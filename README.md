@@ -1,2 +1,2 @@
 # insights-engine
-New module for data analysis
+Weni insights is the module responsible for the data analysis and dashboards.
