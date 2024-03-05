@@ -1,30 +1,31 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
 class Project:
-    uuid: str = None
-    name: str = None
-    timezone: str = None
-    config: dict = None
-    created_at: str = None
-    updated_at: str = None
+    uuid: str
+    name: str
+    timezone: str
+    config: Optional[dict] = None
+    created_at: str
+    updated_at: str
 
 
 @dataclass
 class Permission:
-    uuid: str = None
-    project: str = None
-    user: str = None
-    role: str = None
-    created_at: str = None
-    updated_at: str = None
+    uuid: str
+    project: str
+    user: str
+    role: str
+    created_at: str
+    updated_at: str
 
 
 @dataclass
 class ChatSession:
-    uuid: str = None
-    permission: str = None
-    session_id: str = None
-    created_at: str = None
-    updated_at: str = None
+    uuid: str
+    permission: str
+    session_id: str
+    created_at: str
+    updated_at: str

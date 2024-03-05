@@ -24,6 +24,7 @@ class Widget:
 @dataclass
 class DashboardTemplate:
     uuid: str
+    description: str
     project: Optional[str] = None
     setup: dict
 
@@ -31,5 +32,6 @@ class DashboardTemplate:
 @dataclass
 class WidgetTemplate:
     uuid: str
+    description: str
     project: Optional[str]
     setup: dict
