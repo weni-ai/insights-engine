@@ -1,0 +1,2 @@
+class UserValidationException(Exception):
+    pass
