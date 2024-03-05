@@ -12,6 +12,7 @@ class Project:
 @dataclass
 class Permission:
     uuid: str = None
+    project: str = None
     user: str = None
     role: str = None
 
