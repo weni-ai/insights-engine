@@ -7,6 +7,7 @@ class Dashboard:
     uuid: str
     project: str
     description: str
+    is_default: str
     config: dict
 
 
@@ -18,6 +19,7 @@ class Widget:
     w_type: str
     source: str
     report: dict
+    position: dict
     config: dict
 
 
