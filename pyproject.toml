@@ -16,6 +16,7 @@ psycopg = "^3.1.18"
 factory-boy = "^3.3.0"
 gevent = "^24.2.1"
 django-environ = "^0.11.2"
+whitenoise = "^6.6.0"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.22.2"

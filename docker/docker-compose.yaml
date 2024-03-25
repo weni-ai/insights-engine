@@ -1,7 +1,7 @@
 version: '3.6'
 
 services:
-  database:
+  postgres:
     image: postgres:16.2
     ports:
       - 5432:5432
@@ -26,7 +26,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:-SK}
       - DEBUG=${DEBUG:-true}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
-      - DEFAULT_DATABASE=${DEFAULT_DATABASE:-postgres://insights:insights@database:5432/insights}
+      - DEFAULT_DATABASE=${DEFAULT_DATABASE:-postgres://insights:insights@postgres:5432/insights}
   rabbitmq:
     image: rabbitmq:3.9.7-management
     ports:
