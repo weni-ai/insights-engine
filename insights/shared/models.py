@@ -1,9 +1,11 @@
+from uuid import uuid4
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
 class UUIDModel(models.Model):
-    uuid = models.UUIDField(primary_key=True)
+    uuid = models.UUIDField(primary_key=True, default=uuid4, editable=True)
 
     class Meta:
         abstract = True
