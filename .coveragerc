@@ -1,0 +1,19 @@
+[run]
+omit =
+    ./manage.py
+    insights/*/migrations/*
+    */tests/*
+    */__init__.py
+    Dockerfile
+    */settings.py
+    */apps.py
+    insights/wsgi.py
+    insights/event_driven/*
+    */handle.py
+    insights/asgi.py
+    insights/conftest.py
+    insights/authentication/authentication.py
+
+[report]
+fail_under = 90
+skip_empty = true

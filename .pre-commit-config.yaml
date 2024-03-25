@@ -1,0 +1,65 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: debug-statements
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-merge-conflict
+      - id: check-ast
+      - id: fix-byte-order-marker
+      - id: check-json
+      - id: check-symlinks
+      - id: check-vcs-permalinks
+      - id: check-yaml
+      - id: detect-aws-credentials
+        args: ['--allow-missing-credentials']
+      - id: detect-private-key
+      - id: no-commit-to-branch
+      - id: end-of-file-fixer
+      - id: name-tests-test
+        args: ['--django']
+
+  - repo: local
+    hooks:
+      - id: check-datetime-now
+        name: check_datetime_now
+        description: Prefer datetime.utcnow() ou django.utils.timezone
+        language: pygrep
+        entry: 'datetime\.now\(\)'
+        types: [python]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/iamthefij/docker-pre-commit
+    rev: v3.0.1
+    hooks:
+      - id: docker-compose-check
+
+  - repo: https://gitlab.com/smop/pre-commit-hooks
+    rev: v1.0.0
+    hooks:
+    -   id: check-poetry
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+
+  - repo: local
+    hooks:
+      - id: check-coverage
+        name: Check code coverage
+        entry: coverage run --source='.' manage.py test
+        language: system
+        pass_filenames: false
+        always_run: true
+        fail_under: 90

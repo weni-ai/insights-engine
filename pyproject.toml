@@ -1,3 +1,5 @@
+
+
 [tool.poetry]
 name = "insights-engine"
 version = "0.1.0"
@@ -7,11 +9,57 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pytest = "^8.0.2"
+django = "^5.0.3"
+djangorestframework = "^3.15.1"
+pre-commit = "^3.7.0"
+psycopg = "^3.1.18"
+factory-boy = "^3.3.0"
+gevent = "^24.2.1"
+django-environ = "^0.11.2"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.22.2"
+isort = "^5.13.2"
+flake8 = "^7.0.0"
+black = "^24.3.0"
+pytest = "^8.1.1"
+pytest-django = "^4.8.0"
+pytest-cov = "^5.0.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+extend-exclude = '''
+    (
+        migrations/
+        | manage.py
+        | settings.py
+        | __init__.py
+    )
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 79
+extend_skip = ['migrations', 'manage.py', 'wsgi.py', 'asgi.py', '__init__.py']
+
+[flake8]
+max-line-length=79
+
+[tool.coverage.report]
+omit = [
+  "settings.py",
+  "asgi.py",
+  "wsgi.py",
+  "__init__.py",
+  "migrations/",
+  "manage.py",
+  "insights/urls.py",
+]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+python_files = "tests.py test_*.py *_tests.py"
+DJANGO_SETTINGS_MODULE = "insights.settings"

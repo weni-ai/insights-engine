@@ -1,0 +1,40 @@
+version: '3.6'
+
+services:
+  database:
+    image: postgres:16.2
+    ports:
+      - 5432:5432
+    networks:
+      - default
+      - insights
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-insights}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-insights}
+      - POSTGRES_DB=${POSTGRES_DB:-insights}
+  insights:
+    image: ${DOCKER_IMAGE_NAME:-ilha/insights}:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - ${ENGINE_PORT:-8000}:8000
+    networks:
+      - default
+      - insights
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-SK}
+      - DEBUG=${DEBUG:-true}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - DEFAULT_DATABASE=${DEFAULT_DATABASE:-postgres://insights:insights@database:5432/insights}
+  rabbitmq:
+    image: rabbitmq:3.9.7-management
+    ports:
+      - "5672:5672" # Porta para conexão com o RabbitMQ
+      - "15672:15672" # Porta para acessar a interface de gerenciamento do RabbitMQ
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+networks:
+  insights:
+    external: true
