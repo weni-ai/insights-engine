@@ -10,6 +10,7 @@ class Dashboard(BaseEntity, UUIDEntity, DateEntity):
     description: str
     is_default: str
     config: dict
+    from_template: Optional[str] = None
 
     @property
     def entity_id(self) -> str:

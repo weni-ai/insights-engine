@@ -15,7 +15,7 @@ class CreateUserUseCase:
     ) -> (
         User
     ):  # receive a dto instead of a user instance, and instanciate it after to pass to the repo
-        return self.user_repo.create(user)
+        return self.user_repo.get_or_create(user)
 
 
 @dataclass
