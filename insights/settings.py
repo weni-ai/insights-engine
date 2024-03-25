@@ -31,6 +31,8 @@ DEBUG = env.bool("DEBUG", False)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
+AUTH_USER_MODEL = "users.User"
+
 ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=False)
 
 # Application definition
@@ -41,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "insights.users",
 ]
 
 if ADMIN_ENABLED is True:
@@ -107,6 +110,8 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "UTC"
+
+DEFAULT_LANGUAGE = "en-us"
 
 USE_I18N = True
 
