@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "insights.users",
+    "insights.projects",
 ]
 
 if ADMIN_ENABLED is True:
