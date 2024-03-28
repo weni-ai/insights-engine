@@ -30,3 +30,6 @@ class ProjectAuth(BaseModel):
         "users.User", related_name="authorizations", on_delete=models.CASCADE
     )
     role = models.IntegerField(choices=Roles, default=Roles.NOT_SETTED)
+
+    def __str__(self):
+        return f"[{self.role}] {self.project.name} - {self.user.email}"
