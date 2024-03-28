@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "insights.shared",
     "insights.dashboards",
     "insights.projects",
+    "insights.sources",
     "insights.users",
     "insights.widgets",
 ]
