@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "insights.dashboards",
     "insights.projects",
     "insights.users",
+    "insights.widgets",
 ]
 
 if ADMIN_ENABLED is True:
