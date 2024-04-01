@@ -2,7 +2,8 @@ from enum import Enum
 
 
 class Source(Enum):
+    ROOMS = "rooms"
+    AGENTS = "agents"
     FLOWS = "flows"
-    CHATS = "chats"
-    NEXUS = "nexus"
-    INTEGRATIONS = "integrations"
+    RUNS = "runs"
+    RESULTS = "results"
