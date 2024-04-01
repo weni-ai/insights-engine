@@ -58,7 +58,7 @@ repos:
     hooks:
       - id: check-coverage
         name: Check code coverage
-        entry: coverage run --source='.' manage.py test
+        entry: coverage run --source='.' -m pytest
         language: system
         pass_filenames: false
         always_run: true

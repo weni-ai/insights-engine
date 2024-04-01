@@ -64,3 +64,4 @@ omit = [
 pythonpath = "."
 python_files = "tests.py test_*.py *_tests.py"
 DJANGO_SETTINGS_MODULE = "insights.settings"
+addopts = "--cov"
