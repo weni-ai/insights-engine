@@ -1,22 +1,22 @@
-from django.test import TestCase
+import pytest
 
 from ..models import User
 
 
-class TestUserManager(TestCase):
+@pytest.mark.django_db
+def test_create_user():
+    user = User.objects.create_user(email="test@test.com")
+    assert user.email == "test@test.com"
+    assert user.is_superuser is False
 
-    def setUp(self) -> None:
-        self.user_email = "test@test.com"
 
-    def test_create_user(self):
-        user = User.objects.create_user(email=self.user_email)
-        self.assertEqual(user.email, self.user_email)
-        self.assertFalse(user.is_superuser)
+@pytest.mark.django_db
+def test_create_super_user():
+    with pytest.raises(NotImplementedError):
+        User.objects.create_superuser(email="test@test.com")
 
-    def test_create_super_user(self):
-        with self.assertRaises(NotImplementedError):
-            User.objects.create_superuser(email=self.user_email)
 
-    def test_create_user_without_email(self):
-        with self.assertRaises(ValueError):
-            User.objects.create_user(email="")
+@pytest.mark.django_db
+def test_create_user_without_email():
+    with pytest.raises(ValueError):
+        User.objects.create_user(email="")
