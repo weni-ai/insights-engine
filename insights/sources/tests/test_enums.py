@@ -30,7 +30,7 @@ def test_source_values(source_name, expected_value):
 
 def test_source_invalid_member():
     """
-    Test that accessing an invalid member raises a ValueError.
+    Test that accessing an invalid member raises a AttributeError.
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(AttributeError):
         Source.INVALID_MEMBER
