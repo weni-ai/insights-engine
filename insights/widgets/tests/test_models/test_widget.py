@@ -14,7 +14,7 @@ def test_create_widget(create_default_dashboard):
 
     Widget.objects.create(
         dashboard=dash,
-        title="Active Rooms",
+        name="Active Rooms",
         w_type="card",
         source="rooms",
         report={
@@ -33,7 +33,8 @@ def test_create_widget(create_default_dashboard):
 @pytest.mark.parametrize(
     "remove_config",
     [
-        "title",
+        "dashboard",
+        "name",
         "w_type",
         "source",
         "report",
@@ -45,7 +46,8 @@ def test_create_widget(create_default_dashboard):
 def test_required_fields(remove_config: str, create_default_dashboard):
     dash = create_default_dashboard
     widget_config = {
-        "title": "Active Rooms",
+        "dashboard": dash,
+        "name": "Active Rooms",
         "w_type": "card",
         "source": "rooms",
         "report": {
@@ -60,4 +62,4 @@ def test_required_fields(remove_config: str, create_default_dashboard):
     }
     widget_config.pop(remove_config)
     with pytest.raises(IntegrityError):
-        Widget.objects.create(dashboard=dash, **widget_config)
+        Widget.objects.create(**widget_config)
