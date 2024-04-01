@@ -23,3 +23,13 @@ def create_default_dashboard(create_project):
         description="Dashboard populated with HR data, for HR managers",
         is_default=True,
     )
+
+
+@fixture
+def create_not_default_dashboard(create_project):
+    return Dashboard.objects.create(
+        project=create_project,
+        name="Human Resources",
+        description="Dashboard populated with HR data, for HR managers",
+        is_default=False,
+    )
