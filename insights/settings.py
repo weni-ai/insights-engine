@@ -39,6 +39,7 @@ ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=False)
 
 INSTALLED_APPS = [
     "django.contrib.auth",
+    "mozilla_django_oidc",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
@@ -132,3 +133,26 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# OIDC
+
+OIDC_RP_SERVER_URL = env.str("OIDC_RP_SERVER_URL")
+OIDC_RP_REALM_NAME = env.str("OIDC_RP_REALM_NAME")
+OIDC_OP_JWKS_ENDPOINT = env.str("OIDC_OP_JWKS_ENDPOINT")
+OIDC_RP_CLIENT_ID = env.str("OIDC_RP_CLIENT_ID")
+OIDC_RP_CLIENT_SECRET = env.str("OIDC_RP_CLIENT_SECRET")
+OIDC_OP_AUTHORIZATION_ENDPOINT = env.str("OIDC_OP_AUTHORIZATION_ENDPOINT")
+OIDC_OP_TOKEN_ENDPOINT = env.str("OIDC_OP_TOKEN_ENDPOINT")
+OIDC_OP_USER_ENDPOINT = env.str("OIDC_OP_USER_ENDPOINT")
+OIDC_DRF_AUTH_BACKEND = env.str(
+    "OIDC_DRF_AUTH_BACKEND",
+    default="insights.authentication.authentication.WeniOIDCAuthenticationBackend",
+)
+OIDC_RP_SCOPES = env.str("OIDC_RP_SCOPES", default="openid email")
+
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+    ],
+}
