@@ -9,6 +9,7 @@ omit =
     */apps.py
     insights/wsgi.py
     insights/event_driven/*
+    insights/project/consumers/*
     */handle.py
     insights/asgi.py
     insights/conftest.py

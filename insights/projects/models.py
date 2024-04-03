@@ -27,7 +27,10 @@ class ProjectAuth(BaseModel):
         Project, related_name="authorizations", on_delete=models.CASCADE
     )
     user = models.ForeignKey(
-        "users.User", related_name="authorizations", on_delete=models.CASCADE
+        "users.User",
+        related_name="authorizations",
+        to_field="email",
+        on_delete=models.CASCADE,
     )
     role = models.IntegerField(choices=Roles, default=Roles.NOT_SETTED)
 
