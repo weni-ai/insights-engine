@@ -10,6 +10,9 @@ from insights.shared.models import (
 class Project(BaseModel, ConfigurableModel, SoftDeleteModel):
     name = models.CharField(max_length=255)
     is_template = models.BooleanField(default=False)
+    timezone = models.CharField(max_length=64, null=True)
+    date_format = models.CharField(max_length=64, null=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.uuid} - Project: {self.name}"
@@ -27,7 +30,10 @@ class ProjectAuth(BaseModel):
         Project, related_name="authorizations", on_delete=models.CASCADE
     )
     user = models.ForeignKey(
-        "users.User", related_name="authorizations", on_delete=models.CASCADE
+        "users.User",
+        related_name="authorizations",
+        to_field="email",
+        on_delete=models.CASCADE,
     )
     role = models.IntegerField(choices=Roles, default=Roles.NOT_SETTED)
 

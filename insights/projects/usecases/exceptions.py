@@ -1,0 +1,2 @@
+class InvalidProjectAuth(Exception):
+    pass

@@ -1,7 +1,7 @@
 from pytest import fixture
 
 from insights.dashboards.models import Dashboard, DashboardTemplate
-from insights.projects.models import Project
+from insights.projects.models import Project, ProjectAuth
 from insights.users.models import User
 
 
@@ -44,3 +44,12 @@ def create_project_dashboard_template(create_project):
         description="very good dashboard to analyze your project data",
         config={"example": "use only for testing the models"},
     )
+
+
+@fixture
+def create_project_auth(create_project, create_user):
+    proj = create_project
+    user = create_user
+    role = 1
+
+    return ProjectAuth.objects.create(project=proj, user=user, role=role)
