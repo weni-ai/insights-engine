@@ -20,6 +20,8 @@ class ProjectsUseCase:
             uuid=project_dto.uuid,
             name=project_dto.name,
             is_template=project_dto.is_template,
+            timezone=project_dto.timezone,
+            date_format=project_dto.date_format,
         )
 
         return project

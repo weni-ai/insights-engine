@@ -6,6 +6,8 @@ class ProjectCreationDTO:
     uuid: str
     name: str
     is_template: bool
+    timezone: str = ""
+    date_format: str = ""
 
 
 @dataclass

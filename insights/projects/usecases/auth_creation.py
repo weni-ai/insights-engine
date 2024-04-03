@@ -38,6 +38,17 @@ class ProjectAuthCreationUseCase:
 
         return project_permission
 
+    def bulk_create(self, project: str, authorizations: list[dict]):
+        if authorizations == []:
+            return
+        auth_instances = []
+        project = self.get_project(project)
+        for auth in authorizations:
+            user = self.get_or_create_user_by_email(auth.get("user"))[0]
+            instance = ProjectAuth(project=project, user=user, role=auth.get("role"))
+            auth_instances.append(instance)
+        ProjectAuth.objects.bulk_create(auth_instances, ignore_conflicts=True)
+
     def update_permission(self, project_permission_dto: ProjectAuthDTO):
         return self.create_permission(project_permission_dto)
 

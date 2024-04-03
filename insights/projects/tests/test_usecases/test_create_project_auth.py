@@ -21,6 +21,46 @@ def test_create_or_update_admin_auth(create_project, create_user):
     assert auth.role == role
 
 
+@pytest.mark.django_db
+def test_bulk_create_admin_auth(create_project):
+    proj = create_project
+    assert proj.authorizations.count() == 0
+    ProjectAuthCreationUseCase().bulk_create(
+        project=str(proj.uuid),
+        authorizations=[
+            {"user": "john.doe@weni.ai", "role": 1},
+            {"user": "lina.lawson@weni.ai", "role": 1},
+            {"user": "agent@weni.ai", "role": 0},
+        ],
+    )
+    assert proj.authorizations.count() == 3
+
+
+@pytest.mark.django_db
+def test_bulk_create_admin_auth_with_conflict(create_project_auth):
+    proj = create_project_auth.project
+    assert proj.authorizations.count() == 1
+    ProjectAuthCreationUseCase().bulk_create(
+        project=str(proj.uuid),
+        authorizations=[
+            {"user": create_project_auth.user.email, "role": 1},
+            {"user": "lina.lawson@weni.ai", "role": 1},
+            {"user": "agent@weni.ai", "role": 0},
+        ],
+    )
+    assert proj.authorizations.count() == 3
+
+
+@pytest.mark.django_db
+def test_bulk_create_admin_auth_with_empty_list(create_project):
+    proj = create_project
+    ProjectAuthCreationUseCase().bulk_create(
+        project=str(proj.uuid),
+        authorizations=[],
+    )
+    assert proj.authorizations.count() == 0
+
+
 @pytest.mark.parametrize(
     "method",
     [
