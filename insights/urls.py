@@ -18,6 +18,8 @@ Including another URLconf
 from django.conf import settings
 from django.urls import path
 
+from insights.widgets.viewsets import WidgetListUpdateViewSet
+
 urlpatterns = []
 
 if settings.ADMIN_ENABLED is True:
@@ -25,4 +27,5 @@ if settings.ADMIN_ENABLED is True:
 
     urlpatterns += [
         path("admin/", admin.site.urls),
+        path("widget/", WidgetListUpdateViewSet),
     ]
