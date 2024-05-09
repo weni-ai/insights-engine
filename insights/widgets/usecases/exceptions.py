@@ -1,0 +1,2 @@
+class InvalidWidgetObject(Exception):
+    pass

@@ -78,7 +78,7 @@ create_environment_vars_file:
 	@echo "OIDC_OP_TOKEN_ENDPOINT=''" >> "${ENVIRONMENT_VARS_FILE}"
 	@echo "OIDC_OP_USER_ENDPOINT=''" >> "${ENVIRONMENT_VARS_FILE}"
 	@echo "${SUCCESS}✔${NC} Settings file created"
-	install_development_requirements:
+install_development_requirements:
 	@echo "${INFO}Installing development requirements...${NC}"
 	@poetry install
 	@echo "${SUCCESS}✔${NC} Development requirements installed"
