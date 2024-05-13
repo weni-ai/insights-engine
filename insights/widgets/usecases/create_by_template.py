@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import Dict, List, Union
 
 from django.db import transaction
-from django.db.utils import IntegrityError
-from exceptions import InvalidWidgetObject
 
-from insights.widgets.models import Widget
+from insights.widgets.models import Report, Widget
+
+from .exceptions import InvalidWidgetObject
 
 
 @dataclass
@@ -25,19 +25,30 @@ class WidgetCreationUseCase:
         if not widget_dtos:
             raise ValueError("widget list cannot be empty!")
 
-        created_widgets = []
+        widgets_to_create = []
+        reports_to_create = []
         try:
             with transaction.atomic():
                 for widget_dto in widget_dtos:
-                    widget = Widget.objects.create(
-                        dashboard=widget_dto.config,
+                    widget = Widget(
+                        dashboard=widget_dto.dashboard,
                         name=widget_dto.name,
                         w_type=widget_dto.w_type,
                         source=widget_dto.source,
                         position=widget_dto.position,
                         config=widget_dto.config,
-                        report=widget_dto.report,
                     )
-                    created_widgets.append(widget)
-        except IntegrityError as exception:
+                    widgets_to_create.append(widget)
+
+                    if widget_dto.report:
+                        report = Report(
+                            widget=widget,
+                            **widget_dto.report,
+                        )
+                        reports_to_create.append(report)
+
+                Widget.objects.bulk_create(widgets_to_create)
+                if reports_to_create:
+                    Report.objects.bulk_create(reports_to_create)
+        except Exception as exception:
             raise InvalidWidgetObject(f"Error creating widget: {exception}")

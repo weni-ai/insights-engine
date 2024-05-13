@@ -27,5 +27,9 @@ if settings.ADMIN_ENABLED is True:
 
     urlpatterns += [
         path("admin/", admin.site.urls),
-        path("widget/", WidgetListUpdateViewSet),
     ]
+
+# Fora da condição do admin
+urlpatterns += [
+    path("widget/", WidgetListUpdateViewSet.as_view({"get": "list", "put": "update"})),
+]

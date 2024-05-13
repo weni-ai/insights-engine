@@ -17,9 +17,6 @@ def test_create_widget(create_default_dashboard):
         name="Active Rooms",
         w_type="card",
         source="rooms",
-        report={
-            "example": "the logic behind the report config should be on the use case"
-        },
         position={
             "example": "the logic behind the position config should be on the use case"
         },
@@ -37,7 +34,6 @@ def test_create_widget(create_default_dashboard):
         "name",
         "w_type",
         "source",
-        "report",
         "position",
         "config",
     ],
@@ -50,9 +46,6 @@ def test_required_fields(remove_config: str, create_default_dashboard):
         "name": "Active Rooms",
         "w_type": "card",
         "source": "rooms",
-        "report": {
-            "example": "the logic behind the report config should be on the use case"
-        },
         "position": {
             "example": "the logic behind the position config should be on the use case"
         },
