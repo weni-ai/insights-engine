@@ -15,3 +15,10 @@ class ProjectAuthCreationDTO:
     user_email: str
     project_uuid: str
     role: int
+
+
+@dataclass
+class DashboardTemplateDTO:
+    name: str
+    description: str
+    project: str

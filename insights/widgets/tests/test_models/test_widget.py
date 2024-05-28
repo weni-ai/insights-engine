@@ -1,7 +1,7 @@
 import pytest
 from django.db.utils import IntegrityError
 
-from insights.widgets.models import Widget
+from insights.widgets.models import Report, Widget
 
 
 @pytest.mark.django_db
@@ -12,7 +12,7 @@ def test_create_widget(create_default_dashboard):
     """
     dash = create_default_dashboard
 
-    Widget.objects.create(
+    widget = Widget.objects.create(
         dashboard=dash,
         name="Active Rooms",
         w_type="card",
@@ -24,7 +24,13 @@ def test_create_widget(create_default_dashboard):
             "example": "the logic behind the widget config should be on the use case"
         },
     )
+    report = Report.objects.create(
+        name="report", w_type="card", source="rooms", config={}, widget=widget
+    )
+
     assert dash.widgets.count() == 1
+    assert str(widget) == "Active Rooms"
+    assert str(report) == "report"
 
 
 @pytest.mark.parametrize(

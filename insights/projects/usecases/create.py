@@ -2,6 +2,10 @@ from insights.projects.models import Project
 
 from .project_dto import ProjectCreationDTO
 
+from .create_dashboard_template import DashboardUseCase
+
+from insights.dashboards.models import DashboardTemplate
+
 
 class ProjectsUseCase:
 
@@ -24,4 +28,12 @@ class ProjectsUseCase:
             date_format=project_dto.date_format,
         )
 
+        dashboard_list = list(
+            DashboardTemplate.objects.filter(
+                name__in=["atendimento humano", "jornada do bot"]
+            )
+        )
+
+        dashboard_creation = DashboardUseCase()
+        dashboard_creation.create(project, dashboard_list)
         return project

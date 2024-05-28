@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import List
 
 from django.db import transaction
 
@@ -7,16 +6,7 @@ from insights.widgets.models import Report, Widget
 
 from .exceptions import InvalidWidgetObject
 
-
-@dataclass
-class WidgetCreationDTO:
-    dashboard: str
-    name: str
-    w_type: str
-    source: str
-    position: Dict[str, int]
-    config: Dict[str, Union[str, int, float, bool, None]]
-    report: Dict[str, Union[str, int, float, bool, None]]
+from .widget_dto import WidgetCreationDTO
 
 
 class WidgetCreationUseCase:
