@@ -1,6 +1,7 @@
 from django.db import models
 
 from insights.shared.models import BaseModel, ConfigurableModel
+from settings import INSIGHTS_DOMAIN
 
 
 class BaseWidget(BaseModel, ConfigurableModel):
@@ -28,6 +29,12 @@ class Widget(BaseWidget):
 
     def __str__(self):
         return self.name
+
+    @property
+    def url(self):
+        if self.config["external_url"]:
+            return self.config["external_url"]
+        return f"{INSIGHTS_DOMAIN}/dashboards/self.widget.dashboard/widgets/self.widget/report"
 
 
 class Report(BaseWidget):

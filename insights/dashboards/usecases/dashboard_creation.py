@@ -17,6 +17,7 @@ class create_atendimento_humano:
                     name="Atendimento Humano",
                     description="Dashboard de atendimento humano",
                     is_default=False,
+                    grid=[18, 3],
                 )
                 self.create_widgets(atendimento_humano)
 
@@ -181,6 +182,7 @@ class create_resultado_de_fluxo:
                     name="Resultado de fluxo",
                     description="Dashboard de resultado de fluxo",
                     is_default=False,
+                    grid=[12, 3],
                 )
                 self.create_widgets(dashboard_resultado_de_fluxo)
 
