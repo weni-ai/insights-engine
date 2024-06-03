@@ -16,9 +16,10 @@ Including another URLconf
 """
 
 from django.conf import settings
-from django.urls import path
+from django.urls import path, include
 from insights.widgets.viewsets import WidgetListUpdateViewSet
 from insights.dashboards.viewsets import DashboardViewSet
+from rest_framework.routers import DefaultRouter
 
 urlpatterns = []
 
@@ -29,7 +30,10 @@ if settings.ADMIN_ENABLED is True:
         path("admin/", admin.site.urls),
     ]
 
-urlpatterns += [
-    path("widgets/", WidgetListUpdateViewSet.as_view({"get": "list", "put": "update"})),
-    path("dashboards/", DashboardViewSet.as_view({"get": "list", "put": "update"})),
+router = DefaultRouter()
+router.register(r"widgets", WidgetListUpdateViewSet, basename="widget")
+router.register(r"dashboards", DashboardViewSet, basename="dashboard")
+
+urlpatterns = [
+    path("", include(router.urls)),
 ]
