@@ -5,13 +5,15 @@ from rest_framework.response import Response
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.models import Dashboard
 from insights.dashboards.utils import DefaultPagination
-from insights.widgets.models import Widget
+from insights.widgets.models import Widget, Report
 
 from .serializers import (
     DashboardIsDefaultSerializer,
     DashboardSerializer,
     DashboardWidgetsSerializer,
+    ReportSerializer,
 )
+from .usecases import dashboard_filters
 
 
 class DashboardViewSet(
@@ -51,3 +53,28 @@ class DashboardViewSet(
         serializer = DashboardWidgetsSerializer(result_page, many=True)
 
         return paginator.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=["get"])
+    def filters(self, request, pk=None):
+        dashboard = self.get_object()
+        filters = dashboard_filters.get_dash_filters(dashboard)
+
+        return Response(filters)
+
+    @action(
+        detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/report"
+    )
+    def get_widget_report(self, request, pk=None, widget_uuid=None):
+        try:
+            widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+            report = widget.report
+            serializer = ReportSerializer(report)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Widget.DoesNotExist:
+            return Response(
+                {"detail": "Widget not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        except Report.DoesNotExist:
+            return Response(
+                {"detail": "Report not found."}, status=status.HTTP_404_NOT_FOUND
+            )

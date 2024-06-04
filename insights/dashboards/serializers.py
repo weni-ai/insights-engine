@@ -23,7 +23,7 @@ class ReportSerializer(serializers.ModelSerializer):
     def get_url(self, obj):
         if obj.config.get("external_url"):
             return obj.config["external_url"]
-        return f"{settings.INSIGHTS_DOMAIN}/dashboards/{obj.widget.dashboard.uuid}/widgets/{obj.widget.uuid}/report"
+        return f"{settings.INSIGHTS_DOMAIN}/dashboards/{obj.widget.dashboard.uuid}/widgets/{obj.widget.uuid}/report/"
 
     class Meta:
         model = Report
