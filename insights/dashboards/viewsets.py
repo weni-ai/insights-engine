@@ -1,20 +1,17 @@
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework import status
 
 from insights.authentication.permissions import ProjectAuthPermission
-
 from insights.dashboards.models import Dashboard
+from insights.dashboards.utils import DefaultPagination
 from insights.widgets.models import Widget
 
 from .serializers import (
-    DashboardSerializer,
     DashboardIsDefaultSerializer,
+    DashboardSerializer,
     DashboardWidgetsSerializer,
 )
-
-from insights.dashboards.utils import DefaultPagination
 
 
 class DashboardViewSet(

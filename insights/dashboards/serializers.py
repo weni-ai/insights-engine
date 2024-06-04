@@ -1,8 +1,8 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from insights.dashboards.models import Dashboard
-from insights.widgets.models import Widget, Report
-from django.conf import settings
+from insights.widgets.models import Report, Widget
 
 
 class DashboardSerializer(serializers.ModelSerializer):

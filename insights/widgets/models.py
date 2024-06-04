@@ -1,7 +1,7 @@
+from django.conf import settings
 from django.db import models
 
 from insights.shared.models import BaseModel, ConfigurableModel
-from django.conf import settings
 
 
 class BaseWidget(BaseModel, ConfigurableModel):

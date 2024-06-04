@@ -16,10 +16,11 @@ Including another URLconf
 """
 
 from django.conf import settings
-from django.urls import path, include
-from insights.widgets.viewsets import WidgetListUpdateViewSet
-from insights.dashboards.viewsets import DashboardViewSet
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
+from insights.dashboards.viewsets import DashboardViewSet
+from insights.widgets.viewsets import WidgetListUpdateViewSet
 
 urlpatterns = []
 
