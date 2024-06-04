@@ -11,7 +11,7 @@ class ProjectAuthPermission(permissions.BasePermission):
         else:
             project_id = obj.project_id
 
-        user = "alan.dovale@weni.ai"
+        user = request.user
         auth = ProjectAuth.objects.filter(project=project_id, user=user, role=1).first()
         if not auth:
             raise PermissionDenied("User does not have permission for this project")
