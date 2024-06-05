@@ -78,3 +78,15 @@ class DashboardViewSet(
             return Response(
                 {"detail": "Report not found."}, status=status.HTTP_404_NOT_FOUND
             )
+
+    @action(detail=True, methods=["get"])
+    def list_sources(self, request, pk=None):
+        dashboard = self.get_object()
+        widgets = dashboard.widgets.all()
+
+        sources = [{"source": widget.source} for widget in widgets]
+
+        paginator = DefaultPagination()
+        paginated_sources = paginator.paginate_queryset(sources, request)
+
+        return paginator.get_paginated_response(paginated_sources)
