@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "insights.event_driven",
     "insights.shared",
     "insights.dashboards",
     "insights.projects",

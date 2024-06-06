@@ -31,7 +31,7 @@ ARG APP_VERSION="0.1"
 ENV APP_VERSION=${APP_VERSION} \
     RUNTIME_DEPS=${RUNTIME_DEPS} \
     BUILD_DEPS=${BUILD_DEPS} \
-    APPLICATION_NAME="Insights" \
+    APPLICATION_NAME="insights" \
     PROJECT_PATH=/insights \
     PROJECT_USER=app_user \
     PROJECT_GROUP=app_group \
@@ -65,7 +65,7 @@ COPY pyproject.toml poetry.lock ./
 
 RUN --mount=type=cache,mode=0755,target=/pip_cache,id=pip pip install --cache-dir /pip_cache -U poetry=="${POETRY_VERSION}" \
     && poetry cache clear -n --all pypi \
-    && poetry export --without-hashes --output requirements.txtq
+    && poetry export --without-hashes --output requirements.txt
 
 FROM base as build
 
