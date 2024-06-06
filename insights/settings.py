@@ -37,11 +37,11 @@ AUTH_USER_MODEL = "users.User"
 ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=True)
 
 INSIGHTS_DOMAIN = env.str("INSIGHTS_DOMAIN")
+
 # Application definition
 
 INSTALLED_APPS = [
     "django.contrib.auth",
-    "mozilla_django_oidc",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
