@@ -17,21 +17,33 @@ class DashboardIsDefaultSerializer(serializers.ModelSerializer):
         fields = ["is_default"]
 
 
-class ReportSerializer(serializers.ModelSerializer):
+class DashboardReportSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
 
     def get_url(self, obj):
         if obj.config.get("external_url"):
             return obj.config["external_url"]
         return f"{settings.INSIGHTS_DOMAIN}/dashboards/{obj.widget.dashboard.uuid}/widgets/{obj.widget.uuid}/report/"
 
+    def get_type(self, obj):
+        if obj.config.get("external_url"):
+            return "external"
+        return "internal"
+
+    class Meta:
+        model = Report
+        fields = ["url", "type"]
+
+
+class ReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Report
         fields = "__all__"
 
 
 class DashboardWidgetsSerializer(serializers.ModelSerializer):
-    report = ReportSerializer()
+    report = DashboardReportSerializer()
 
     class Meta:
         model = Widget

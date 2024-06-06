@@ -11,6 +11,7 @@ from .serializers import (
     DashboardIsDefaultSerializer,
     DashboardSerializer,
     DashboardWidgetsSerializer,
+    DashboardReportSerializer,
     ReportSerializer,
 )
 from .usecases import dashboard_filters

@@ -7,7 +7,10 @@ from .serializers import WidgetSerializer
 
 
 class WidgetListUpdateViewSet(
-    mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+    mixins.ListModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+    mixins.RetrieveModelMixin,
 ):
     permission_classes = [ProjectAuthPermission]
     queryset = Widget.objects.all()
