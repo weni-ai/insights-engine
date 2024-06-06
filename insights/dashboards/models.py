@@ -33,6 +33,7 @@ class Dashboard(BaseModel, ConfigurableModel):
         null=True,
         blank=True,
     )
+    grid = models.JSONField("Grid", default=list)
 
     def __str__(self):
         return f"{self.project.name} - {self.name}"
