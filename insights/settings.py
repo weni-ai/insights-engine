@@ -33,8 +33,9 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
 AUTH_USER_MODEL = "users.User"
 
-ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=False)
+ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=True)
 
+INSIGHTS_DOMAIN = env.str(("INSIGHTS_DOMAIN"))
 # Application definition
 
 INSTALLED_APPS = [
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     "insights.sources",
     "insights.users",
     "insights.widgets",
+    "rest_framework",
 ]
 
 if ADMIN_ENABLED is True:
@@ -91,6 +93,11 @@ WSGI_APPLICATION = "insights.wsgi.application"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {"default": env.db(var="DEFAULT_DATABASE", default="sqlite:///db.sqlite3")}
+
+REST_FRAMEWORK = {
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
