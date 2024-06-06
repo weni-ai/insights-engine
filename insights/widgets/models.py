@@ -8,7 +8,7 @@ class BaseWidget(BaseModel, ConfigurableModel):
     name = models.CharField(
         "Name", max_length=255, null=False, blank=False, default=None
     )
-    w_type = models.CharField(
+    type = models.CharField(
         "Widget Type", max_length=50, null=False, blank=False, default=None
     )
     source = models.CharField(
