@@ -55,7 +55,7 @@ def test_generate_sql_query_with_operation():
 def test_generate_sql_query_with_tag_join():
     filter_dict = {"user_id": 123, "tag__in": [1, 2, 3, 4]}
     query, params = generate_sql_query(filter_dict)
-    expected_query = "SELECT COUNT(r.*) FROM public.rooms_room as r INNER JOIN public.rooms_room_tags AS tg ON tg.room_id=r.uuid WHERE r.user_id = (%s) AND tg.uuid IN (%s, %s, %s, %s);"
+    expected_query = "SELECT COUNT(r.*) FROM public.rooms_room as r INNER JOIN public.rooms_room_tags AS tg ON tg.room_id=r.uuid WHERE r.user_id = (%s) AND tg.sectortag_id IN (%s, %s, %s, %s);"
     assert query == expected_query
     assert params == [123, 1, 2, 3, 4]
 
@@ -73,14 +73,14 @@ def test_generate_sql_query_with_project_join():
 
 def test_get_joins_from_schema():
     assert get_joins_from_schema("sector") == {
-        "INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id"
+        "q": "INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id"
     }
     assert get_joins_from_schema("project") == {
-        "INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id",
-        "INNER JOIN public.sectors_sector AS s ON s.uuid=q.sector_id",
-        "INNER JOIN public.projects_project AS p ON p.uuid=s.project_id",
+        "q": "INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id",
+        "s": "INNER JOIN public.sectors_sector AS s ON s.uuid=q.sector_id",
+        "p": "INNER JOIN public.projects_project AS p ON p.uuid=s.project_id",
     }
     assert get_joins_from_schema("tag") == {
-        "INNER JOIN public.rooms_room_tags AS tg ON tg.room_id=r.uuid"
+        "tg": "INNER JOIN public.rooms_room_tags AS tg ON tg.room_id=r.uuid"
     }
-    assert get_joins_from_schema("other_field") == set()
+    assert get_joins_from_schema("other_field") == dict()

@@ -8,7 +8,7 @@ def secondary_dbs_execute_query(db_name: str, query: str, *args, **kwargs):
 
 class RoomSQLQueryBuilder:
     def __init__(self):
-        self.joins = set()
+        self.joins = dict()
         self.where_clauses = []
         self.params = []
         self.is_valid = False
@@ -20,10 +20,10 @@ class RoomSQLQueryBuilder:
         self.params.extend(params)
 
     def add_joins(self, joins: set):
-        self.joins = self.joins.union(joins)
+        self.joins.update(joins)
 
     def build_query(self):
-        self.join_clause = " ".join(self.joins)
+        self.join_clause = " ".join(self.joins.values())
         self.where_clause = " AND ".join(self.where_clauses)
         self.is_valid = True
 

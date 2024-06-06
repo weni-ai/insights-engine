@@ -27,7 +27,7 @@ def test_add_filter_with_table_alias(strategy, builder):
 
 
 def test_add_joins(builder):
-    joins = {"INNER JOIN users u ON u.id = r.user_id"}
+    joins = {"u": "INNER JOIN users u ON u.id = r.user_id"}
     builder.add_joins(joins)
     assert builder.joins == joins
 
