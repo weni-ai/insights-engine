@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 
 import environ
+from django.utils.log import DEFAULT_LOGGING
 
 environ.Env.read_env(env_file=(environ.Path(__file__) - 2)(".env"))
 
@@ -35,7 +36,7 @@ AUTH_USER_MODEL = "users.User"
 
 ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=True)
 
-INSIGHTS_DOMAIN = env.str(("INSIGHTS_DOMAIN"))
+INSIGHTS_DOMAIN = env.str("INSIGHTS_DOMAIN")
 # Application definition
 
 INSTALLED_APPS = [
@@ -142,21 +143,12 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# OIDC
 
-OIDC_RP_SERVER_URL = env.str("OIDC_RP_SERVER_URL")
-OIDC_RP_REALM_NAME = env.str("OIDC_RP_REALM_NAME")
-OIDC_OP_JWKS_ENDPOINT = env.str("OIDC_OP_JWKS_ENDPOINT")
-OIDC_RP_CLIENT_ID = env.str("OIDC_RP_CLIENT_ID")
-OIDC_RP_CLIENT_SECRET = env.str("OIDC_RP_CLIENT_SECRET")
-OIDC_OP_AUTHORIZATION_ENDPOINT = env.str("OIDC_OP_AUTHORIZATION_ENDPOINT")
-OIDC_OP_TOKEN_ENDPOINT = env.str("OIDC_OP_TOKEN_ENDPOINT")
-OIDC_OP_USER_ENDPOINT = env.str("OIDC_OP_USER_ENDPOINT")
-OIDC_DRF_AUTH_BACKEND = env.str(
-    "OIDC_DRF_AUTH_BACKEND",
-    default="insights.authentication.authentication.WeniOIDCAuthenticationBackend",
-)
-OIDC_RP_SCOPES = env.str("OIDC_RP_SCOPES", default="openid email")
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+    ],
+}
 
 
 REST_FRAMEWORK = {
@@ -164,6 +156,64 @@ REST_FRAMEWORK = {
         "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
     ],
 }
+
+# Logging
+
+LOGGING = DEFAULT_LOGGING
+LOGGING["formatters"]["verbose"] = {
+    "format": "%(levelname)s  %(asctime)s  %(module)s "
+    "%(process)d  %(thread)d  %(message)s"
+}
+LOGGING["handlers"]["console"] = {
+    "level": "DEBUG",
+    "class": "logging.StreamHandler",
+    "formatter": "verbose",
+}
+
+# mozilla-django-oidc
+
+OIDC_ENABLED = env.bool("OIDC_ENABLED", default=False)
+if OIDC_ENABLED:
+    REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"].append(
+        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+    )
+    INSTALLED_APPS = (*INSTALLED_APPS, "mozilla_django_oidc")
+    LOGGING["loggers"]["mozilla_django_oidc"] = {
+        "level": "DEBUG",
+        "handlers": ["console"],
+        "propagate": False,
+    }
+    LOGGING["loggers"]["weni_django_oidc"] = {
+        "level": "DEBUG",
+        "handlers": ["console"],
+        "propagate": False,
+    }
+
+    OIDC_RP_CLIENT_ID = env.str("OIDC_RP_CLIENT_ID")
+    OIDC_RP_CLIENT_SECRET = env.str("OIDC_RP_CLIENT_SECRET")
+    OIDC_OP_AUTHORIZATION_ENDPOINT = env.str("OIDC_OP_AUTHORIZATION_ENDPOINT")
+    OIDC_OP_TOKEN_ENDPOINT = env.str("OIDC_OP_TOKEN_ENDPOINT")
+    OIDC_OP_USER_ENDPOINT = env.str("OIDC_OP_USER_ENDPOINT")
+    OIDC_OP_USERS_DATA_ENDPOINT = env.str("OIDC_OP_USERS_DATA_ENDPOINT")
+    OIDC_OP_JWKS_ENDPOINT = env.str("OIDC_OP_JWKS_ENDPOINT")
+    OIDC_RP_SIGN_ALGO = env.str("OIDC_RP_SIGN_ALGO", default="RS256")
+    OIDC_DRF_AUTH_BACKEND = env.str(
+        "OIDC_DRF_AUTH_BACKEND",
+        default="insights.authentication.authentication.WeniOIDCAuthenticationBackend",
+    )
+
+    OIDC_RP_SCOPES = env.str("OIDC_RP_SCOPES", default="openid email")
+
+    # TODO: Set admin permission to Chats client and remove the follow variables
+    OIDC_ADMIN_CLIENT_ID = env.str("OIDC_ADMIN_CLIENT_ID")
+    OIDC_ADMIN_CLIENT_SECRET = env.str("OIDC_ADMIN_CLIENT_SECRET")
+
+OIDC_CACHE_TOKEN = env.bool(
+    "OIDC_CACHE_TOKEN", default=False
+)  # Enable/disable user token caching (default: False).
+OIDC_CACHE_TTL = env.int(
+    "OIDC_CACHE_TTL", default=600
+)  # Time-to-live for cached user tokens (default: 600 seconds).
 
 
 USE_EDA = env.bool("USE_EDA", default=False)
