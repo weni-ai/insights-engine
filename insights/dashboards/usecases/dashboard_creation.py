@@ -44,7 +44,7 @@ class CreateHumanService:
                     type="card",
                     source="chats",
                     config={"operation": "count", "type_result": "executions"},
-                    dash=dashboard_atendimento_humano,
+                    dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [1, 4]},
                 )
                 Widget.objects.create(
@@ -52,7 +52,7 @@ class CreateHumanService:
                     type="card",
                     source="chats",
                     config={"operation": "AVG", "type_result": "executions"},
-                    dash=dashboard_atendimento_humano,
+                    dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [5, 8]},
                 )
                 encerrados = Widget.objects.create(
@@ -60,7 +60,7 @@ class CreateHumanService:
                     type="card",
                     source="chats",
                     config={"operation": "AVG", "type_result": "executions"},
-                    dash=dashboard_atendimento_humano,
+                    dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [9, 12]},
                 )
                 Widget.objects.create(
@@ -68,7 +68,7 @@ class CreateHumanService:
                     type="card",
                     source="chats",
                     config={"operation": "count", "type_result": "executions"},
-                    dash=dashboard_atendimento_humano,
+                    dashboard=dashboard_atendimento_humano,
                     position={"rows": [3, 3], "columns": [1, 4]},
                 )
                 aguardando_atendimento = Widget.objects.create(
@@ -76,7 +76,7 @@ class CreateHumanService:
                     type="card",
                     source="chats",
                     config={"operation": "count", "type_result": "executions"},
-                    dash=dashboard_atendimento_humano,
+                    dashboard=dashboard_atendimento_humano,
                     position={"rows": [3, 3], "columns": [5, 8]},
                 )
                 Widget.objects.create(
@@ -84,7 +84,7 @@ class CreateHumanService:
                     type="card",
                     source="chats",
                     config={"operation": "count", "type_result": "executions"},
-                    dash=dashboard_atendimento_humano,
+                    dashboard=dashboard_atendimento_humano,
                     position={"rows": [3, 3], "columns": [9, 12]},
                 )
                 Widget.objects.create(
@@ -123,7 +123,7 @@ class CreateHumanService:
                             "name_overwrite": "Agentes online",
                         }
                     },
-                    dash=dashboard_atendimento_humano,
+                    dashboard=dashboard_atendimento_humano,
                     position={"rows": [1, 3], "columns": [13, 18]},
                 )
 
@@ -197,7 +197,7 @@ class CreateFlowResults:
                     type="card",
                     source="",
                     config={},
-                    dash=dashboard_resultado_de_fluxo,
+                    dashboard=dashboard_resultado_de_fluxo,
                     position={"rows": [1, 1], "columns": [1, 4]},
                 )
                 Widget.objects.create(
@@ -205,7 +205,7 @@ class CreateFlowResults:
                     type="card",
                     source="",
                     config={},
-                    dash=dashboard_resultado_de_fluxo,
+                    dashboard=dashboard_resultado_de_fluxo,
                     position={"rows": [2, 2], "columns": [1, 4]},
                 )
                 Widget.objects.create(
@@ -213,7 +213,7 @@ class CreateFlowResults:
                     type="card",
                     source="",
                     config={},
-                    dash=dashboard_resultado_de_fluxo,
+                    dashboard=dashboard_resultado_de_fluxo,
                     position={"rows": [3, 3], "columns": [1, 4]},
                 )
                 Widget.objects.create(
@@ -221,7 +221,7 @@ class CreateFlowResults:
                     type="card",
                     source="",
                     config={},
-                    dash=dashboard_resultado_de_fluxo,
+                    dashboard=dashboard_resultado_de_fluxo,
                     position={"rows": [1, 1], "columns": [5, 8]},
                 )
                 Widget.objects.create(
@@ -229,7 +229,7 @@ class CreateFlowResults:
                     type="card",
                     source="",
                     config={},
-                    dash=dashboard_resultado_de_fluxo,
+                    dashboard=dashboard_resultado_de_fluxo,
                     position={"rows": [2, 2], "columns": [5, 8]},
                 )
                 Widget.objects.create(
@@ -237,7 +237,7 @@ class CreateFlowResults:
                     type="card",
                     source="",
                     config={},
-                    dash=dashboard_resultado_de_fluxo,
+                    dashboard=dashboard_resultado_de_fluxo,
                     position={"rows": [3, 3], "columns": [5, 8]},
                 )
                 Widget.objects.create(
@@ -245,7 +245,7 @@ class CreateFlowResults:
                     type="graph_funnel",
                     source="",
                     config={},
-                    dash=dashboard_resultado_de_fluxo,
+                    dashboard=dashboard_resultado_de_fluxo,
                     position={"rows": [1, 3], "columns": [9, 12]},
                 )
         except Exception as exception:
