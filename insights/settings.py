@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Local apps
     "insights.event_driven",
     "insights.shared",
     "insights.dashboards",
@@ -54,7 +55,10 @@ INSTALLED_APPS = [
     "insights.sources",
     "insights.users",
     "insights.widgets",
+    # 3rd party apps
     "rest_framework",
+    "rest_framework.authtoken",
+    "drf_spectacular",
 ]
 
 if ADMIN_ENABLED is True:
@@ -95,11 +99,6 @@ WSGI_APPLICATION = "insights.wsgi.application"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {"default": env.db(var="DEFAULT_DATABASE", default="sqlite:///db.sqlite3")}
-
-REST_FRAMEWORK = {
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -148,15 +147,20 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+        "rest_framework.authentication.TokenAuthentication"
     ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination." + "LimitOffsetPagination",
+    "PAGE_SIZE": env.int("REST_PAGINATION_SIZE", default=20),
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-
-REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
-    ],
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Insights Engine",
+    "DESCRIPTION": "Insights REST API",
+    "VERSION": "0.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # OTHER SETTINGS
 }
 
 # Logging
