@@ -5,4 +5,4 @@ from .consumers import ProjectAuthConsumer, ProjectConsumer
 
 def handle_consumers(channel: Channel) -> None:
     channel.basic_consume("insights.projects", callback=ProjectConsumer().handle)
-    channel.basic_consume("chats.permissions", callback=ProjectAuthConsumer().handle)
+    channel.basic_consume("insights.permissions", callback=ProjectAuthConsumer().handle)

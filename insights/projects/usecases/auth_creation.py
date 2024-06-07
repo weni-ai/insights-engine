@@ -18,7 +18,7 @@ class ProjectAuthDTO:
 class ProjectAuthCreationUseCase:
     def role_mapping(self, role: int):
         # theres only two role atm, 0 and 1
-        return int(role > 0)
+        return 1 if role == 3 else 0
 
     def get_project(self, project: str):
         # use project use case for retrieving by UUID

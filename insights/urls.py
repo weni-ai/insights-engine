@@ -17,6 +17,11 @@ Including another URLconf
 
 from django.conf import settings
 from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 from rest_framework.routers import DefaultRouter
 
 from insights.dashboards.viewsets import DashboardViewSet
@@ -24,17 +29,25 @@ from insights.widgets.viewsets import WidgetListUpdateViewSet
 
 urlpatterns = []
 
+
+router = DefaultRouter()
+router.register(r"widgets", WidgetListUpdateViewSet, basename="widget")
+router.register(r"dashboards", DashboardViewSet, basename="dashboard")
+
+urlpatterns += [
+    path("", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    path(
+        "swagger/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path("schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("v1/", include(router.urls)),
+]
+
 if settings.ADMIN_ENABLED is True:
     from django.contrib import admin
 
     urlpatterns += [
         path("admin/", admin.site.urls),
     ]
-
-router = DefaultRouter()
-router.register(r"widgets", WidgetListUpdateViewSet, basename="widget")
-router.register(r"dashboards", DashboardViewSet, basename="dashboard")
-
-urlpatterns = [
-    path("", include(router.urls)),
-]

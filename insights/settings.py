@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 import environ
@@ -36,16 +37,17 @@ AUTH_USER_MODEL = "users.User"
 
 ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=True)
 
-INSIGHTS_DOMAIN = env.str(("INSIGHTS_DOMAIN"))
+INSIGHTS_DOMAIN = env.str("INSIGHTS_DOMAIN")
+
 # Application definition
 
 INSTALLED_APPS = [
     "django.contrib.auth",
-    "mozilla_django_oidc",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Local apps
     "insights.event_driven",
     "insights.shared",
     "insights.dashboards",
@@ -53,7 +55,11 @@ INSTALLED_APPS = [
     "insights.sources",
     "insights.users",
     "insights.widgets",
+    # 3rd party apps
+    "django_filters",
     "rest_framework",
+    "rest_framework.authtoken",
+    "drf_spectacular",
 ]
 
 if ADMIN_ENABLED is True:
@@ -95,11 +101,6 @@ WSGI_APPLICATION = "insights.wsgi.application"
 
 DATABASES = {"default": env.db(var="DEFAULT_DATABASE", default="sqlite:///db.sqlite3")}
 
-REST_FRAMEWORK = {
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,
-}
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
@@ -136,30 +137,90 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# OIDC
-
-OIDC_RP_SERVER_URL = env.str("OIDC_RP_SERVER_URL")
-OIDC_RP_REALM_NAME = env.str("OIDC_RP_REALM_NAME")
-OIDC_OP_JWKS_ENDPOINT = env.str("OIDC_OP_JWKS_ENDPOINT")
-OIDC_RP_CLIENT_ID = env.str("OIDC_RP_CLIENT_ID")
-OIDC_RP_CLIENT_SECRET = env.str("OIDC_RP_CLIENT_SECRET")
-OIDC_OP_AUTHORIZATION_ENDPOINT = env.str("OIDC_OP_AUTHORIZATION_ENDPOINT")
-OIDC_OP_TOKEN_ENDPOINT = env.str("OIDC_OP_TOKEN_ENDPOINT")
-OIDC_OP_USER_ENDPOINT = env.str("OIDC_OP_USER_ENDPOINT")
-
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+        "rest_framework.authentication.TokenAuthentication"
     ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination." + "LimitOffsetPagination",
+    "PAGE_SIZE": env.int("REST_PAGINATION_SIZE", default=20),
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Insights Engine",
+    "DESCRIPTION": "Insights REST API",
+    "VERSION": "0.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # OTHER SETTINGS
+}
+
+# Logging
+
+LOGGING = DEFAULT_LOGGING
+LOGGING["formatters"]["verbose"] = {
+    "format": "%(levelname)s  %(asctime)s  %(module)s "
+    "%(process)d  %(thread)d  %(message)s"
+}
+LOGGING["handlers"]["console"] = {
+    "level": "DEBUG",
+    "class": "logging.StreamHandler",
+    "formatter": "verbose",
+}
+
+# mozilla-django-oidc
+
+OIDC_ENABLED = env.bool("OIDC_ENABLED", default=False)
+if OIDC_ENABLED:
+    REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"].append(
+        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+    )
+    INSTALLED_APPS = (*INSTALLED_APPS, "mozilla_django_oidc")
+    LOGGING["loggers"]["mozilla_django_oidc"] = {
+        "level": "DEBUG",
+        "handlers": ["console"],
+        "propagate": False,
+    }
+    LOGGING["loggers"]["weni_django_oidc"] = {
+        "level": "DEBUG",
+        "handlers": ["console"],
+        "propagate": False,
+    }
+
+    OIDC_RP_CLIENT_ID = env.str("OIDC_RP_CLIENT_ID")
+    OIDC_RP_CLIENT_SECRET = env.str("OIDC_RP_CLIENT_SECRET")
+    OIDC_OP_AUTHORIZATION_ENDPOINT = env.str("OIDC_OP_AUTHORIZATION_ENDPOINT")
+    OIDC_OP_TOKEN_ENDPOINT = env.str("OIDC_OP_TOKEN_ENDPOINT")
+    OIDC_OP_USER_ENDPOINT = env.str("OIDC_OP_USER_ENDPOINT")
+    OIDC_OP_USERS_DATA_ENDPOINT = env.str("OIDC_OP_USERS_DATA_ENDPOINT")
+    OIDC_OP_JWKS_ENDPOINT = env.str("OIDC_OP_JWKS_ENDPOINT")
+    OIDC_RP_SIGN_ALGO = env.str("OIDC_RP_SIGN_ALGO", default="RS256")
+    OIDC_DRF_AUTH_BACKEND = env.str(
+        "OIDC_DRF_AUTH_BACKEND",
+        default="insights.authentication.authentication.WeniOIDCAuthenticationBackend",
+    )
+
+    OIDC_RP_SCOPES = env.str("OIDC_RP_SCOPES", default="openid email")
+
+    # TODO: Set admin permission to Chats client and remove the follow variables
+    OIDC_ADMIN_CLIENT_ID = env.str("OIDC_ADMIN_CLIENT_ID")
+    OIDC_ADMIN_CLIENT_SECRET = env.str("OIDC_ADMIN_CLIENT_SECRET")
+
+OIDC_CACHE_TOKEN = env.bool(
+    "OIDC_CACHE_TOKEN", default=False
+)  # Enable/disable user token caching (default: False).
+OIDC_CACHE_TTL = env.int(
+    "OIDC_CACHE_TTL", default=600
+)  # Time-to-live for cached user tokens (default: 600 seconds).
 
 # Logging
 

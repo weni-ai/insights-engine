@@ -3,8 +3,8 @@ from insights.projects.models import Project
 from .project_dto import ProjectCreationDTO
 
 from insights.dashboards.usecases.dashboard_creation import (
-    create_atendimento_humano,
-    create_resultado_de_fluxo,
+    CreateHumanService,
+    CreateFlowResults,
 )
 
 
@@ -28,6 +28,6 @@ class ProjectsUseCase:
             timezone=project_dto.timezone,
             date_format=project_dto.date_format,
         )
-        create_atendimento_humano.create_dashboard(project)
-        create_resultado_de_fluxo.create_dashboard(project)
+        CreateHumanService().create_dashboard(project)
+        CreateFlowResults().create_dashboard(project)
         return project
