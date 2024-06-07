@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "insights.users",
     "insights.widgets",
     # 3rd party apps
+    "django_filters",
     "rest_framework",
     "rest_framework.authtoken",
     "drf_spectacular",
