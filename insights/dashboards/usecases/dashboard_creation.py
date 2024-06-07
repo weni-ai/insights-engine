@@ -8,7 +8,7 @@ from insights.dashboards.usecases.exceptions import (
 )
 
 
-class create_atendimento_humano:
+class CreateHumanService:
     def create_dashboard(self, project):
         try:
             with transaction.atomic():
@@ -29,7 +29,7 @@ class create_atendimento_humano:
             with transaction.atomic():
                 pico_de_atendimento = Widget.objects.create(
                     name="Picos de atendimentos abertos",
-                    w_type="graph_column",
+                    type="graph_column",
                     source="chats",
                     config={
                         "end_time": "18:00",
@@ -41,7 +41,7 @@ class create_atendimento_humano:
                 )
                 em_andamento = Widget.objects.create(
                     name="Em andamento",
-                    w_type="card",
+                    type="card",
                     source="chats",
                     config={"operation": "count", "type_result": "executions"},
                     dash=dashboard_atendimento_humano,
@@ -49,7 +49,7 @@ class create_atendimento_humano:
                 )
                 Widget.objects.create(
                     name="Tempo de espera",
-                    w_type="card",
+                    type="card",
                     source="chats",
                     config={"operation": "AVG", "type_result": "executions"},
                     dash=dashboard_atendimento_humano,
@@ -57,7 +57,7 @@ class create_atendimento_humano:
                 )
                 encerrados = Widget.objects.create(
                     name="Encerrados",
-                    w_type="card",
+                    type="card",
                     source="chats",
                     config={"operation": "AVG", "type_result": "executions"},
                     dash=dashboard_atendimento_humano,
@@ -65,7 +65,7 @@ class create_atendimento_humano:
                 )
                 Widget.objects.create(
                     name="Tempo de resposta",
-                    w_type="card",
+                    type="card",
                     source="chats",
                     config={"operation": "count", "type_result": "executions"},
                     dash=dashboard_atendimento_humano,
@@ -73,7 +73,7 @@ class create_atendimento_humano:
                 )
                 aguardando_atendimento = Widget.objects.create(
                     name="Aguardando atendimento",
-                    w_type="card",
+                    type="card",
                     source="chats",
                     config={"operation": "count", "type_result": "executions"},
                     dash=dashboard_atendimento_humano,
@@ -81,7 +81,7 @@ class create_atendimento_humano:
                 )
                 Widget.objects.create(
                     name="Tempo de interação",
-                    w_type="card",
+                    type="card",
                     source="chats",
                     config={"operation": "count", "type_result": "executions"},
                     dash=dashboard_atendimento_humano,
@@ -89,7 +89,7 @@ class create_atendimento_humano:
                 )
                 Widget.objects.create(
                     name="Chats por agente",
-                    w_type="table_dynamic_by_filter",
+                    type="table_dynamic_by_filter",
                     source="chats",
                     config={
                         "default": {
@@ -143,28 +143,28 @@ class create_atendimento_humano:
             with transaction.atomic():
                 Report.objects.create(
                     name="Pico de chats abertos por hora",
-                    w_type="graph_column",
+                    type="graph_column",
                     source="chats",
                     config={},
                     widget=pico_de_atendimento,
                 )
                 Report.objects.create(
                     name="Em andamento",
-                    w_type="table_group",
+                    type="table_group",
                     source="chats",
                     config={},
                     widget=em_andamento,
                 )
                 Report.objects.create(
                     name="Encerrados",
-                    w_type="table_group",
+                    type="table_group",
                     source="chats",
                     config={},
                     widget=encerrados,
                 )
                 Report.objects.create(
                     name="Aguardando atendimento",
-                    w_type="table_group",
+                    type="table_group",
                     source="chats",
                     config={},
                     widget=aguardando_atendimento,
@@ -173,7 +173,7 @@ class create_atendimento_humano:
             raise InvalidReportsObject(f"Error creating dashboard: {exception}")
 
 
-class create_resultado_de_fluxo:
+class CreateFlowResults:
     def create_dashboard(self, project):
         try:
             with transaction.atomic():
@@ -194,7 +194,7 @@ class create_resultado_de_fluxo:
             with transaction.atomic():
                 Widget.objects.create(
                     name="Métrica vazia",
-                    w_type="card",
+                    type="card",
                     source="",
                     config={},
                     dash=dashboard_resultado_de_fluxo,
@@ -202,7 +202,7 @@ class create_resultado_de_fluxo:
                 )
                 Widget.objects.create(
                     name="Métrica vazia",
-                    w_type="card",
+                    type="card",
                     source="",
                     config={},
                     dash=dashboard_resultado_de_fluxo,
@@ -210,7 +210,7 @@ class create_resultado_de_fluxo:
                 )
                 Widget.objects.create(
                     name="Métrica vazia",
-                    w_type="card",
+                    type="card",
                     source="",
                     config={},
                     dash=dashboard_resultado_de_fluxo,
@@ -218,7 +218,7 @@ class create_resultado_de_fluxo:
                 )
                 Widget.objects.create(
                     name="Métrica vazia",
-                    w_type="card",
+                    type="card",
                     source="",
                     config={},
                     dash=dashboard_resultado_de_fluxo,
@@ -226,7 +226,7 @@ class create_resultado_de_fluxo:
                 )
                 Widget.objects.create(
                     name="Métrica vazia",
-                    w_type="card",
+                    type="card",
                     source="",
                     config={},
                     dash=dashboard_resultado_de_fluxo,
@@ -234,7 +234,7 @@ class create_resultado_de_fluxo:
                 )
                 Widget.objects.create(
                     name="Métrica vazia",
-                    w_type="card",
+                    type="card",
                     source="",
                     config={},
                     dash=dashboard_resultado_de_fluxo,
@@ -242,7 +242,7 @@ class create_resultado_de_fluxo:
                 )
                 Widget.objects.create(
                     name="Métrica vazia",
-                    w_type="graph_funnel",
+                    type="graph_funnel",
                     source="",
                     config={},
                     dash=dashboard_resultado_de_fluxo,
