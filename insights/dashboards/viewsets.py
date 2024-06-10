@@ -11,7 +11,6 @@ from .serializers import (
     DashboardIsDefaultSerializer,
     DashboardSerializer,
     DashboardWidgetsSerializer,
-    DashboardReportSerializer,
     ReportSerializer,
 )
 from .usecases import dashboard_filters
@@ -27,7 +26,9 @@ class DashboardViewSet(
     def get_queryset(self):
         project_id = self.request.query_params.get("project", None)
         if project_id is not None:
-            return Dashboard.objects.filter(project_id=project_id)
+            return Dashboard.objects.filter(project_id=project_id).order_by(
+                "created_on"
+            )
         return Dashboard.objects.none()
 
     @action(detail=True, methods=["patch"])
@@ -46,7 +47,7 @@ class DashboardViewSet(
     def list_widgets(self, request, pk=None):
         dashboard = self.get_object()
 
-        widgets = Widget.objects.filter(dashboard=dashboard)
+        widgets = Widget.objects.filter(dashboard=dashboard).order_by("created_on")
 
         paginator = DefaultPagination()
         result_page = paginator.paginate_queryset(widgets, request)
