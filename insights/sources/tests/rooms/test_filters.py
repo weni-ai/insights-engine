@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from insights.sources.rooms.filters import BasicFilterStrategy
+from insights.sources.filters import BasicFilterStrategy
 
 
 @pytest.fixture
