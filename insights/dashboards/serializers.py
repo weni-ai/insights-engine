@@ -22,9 +22,17 @@ class DashboardReportSerializer(serializers.ModelSerializer):
     type = serializers.SerializerMethodField()
 
     def get_url(self, obj):
-        if obj.config.get("external_url"):
-            return obj.config["external_url"]
-        return f"{settings.INSIGHTS_DOMAIN}/v1/dashboards/{obj.widget.dashboard.uuid}/widgets/{obj.widget.uuid}/report/"
+        config = obj.config
+
+        if isinstance(config, dict):
+            if config.get("external_url"):
+                return config["external_url"]
+            return f"{settings.INSIGHTS_DOMAIN}/v1/dashboards/{obj.widget.dashboard.uuid}/widgets/{obj.widget.uuid}/report/"
+        elif isinstance(config, list):
+            for item in config:
+                if isinstance(item, dict) and item.get("external_url"):
+                    return item["external_url"]
+            return f"{settings.INSIGHTS_DOMAIN}/v1/dashboards/{obj.widget.dashboard.uuid}/widgets/{obj.widget.uuid}/report/"
 
     def get_type(self, obj):
         if obj.config.get("external_url"):
