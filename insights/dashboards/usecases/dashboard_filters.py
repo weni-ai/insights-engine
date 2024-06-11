@@ -4,19 +4,23 @@ from insights.dashboards.models import Dashboard
 def get_dash_filters(dash: Dashboard):
     if dash.name == "Atendimento humano":
         data = {
-            "tags": {
-                "type": "select",
-                "label": "Tags",
-                "source": "chats_tags",
-                "depends_on": {"filter": "sectors", "search_param": "sector"},
-                "placeholder": "Selecione tags",
+            "contact": {
+                "type": "input_text",
+                "label": "Pesquisa por contato",
+                "placeholder": "Nome ou URN do contato",
             },
-            "agents": {
+            "ended_at": {
+                "type": "date_range",
+                "label": "Data",
+                "end_sufix": "_before",
+                "placeholder": None,
+                "start_sufix": "_after",
+            },
+            "sectors": {
                 "type": "select",
-                "label": "Agente",
-                "source": "chats_agents",
-                "depends_on": {"filter": "sectors", "search_param": None},
-                "placeholder": "Selecione agente",
+                "label": "Setor",
+                "source": "chats_sectors",
+                "placeholder": "Selecione setor",
             },
             "queues": {
                 "type": "select",
@@ -25,23 +29,19 @@ def get_dash_filters(dash: Dashboard):
                 "depends_on": {"filter": "sectors", "search_param": "sector"},
                 "placeholder": "Selecione fila",
             },
-            "contact": {
-                "type": "input_text",
-                "label": "Pesquisa por contato",
-                "placeholder": "Nome ou URN do contato",
-            },
-            "sectors": {
+            "agents": {
                 "type": "select",
-                "label": "Setor",
-                "source": "chats_sectors",
-                "placeholder": "Selecione setor",
+                "label": "Agente",
+                "source": "chats_agents",
+                "depends_on": {"filter": "sectors", "search_param": None},
+                "placeholder": "Selecione agente",
             },
-            "ended_at": {
-                "type": "date_range",
-                "label": "Data",
-                "end_sufix": "_before",
-                "placeholder": None,
-                "start_sufix": "_after",
+            "tags": {
+                "type": "select",
+                "label": "Tags",
+                "source": "chats_tags",
+                "depends_on": {"filter": "sectors", "search_param": "sector"},
+                "placeholder": "Selecione tags",
             },
         }
         return data
