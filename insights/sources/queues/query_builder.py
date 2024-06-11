@@ -25,6 +25,6 @@ class QueueSQLQueryBuilder:
     def list(self):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT uuid,name FROM public.queues_queue AS q INNER JOIN public.sectors_sector AS s ON s.uuid == q.sector_id WHERE {self.where_clause};"
+        query = f"SELECT q.uuid,q.name FROM public.queues_queue AS q INNER JOIN public.sectors_sector AS s ON s.uuid == q.sector_id WHERE {self.where_clause};"
 
         return query, self.params

@@ -1,6 +1,6 @@
 import pytest
 
-from insights.sources.rooms.filters import BasicFilterStrategy
+from insights.sources.filters import BasicFilterStrategy
 from insights.sources.rooms.query_builder import RoomSQLQueryBuilder
 
 
