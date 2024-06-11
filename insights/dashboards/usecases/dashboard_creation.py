@@ -179,7 +179,7 @@ class CreateFlowResults:
             with transaction.atomic():
                 dashboard_resultado_de_fluxo = Dashboard.objects.create(
                     project=project,
-                    name="Resultado de fluxo",
+                    name="Resultados de fluxos",
                     description="Dashboard de resultado de fluxo",
                     is_default=False,
                     grid=[12, 3],

@@ -41,10 +41,8 @@ class Dashboard(BaseModel, ConfigurableModel):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=[
-                    "is_default",
-                ],
+                fields=["project", "is_default"],
                 condition=models.Q(is_default=True),
-                name="unique_true_default_dashboard",
+                name="unique_default_dashboard_per_project",
             )
         ]
