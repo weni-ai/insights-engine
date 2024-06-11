@@ -14,7 +14,7 @@ class CreateHumanService:
             with transaction.atomic():
                 atendimento_humano = Dashboard.objects.create(
                     project=project,
-                    name="Atendimento Humano",
+                    name="Atendimento humano",
                     description="Dashboard de atendimento humano",
                     is_default=False,
                     grid=[18, 3],

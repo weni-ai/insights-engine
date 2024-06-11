@@ -224,6 +224,9 @@ OIDC_CACHE_TTL = env.int(
     "OIDC_CACHE_TTL", default=600
 )  # Time-to-live for cached user tokens (default: 600 seconds).
 
+# CORS CONFIG
+CORS_ORIGIN_ALLOW_ALL = True
+
 
 USE_EDA = env.bool("USE_EDA", default=False)
 
