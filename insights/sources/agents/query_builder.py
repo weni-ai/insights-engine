@@ -25,6 +25,6 @@ class AgentSQLQueryBuilder:
     def list(self):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT pp.uuid as uuid, CONCAT(u.first_name, ' ', u.last_name) AS name FROM public.projects_projectpermission AS pp INNER JOIN public.projects_project AS p ON p.uuid == pp.project_id INNER JOIN public.accounts_user AS u ON u.email=pp.user_id WHERE {self.where_clause};"
+        query = f"SELECT pp.uuid, u.email, CONCAT(u.first_name, ' ', u.last_name) AS name FROM public.projects_projectpermission AS pp INNER JOIN public.projects_project AS p ON p.uuid == pp.project_id INNER JOIN public.accounts_user AS u ON u.email=pp.user_id WHERE {self.where_clause};"
 
         return query, self.params

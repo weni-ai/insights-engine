@@ -11,7 +11,7 @@ def generate_sql_query(
     builder = QueueSQLQueryBuilder()
 
     for key, value in filters.items():
-        table_alias = "r"
+        table_alias = "q"
         if "__" in key:
             field, operation = key.split("__", 1)
         else:
