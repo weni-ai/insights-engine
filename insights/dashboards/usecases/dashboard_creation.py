@@ -16,7 +16,7 @@ class CreateHumanService:
                     project=project,
                     name="Atendimento humano",
                     description="Dashboard de atendimento humano",
-                    is_default=False,
+                    is_default=True,
                     grid=[18, 3],
                 )
                 self.create_widgets(atendimento_humano)

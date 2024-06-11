@@ -35,8 +35,16 @@ class DashboardReportSerializer(serializers.ModelSerializer):
             return f"{settings.INSIGHTS_DOMAIN}/v1/dashboards/{obj.widget.dashboard.uuid}/widgets/{obj.widget.uuid}/report/"
 
     def get_type(self, obj):
-        if obj.config.get("external_url"):
+        config = obj.config
+
+        if isinstance(config, dict) and config.get("external_url"):
             return "external"
+
+        elif isinstance(config, list):
+            for item in config:
+                if isinstance(item, dict) and item.get("external_url"):
+                    return "external"
+
         return "internal"
 
     class Meta:
