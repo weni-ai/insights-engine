@@ -3,13 +3,12 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from insights.authentication.permissions import ProjectAuthPermission
 from insights.projects.parsers import parse_dict_to_json
-
-# from insights.authentication.permissions import ProjectAuthPermission
 
 
 class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    # permission_classes = [ProjectAuthPermission]
+    permission_classes = [ProjectAuthPermission]
 
     def get_source(self, slug: str):
         try:
@@ -33,6 +32,11 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             )
         filters = request.data or request.query_params or {}
         action = filters.pop("action", "list")
+
+        tags = filters.pop("tags", None)
+        if tags:
+            filters["tags"] = tags.split(",")
+
         serialized_source = SourceQuery.execute(
             filters=filters,
             action=action,

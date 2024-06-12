@@ -12,24 +12,24 @@ def get_dash_filters(dash: Dashboard):
             "ended_at": {
                 "type": "date_range",
                 "label": "Data",
-                "end_sufix": "_before",
+                "end_sufix": "__lte",
                 "placeholder": None,
-                "start_sufix": "_after",
+                "start_sufix": "__gte",
             },
-            "sectors": {
+            "sector": {
                 "type": "select",
                 "label": "Setor",
                 "source": "chats_sectors",
                 "placeholder": "Selecione setor",
             },
-            "queues": {
+            "queue": {
                 "type": "select",
                 "label": "Fila",
                 "source": "chats_queues",
                 "depends_on": {"filter": "sectors", "search_param": "sector"},
                 "placeholder": "Selecione fila",
             },
-            "agents": {
+            "agent": {
                 "type": "select",
                 "label": "Agente",
                 "source": "chats_agents",
@@ -49,9 +49,10 @@ def get_dash_filters(dash: Dashboard):
         data = {
             "ended_at": {
                 "type": "date_range",
-                "end_sufix": "_before",
+                "label": "Data",
+                "end_sufix": "__lte",
                 "placeholder": None,
-                "start_sufix": "_after",
-            }
+                "start_sufix": "__gte",
+            },
         }
         return data
