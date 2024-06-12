@@ -6,6 +6,9 @@ class RoomSQLQueryBuilder:
         self.is_valid = False
 
     def add_filter(self, strategy, field, operation, value, table_alias: str = "r"):
+        if field == "contact":
+            field = {"name": "ctt", "external_id": "ctt", "urn": "r"}
+            operation = "or"
         clause, params = strategy.apply(field, operation, value, table_alias)
 
         self.where_clauses.append(clause)

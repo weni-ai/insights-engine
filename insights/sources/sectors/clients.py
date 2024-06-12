@@ -11,9 +11,12 @@ def generate_sql_query(
     builder = SectorSQLQueryBuilder()
 
     for key, value in filters.items():
-        table_alias = "r"
+        table_alias = "s"
         if "__" in key:
             field, operation = key.split("__", 1)
+        elif type(value) is list:
+            field = key.split("__", 1)[0]
+            operation = "in"
         else:
             field, operation = key, "eq"
         builder.add_filter(strategy, field, operation, value, table_alias)

@@ -1,5 +1,5 @@
 from insights.sources.filters import BasicFilterStrategy
-from insights.sources.queues.query_builder import QueueSQLQueryBuilder
+from insights.sources.tags.query_builder import TagSQLQueryBuilder
 
 
 def generate_sql_query(
@@ -8,12 +8,15 @@ def generate_sql_query(
     query_kwargs: dict = {},
 ):
     strategy = BasicFilterStrategy()
-    builder = QueueSQLQueryBuilder()
+    builder = TagSQLQueryBuilder()
 
     for key, value in filters.items():
-        table_alias = "r"
+        table_alias = "tg"
         if "__" in key:
             field, operation = key.split("__", 1)
+        elif type(value) is list:
+            field = key.split("__", 1)[0]
+            operation = "in"
         else:
             field, operation = key, "eq"
         builder.add_filter(strategy, field, operation, value, table_alias)

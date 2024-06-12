@@ -12,7 +12,7 @@ class SectorSQLQueryBuilder:
         self.params = []
         self.is_valid = False
 
-    def add_filter(self, strategy, field, operation, value, table_alias: str = "r"):
+    def add_filter(self, strategy, field, operation, value, table_alias: str = "s"):
         clause, params = strategy.apply(field, operation, value, table_alias)
 
         self.where_clauses.append(clause)
@@ -25,8 +25,6 @@ class SectorSQLQueryBuilder:
     def list(self):
         if not self.is_valid:
             self.build_query()
-        query = (
-            f"SELECT uuid,name FROM public.sectors_sector WHERE {self.where_clause};"
-        )
+        query = f"SELECT s.uuid,s.name FROM public.sectors_sector AS s WHERE {self.where_clause};"
 
         return query, self.params
