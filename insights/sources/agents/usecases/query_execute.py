@@ -37,3 +37,4 @@ class QueryExecutor:
             "previous": query_results.get("previous").split("?")[1],
             "results": query_results.get("results"),
         }
+        return parser(paginated_results)

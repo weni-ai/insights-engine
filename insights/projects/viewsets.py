@@ -25,6 +25,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     )
     def retrieve_source_data(self, request, source_slug=None, *args, **kwargs):
         SourceQuery = self.get_source(slug=source_slug)
+        query_kwargs = {}
         if SourceQuery is None:
             return Response(
                 {"detail": f"could not find a source with the slug {source_slug}"},
@@ -36,6 +37,9 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         tags = filters.pop("tags", None)
         if tags:
             filters["tags"] = tags.split(",")
+        field_name = filters.pop("field_name", None)
+        if field_name:
+            query_kwargs["field_name"] = field_name
 
         serialized_source = SourceQuery.execute(
             filters=filters,
@@ -44,5 +48,6 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             project=self.get_object(),
             user_email=self.request.user.email,
             return_format="select_input",
+            query_kwargs=query_kwargs,
         )
         return Response(serialized_source, status.HTTP_200_OK)

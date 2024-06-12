@@ -246,3 +246,5 @@ if USE_EDA:
 
     FLOWS_TICKETER_EXCHANGE = env("FLOWS_TICKETER_EXCHANGE", default="sectors.topic")
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
+
+CHATS_URL = env("CHATS_URL")
