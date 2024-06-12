@@ -1,3 +1,7 @@
+import requests
+from django.conf import settings
+
+from insights.internals.base import InternalAuthentication
 from insights.sources.filters import BasicFilterStrategy
 from insights.sources.rooms.query_builder import RoomSQLQueryBuilder
 
@@ -57,3 +61,17 @@ def generate_sql_query(
     builder.build_query()
 
     return getattr(builder, query_type)(**query_kwargs)
+
+
+class RoomRESTClient(InternalAuthentication):
+    def __init__(self, project) -> None:
+        self.project = project
+        self.url = f"{settings.CHATS_URL}/v1/internal/rooms/"
+
+    def list(self, query_filters: dict):
+        query_filters["project"] = str(self.project.uuid)
+
+        response = requests.get(
+            url=self.url, headers=self.headers, params=query_filters
+        )
+        return response.json()

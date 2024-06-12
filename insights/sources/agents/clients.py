@@ -1,17 +1,15 @@
 import requests
 from django.conf import settings
 
+from insights.internals.base import InternalAuthentication
 from insights.sources.agents.query_builder import AgentSQLQueryBuilder
 from insights.sources.filters import BasicFilterStrategy
 
 
-class AgentsRESTClient:
+class AgentsRESTClient(InternalAuthentication):
     def __init__(self, project) -> None:
         self.project = project
         self.url = f"{settings.CHATS_URL}/v1/internal/dashboard/{self.project}/agent/"
-
-    def headers(self, internal_token):
-        return {"Authorization": f"Bearer {internal_token}"}
 
     def list(self, query_filters: dict):
         if query_filters.get("created_on__gte", None):
