@@ -18,17 +18,19 @@ class QueryExecutor:
     ):
         if return_format == "select_input" or action != "list":
             filters["project_id"] = str(project.uuid)
-            filters["user_request"] = user_email
             query, params = generate_sql_query(filters=filters, query_type=action)
             with get_cursor(db_name="chats") as cur:
-                query_results = dictfetchall(cur.execute(query, params).fetchall())
+                query_exec = cur.execute(query, params)
+                query_results = dictfetchall(query_exec)
             paginated_results = {
                 "next": None,
                 "previous": None,
                 "results": query_results,
             }
             return parser(paginated_results)
+
         client = AgentsRESTClient(project=project)
+        filters["user_request"] = user_email
         query_results = client.list(filters)
         paginated_results = {
             "next": query_results.get("next").split("?")[1],
