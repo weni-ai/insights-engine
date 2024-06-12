@@ -19,6 +19,5 @@ def pg_execute_query(db_name: str, query: str, *args, **kwargs):
 
 @contextmanager
 def get_cursor(db_name: str):
-    with connections[db_name] as conn:
-        with conn.cursor() as cur:
-            yield cur
+    with connections[db_name].cursor() as cur:
+        yield cur
