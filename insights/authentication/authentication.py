@@ -1,5 +1,4 @@
 import logging
-import re
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
