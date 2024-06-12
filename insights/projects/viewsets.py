@@ -38,6 +38,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             action=action,
             parser=parse_dict_to_json,
             project=self.get_object(),
+            user_email=self.request.user.email,
             return_format="select_input",
         )
         return Response(serialized_source, status.HTTP_200_OK)

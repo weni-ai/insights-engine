@@ -20,11 +20,13 @@ class QueryExecutor:
         parser: callable,
         return_format: str = None,
         project: object = None,
+        user_email: str = None,
         *args,
         **kwargs
     ):
         if return_format == "select_input" or action != "list":
             filters["project_id"] = str(project.uuid)
+            filters["user_request"] = user_email
             query, params = generate_sql_query(filters=filters, query_type=action)
             with get_cursor(db_name="chats") as cur:
                 query_results = cur.execute(query, params).fetchall()
