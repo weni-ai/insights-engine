@@ -1,8 +1,8 @@
 class BasicFilterStrategy:
     def apply(self, field, operation, value, table_alias):
-        if operation == "after":
+        if operation == "after" or operation == "gte":
             return f"{table_alias}.{field} > (%s)", [value]
-        elif operation == "before":
+        elif operation == "before" or operation == "lte":
             return f"{table_alias}.{field} < (%s)", [value]
         elif operation == "eq":
             return f"{table_alias}.{field} = (%s)", [value]
