@@ -9,7 +9,8 @@ def dictfetchall(cursor):
     Assume the column names are unique.
     """
     columns = [col[0] for col in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    return results if len(results) > 1 else results[0]
 
 
 def pg_execute_query(db_name: str, query: str, *args, **kwargs):

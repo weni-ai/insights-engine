@@ -27,7 +27,7 @@ class RoomSQLQueryBuilder:
     ):
         if not self.is_valid:
             self.build_query()
-        query = f"WITH hourly_data AS (SELECT EXTRACT(HOUR FROM r.{time_field}) AS hour, COUNT(*) AS rooms_count FROM public.rooms_room as r {self.join_clause} WHERE {self.where_clause} GROUP BY hour) SELECT hours.hour, COALESCE(hourly_data.rooms_count, 0) AS rooms_created FROM generate_series(0, 23) AS hours(hour) LEFT JOIN hourly_data ON hours.hour = hourly_data.hour ORDER BY rooms_created DESC FETCH FIRST {limit} ROWS ONLY;"
+        query = f"WITH hourly_data AS (SELECT EXTRACT(HOUR FROM r.{time_field}) AS hour, COUNT(*) AS rooms_count FROM public.rooms_room as r {self.join_clause} WHERE {self.where_clause} GROUP BY hour) SELECT hours.hour as label, COALESCE(hourly_data.rooms_count, 0) AS value FROM generate_series(0, 23) AS hours(hour) LEFT JOIN hourly_data ON label = hourly_data.hour ORDER BY value DESC FETCH FIRST {limit} ROWS ONLY;"
 
         return query, self.params
 
