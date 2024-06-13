@@ -31,7 +31,7 @@ class CreateHumanService:
                 pico_de_atendimento = Widget.objects.create(
                     name="Picos de atendimentos abertos",
                     type="graph_column",
-                    source="chats",
+                    source="rooms",
                     config={
                         "limit": 12,
                         "operation": "timeseries_hour_group_count",
@@ -42,7 +42,7 @@ class CreateHumanService:
                 em_andamento = Widget.objects.create(
                     name="Em andamento",
                     type="card",
-                    source="chats",
+                    source="rooms",
                     config={
                         "operation": "count",
                         "type_result": "executions",
@@ -54,7 +54,7 @@ class CreateHumanService:
                 Widget.objects.create(
                     name="Tempo de espera",
                     type="card",
-                    source="chats",
+                    source="rooms",
                     config={
                         "operation": "avg",
                         "type_result": "executions",
@@ -66,7 +66,7 @@ class CreateHumanService:
                 encerrados = Widget.objects.create(
                     name="Encerrados",
                     type="card",
-                    source="chats",
+                    source="rooms",
                     config={
                         "operation": "count",
                         "type_result": "executions",
@@ -78,7 +78,7 @@ class CreateHumanService:
                 Widget.objects.create(
                     name="Tempo de resposta",
                     type="card",
-                    source="chats",
+                    source="rooms",
                     config={
                         "operation": "avg",
                         "type_result": "executions",
@@ -90,7 +90,7 @@ class CreateHumanService:
                 aguardando_atendimento = Widget.objects.create(
                     name="Aguardando atendimento",
                     type="card",
-                    source="chats",
+                    source="rooms",
                     config={
                         "operation": "count",
                         "type_result": "executions",
@@ -105,7 +105,7 @@ class CreateHumanService:
                 Widget.objects.create(
                     name="Tempo de interação",
                     type="card",
-                    source="chats",
+                    source="rooms",
                     config={
                         "operation": "avg",
                         "type_result": "executions",
@@ -117,7 +117,7 @@ class CreateHumanService:
                 Widget.objects.create(
                     name="Chats por agente",
                     type="table_dynamic_by_filter",
-                    source="chats",
+                    source="rooms",
                     config={
                         "default": {
                             "icon": "forum:weni-600",
