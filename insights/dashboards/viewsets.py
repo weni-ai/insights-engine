@@ -28,7 +28,7 @@ class DashboardViewSet(
         if project_id is not None:
             return (
                 Dashboard.objects.filter(project_id=project_id)
-                .exclude(title="Resultados de fluxos")
+                .exclude(name="Resultados de fluxos")
                 .order_by("created_on")
             )
         return Dashboard.objects.none()
