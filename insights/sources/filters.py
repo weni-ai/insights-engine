@@ -12,10 +12,8 @@ class BasicFilterStrategy:
         elif operation == "icontains":
             return f"{table_alias}.{field} ILIKE (%s)", [f"%{value}%"]
         elif operation == "isnull":
-            placeholder = "IS (%s) NULL" if value is True else "IS NULL"
-            return f"{table_alias}.{field} {placeholder}", [
-                "NOT" if value is True else None
-            ]
+            placeholder = "IS NOT NULL" if value is True else "IS NULL"
+            return f"{table_alias}.{field} {placeholder}", None
         elif operation == "or":
             if type(field) is not dict:
                 raise ValueError(
