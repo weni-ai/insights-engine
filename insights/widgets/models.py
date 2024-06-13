@@ -28,7 +28,7 @@ class Widget(BaseWidget):
 
     @property
     def project(self):
-        self.dashboard.project
+        return self.dashboard.project
 
     def __str__(self):
         return self.name
@@ -51,7 +51,7 @@ class Report(BaseWidget):
 
     @property
     def project(self):
-        self.widget.project
+        return self.widget.project
 
     def __str__(self):
         return self.name
