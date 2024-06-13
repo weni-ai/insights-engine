@@ -1,11 +1,12 @@
-from insights.dashboards.models import Dashboard
-from insights.widgets.models import Widget, Report
 from django.db import transaction
+
+from insights.dashboards.models import Dashboard
 from insights.dashboards.usecases.exceptions import (
     InvalidDashboardObject,
-    InvalidWidgetsObject,
     InvalidReportsObject,
+    InvalidWidgetsObject,
 )
+from insights.widgets.models import Report, Widget
 
 
 class CreateHumanService:
@@ -32,8 +33,8 @@ class CreateHumanService:
                     type="graph_column",
                     source="chats",
                     config={
+                        "limit": 12,
                         "operation": "timeseries_hour_group_count",
-                        "limit_first_results": 12,
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [1, 1], "columns": [1, 12]},
@@ -42,7 +43,11 @@ class CreateHumanService:
                     name="Em andamento",
                     type="card",
                     source="chats",
-                    config={"operation": "count", "type_result": "executions"},
+                    config={
+                        "operation": "count",
+                        "type_result": "executions",
+                        "filter": {"is_active": True, "attending": True},
+                    },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [1, 4]},
                 )
@@ -50,7 +55,11 @@ class CreateHumanService:
                     name="Tempo de espera",
                     type="card",
                     source="chats",
-                    config={"operation": "avg", "type_result": "executions"},
+                    config={
+                        "operation": "avg",
+                        "type_result": "executions",
+                        "op_field": "waiting_time",
+                    },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [5, 8]},
                 )
@@ -58,7 +67,11 @@ class CreateHumanService:
                     name="Encerrados",
                     type="card",
                     source="chats",
-                    config={"operation": "avg", "type_result": "executions"},
+                    config={
+                        "operation": "count",
+                        "type_result": "executions",
+                        "filter": {"is_active": False},
+                    },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [9, 12]},
                 )
@@ -66,7 +79,11 @@ class CreateHumanService:
                     name="Tempo de resposta",
                     type="card",
                     source="chats",
-                    config={"operation": "count", "type_result": "executions"},
+                    config={
+                        "operation": "avg",
+                        "type_result": "executions",
+                        "op_field": "response_time",
+                    },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [3, 3], "columns": [1, 4]},
                 )
@@ -74,7 +91,14 @@ class CreateHumanService:
                     name="Aguardando atendimento",
                     type="card",
                     source="chats",
-                    config={"operation": "count", "type_result": "executions"},
+                    config={
+                        "operation": "count",
+                        "type_result": "executions",
+                        "filter": {
+                            "is_active": True,
+                            "attending": False,
+                        },
+                    },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [3, 3], "columns": [5, 8]},
                 )
@@ -82,7 +106,11 @@ class CreateHumanService:
                     name="Tempo de interação",
                     type="card",
                     source="chats",
-                    config={"operation": "count", "type_result": "executions"},
+                    config={
+                        "operation": "avg",
+                        "type_result": "executions",
+                        "op_field": "interaction_time",
+                    },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [3, 3], "columns": [9, 12]},
                 )
@@ -128,16 +156,165 @@ class CreateHumanService:
 
                 self.create_reports(
                     pico_de_atendimento,
+                    aguardando_atendimento,
                     em_andamento,
                     encerrados,
-                    aguardando_atendimento,
                 )
         except Exception as exception:
             raise InvalidWidgetsObject(f"Error creating widgets: {exception}")
 
     def create_reports(
-        self, pico_de_atendimento, em_andamento, encerrados, aguardando_atendimento
+        self,
+        pico_de_atendimento,
+        aguardando_atendimento,
+        em_andamento,
+        encerrados,
     ):
+        table_group_report = {
+            "name": "Em andamento",
+            "type": "table_group",
+            "source": "rooms",
+            "config": {
+                "waiting": {
+                    "name": "Aguardando",
+                    "fields": [
+                        {
+                            "name": "Contato",
+                            "value": "contact",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "URN",
+                            "value": "urn",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Horário do início",
+                            "value": "start_time",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Setor",
+                            "value": "sector",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Fila",
+                            "value": "queue",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                    ],
+                    "filter": {
+                        "is_active": True,
+                        "attending": False,
+                    },
+                    "is_default": False,
+                },
+                "in_progress": {
+                    "name": "Em andamento",
+                    "fields": [
+                        {
+                            "name": "Contato",
+                            "value": "contact",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "URN",
+                            "value": "urn",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "agente",
+                            "value": "agent",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Horário do início",
+                            "value": "start_time",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Setor",
+                            "value": "sector",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Fila",
+                            "value": "queue",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                    ],
+                    "filter": {"is_active": True, "attending": True},
+                    "is_default": False,
+                },
+                "closed": {
+                    "name": "Encerrados",
+                    "fields": [
+                        {
+                            "name": "Contato",
+                            "value": "contact",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "URN",
+                            "value": "urn",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "agente",
+                            "value": "agent",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Horário do início",
+                            "value": "created_on",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Horário de fim",
+                            "value": "ended_at",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Setor",
+                            "value": "sector",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Fila",
+                            "value": "queue",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                        {
+                            "name": "Tag",
+                            "value": "tag",
+                            "display": True,
+                            "hidden_name": False,
+                        },
+                    ],
+                    "filter": {"is_active": False},
+                    "is_default": False,
+                },
+            },
+        }
         try:
             with transaction.atomic():
                 Report.objects.create(
@@ -146,376 +323,24 @@ class CreateHumanService:
                     source="rooms",
                     config={
                         "operation": "timeseries_hour_group_count",
-                        "limit_first_results": 12,
                     },
                     widget=pico_de_atendimento,
                 )
-                Report.objects.create(
-                    name="Em andamento",
-                    type="table_group",
-                    source="rooms",
-                    config=[
-                        {
-                            "name": "Aguardando",
-                            "slug": "waiting",
-                            "fields": [
-                                {
-                                    "name": "Contato",
-                                    "value": "contact",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "URN",
-                                    "value": "urn",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Horário do início",
-                                    "value": "start_time",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Setor",
-                                    "value": "sector",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Fila",
-                                    "value": "queue",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                            ],
-                            "filter": None,
-                            "is_default": False,
-                        },
-                        {
-                            "name": "Em andamento",
-                            "slug": "in_progress",
-                            "fields": [
-                                {
-                                    "name": "Contato",
-                                    "value": "contact",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "URN",
-                                    "value": "urn",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Horário do início",
-                                    "value": "start_time",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Setor",
-                                    "value": "sector",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Fila",
-                                    "value": "queue",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                            ],
-                            "filter": None,
-                            "is_default": True,
-                        },
-                        {
-                            "name": "Encerrados",
-                            "slug": "closed",
-                            "fields": [
-                                {
-                                    "name": "Contato",
-                                    "value": "contact",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "URN",
-                                    "value": "urn",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Horário do início",
-                                    "value": "start_time",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Setor",
-                                    "value": "sector",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Fila",
-                                    "value": "queue",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                            ],
-                            "filter": None,
-                            "is_default": False,
-                        },
-                    ],
-                    widget=em_andamento,
-                )
-                Report.objects.create(
-                    name="Encerrados",
-                    type="table_group",
-                    source="rooms",
-                    config=[
-                        {
-                            "name": "Aguardando",
-                            "slug": "waiting",
-                            "fields": [
-                                {
-                                    "name": "Contato",
-                                    "value": "contact",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "URN",
-                                    "value": "urn",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Horário do início",
-                                    "value": "start_time",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Setor",
-                                    "value": "sector",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Fila",
-                                    "value": "queue",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                            ],
-                            "filter": None,
-                            "is_default": False,
-                        },
-                        {
-                            "name": "Em andamento",
-                            "slug": "in_progress",
-                            "fields": [
-                                {
-                                    "name": "Contato",
-                                    "value": "contact",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "URN",
-                                    "value": "urn",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Horário do início",
-                                    "value": "start_time",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Setor",
-                                    "value": "sector",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Fila",
-                                    "value": "queue",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                            ],
-                            "filter": None,
-                            "is_default": False,
-                        },
-                        {
-                            "name": "Encerrados",
-                            "slug": "closed",
-                            "fields": [
-                                {
-                                    "name": "Contato",
-                                    "value": "contact",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "URN",
-                                    "value": "urn",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Horário do início",
-                                    "value": "start_time",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Setor",
-                                    "value": "sector",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Fila",
-                                    "value": "queue",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                            ],
-                            "filter": None,
-                            "is_default": True,
-                        },
-                    ],
-                    widget=encerrados,
-                )
-                Report.objects.create(
-                    name="Aguardando atendimento",
-                    type="table_group",
-                    source="chats",
-                    config=[
-                        {
-                            "name": "Aguardando",
-                            "slug": "waiting",
-                            "fields": [
-                                {
-                                    "name": "Contato",
-                                    "value": "contact",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "URN",
-                                    "value": "urn",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Horário do início",
-                                    "value": "start_time",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Setor",
-                                    "value": "sector",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Fila",
-                                    "value": "queue",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                            ],
-                            "filter": None,
-                            "is_default": True,
-                        },
-                        {
-                            "name": "Em andamento",
-                            "slug": "in_progress",
-                            "fields": [
-                                {
-                                    "name": "Contato",
-                                    "value": "contact",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "URN",
-                                    "value": "urn",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Horário do início",
-                                    "value": "start_time",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Setor",
-                                    "value": "sector",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Fila",
-                                    "value": "queue",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                            ],
-                            "filter": None,
-                            "is_default": False,
-                        },
-                        {
-                            "name": "Encerrados",
-                            "slug": "closed",
-                            "fields": [
-                                {
-                                    "name": "Contato",
-                                    "value": "contact",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "URN",
-                                    "value": "urn",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Horário do início",
-                                    "value": "start_time",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Setor",
-                                    "value": "sector",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                                {
-                                    "name": "Fila",
-                                    "value": "queue",
-                                    "display": True,
-                                    "hidden_name": False,
-                                },
-                            ],
-                            "filter": None,
-                            "is_default": False,
-                        },
-                    ],
-                    widget=aguardando_atendimento,
-                )
+                waiting_report = table_group_report.copy()
+                waiting_report["widget"] = aguardando_atendimento
+                waiting_report["config"]["waiting"]["is_default"] = True
+                Report.objects.create(**waiting_report)
+
+                in_progress_report = table_group_report.copy()
+                waiting_report["widget"] = em_andamento
+                waiting_report["config"]["in_progress"]["is_default"] = True
+                Report.objects.create(**in_progress_report)
+
+                closed_report = table_group_report.copy()
+                waiting_report["widget"] = encerrados
+                waiting_report["config"]["closed"]["is_default"] = True
+                Report.objects.create(**closed_report)
+
         except Exception as exception:
             raise InvalidReportsObject(f"Error creating dashboard: {exception}")
 

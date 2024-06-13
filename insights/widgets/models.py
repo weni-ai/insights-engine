@@ -35,11 +35,12 @@ class Widget(BaseWidget):
 
     def source_config(self, sub_widget: str = None):
         config = self.config if sub_widget is None else self.config[sub_widget]
-        # default_filters, operation, op_field
+        # default_filters, operation, op_field, limit
         return (
             config.get("filter", {}),
             config.get("operation", "list"),
             config.get("op_field", None),
+            config.get("limit", None),
         )
 
 
@@ -62,4 +63,5 @@ class Report(BaseWidget):
             config.get("filter", {}),
             config.get("operation", "list"),
             config.get("op_field", None),
+            config.get("limit", None),
         )

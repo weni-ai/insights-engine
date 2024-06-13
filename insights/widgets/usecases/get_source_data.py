@@ -17,7 +17,7 @@ def get_source_data_from_widget(
                 f"could not find a source with the slug {source}, make sure that the widget is configured with a supported source"
             )
 
-        default_filters, operation, op_field = widget.source_config(
+        default_filters, operation, op_field, limit = widget.source_config(
             sub_widget=filters.pop("slug", None)
         )  # implement a dynamic handler for each widget
 
@@ -29,6 +29,8 @@ def get_source_data_from_widget(
 
         if op_field:
             query_kwargs["field_name"] = op_field
+        if limit:
+            query_kwargs["limit"] = limit
 
         serialized_source = SourceQuery.execute(
             filters=filters,
