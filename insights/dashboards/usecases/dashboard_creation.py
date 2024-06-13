@@ -32,9 +32,8 @@ class CreateHumanService:
                     type="graph_column",
                     source="chats",
                     config={
-                        "end_time": "18:00",
-                        "interval": "60",
-                        "start_time": "07:00",
+                        "operation": "timeseries_hour_group_count",
+                        "limit_first_results": 12,
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [1, 1], "columns": [1, 12]},
@@ -51,7 +50,7 @@ class CreateHumanService:
                     name="Tempo de espera",
                     type="card",
                     source="chats",
-                    config={"operation": "AVG", "type_result": "executions"},
+                    config={"operation": "avg", "type_result": "executions"},
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [5, 8]},
                 )
@@ -59,7 +58,7 @@ class CreateHumanService:
                     name="Encerrados",
                     type="card",
                     source="chats",
-                    config={"operation": "AVG", "type_result": "executions"},
+                    config={"operation": "avg", "type_result": "executions"},
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [9, 12]},
                 )
@@ -144,14 +143,17 @@ class CreateHumanService:
                 Report.objects.create(
                     name="Pico de chats abertos por hora",
                     type="graph_column",
-                    source="chats",
-                    config={},
+                    source="rooms",
+                    config={
+                        "operation": "timeseries_hour_group_count",
+                        "limit_first_results": 12,
+                    },
                     widget=pico_de_atendimento,
                 )
                 Report.objects.create(
                     name="Em andamento",
                     type="table_group",
-                    source="chats",
+                    source="rooms",
                     config=[
                         {
                             "name": "Aguardando",
@@ -273,7 +275,7 @@ class CreateHumanService:
                 Report.objects.create(
                     name="Encerrados",
                     type="table_group",
-                    source="chats",
+                    source="rooms",
                     config=[
                         {
                             "name": "Aguardando",

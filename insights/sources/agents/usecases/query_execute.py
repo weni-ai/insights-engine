@@ -8,7 +8,7 @@ from insights.sources.agents.clients import (
 class QueryExecutor:
     def execute(
         filters: dict,
-        action: str,
+        operation: str,
         parser: callable,
         return_format: str = None,
         project: object = None,
@@ -16,9 +16,9 @@ class QueryExecutor:
         *args,
         **kwargs
     ):
-        if return_format == "select_input" or action != "list":
+        if return_format == "select_input" or operation != "list":
             filters["project_id"] = str(project.uuid)
-            query, params = generate_sql_query(filters=filters, query_type=action)
+            query, params = generate_sql_query(filters=filters, query_type=operation)
             with get_cursor(db_name="chats") as cur:
                 query_exec = cur.execute(query, params)
                 query_results = dictfetchall(query_exec)

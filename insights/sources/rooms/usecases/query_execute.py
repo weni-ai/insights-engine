@@ -5,14 +5,14 @@ from insights.sources.rooms.clients import RoomRESTClient, generate_sql_query
 class QueryExecutor:
     def execute(
         filters: dict,
-        action: str,
+        operation: str,
         parser: callable,
         project: object,
         query_kwargs: dict = {},
         *args,
         **kwargs
     ):
-        if action == "list":
+        if operation == "list":
             client = RoomRESTClient(project=project)
             query_results = client.list(filters)
             paginated_results = {
@@ -22,7 +22,7 @@ class QueryExecutor:
             }
             return parser(paginated_results)
         query, params = generate_sql_query(
-            filters=filters, query_type=action, query_kwargs=query_kwargs
+            filters=filters, query_type=operation, query_kwargs=query_kwargs
         )
         with get_cursor(db_name="chats") as cur:
             query_exec = cur.execute(query, params)

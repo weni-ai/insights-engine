@@ -1,30 +1,20 @@
-from django.utils.module_loading import import_string
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from insights.authentication.permissions import ProjectAuthPermission
+from insights.shared.viewsets import get_source
 from insights.projects.parsers import parse_dict_to_json
 
 
 class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     permission_classes = [ProjectAuthPermission]
 
-    def get_source(self, slug: str):
-        try:
-            source_path = (
-                f"insights.sources.{slug}.usecases.query_execute.QueryExecutor"
-            )
-            return import_string(source_path)
-        except (ModuleNotFoundError, ImportError, AttributeError) as e:
-            print(f"Error: {e}")
-            return None
-
     @action(
         detail=True, methods=["get"], url_path="sources/(?P<source_slug>[^/.]+)/data"
     )
     def retrieve_source_data(self, request, source_slug=None, *args, **kwargs):
-        SourceQuery = self.get_source(slug=source_slug)
+        SourceQuery = get_source(slug=source_slug)
         query_kwargs = {}
         if SourceQuery is None:
             return Response(
@@ -32,7 +22,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 status.HTTP_404_NOT_FOUND,
             )
         filters = request.data or request.query_params or {}
-        action = filters.pop("action", "list")
+        operation = filters.pop("operation", "list")
 
         tags = filters.pop("tags", None)
         if tags:
@@ -43,7 +33,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
         serialized_source = SourceQuery.execute(
             filters=filters,
-            action=action,
+            operation=operation,
             parser=parse_dict_to_json,
             project=self.get_object(),
             user_email=self.request.user.email,

@@ -4,10 +4,15 @@ from insights.sources.sectors.clients import generate_sql_query
 
 class QueryExecutor:
     def execute(
-        filters: dict, action: str, parser: callable, project: object, *args, **kwargs
+        filters: dict,
+        operation: str,
+        parser: callable,
+        project: object,
+        *args,
+        **kwargs
     ):
         filters["project_id"] = str(project.uuid)
-        query, params = generate_sql_query(filters=filters, query_type=action)
+        query, params = generate_sql_query(filters=filters, query_type=operation)
         with get_cursor(db_name="chats") as cur:
             query_exec = cur.execute(query, params)
             query_results = dictfetchall(query_exec)
