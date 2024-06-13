@@ -18,7 +18,7 @@ class ProjectAuthDTO:
 class ProjectAuthCreationUseCase:
     def role_mapping(self, role: int):
         # theres only two role atm, 0 and 1
-        return int(role > 0)
+        return 1 if role == 3 else 0
 
     def get_project(self, project: str):
         # use project use case for retrieving by UUID
@@ -44,8 +44,9 @@ class ProjectAuthCreationUseCase:
         auth_instances = []
         project = self.get_project(project)
         for auth in authorizations:
-            user = self.get_or_create_user_by_email(auth.get("user"))[0]
-            instance = ProjectAuth(project=project, user=user, role=auth.get("role"))
+            user = self.get_or_create_user_by_email(auth.get("user_email"))[0]
+            role_value = self.role_mapping(int(auth.get("role")))
+            instance = ProjectAuth(project=project, user=user, role=role_value)
             auth_instances.append(instance)
         ProjectAuth.objects.bulk_create(auth_instances, ignore_conflicts=True)
 

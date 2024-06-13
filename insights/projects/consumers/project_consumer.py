@@ -14,22 +14,26 @@ class ProjectConsumer(EDAConsumer):
         print(f"[ProjectConsumer] - Consuming a message. Body: {message.body}")
         body = JSONParser.parse(message.body)
 
-        project_dto = ProjectCreationDTO(
-            uuid=body.get("uuid"),
-            name=body.get("name"),
-            is_template=body.get("is_template"),
-            date_format=body.get("date_format"),
-            timezone=body.get("timezone"),
-        )
+        try:
+            project_dto = ProjectCreationDTO(
+                uuid=body.get("uuid"),
+                name=body.get("name"),
+                is_template=body.get("is_template"),
+                date_format=body.get("date_format"),
+                timezone=body.get("timezone"),
+            )
 
-        authorizations = body.get("authorizations", [])
+            authorizations = body.get("authorizations", [])
 
-        project_creation = ProjectsUseCase()
-        project = project_creation.create_project(project_dto)
+            project_creation = ProjectsUseCase()
+            project = project_creation.create_project(project_dto)
 
-        auth_creation = ProjectAuthCreationUseCase()
-        auth_creation.bulk_create(
-            project=str(project.uuid), authorizations=authorizations
-        )
+            auth_creation = ProjectAuthCreationUseCase()
+            auth_creation.bulk_create(
+                project=str(project.uuid), authorizations=authorizations
+            )
 
-        channel.basic_ack(message.delivery_tag)
+            channel.basic_ack(message.delivery_tag)
+        except Exception as exception:
+            channel.basic_reject(message.delivery_tag, requeue=False)
+            print(f"[ProjectConsumer] - Message rejected by: {exception}")

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 import environ
@@ -34,17 +35,19 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 
 AUTH_USER_MODEL = "users.User"
 
-ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=False)
+ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=True)
+
+INSIGHTS_DOMAIN = env.str("INSIGHTS_DOMAIN")
 
 # Application definition
 
 INSTALLED_APPS = [
     "django.contrib.auth",
-    "mozilla_django_oidc",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Local apps
     "insights.event_driven",
     "insights.shared",
     "insights.dashboards",
@@ -52,6 +55,12 @@ INSTALLED_APPS = [
     "insights.sources",
     "insights.users",
     "insights.widgets",
+    # 3rd party apps
+    "django_filters",
+    "corsheaders",
+    "rest_framework",
+    "rest_framework.authtoken",
+    "drf_spectacular",
 ]
 
 if ADMIN_ENABLED is True:
@@ -60,6 +69,7 @@ if ADMIN_ENABLED is True:
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -91,7 +101,10 @@ WSGI_APPLICATION = "insights.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {"default": env.db(var="DEFAULT_DATABASE", default="sqlite:///db.sqlite3")}
+DATABASES = {
+    "default": env.db(var="DEFAULT_DATABASE", default="sqlite:///insights_db.sqlite3"),
+    "chats": env.db(var="CHATS_PG_DATABASE", default="sqlite:///chats_db.sqlite3"),
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -129,29 +142,31 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# OIDC
-
-OIDC_RP_SERVER_URL = env.str("OIDC_RP_SERVER_URL")
-OIDC_RP_REALM_NAME = env.str("OIDC_RP_REALM_NAME")
-OIDC_OP_JWKS_ENDPOINT = env.str("OIDC_OP_JWKS_ENDPOINT")
-OIDC_RP_CLIENT_ID = env.str("OIDC_RP_CLIENT_ID")
-OIDC_RP_CLIENT_SECRET = env.str("OIDC_RP_CLIENT_SECRET")
-OIDC_OP_AUTHORIZATION_ENDPOINT = env.str("OIDC_OP_AUTHORIZATION_ENDPOINT")
-OIDC_OP_TOKEN_ENDPOINT = env.str("OIDC_OP_TOKEN_ENDPOINT")
-OIDC_OP_USER_ENDPOINT = env.str("OIDC_OP_USER_ENDPOINT")
-
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+        "rest_framework.authentication.TokenAuthentication"
     ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination." + "LimitOffsetPagination",
+    "PAGE_SIZE": env.int("REST_PAGINATION_SIZE", default=20),
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Insights Engine",
+    "DESCRIPTION": "Insights REST API",
+    "VERSION": "0.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # OTHER SETTINGS
 }
 
 # Logging
@@ -212,6 +227,9 @@ OIDC_CACHE_TTL = env.int(
     "OIDC_CACHE_TTL", default=600
 )  # Time-to-live for cached user tokens (default: 600 seconds).
 
+# CORS CONFIG
+CORS_ORIGIN_ALLOW_ALL = True
+
 
 USE_EDA = env.bool("USE_EDA", default=False)
 
@@ -228,3 +246,5 @@ if USE_EDA:
 
     FLOWS_TICKETER_EXCHANGE = env("FLOWS_TICKETER_EXCHANGE", default="sectors.topic")
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
+
+CHATS_URL = env("CHATS_URL")

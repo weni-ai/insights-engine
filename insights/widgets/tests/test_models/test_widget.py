@@ -15,7 +15,7 @@ def test_create_widget(create_default_dashboard):
     Widget.objects.create(
         dashboard=dash,
         name="Active Rooms",
-        w_type="card",
+        type="card",
         source="rooms",
         report={
             "example": "the logic behind the report config should be on the use case"
@@ -35,7 +35,7 @@ def test_create_widget(create_default_dashboard):
     [
         "dashboard",
         "name",
-        "w_type",
+        "type",
         "source",
         "report",
         "position",
@@ -48,7 +48,7 @@ def test_required_fields(remove_config: str, create_default_dashboard):
     widget_config = {
         "dashboard": dash,
         "name": "Active Rooms",
-        "w_type": "card",
+        "type": "card",
         "source": "rooms",
         "report": {
             "example": "the logic behind the report config should be on the use case"

@@ -2,6 +2,11 @@ from insights.projects.models import Project
 
 from .project_dto import ProjectCreationDTO
 
+from insights.dashboards.usecases.dashboard_creation import (
+    CreateHumanService,
+    CreateFlowResults,
+)
+
 
 class ProjectsUseCase:
 
@@ -23,5 +28,6 @@ class ProjectsUseCase:
             timezone=project_dto.timezone,
             date_format=project_dto.date_format,
         )
-
+        CreateHumanService().create_dashboard(project)
+        CreateFlowResults().create_dashboard(project)
         return project
