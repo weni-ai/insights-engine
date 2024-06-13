@@ -31,5 +31,12 @@ class QueryExecutor:
         with get_cursor(db_name="chats") as cur:
             query_exec = cur.execute(query, params)
             query_results = dictfetchall(query_exec)
-        paginated_results = {"next": None, "previous": None, "results": query_results}
+        if operation in ["count", "avg"]:
+            paginated_results = query_results
+        else:
+            paginated_results = {
+                "next": None,
+                "previous": None,
+                "results": query_results,
+            }
         return paginated_results  # parser(paginated_results)
