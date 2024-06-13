@@ -12,7 +12,8 @@ class BasicFilterStrategy:
         elif operation == "icontains":
             return f"{table_alias}.{field} ILIKE (%s)", [f"%{value}%"]
         elif operation == "isnull":
-            return f"{table_alias}.{field} IS (%s) NULL", [
+            placeholder = "IS (%s) NULL" if value is True else "IS NULL"
+            return f"{table_alias}.{field} {placeholder}", [
                 "NOT" if value is True else None
             ]
         elif operation == "or":

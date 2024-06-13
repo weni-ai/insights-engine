@@ -12,7 +12,8 @@ class RoomSQLQueryBuilder:
         clause, params = strategy.apply(field, operation, value, table_alias)
 
         self.where_clauses.append(clause)
-        self.params.extend(params)
+        if params is not None:
+            self.params.extend(params)
 
     def add_joins(self, joins: set):
         self.joins.update(joins)
