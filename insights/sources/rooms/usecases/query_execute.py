@@ -25,7 +25,7 @@ class QueryExecutor:
                 "results": query_results.get("results"),
             }
             return paginated_results  # parser(paginated_results)
-        filters["project"] = project
+        filters["project"] = str(project.uuid)
         query, params = generate_sql_query(
             filters=filters, query_type=operation, query_kwargs=query_kwargs
         )
