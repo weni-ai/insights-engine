@@ -13,7 +13,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     queryset = Project.objects.all()
 
     @action(
-        detail=True, methods=["get"], url_path="sources/(?P<source_slug>[^/.]+)/data"
+        detail=True, methods=["get"], url_path="sources/(?P<source_slug>[^/.]+)/search"
     )
     def retrieve_source_data(self, request, source_slug=None, *args, **kwargs):
         SourceQuery = get_source(slug=source_slug)
