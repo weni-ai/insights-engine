@@ -33,10 +33,10 @@ class QueryExecutor:
         filters["user_request"] = user_email
         query_results = client.list(filters)
 
-        nxt = (query_results.get("next"),)
-        nxt = (None if nxt is None else nxt.split("?")[1],)
-        prev = (query_results.get("previous"),)
-        prev = (None if prev is None else prev.split("?")[1],)
+        nxt = query_results.get("next")
+        nxt = None if nxt is None else nxt.split("?")[1]
+        prev = query_results.get("previous")
+        prev = None if prev is None else prev.split("?")[1]
         paginated_results = {
             "next": nxt,
             "previous": prev,
