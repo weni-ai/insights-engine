@@ -70,19 +70,19 @@ class DashboardViewSet(
         detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/data"
     )
     def get_widget_data(self, request, pk=None, widget_uuid=None):
-        try:
-            widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
-            filters = (request.data or request.query_params or {}).copy()
-            filters.pop("project", None)
-            serialized_source = get_source_data_from_widget(
-                widget=widget,
-                is_report=False,
-                filters=filters,
-                user_email=request.user.email,
-            )
-            return Response(serialized_source, status.HTTP_200_OK)
-        except Exception as err:
-            return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+        # try:
+        widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+        filters = (request.data or request.query_params or {}).copy()
+        filters.pop("project", None)
+        serialized_source = get_source_data_from_widget(
+            widget=widget,
+            is_report=False,
+            filters=filters,
+            user_email=request.user.email,
+        )
+        return Response(serialized_source, status.HTTP_200_OK)
+        # except Exception as err:
+        #     return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/report"
@@ -108,19 +108,20 @@ class DashboardViewSet(
         url_path="widgets/(?P<widget_uuid>[^/.]+)/report/data",
     )
     def get_report_data(self, request, pk=None, widget_uuid=None):
-        try:
-            widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
-            filters = (request.data or request.query_params or {}).copy()
-            filters.pop("project", None)
-            serialized_source = get_source_data_from_widget(
-                widget=widget,
-                is_report=True,
-                filters=filters,
-                user_email=request.user.email,
-            )
-            return Response(serialized_source, status.HTTP_200_OK)
-        except Exception as err:
-            return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+        # try:
+        widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+        filters = (request.data or request.query_params or {}).copy()
+        filters.pop("project", None)
+        serialized_source = get_source_data_from_widget(
+            widget=widget,
+            is_report=True,
+            filters=filters,
+            user_email=request.user.email,
+        )
+        return Response(serialized_source, status.HTTP_200_OK)
+
+        # except Exception as err:
+        #     return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["get"])
     def list_sources(self, request, pk=None):
