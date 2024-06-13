@@ -1,12 +1,12 @@
 from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
 
-from insights.projects.models import ProjectAuth
+from insights.projects.models import Project, ProjectAuth
 
 
 class ProjectAuthPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        if hasattr(obj, "dashboard"):
+        if type(obj) is Project:
             project = obj
         else:
             project = obj.project
