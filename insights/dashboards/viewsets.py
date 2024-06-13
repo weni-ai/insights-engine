@@ -104,7 +104,7 @@ class DashboardViewSet(
     @action(
         detail=True,
         methods=["get"],
-        url_path="widgets/(?P<widget_uuid>[^/.]+)/report/data/",
+        url_path="widgets/(?P<widget_uuid>[^/.]+)/report/data",
     )
     def get_report_data(self, request, pk=None, widget_uuid=None):
         try:
