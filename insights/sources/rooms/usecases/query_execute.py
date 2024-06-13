@@ -20,7 +20,7 @@ class QueryExecutor:
                 "previous": query_results.get("previous").split("?")[1],
                 "results": query_results.get("results"),
             }
-            return parser(paginated_results)
+            return paginated_results  # parser(paginated_results)
         query, params = generate_sql_query(
             filters=filters, query_type=operation, query_kwargs=query_kwargs
         )
@@ -28,4 +28,4 @@ class QueryExecutor:
             query_exec = cur.execute(query, params)
             query_results = dictfetchall(query_exec)
         paginated_results = {"next": None, "previous": None, "results": query_results}
-        return parser(paginated_results)
+        return paginated_results  # parser(paginated_results)

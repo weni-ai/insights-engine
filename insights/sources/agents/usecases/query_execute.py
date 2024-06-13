@@ -27,7 +27,7 @@ class QueryExecutor:
                 "previous": None,
                 "results": query_results,
             }
-            return parser(paginated_results)
+            return paginated_results  # parser(paginated_results)
 
         client = AgentsRESTClient(project=project)
         filters["user_request"] = user_email
@@ -37,4 +37,4 @@ class QueryExecutor:
             "previous": query_results.get("previous").split("?")[1],
             "results": query_results.get("results"),
         }
-        return parser(paginated_results)
+        return paginated_results  # parser(paginated_results)

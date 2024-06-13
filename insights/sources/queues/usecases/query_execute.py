@@ -9,4 +9,4 @@ class QueryExecutor:
             query_exec = cur.execute(query, params)
             query_results = dictfetchall(query_exec)
         paginated_results = {"next": None, "previous": None, "results": query_results}
-        return parser(paginated_results)
+        return paginated_results  # parser(paginated_results)
