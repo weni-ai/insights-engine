@@ -11,6 +11,10 @@ class BasicFilterStrategy:
             return f"{table_alias}.{field} IN ({placeholders})", list(value)
         elif operation == "icontains":
             return f"{table_alias}.{field} ILIKE (%s)", [f"%{value}%"]
+        elif operation == "isnull":
+            return f"{table_alias}.{field} IS (%s) NULL", [
+                "NOT" if value is True else ""
+            ]
         elif operation == "or":
             if type(field) is not dict:
                 raise ValueError(

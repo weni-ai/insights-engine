@@ -46,7 +46,7 @@ class CreateHumanService:
                     config={
                         "operation": "count",
                         "type_result": "executions",
-                        "filter": {"is_active": True, "attending": True},
+                        "filter": {"is_active": True, "user_id__isnull": True},
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [1, 4]},
@@ -82,7 +82,7 @@ class CreateHumanService:
                     config={
                         "operation": "avg",
                         "type_result": "executions",
-                        "op_field": "response_time",
+                        "op_field": "message_response_time",
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [3, 3], "columns": [1, 4]},
@@ -96,7 +96,7 @@ class CreateHumanService:
                         "type_result": "executions",
                         "filter": {
                             "is_active": True,
-                            "attending": False,
+                            "user_id__isnull": False,
                         },
                     },
                     dashboard=dashboard_atendimento_humano,
