@@ -15,9 +15,13 @@ class QueryExecutor:
         if operation == "list":
             client = RoomRESTClient(project=project)
             query_results = client.list(filters)
+            nxt = (query_results.get("next"),)
+            nxt = (None if nxt is None else nxt.split("?")[1],)
+            prev = (query_results.get("previous"),)
+            prev = (None if prev is None else prev.split("?")[1],)
             paginated_results = {
-                "next": query_results.get("next").split("?")[1],
-                "previous": query_results.get("previous").split("?")[1],
+                "next": nxt,
+                "previous": prev,
                 "results": query_results.get("results"),
             }
             return paginated_results  # parser(paginated_results)
