@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import models
 
 from insights.shared.models import BaseModel, ConfigurableModel
@@ -27,8 +26,21 @@ class Widget(BaseWidget):
     )
     position = models.JSONField("Widget position")
 
+    @property
+    def project(self):
+        self.dashboard.project
+
     def __str__(self):
         return self.name
+
+    def source_config(self, sub_widget: str = None):
+        config = self.config if sub_widget is None else self.config[sub_widget]
+        # default_filters, operation, op_field
+        return (
+            config.get("filter", {}),
+            config.get("operation", "list"),
+            config.get("op_field", None),
+        )
 
 
 class Report(BaseWidget):
@@ -36,5 +48,18 @@ class Report(BaseWidget):
         Widget, related_name="report", on_delete=models.CASCADE
     )
 
+    @property
+    def project(self):
+        self.widget.project
+
     def __str__(self):
         return self.name
+
+    def source_config(self, sub_widget: str = None):
+        config = self.config if sub_widget is None else self.config[sub_widget]
+        # default_filters, operation, op_field
+        return (
+            config.get("filter", {}),
+            config.get("operation", "list"),
+            config.get("op_field", None),
+        )

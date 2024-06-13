@@ -5,9 +5,10 @@ from rest_framework.response import Response
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.models import Dashboard
 from insights.dashboards.utils import DefaultPagination
-from insights.widgets.models import Widget, Report
-from insights.shared.viewsets import get_source
-from insights.projects.parsers import parse_dict_to_json
+from insights.widgets.models import Report, Widget
+from insights.widgets.usecases.get_source_data import (
+    get_source_data_from_widget,
+)
 
 from .serializers import (
     DashboardIsDefaultSerializer,
@@ -66,6 +67,23 @@ class DashboardViewSet(
         return Response(filters)
 
     @action(
+        detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/data"
+    )
+    def get_widget_data(self, request, pk=None, widget_uuid=None):
+        try:
+            widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+            filters = request.data or request.query_params or {}
+            serialized_source = get_source_data_from_widget(
+                widget=widget,
+                is_report=False,
+                filters=filters,
+                user_email=request.user.email,
+            )
+            return Response(serialized_source, status.HTTP_200_OK)
+        except Exception as err:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(
         detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/report"
     )
     def get_widget_report(self, request, pk=None, widget_uuid=None):
@@ -84,50 +102,23 @@ class DashboardViewSet(
             )
 
     @action(
-        detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/data"
+        detail=True,
+        methods=["get"],
+        url_path="widgets/(?P<widget_uuid>[^/.]+)/report/data/",
     )
-    def get_widget_data(self, request, pk=None, widget_uuid=None):
+    def get_report_data(self, request, pk=None, widget_uuid=None):
         try:
             widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
-            SourceQuery = get_source(slug=widget.source)
-            query_kwargs = {}
-            if SourceQuery is None:
-                return Response(
-                    {
-                        "detail": f"could not find a source with the slug {widget.source}"
-                    },
-                    status.HTTP_404_NOT_FOUND,
-                )
-
             filters = request.data or request.query_params or {}
-
-            default_filters, operation, op_field = widget.source_config(
-                sub_widget=filters.pop("sub_widget", None)
-            )
-
-            filters.extend(default_filters)
-
-            tags = filters.pop("tags", None)
-            if tags:
-                filters["tags"] = tags.split(",")
-
-            if op_field:
-                query_kwargs["field_name"] = op_field
-
-            serialized_source = SourceQuery.execute(
+            serialized_source = get_source_data_from_widget(
+                widget=widget,
+                is_report=True,
                 filters=filters,
-                operation=operation,
-                parser=parse_dict_to_json,
-                project=self.get_object(),
-                user_email=self.request.user.email,
-                return_format="select_input",
-                query_kwargs=query_kwargs,
+                user_email=request.user.email,
             )
             return Response(serialized_source, status.HTTP_200_OK)
-        except Widget.DoesNotExist:
-            return Response(
-                {"detail": "Widget not found."}, status=status.HTTP_404_NOT_FOUND
-            )
+        except Exception as err:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["get"])
     def list_sources(self, request, pk=None):
