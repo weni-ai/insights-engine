@@ -13,7 +13,7 @@ class BasicFilterStrategy:
             return f"{table_alias}.{field} ILIKE (%s)", [f"%{value}%"]
         elif operation == "isnull":
             return f"{table_alias}.{field} IS (%s) NULL", [
-                "NOT" if value is True else ""
+                "NOT" if value is True else None
             ]
         elif operation == "or":
             if type(field) is not dict:
