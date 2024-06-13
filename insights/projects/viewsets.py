@@ -3,12 +3,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from insights.authentication.permissions import ProjectAuthPermission
-from insights.shared.viewsets import get_source
+from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
+from insights.shared.viewsets import get_source
 
 
 class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     permission_classes = [ProjectAuthPermission]
+    queryset = Project.objects.all()
 
     @action(
         detail=True, methods=["get"], url_path="sources/(?P<source_slug>[^/.]+)/data"
