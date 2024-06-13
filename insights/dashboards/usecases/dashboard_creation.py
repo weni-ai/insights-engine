@@ -332,13 +332,13 @@ class CreateHumanService:
                 Report.objects.create(**waiting_report)
 
                 in_progress_report = table_group_report.copy()
-                waiting_report["widget"] = em_andamento
-                waiting_report["config"]["in_progress"]["is_default"] = True
+                in_progress_report["widget"] = em_andamento
+                in_progress_report["config"]["in_progress"]["is_default"] = True
                 Report.objects.create(**in_progress_report)
 
                 closed_report = table_group_report.copy()
-                waiting_report["widget"] = encerrados
-                waiting_report["config"]["closed"]["is_default"] = True
+                closed_report["widget"] = encerrados
+                closed_report["config"]["closed"]["is_default"] = True
                 Report.objects.create(**closed_report)
 
         except Exception as exception:

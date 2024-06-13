@@ -9,7 +9,7 @@ def get_dash_filters(dash: Dashboard):
                 "label": "Pesquisa por contato",
                 "placeholder": "Nome ou URN do contato",
             },
-            "ended_at": {
+            "created_on": {
                 "type": "date_range",
                 "label": "Data",
                 "end_sufix": "__lte",
@@ -19,20 +19,20 @@ def get_dash_filters(dash: Dashboard):
             "sector": {
                 "type": "select",
                 "label": "Setor",
-                "source": "chats_sectors",
+                "source": "sectors",
                 "placeholder": "Selecione setor",
             },
             "queue": {
                 "type": "select",
                 "label": "Fila",
-                "source": "chats_queues",
+                "source": "queues",
                 "depends_on": {"filter": "sectors", "search_param": "sector"},
                 "placeholder": "Selecione fila",
             },
             "agent": {
                 "type": "select",
                 "label": "Agente",
-                "source": "chats_agents",
+                "source": "agents",
                 "depends_on": {"filter": "sectors", "search_param": None},
                 "placeholder": "Selecione agente",
             },
