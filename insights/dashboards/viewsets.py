@@ -27,7 +27,7 @@ class DashboardViewSet(
     pagination_class = DefaultPagination
 
     def get_queryset(self):
-        project_id = self.request.query_params.get("project", None)
+        project_id = self.request.query_params.get("project", None)  # do we need this?
         if project_id is not None:
             return Dashboard.objects.filter(project_id=project_id).order_by(
                 "created_on"
@@ -73,6 +73,7 @@ class DashboardViewSet(
         try:
             widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
             filters = (request.data or request.query_params or {}).copy()
+            filters.pop("project", None)
             serialized_source = get_source_data_from_widget(
                 widget=widget,
                 is_report=False,
@@ -81,7 +82,7 @@ class DashboardViewSet(
             )
             return Response(serialized_source, status.HTTP_200_OK)
         except Exception as err:
-            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/report"
@@ -110,6 +111,7 @@ class DashboardViewSet(
         try:
             widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
             filters = (request.data or request.query_params or {}).copy()
+            filters.pop("project", None)
             serialized_source = get_source_data_from_widget(
                 widget=widget,
                 is_report=True,
@@ -118,7 +120,7 @@ class DashboardViewSet(
             )
             return Response(serialized_source, status.HTTP_200_OK)
         except Exception as err:
-            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=["get"])
     def list_sources(self, request, pk=None):
