@@ -72,7 +72,7 @@ class DashboardViewSet(
     def get_widget_data(self, request, pk=None, widget_uuid=None):
         try:
             widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
-            filters = request.data or request.query_params or {}
+            filters = (request.data or request.query_params or {}).copy()
             serialized_source = get_source_data_from_widget(
                 widget=widget,
                 is_report=False,
@@ -109,7 +109,7 @@ class DashboardViewSet(
     def get_report_data(self, request, pk=None, widget_uuid=None):
         try:
             widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
-            filters = request.data or request.query_params or {}
+            filters = (request.data or request.query_params or {}).copy()
             serialized_source = get_source_data_from_widget(
                 widget=widget,
                 is_report=True,

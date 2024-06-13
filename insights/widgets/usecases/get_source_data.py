@@ -21,7 +21,7 @@ def get_source_data_from_widget(
             sub_widget=filters.pop("slug", None)
         )  # implement a dynamic handler for each widget
 
-        filters.extend(default_filters)
+        filters = filters | default_filters
 
         tags = filters.pop("tags", None)
         if tags:
