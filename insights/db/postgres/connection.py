@@ -13,6 +13,16 @@ def dictfetchall(cursor):
     return results if len(results) > 1 else results[0]
 
 
+def dictfetchone(cursor):
+    """
+    Return all rows from a cursor as a dict.
+    Assume the column names are unique.
+    """
+    columns = [col[0] for col in cursor.description]
+    row = cursor.fetchone()
+    return dict(zip(columns, row))
+
+
 def pg_execute_query(db_name: str, query: str, *args, **kwargs):
     with connections[db_name].cursor() as cursor:
         return cursor.execute(query, args).fetchall()

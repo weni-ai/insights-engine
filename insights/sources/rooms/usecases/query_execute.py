@@ -1,4 +1,8 @@
-from insights.db.postgres.connection import dictfetchall, get_cursor
+from insights.db.postgres.connection import (
+    dictfetchall,
+    dictfetchone,
+    get_cursor,
+)
 from insights.sources.rooms.clients import RoomRESTClient, generate_sql_query
 
 
@@ -31,7 +35,10 @@ class QueryExecutor:
         )
         with get_cursor(db_name="chats") as cur:
             query_exec = cur.execute(query, params)
-            query_results = dictfetchall(query_exec)
+            if operation in ["count", "avg"]:
+                query_results = dictfetchone(query_exec)
+            else:
+                query_results = dictfetchall(query_exec)
         if operation in ["count", "avg"]:
             paginated_results = query_results
         else:
