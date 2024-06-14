@@ -26,7 +26,7 @@ class QueryExecutor:
             paginated_results = {
                 "next": nxt,
                 "previous": prev,
-                "results": query_results.get("results"),
+                "results": query_results.get("results", []),
             }
             return paginated_results  # parser(paginated_results)
         filters["project"] = str(project.uuid)

@@ -117,7 +117,7 @@ class CreateHumanService:
                 Widget.objects.create(
                     name="Chats por agente",
                     type="table_dynamic_by_filter",
-                    source="rooms",
+                    source="agents",
                     config={
                         "default": {
                             "icon": "forum:weni-600",

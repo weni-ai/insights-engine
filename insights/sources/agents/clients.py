@@ -9,13 +9,16 @@ from insights.sources.filters import BasicFilterStrategy
 class AgentsRESTClient(InternalAuthentication):
     def __init__(self, project) -> None:
         self.project = project
-        self.url = f"{settings.CHATS_URL}/v1/internal/dashboard/{self.project}/agent/"
+        self.url = (
+            f"{settings.CHATS_URL}/v1/internal/dashboard/{self.project.uuid}/agent/"
+        )
 
     def list(self, query_filters: dict):
         if query_filters.get("created_on__gte", None):
-            query_filters["start_date"] = query_filters.get("created_on__gte")
+            query_filters["start_date"] = query_filters.pop("created_on__gte")[0]
         if query_filters.get("created_on__lte", None):
-            query_filters["end_date"] = query_filters.get("created_on__lte")
+            query_filters["end_date"] = query_filters.pop("created_on__lte")[0]
+
         response = requests.get(
             url=self.url, headers=self.headers, params=query_filters
         )
