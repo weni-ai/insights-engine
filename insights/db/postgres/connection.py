@@ -9,8 +9,7 @@ def dictfetchall(cursor):
     Assume the column names are unique.
     """
     columns = [col[0] for col in cursor.description]
-    results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    return results if len(results) > 1 else results[0]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
 def dictfetchone(cursor):
