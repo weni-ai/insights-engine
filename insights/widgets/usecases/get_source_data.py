@@ -18,12 +18,12 @@ def get_source_data_from_widget(
             )
 
         default_filters, operation, op_field, limit = widget.source_config(
-            sub_widget=filters.pop("slug", None)
+            sub_widget=filters.pop("slug", [None])[0]
         )  # implement a dynamic handler for each widget
 
-        filters = filters | default_filters
+        filters.update(default_filters)
 
-        tags = filters.pop("tags", None)
+        tags = filters.pop("tags", [None])[0]
         if tags:
             filters["tags"] = tags.split(",")
 
