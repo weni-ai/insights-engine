@@ -300,7 +300,7 @@ class CreateHumanService:
                 },
                 {
                     "name": "Tags",
-                    "value": "tag",
+                    "value": "tags",
                     "display": True,
                     "hidden_name": False,
                 },
