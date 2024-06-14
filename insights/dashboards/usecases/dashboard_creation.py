@@ -192,7 +192,7 @@ class CreateHumanService:
                         },
                         {
                             "name": "Horário do início",
-                            "value": "start_time",
+                            "value": "created_on",
                             "display": True,
                             "hidden_name": False,
                         },
@@ -238,7 +238,7 @@ class CreateHumanService:
                         },
                         {
                             "name": "Horário do início",
-                            "value": "start_time",
+                            "value": "created_on",
                             "display": True,
                             "hidden_name": False,
                         },

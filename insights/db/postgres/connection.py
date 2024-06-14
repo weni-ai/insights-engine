@@ -1,33 +1,38 @@
 from contextlib import contextmanager
 
-from django.db import connections
+import settings
+from psycopg import connect
+from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool, NullConnectionPool
 
 
 def dictfetchall(cursor):
-    """
-    Return all rows from a cursor as a dict.
-    Assume the column names are unique.
-    """
-    columns = [col[0] for col in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    return cursor.fetchall()
 
 
 def dictfetchone(cursor):
-    """
-    Return all rows from a cursor as a dict.
-    Assume the column names are unique.
-    """
-    columns = [col[0] for col in cursor.description]
-    row = cursor.fetchone()
-    return dict(zip(columns, row))
+    return cursor.fetchone()
 
 
-def pg_execute_query(db_name: str, query: str, *args, **kwargs):
-    with connections[db_name].cursor() as cursor:
-        return cursor.execute(query, args).fetchall()
+chats_pool = NullConnectionPool(
+    max_size=5,
+    conninfo=settings.CHATS_PG,
+    check=ConnectionPool.check_connection,
+)
 
 
 @contextmanager
-def get_cursor(db_name: str):
-    with connections[db_name].cursor() as cur:
-        yield cur
+def get_connection():
+    # if settings.CONNECTION_TYPE == "pool":
+    #     with chats_pool.connection() as conn:
+    #         yield conn
+    # else:
+    with connect(settings.CHATS_PG) as conn:
+        yield conn
+
+
+@contextmanager
+def get_cursor(*args, **kwargs):
+    with get_connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            yield cur
