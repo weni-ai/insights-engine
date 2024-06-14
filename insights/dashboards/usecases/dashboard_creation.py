@@ -170,149 +170,152 @@ class CreateHumanService:
         em_andamento,
         encerrados,
     ):
+        waiting = {
+            "name": "Aguardando",
+            "fields": [
+                {
+                    "name": "Contato",
+                    "value": "contact",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "URN",
+                    "value": "urn",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Início",
+                    "value": "created_on",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Setor",
+                    "value": "sector",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Fila",
+                    "value": "queue",
+                    "display": True,
+                    "hidden_name": False,
+                },
+            ],
+            "filter": {
+                "is_active": True,
+                "attending": False,
+            },
+            "is_default": False,
+        }
+        in_progress = {
+            "name": "Em andamento",
+            "fields": [
+                {
+                    "name": "Contato",
+                    "value": "contact",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "URN",
+                    "value": "urn",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Agente",
+                    "value": "agent",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Início",
+                    "value": "created_on",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Setor",
+                    "value": "sector",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Fila",
+                    "value": "queue",
+                    "display": True,
+                    "hidden_name": False,
+                },
+            ],
+            "filter": {"is_active": True, "attending": True},
+            "is_default": False,
+        }
+        closed = {
+            "name": "Encerrados",
+            "fields": [
+                {
+                    "name": "Contato",
+                    "value": "contact",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "URN",
+                    "value": "urn",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Agente",
+                    "value": "agent",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Início",
+                    "value": "created_on",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Fim",
+                    "value": "ended_at",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Setor",
+                    "value": "sector",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Fila",
+                    "value": "queue",
+                    "display": True,
+                    "hidden_name": False,
+                },
+                {
+                    "name": "Tags",
+                    "value": "tag",
+                    "display": True,
+                    "hidden_name": False,
+                },
+            ],
+            "filter": {"is_active": False},
+            "is_default": False,
+        }
         table_group_report = {
             "name": "Em andamento",
             "type": "table_group",
             "source": "rooms",
             "config": {
-                "waiting": {
-                    "name": "Aguardando",
-                    "fields": [
-                        {
-                            "name": "Contato",
-                            "value": "contact",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "URN",
-                            "value": "urn",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Horário do início",
-                            "value": "created_on",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Setor",
-                            "value": "sector",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Fila",
-                            "value": "queue",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                    ],
-                    "filter": {
-                        "is_active": True,
-                        "attending": False,
-                    },
-                    "is_default": False,
-                },
-                "in_progress": {
-                    "name": "Em andamento",
-                    "fields": [
-                        {
-                            "name": "Contato",
-                            "value": "contact",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "URN",
-                            "value": "urn",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "agente",
-                            "value": "agent",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Horário do início",
-                            "value": "created_on",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Setor",
-                            "value": "sector",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Fila",
-                            "value": "queue",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                    ],
-                    "filter": {"is_active": True, "attending": True},
-                    "is_default": False,
-                },
-                "closed": {
-                    "name": "Encerrados",
-                    "fields": [
-                        {
-                            "name": "Contato",
-                            "value": "contact",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "URN",
-                            "value": "urn",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "agente",
-                            "value": "agent",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Horário do início",
-                            "value": "created_on",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Horário de fim",
-                            "value": "ended_at",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Setor",
-                            "value": "sector",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Fila",
-                            "value": "queue",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                        {
-                            "name": "Tag",
-                            "value": "tag",
-                            "display": True,
-                            "hidden_name": False,
-                        },
-                    ],
-                    "filter": {"is_active": False},
-                    "is_default": False,
-                },
+                "closed": closed,
+                "in_progress": in_progress,
+                "waiting": waiting,
             },
         }
         try:
