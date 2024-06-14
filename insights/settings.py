@@ -14,7 +14,9 @@ import os
 from pathlib import Path
 
 import environ
+import sentry_sdk
 from django.utils.log import DEFAULT_LOGGING
+from sentry_sdk.integrations.django import DjangoIntegration
 
 environ.Env.read_env(env_file=(environ.Path(__file__) - 2)(".env"))
 
@@ -230,6 +232,16 @@ OIDC_CACHE_TTL = env.int(
 # CORS CONFIG
 CORS_ORIGIN_ALLOW_ALL = True
 
+# Sentry configuration
+
+USE_SENTRY = env.bool("USE_SENTRY", default=False)
+
+if USE_SENTRY:
+    sentry_sdk.init(
+        dsn=env.str("SENTRY_DSN"),
+        integrations=[DjangoIntegration()],
+        environment=env.str("ENVIRONMENT", default="develop"),
+    )
 
 USE_EDA = env.bool("USE_EDA", default=False)
 
