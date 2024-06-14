@@ -130,13 +130,13 @@ class CreateHumanService:
                                 },
                                 {
                                     "name": "Em andamento",
-                                    "value": "open",
+                                    "value": "opened",
                                     "display": True,
                                     "hidden_name": False,
                                 },
                                 {
                                     "name": "Encerrados",
-                                    "value": "close",
+                                    "value": "closed",
                                     "display": True,
                                     "hidden_name": False,
                                 },
