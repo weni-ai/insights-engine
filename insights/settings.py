@@ -102,7 +102,6 @@ WSGI_APPLICATION = "insights.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-CHATS_PG = env.str(var="CHATS_PG_DATABASE")
 
 DATABASES = {
     "default": env.db(var="DEFAULT_DATABASE", default="sqlite:///insights_db.sqlite3"),
