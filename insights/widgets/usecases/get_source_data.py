@@ -22,10 +22,10 @@ def get_source_data_from_widget(
         )  # implement a dynamic handler for each widget
 
         filters.update(default_filters)
-
-        tags = filters.pop("tags", [None])[0]
-        if tags:
-            filters["tags"] = tags.split(",")
+        if operation == "list":
+            tags = filters.pop("tags", [None])[0]
+            if tags:
+                filters["tags"] = tags.split(",")
 
         if op_field:
             query_kwargs["field_name"] = op_field

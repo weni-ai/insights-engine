@@ -25,10 +25,10 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             )
         filters = dict(request.data or request.query_params or {})
         operation = filters.pop("operation", ["list"])[0]
-
-        tags = filters.pop("tags", [None])[0]
-        if tags:
-            filters["tags"] = tags.split(",")
+        if operation == "list":
+            tags = filters.pop("tags", [None])[0]
+            if tags:
+                filters["tags"] = tags.split(",")
         field_name = filters.pop("field_name", [None])[0]
         if field_name:
             query_kwargs["field_name"] = field_name
