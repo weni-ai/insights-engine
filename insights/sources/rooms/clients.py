@@ -11,6 +11,7 @@ relation_schema = {
     "tag": {"field_name": "sectortag_id", "table_alias": "tg"},
     "tags": {"field_name": "sectortag_id", "table_alias": "tg"},
     "sector": {"field_name": "sector_id", "table_alias": "q"},
+    "sector_id": {"field_name": "sector_id", "table_alias": "q"},
     "queue": {"field_name": "queue_id", "table_alias": "r"},
     "contact": {"field_name": "uuid", "table_alias": "ctt"},
 }

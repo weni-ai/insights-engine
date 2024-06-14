@@ -26,7 +26,7 @@ def get_dash_filters(dash: Dashboard):
                 "type": "select",
                 "label": "Fila",
                 "source": "queues",
-                "depends_on": {"filter": "sector", "search_param": "sector"},
+                "depends_on": {"filter": "sector", "search_param": "sector_id"},
                 "placeholder": "Selecione fila",
             },
             "agent": {
@@ -39,8 +39,8 @@ def get_dash_filters(dash: Dashboard):
             "tags": {
                 "type": "select",
                 "label": "Tags",
-                "source": "chats_tags",
-                "depends_on": {"filter": "sector", "search_param": "sector"},
+                "source": "tags",
+                "depends_on": {"filter": "sector", "search_param": "sector_id"},
                 "placeholder": "Selecione tags",
             },
         }
