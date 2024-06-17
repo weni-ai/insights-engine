@@ -19,12 +19,14 @@ def get_dash_filters(dash: Dashboard):
             "sector": {
                 "type": "select",
                 "label": "Setor",
+                "field": "uuid",
                 "source": "sectors",
                 "placeholder": "Selecione setor",
             },
             "queue": {
                 "type": "select",
                 "label": "Fila",
+                "field": "uuid",
                 "source": "queues",
                 "depends_on": {"filter": "sector", "search_param": "sector_id"},
                 "placeholder": "Selecione fila",
@@ -32,6 +34,7 @@ def get_dash_filters(dash: Dashboard):
             "agent": {
                 "type": "select",
                 "label": "Agente",
+                "field": "email",
                 "source": "agents",
                 "depends_on": {"filter": "sector", "search_param": None},
                 "placeholder": "Selecione agente",
@@ -39,6 +42,7 @@ def get_dash_filters(dash: Dashboard):
             "tags": {
                 "type": "select",
                 "label": "Tags",
+                "field": "uuid",
                 "source": "tags",
                 "depends_on": {"filter": "sector", "search_param": "sector_id"},
                 "placeholder": "Selecione tags",
