@@ -23,9 +23,11 @@ class QueryExecutor:
             nxt = None if nxt is None else nxt.split("?")[1]
             prev = query_results.get("previous")
             prev = None if prev is None else prev.split("?")[1]
+            count = query_results.get("count", 0)
             paginated_results = {
                 "next": nxt,
                 "previous": prev,
+                "count": count,
                 "results": query_results.get("results", []),
             }
             return paginated_results  # parser(paginated_results)
