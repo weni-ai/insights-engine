@@ -1,3 +1,5 @@
+import copy
+
 from django.db import transaction
 
 from insights.dashboards.models import Dashboard
@@ -329,17 +331,17 @@ class CreateHumanService:
                     },
                     widget=pico_de_atendimento,
                 )
-                waiting_report = table_group_report.copy()
+                waiting_report = copy.deepcopy(table_group_report)
                 waiting_report["widget"] = aguardando_atendimento
                 waiting_report["config"]["waiting"]["is_default"] = True
                 Report.objects.create(**waiting_report)
 
-                in_progress_report = table_group_report.copy()
+                in_progress_report = copy.deepcopy(table_group_report)
                 in_progress_report["widget"] = em_andamento
                 in_progress_report["config"]["in_progress"]["is_default"] = True
                 Report.objects.create(**in_progress_report)
 
-                closed_report = table_group_report.copy()
+                closed_report = copy.deepcopy(table_group_report)
                 closed_report["widget"] = encerrados
                 closed_report["config"]["closed"]["is_default"] = True
                 Report.objects.create(**closed_report)
