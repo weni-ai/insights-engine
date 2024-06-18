@@ -150,7 +150,37 @@ class CreateHumanService:
                                 },
                             ],
                             "name_overwrite": "Agentes online",
-                        }
+                        },
+                        "created_on": {
+                            "icon": "forum:weni-600",
+                            "fields": [
+                                {
+                                    "name": "Agente",
+                                    "value": "agent",
+                                    "display": True,
+                                    "hidden_name": False,
+                                },
+                                {
+                                    "name": "Chats no período",
+                                    "value": "opened",
+                                    "display": True,
+                                    "hidden_name": False,
+                                },
+                                {
+                                    "name": "Encerrados",
+                                    "value": "closed",
+                                    "display": True,
+                                    "hidden_name": False,
+                                },
+                                {
+                                    "name": "Status",
+                                    "value": "status",
+                                    "display": True,
+                                    "hidden_name": True,
+                                },
+                            ],
+                            "name_overwrite": "Chats por agente",
+                        },
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [1, 3], "columns": [13, 18]},
