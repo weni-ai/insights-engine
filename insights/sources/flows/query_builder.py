@@ -1,10 +1,10 @@
-class TagSQLQueryBuilder:
+class FlowSQLQueryBuilder:
     def __init__(self):
         self.where_clauses = []
         self.params = []
         self.is_valid = False
 
-    def add_filter(self, strategy, field, operation, value, table_alias: str = "tg"):
+    def add_filter(self, strategy, field, operation, value, table_alias: str = "s"):
         clause, params = strategy.apply(field, operation, value, table_alias)
 
         self.where_clauses.append(clause)
@@ -17,6 +17,6 @@ class TagSQLQueryBuilder:
     def list(self):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT tg.uuid,tg.name FROM public.sectors_sectortag AS tg WHERE {self.where_clause};"
+        query = f"SELECT f.uuid, f.name, f.metadata FROM public.flows_flow AS f INNER JOIN public.orgs_org AS o ON o.id=f.org_id WHERE {self.where_clause};"
 
         return query, self.params
