@@ -2,6 +2,9 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from django.conf import settings
+from django.db.models import Q
+
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.models import Dashboard
 from insights.dashboards.utils import DefaultPagination
@@ -31,7 +34,10 @@ class DashboardViewSet(
         if project_id is not None:
             return (
                 Dashboard.objects.filter(project_id=project_id)
-                .exclude(name="Resultados de fluxos")
+                .exclude(
+                    Q(name="Resultados de fluxos")
+                    & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
+                )
                 .order_by("created_on")
             )
 
