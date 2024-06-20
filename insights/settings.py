@@ -260,3 +260,5 @@ if USE_EDA:
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
 
 CHATS_URL = env("CHATS_URL")
+
+PROJECT_ALLOW_LIST = env("PROJECT_ALLOW_LIST", default=[])
