@@ -13,7 +13,7 @@ class QueryExecutor:
     ):
         filters["project"] = str(project.uuid)
         query, params = generate_sql_query(filters=filters, query_type=operation)
-        with get_cursor(db_name="chats") as cur:
+        with get_cursor(db_name="flows") as cur:
             query_exec = cur.execute(query, params)
             query_results = dictfetchall(query_exec)
         paginated_results = {"next": None, "previous": None, "results": query_results}

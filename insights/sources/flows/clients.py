@@ -9,7 +9,7 @@ relation_schema = {
 def get_joins_from_schema(field):
     joins = dict()
     if "project" == field:
-        joins["q"] = "INNER JOIN public.orgs_org AS o ON o.id=f.org_id"
+        joins["o"] = "INNER JOIN public.orgs_org AS o ON o.id=f.org_id"
 
     return joins
 
@@ -24,7 +24,7 @@ def generate_sql_query(
     builder = FlowSQLQueryBuilder()
 
     for key, value in filters.items():
-        table_alias = "r"
+        table_alias = "f"
         if "__" in key:
             field, operation = key.split("__", 1)
         elif type(value) is list:
