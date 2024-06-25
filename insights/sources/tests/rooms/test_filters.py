@@ -2,12 +2,12 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from insights.sources.filters import BasicFilterStrategy
+from insights.sources.filters import PostgreSQLFilterStrategy
 
 
 @pytest.fixture
 def strategy():
-    return BasicFilterStrategy()
+    return PostgreSQLFilterStrategy()
 
 
 def test_eq_operation(strategy):

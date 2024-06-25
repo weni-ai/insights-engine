@@ -1,6 +1,5 @@
-from insights.sources.filters import BasicFilterStrategy
+from insights.sources.filters import PostgreSQLFilterStrategy
 from insights.sources.flows.query_builder import FlowSQLQueryBuilder
-
 
 relation_schema = {
     "project": {"field_name": "proj_uuid", "table_alias": "o"},
@@ -21,7 +20,7 @@ def generate_sql_query(
     query_type: str = "count",
     query_kwargs: dict = {},
 ):
-    strategy = BasicFilterStrategy()
+    strategy = PostgreSQLFilterStrategy()
     builder = FlowSQLQueryBuilder()
 
     for key, value in filters.items():

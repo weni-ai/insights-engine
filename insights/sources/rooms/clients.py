@@ -2,7 +2,7 @@ import requests
 from django.conf import settings
 
 from insights.internals.base import InternalAuthentication
-from insights.sources.filters import BasicFilterStrategy
+from insights.sources.filters import PostgreSQLFilterStrategy
 from insights.sources.rooms.query_builder import RoomSQLQueryBuilder
 
 relation_schema = {
@@ -40,7 +40,7 @@ def generate_sql_query(
     query_type: str = "count",
     query_kwargs: dict = {},
 ):
-    strategy = BasicFilterStrategy()
+    strategy = PostgreSQLFilterStrategy()
     builder = RoomSQLQueryBuilder()
 
     for key, value in filters.items():
