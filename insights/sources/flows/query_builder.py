@@ -22,6 +22,6 @@ class FlowSQLQueryBuilder:
     def list(self):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT f.uuid, f.name, f.metadata FROM public.flows_flow AS f {self.join_clause} WHERE {self.where_clause};"
+        query = f"SELECT f.uuid, f.name FROM public.flows_flow AS f {self.join_clause} WHERE {self.where_clause};"
 
         return query, self.params

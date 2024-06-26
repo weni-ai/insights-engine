@@ -26,7 +26,8 @@ class WidgetListUpdateViewSet(
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         widget = self.get_object()
-        update_data = request.data
+        update_data = dict(request.data)
+        report_name = update_data.pop("report_name", None)
 
         config = widget.config
         if "config" in update_data:
@@ -54,6 +55,9 @@ class WidgetListUpdateViewSet(
                 source=widget.source,
                 type="graph_bar",
             )
+
+        if report_name:
+            report.name = report_name
 
         report.config = {
             "operation": widget.config.get("operation"),
