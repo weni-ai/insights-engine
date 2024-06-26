@@ -63,7 +63,7 @@ class FlowRunsElasticSearchQueryBuilder:
     def min(self, op_field):
         return self._base_operation("min", op_field)
 
-    def recurrence(self, op_field):
+    def recurrence(self, op_field: str, limit: int = 100):
         aggs = {
             "values": {
                 "nested": {"path": "values"},
@@ -74,7 +74,7 @@ class FlowRunsElasticSearchQueryBuilder:
                         },
                         "aggs": {
                             "agg_value": {
-                                "terms": {"size": 100, "field": "values.value"}
+                                "terms": {"size": limit, "field": "values.value"}
                             }
                         },
                     }

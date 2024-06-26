@@ -26,12 +26,16 @@ class Widget(BaseWidget):
     )
     position = models.JSONField("Widget position")
 
+    def __str__(self):
+        return self.name
+
     @property
     def project(self):
         return self.dashboard.project
 
-    def __str__(self):
-        return self.name
+    @property
+    def is_configurable(self):
+        return self.dashboard.name == "Resultados de fluxos"
 
     def source_config(self, sub_widget: str = None):
         config = self.config if sub_widget is None else self.config[sub_widget]

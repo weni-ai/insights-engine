@@ -9,10 +9,12 @@ def transform_terms_count_to_percentage(
     for term in terms_agg_buckets:
         value = term.get("doc_count")
         if value == 0:
-            transformed_results.append({"name": term.get("key"), "value": "0%"})
+            transformed_results.append({"value": term.get("key"), "percentage": "0%"})
             continue
         percent = (value / total) * 100
-        transformed_results.append({"name": term.get("key"), "value": f"{percent}%"})
+        transformed_results.append(
+            {"value": term.get("key"), "percentage": f"{percent}%"}
+        )
     return transformed_results
 
 
@@ -42,9 +44,11 @@ class QueryExecutor:
                 others=terms_agg.get("agg_value", {}).get("sum_other_doc_count", 0),
                 terms_agg_buckets=terms_agg.get("agg_value", {}).get("buckets", []),
             )
-            paginated_results = {
+            return {
                 "results": transformed_terms,
             }
+        elif operation == "count":
+            return {"value": response.get("count", 0)}
         else:
             return (
                 response.get("aggregations", {})
@@ -52,4 +56,3 @@ class QueryExecutor:
                 .get("agg_field", {})
                 .get("agg_value")
             )
-        return paginated_results  # parser(paginated_results)
