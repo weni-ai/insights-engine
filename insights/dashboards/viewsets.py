@@ -29,10 +29,8 @@ class DashboardViewSet(
     def get_queryset(self):
         project_id = self.request.query_params.get("project", None)  # do we need this?
         if project_id is not None:
-            return (
-                Dashboard.objects.filter(project_id=project_id)
-                .exclude(name="Resultados de fluxos")
-                .order_by("created_on")
+            return Dashboard.objects.filter(project_id=project_id).order_by(
+                "created_on"
             )
 
         return Dashboard.objects.none()
