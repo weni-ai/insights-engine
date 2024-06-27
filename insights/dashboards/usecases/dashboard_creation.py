@@ -448,7 +448,7 @@ class CreateFlowResults:
                     position={"rows": [3, 3], "columns": [5, 8]},
                 )
                 Widget.objects.create(
-                    name="Métrica vazia",
+                    name="Funil",
                     type="graph_funnel",
                     source="",
                     config={},
