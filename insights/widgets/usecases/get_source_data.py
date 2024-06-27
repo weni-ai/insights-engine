@@ -36,27 +36,6 @@ def apply_timezone_to_date_filters(default_filters: dict, timezone: str):
                     default_filters[key][subkey] = tz.localize(date_value)
 
 
-def set_live_day(default_filters: dict):
-    start_of_day = datetime.combine(now().date(), time.min)
-    default_filters["created_on__gte"] = start_of_day
-
-
-def apply_timezone_to_date_filters(default_filters: dict, timezone: str):
-    tz = pytz.timezone(timezone)
-    date_suffixes = ["__gte", "__lte"]
-
-    if default_filters.get("created_on__gte") == "now":
-        set_live_day(default_filters)
-
-    for key, value in default_filters.items():
-        if any(key.endswith(suffix) for suffix in date_suffixes):
-            if isinstance(value, str):
-                date_value = datetime.strptime(value, "%Y-%m-%d")
-                default_filters[key] = tz.localize(date_value)
-            elif isinstance(value, datetime):
-                default_filters[key] = tz.localize(value)
-
-
 def get_source_data_from_widget(
     widget: Widget, is_report: bool = False, filters: dict = {}, user_email: str = ""
 ):
