@@ -1,6 +1,32 @@
+from datetime import datetime, time
+
+import pytz
+from django.utils.timezone import make_aware, now
+
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
+
+
+def set_live_day(default_filters: dict):
+    start_of_day = datetime.combine(now().date(), time.min)
+    default_filters["created_on__gte"] = start_of_day
+
+
+def apply_timezone_to_date_filters(default_filters: dict, timezone: str):
+    tz = pytz.timezone(timezone)
+    date_suffixes = ["__gte", "__lte"]
+
+    if default_filters.get("created_on__gte") == "now":
+        set_live_day(default_filters)
+
+    for key, value in default_filters.items():
+        if any(key.endswith(suffix) for suffix in date_suffixes):
+            if isinstance(value, str):
+                date_value = datetime.strptime(value, "%Y-%m-%d")
+                default_filters[key] = tz.localize(date_value)
+            elif isinstance(value, datetime):
+                default_filters[key] = tz.localize(value)
 
 
 def get_source_data_from_widget(
@@ -19,13 +45,17 @@ def get_source_data_from_widget(
 
         default_filters, operation, op_field, limit = widget.source_config(
             sub_widget=filters.pop("slug", [None])[0]
-        )  # implement a dynamic handler for each widget
+        )
 
-        filters.update(default_filters)
+        default_filters.update(filters)
+
+        project_timezone = widget.project.timezone
+        apply_timezone_to_date_filters(default_filters, project_timezone)
+
         if operation == "list":
-            tags = filters.pop("tags", [None])[0]
+            tags = default_filters.pop("tags", [None])[0]
             if tags:
-                filters["tags"] = tags.split(",")
+                default_filters["tags"] = tags.split(",")
 
         if op_field:
             query_kwargs["field_name"] = op_field
@@ -33,7 +63,7 @@ def get_source_data_from_widget(
             query_kwargs["limit"] = limit
 
         serialized_source = SourceQuery.execute(
-            filters=filters,
+            filters=default_filters,
             operation=operation,
             parser=parse_dict_to_json,
             project=widget.project,
