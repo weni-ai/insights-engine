@@ -7,10 +7,8 @@ import pytz
 from django.utils.timezone import now, make_aware
 
 
-def set_live_day(default_filters: dict, tz):
-    start_of_day = make_aware(
-        datetime.combine(now().date(), datetime.min.time()), timezone=tz
-    )
+def set_live_day(default_filters: dict):
+    start_of_day = datetime.combine(now().date(), time.min)
     default_filters["created_on__gte"] = start_of_day
 
 
@@ -19,7 +17,7 @@ def apply_timezone_to_date_filters(default_filters: dict, timezone: str):
     date_suffixes = ["__gte", "__lte"]
 
     if default_filters.get("created_on__gte") == "now":
-        set_live_day(default_filters, tz)
+        set_live_day(default_filters)
 
     for key, value in default_filters.items():
         if any(key.endswith(suffix) for suffix in date_suffixes):
