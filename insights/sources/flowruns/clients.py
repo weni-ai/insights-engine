@@ -13,6 +13,7 @@ flow_runs_filters = {
 
 class FlowRunsElasticSearchClient:
     def execute(
+        self,
         filters: dict,
         query_type: str = "count",
         query_kwargs: dict = {},
