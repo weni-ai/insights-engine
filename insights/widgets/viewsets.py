@@ -39,18 +39,19 @@ class WidgetListUpdateViewSet(
             return Response(serializer.data)
 
         if config.get("operation") != "recurrence":
-            if widget.report is not None:
+            try:
                 widget.report.delete()
+            except Report.DoesNotExist:
+                pass
             serializer = self._update(widget, update_data, partial)
             return Response(serializer.data)
 
         config["limit"] = 1
         serializer = self._update(widget, update_data, partial)
         widget.refresh_from_db()
-
-        report = widget.report
-
-        if not report:
+        try:
+            report = widget.report
+        except Report.DoesNotExist:
             report = Report(
                 widget=widget,
                 source=widget.source,
