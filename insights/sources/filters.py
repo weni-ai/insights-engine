@@ -1,4 +1,4 @@
-class BasicFilterStrategy:
+class PostgreSQLFilterStrategy:
     def apply(self, field, operation, value, table_alias):
         if operation == "after" or operation == "gte":
             return f"{table_alias}.{field} >= (%s)", [value]
@@ -30,3 +30,18 @@ class BasicFilterStrategy:
             return f"({' OR '.join(or_clauses)})", or_params
         else:
             raise ValueError(f"Unsupported operation: {operation}")
+
+
+class ElasticSearchFilterStrategy:
+    def apply(self, field, operation, value, *args, **kwargs):
+        query_block = "must"
+        if operation == "eq":
+            query_operation = "term"
+        elif operation == "after" or operation == "gte":
+            query_operation = "range"
+            value = {"gte": value}
+        elif operation == "before" or operation == "lte":
+            query_operation = "range"
+            value = {"lte": value}
+
+        return field, value, query_block, query_operation

@@ -1,9 +1,8 @@
+from django.conf import settings
+from django.db.models import Q
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
-from django.conf import settings
-from django.db.models import Q
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.models import Dashboard

@@ -457,6 +457,3 @@ class CreateFlowResults:
                 )
         except Exception as exception:
             raise InvalidWidgetsObject(f"Error creating widgets: {exception}")
-
-    def create_reports():
-        pass

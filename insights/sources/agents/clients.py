@@ -3,7 +3,7 @@ from django.conf import settings
 
 from insights.internals.base import InternalAuthentication
 from insights.sources.agents.query_builder import AgentSQLQueryBuilder
-from insights.sources.filters import BasicFilterStrategy
+from insights.sources.filters import PostgreSQLFilterStrategy
 
 
 class AgentsRESTClient(InternalAuthentication):
@@ -30,7 +30,7 @@ def generate_sql_query(
     query_type: str = "list",
     query_kwargs: dict = {},
 ):
-    strategy = BasicFilterStrategy()
+    strategy = PostgreSQLFilterStrategy()
     builder = AgentSQLQueryBuilder()
 
     for key, value in filters.items():
