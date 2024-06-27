@@ -59,6 +59,7 @@ class ReportSerializer(serializers.ModelSerializer):
 
 
 class DashboardWidgetsSerializer(serializers.ModelSerializer):
+    is_configurable = serializers.BooleanField(read_only=True)
     report = DashboardReportSerializer()
 
     class Meta:
