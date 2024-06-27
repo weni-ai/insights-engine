@@ -34,7 +34,10 @@ class DashboardViewSet(
         if project_id is not None:
             return (
                 Dashboard.objects.filter(project_id=project_id)
-                .exclude(~Q(project_id__in=settings.PROJECT_ALLOW_LIST))
+                .exclude(
+                    Q(name="Resultados de fluxos")
+                    & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
+                )
                 .order_by("created_on")
             )
 
