@@ -1,34 +1,32 @@
+from datetime import datetime, time
+
+import pytz
+
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
 
-from datetime import datetime, time
-import pytz
-from django.utils.timezone import now, make_aware
 
-
-def set_live_day(default_filters: dict):
-    start_of_day = datetime.combine(datetime.now().date(), datetime.min.time())
-    default_filters.setdefault("filter", {})["created_on__gte"] = start_of_day
+def set_live_day(default_filters: dict, key: str):
+    start_of_day = datetime.combine(datetime.now().date(), time.min)
+    default_filters[key] = start_of_day
 
 
 def apply_timezone_to_date_filters(default_filters: dict, timezone: str):
     tz = pytz.timezone(timezone)
     date_suffixes = ["__gte", "__lte"]
 
-    if default_filters["filter"].get("created_on__gte") == "now":
-        set_live_day(default_filters)
+    for key, value in list(default_filters.items()):
+        if any(key.endswith(suffix) for suffix in date_suffixes):
+            if value == "today":
+                set_live_day(default_filters, key)
+                value = default_filters[key]
 
-    for key, value in default_filters.items():
-        if isinstance(value, dict):
-            for subkey, subvalue in value.items():
-                if subkey.endswith(tuple(date_suffixes)):
-                    if isinstance(subvalue, str):
-                        date_value = datetime.strptime(subvalue, "%Y-%m-%d")
-                    elif isinstance(subvalue, datetime):
-                        date_value = subvalue
-
-                    default_filters[key][subkey] = tz.localize(date_value)
+            if isinstance(value, str):
+                date_value = datetime.strptime(value, "%Y-%m-%d")
+                default_filters[key] = tz.localize(date_value)
+            elif isinstance(value, datetime):
+                default_filters[key] = tz.localize(value)
 
 
 def get_source_data_from_widget(
