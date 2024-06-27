@@ -1,12 +1,12 @@
 import pytest
 
-from insights.sources.filters import BasicFilterStrategy
+from insights.sources.filters import PostgreSQLFilterStrategy
 from insights.sources.rooms.query_builder import RoomSQLQueryBuilder
 
 
 @pytest.fixture
 def strategy():
-    return BasicFilterStrategy()
+    return PostgreSQLFilterStrategy()
 
 
 @pytest.fixture
