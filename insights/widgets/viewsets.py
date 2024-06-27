@@ -39,7 +39,8 @@ class WidgetListUpdateViewSet(
             return Response(serializer.data)
 
         if config.get("operation") != "recurrence":
-            widget.reports.delete()
+            if widget.report is not None:
+                widget.report.delete()
             serializer = self._update(widget, update_data, partial)
             return Response(serializer.data)
 
