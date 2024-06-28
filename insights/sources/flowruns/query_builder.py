@@ -29,12 +29,17 @@ class FlowRunsElasticSearchQueryBuilder:
         self.validated_query = {"bool": query_bool_blocks}
         self.is_valid = True
 
-    def count(self) -> list[str, dict]:
+    def count(self, *args, **kwargs) -> list[str, dict]:
         """return endpoint and filter"""
         return ["_count", {"query": self.validated_query}]
 
     def _base_operation(
-        self, operation: str, field_name: str, value_field: str = "values.value_number"
+        self,
+        operation: str,
+        op_field: str,
+        value_field: str = "values.value_number",
+        *args,
+        **kwargs
     ):
         aggs = {
             "values": {
@@ -42,7 +47,7 @@ class FlowRunsElasticSearchQueryBuilder:
                 "aggs": {
                     "agg_field": {
                         "filter": {
-                            "bool": {"filter": [{"term": {"values.name": field_name}}]}
+                            "bool": {"filter": [{"term": {"values.name": op_field}}]}
                         },
                         "aggs": {"agg_value": {operation: {"field": value_field}}},
                     }
@@ -51,26 +56,26 @@ class FlowRunsElasticSearchQueryBuilder:
         }
         return ["_search", {"size": 0, "query": self.validated_query, "aggs": aggs}]
 
-    def sum(self, field_name):
-        return self._base_operation("sum", field_name)
+    def sum(self, op_field, *args, **kwargs):
+        return self._base_operation("sum", op_field)
 
-    def avg(self, field_name):
-        return self._base_operation("avg", field_name)
+    def avg(self, op_field, *args, **kwargs):
+        return self._base_operation("avg", op_field)
 
-    def max(self, field_name):
-        return self._base_operation("max", field_name)
+    def max(self, op_field, *args, **kwargs):
+        return self._base_operation("max", op_field)
 
-    def min(self, field_name):
-        return self._base_operation("min", field_name)
+    def min(self, op_field, *args, **kwargs):
+        return self._base_operation("min", op_field)
 
-    def recurrence(self, field_name: str, limit: int = 100):
+    def recurrence(self, op_field: str, limit: int = 100, *args, **kwargs):
         aggs = {
             "values": {
                 "nested": {"path": "values"},
                 "aggs": {
                     "agg_field": {
                         "filter": {
-                            "bool": {"filter": [{"term": {"values.name": field_name}}]}
+                            "bool": {"filter": [{"term": {"values.name": op_field}}]}
                         },
                         "aggs": {
                             "agg_value": {
