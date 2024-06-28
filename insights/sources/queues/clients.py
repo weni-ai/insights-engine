@@ -1,4 +1,4 @@
-from insights.sources.filters import BasicFilterStrategy
+from insights.sources.filters import PostgreSQLFilterStrategy
 from insights.sources.queues.query_builder import QueueSQLQueryBuilder
 
 
@@ -7,7 +7,7 @@ def generate_sql_query(
     query_type: str = "list",
     query_kwargs: dict = {},
 ):
-    strategy = BasicFilterStrategy()
+    strategy = PostgreSQLFilterStrategy()
     builder = QueueSQLQueryBuilder()
 
     for key, value in filters.items():

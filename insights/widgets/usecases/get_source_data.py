@@ -28,7 +28,7 @@ def get_source_data_from_widget(
                 filters["tags"] = tags.split(",")
 
         if op_field:
-            query_kwargs["field_name"] = op_field
+            query_kwargs["op_field"] = op_field
         if limit:
             query_kwargs["limit"] = limit
 

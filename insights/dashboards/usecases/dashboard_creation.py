@@ -448,7 +448,7 @@ class CreateFlowResults:
                     position={"rows": [3, 3], "columns": [5, 8]},
                 )
                 Widget.objects.create(
-                    name="Métrica vazia",
+                    name="Funil",
                     type="graph_funnel",
                     source="",
                     config={},
@@ -457,6 +457,3 @@ class CreateFlowResults:
                 )
         except Exception as exception:
             raise InvalidWidgetsObject(f"Error creating widgets: {exception}")
-
-    def create_reports():
-        pass

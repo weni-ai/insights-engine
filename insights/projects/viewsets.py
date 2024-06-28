@@ -29,9 +29,9 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             tags = filters.pop("tags", [None])[0]
             if tags:
                 filters["tags"] = tags.split(",")
-        field_name = filters.pop("field_name", [None])[0]
-        if field_name:
-            query_kwargs["field_name"] = field_name
+        op_field = filters.pop("op_field", [None])[0]
+        if op_field:
+            query_kwargs["op_field"] = op_field
 
         serialized_source = SourceQuery.execute(
             filters=filters,
