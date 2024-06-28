@@ -27,7 +27,7 @@ def test_generate_sql_query_timeseries():
 def test_generate_sql_query_sum():
     filter_dict = {"user_id": 123}
     query, params = generate_sql_query(
-        filter_dict, query_type="sum", query_kwargs={"field_name": "duration"}
+        filter_dict, query_type="sum", query_kwargs={"op_field": "duration"}
     )
     expected_query = "SELECT SUM(mr.duration) FROM public.rooms_room as r INNER JOIN public.dashboard_roommetrics AS mr ON mr.room_id=r.uuid  WHERE r.user_id = (%s);"
     assert query == expected_query
@@ -37,7 +37,7 @@ def test_generate_sql_query_sum():
 def test_generate_sql_query_avg():
     filter_dict = {"user_id": 123}
     query, params = generate_sql_query(
-        filter_dict, query_type="avg", query_kwargs={"field_name": "duration"}
+        filter_dict, query_type="avg", query_kwargs={"op_field": "duration"}
     )
     expected_query = "SELECT AVG(mr.duration) FROM public.rooms_room as r INNER JOIN public.dashboard_roommetrics AS mr ON mr.room_id=r.uuid  WHERE r.user_id = (%s);"
     assert query == expected_query
