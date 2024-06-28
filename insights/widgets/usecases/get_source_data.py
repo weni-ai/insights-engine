@@ -7,6 +7,12 @@ from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
 
 
+def verify_filters(default_filters: dict):
+    if "created_on__gte" in default_filters and "created_on__lte" in default_filters:
+        if "ended_at__gte" in default_filters:
+            del default_filters["ended_at__gte"]
+
+
 def set_live_day(default_filters: dict, key: str):
     start_of_day = datetime.combine(datetime.now().date(), time.min)
     default_filters[key] = start_of_day
@@ -51,6 +57,7 @@ def get_source_data_from_widget(
 
         project_timezone = widget.project.timezone
         apply_timezone_to_date_filters(default_filters, project_timezone)
+        verify_filters(default_filters)
 
         if operation == "list":
             tags = default_filters.pop("tags", [None])[0]
