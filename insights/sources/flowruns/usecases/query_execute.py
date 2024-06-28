@@ -8,13 +8,11 @@ def transform_terms_count_to_percentage(
     transformed_results = []
     for term in terms_agg_buckets:
         value = term.get("doc_count")
-        if value == 0:
-            transformed_results.append({"value": term.get("key"), "percentage": "0%"})
+        if value == 0 or value is None:
+            transformed_results.append({"label": term.get("key"), "value": "0%"})
             continue
         percent = (value / total) * 100
-        transformed_results.append(
-            {"value": term.get("key"), "percentage": f"{percent}%"}
-        )
+        transformed_results.append({"label": term.get("key"), "value": f"{percent}%"})
     return transformed_results
 
 
