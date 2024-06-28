@@ -8,6 +8,7 @@ from insights.widgets.models import Widget
 
 
 def verify_filters(filters: dict):
+    print("filtros", filters)
     if "created_on__gte" in filters.get(
         "filter", {}
     ) and "created_on__lte" in filters.get("filter", {}):
