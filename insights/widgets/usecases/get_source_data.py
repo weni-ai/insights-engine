@@ -8,12 +8,9 @@ from insights.widgets.models import Widget
 
 
 def verify_filters(default_filters: dict):
-    print("filtros", default_filters)
     if "created_on__gte" in default_filters and "created_on__lte" in default_filters:
         if "ended_at__gte" in default_filters:
             del default_filters["ended_at__gte"]
-
-    print("apos", default_filters)
 
 
 def set_live_day(default_filters: dict, key: str):
@@ -62,7 +59,6 @@ def get_source_data_from_widget(
         apply_timezone_to_date_filters(default_filters, project_timezone)
         verify_filters(default_filters)
 
-        print("funcao final", default_filters)
         if operation == "list":
             tags = default_filters.pop("tags", [None])[0]
             if tags:
