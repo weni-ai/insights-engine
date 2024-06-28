@@ -10,7 +10,7 @@ from insights.widgets.models import Widget
 def verify_filters(default_filters: dict):
     print("filtros", default_filters)
     if "created_on__gte" in default_filters and "created_on__lte" in default_filters:
-        if "ended_at__gte" in default_filters.get("filter", {}):
+        if "ended_at__gte" in default_filters:
             del default_filters["ended_at__gte"]
 
     print("apos", default_filters)
