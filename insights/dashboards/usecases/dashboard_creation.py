@@ -63,7 +63,7 @@ class CreateHumanService:
                         "op_field": "waiting_time",
                     },
                     dashboard=dashboard_atendimento_humano,
-                    position={"rows": [2, 2], "columns": [5, 8]},
+                    position={"rows": [3, 3], "columns": [5, 8]},
                 )
                 encerrados = Widget.objects.create(
                     name="Encerrados",
@@ -102,7 +102,7 @@ class CreateHumanService:
                         },
                     },
                     dashboard=dashboard_atendimento_humano,
-                    position={"rows": [3, 3], "columns": [5, 8]},
+                    position={"rows": [2, 2], "columns": [5, 8]},
                 )
                 Widget.objects.create(
                     name="Tempo de interação",
