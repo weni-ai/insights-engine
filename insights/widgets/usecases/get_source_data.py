@@ -7,32 +7,16 @@ from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
 
 
-def verify_filters(default_filters: dict):
-    if "created_on__gte" in default_filters and "created_on__lte" in default_filters:
-        if "ended_at__gte" in default_filters:
-            del default_filters["ended_at__gte"]
+def apply_timezone_to_filters(default_filters, project_timezone_str):
+    project_timezone = pytz.timezone(project_timezone_str)
+    for key in default_filters.keys():
+        if key.endswith("__gte") or key.endswith("__lte"):
+            date_str = default_filters[key][0]
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            date_obj_with_tz = project_timezone.localize(date_obj)
+            default_filters[key] = [date_obj_with_tz]
 
-
-def set_live_day(default_filters: dict, key: str):
-    start_of_day = datetime.combine(datetime.now().date(), time.min)
-    default_filters[key] = start_of_day
-
-
-def apply_timezone_to_date_filters(default_filters: dict, timezone: str):
-    tz = pytz.timezone(timezone)
-    date_suffixes = ["__gte", "__lte"]
-
-    for key, value in list(default_filters.items()):
-        if any(key.endswith(suffix) for suffix in date_suffixes):
-            if value == "today":
-                set_live_day(default_filters, key)
-                value = default_filters[key]
-
-            if isinstance(value, str):
-                date_value = datetime.strptime(value, "%Y-%m-%d")
-                default_filters[key] = tz.localize(date_value)
-            elif isinstance(value, datetime):
-                default_filters[key] = tz.localize(value)
+    return default_filters
 
 
 def get_source_data_from_widget(
@@ -56,8 +40,7 @@ def get_source_data_from_widget(
         default_filters.update(filters)
 
         project_timezone = widget.project.timezone
-        apply_timezone_to_date_filters(default_filters, project_timezone)
-        verify_filters(default_filters)
+        apply_timezone_to_filters(default_filters, project_timezone)
 
         if operation == "list":
             tags = default_filters.pop("tags", [None])[0]
