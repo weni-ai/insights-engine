@@ -1,4 +1,4 @@
-from insights.db.postgres.connection import (
+from insights.db.postgres.django.connection import (
     dictfetchall,
     dictfetchone,
     get_cursor,

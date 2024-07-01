@@ -1,4 +1,4 @@
-from insights.db.postgres.connection import dictfetchall, get_cursor
+from insights.db.postgres.django.connection import dictfetchall, get_cursor
 from insights.sources.sectors.clients import generate_sql_query
 
 
