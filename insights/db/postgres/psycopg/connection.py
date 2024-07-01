@@ -17,7 +17,7 @@ def get_connection(db_name: str):
     if not pools.get(db_name, None):
         pools[db_name] = NullConnectionPool(
             max_size=5,
-            conninfo=settings.DATABASES.get(db_name),
+            conninfo=settings.PSYCOPG_DATABASES.get(db_name),
             check=ConnectionPool.check_connection,
         )
     with pools.get(db_name).connection() as conn:

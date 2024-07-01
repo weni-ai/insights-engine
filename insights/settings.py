@@ -106,8 +106,12 @@ WSGI_APPLICATION = "insights.wsgi.application"
 DATABASES = {
     "default": env.db(var="DEFAULT_DATABASE", default="sqlite:///insights_db.sqlite3"),
     "chats": env.db(var="CHATS_PG_DATABASE", default="sqlite:///chats_db.sqlite3"),
+    "flows": env.db(var="FLOWS_PG_DATABASE", default="sqlite:///flows_db.sqlite3"),
+}
+PSYCOPG_DATABASES = {
     "flows": env.str(var="FLOWS_PG_DATABASE", default="sqlite:///flows_db.sqlite3"),
 }
+
 FLOWS_ES_DATABASE = env.str(var="FLOWS_ES_DATABASE", default="https://localhost:9000")
 
 
