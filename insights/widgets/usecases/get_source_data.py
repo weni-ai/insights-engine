@@ -37,10 +37,8 @@ def get_source_data_from_widget(
 
         default_filters.update(filters)
 
-        print("filtro antes", default_filters)
         project_timezone = widget.project.timezone
         apply_timezone_to_filters(default_filters, project_timezone)
-        print("filtro depois", default_filters)
 
         if operation == "list":
             tags = default_filters.pop("tags", [None])[0]
