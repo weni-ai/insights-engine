@@ -14,7 +14,7 @@ def apply_timezone_to_filters(default_filters, project_timezone_str):
             date_str = default_filters[key][0]
             date_obj = datetime.strptime(date_str, "%Y-%m-%d")
             date_obj_with_tz = project_timezone.localize(date_obj)
-            default_filters[key] = [date_obj_with_tz]
+            default_filters[key] = date_obj_with_tz
 
 
 def get_source_data_from_widget(
