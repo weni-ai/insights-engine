@@ -23,7 +23,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 {"detail": f"could not find a source with the slug {source_slug}"},
                 status.HTTP_404_NOT_FOUND,
             )
-        filters = dict(request.data or request.query_params or {})
+        filters = request.data or request.query_params.dict()
         operation = filters.pop("operation", ["list"])[0]
         if operation == "list":
             tags = filters.pop("tags", [None])[0]
