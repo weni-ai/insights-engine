@@ -65,6 +65,7 @@ class WidgetListUpdateViewSet(
             "operation": widget.config.get("operation"),
             "op_field": widget.config.get("op_field"),
             "filter": widget.config.get("filter"),
+            "data_suffix": "%",
         }
         report.save()
 
