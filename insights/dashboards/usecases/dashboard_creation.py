@@ -400,7 +400,7 @@ class CreateFlowResults:
         try:
             with transaction.atomic():
                 Widget.objects.create(
-                    name="Métrica vazia",
+                    name="",
                     type="card",
                     source="",
                     config={},
@@ -408,7 +408,7 @@ class CreateFlowResults:
                     position={"rows": [1, 1], "columns": [1, 4]},
                 )
                 Widget.objects.create(
-                    name="Métrica vazia",
+                    name="",
                     type="card",
                     source="",
                     config={},
@@ -416,7 +416,7 @@ class CreateFlowResults:
                     position={"rows": [2, 2], "columns": [1, 4]},
                 )
                 Widget.objects.create(
-                    name="Métrica vazia",
+                    name="",
                     type="card",
                     source="",
                     config={},
@@ -424,7 +424,7 @@ class CreateFlowResults:
                     position={"rows": [3, 3], "columns": [1, 4]},
                 )
                 Widget.objects.create(
-                    name="Métrica vazia",
+                    name="",
                     type="card",
                     source="",
                     config={},
@@ -432,7 +432,7 @@ class CreateFlowResults:
                     position={"rows": [1, 1], "columns": [5, 8]},
                 )
                 Widget.objects.create(
-                    name="Métrica vazia",
+                    name="",
                     type="card",
                     source="",
                     config={},
@@ -440,7 +440,7 @@ class CreateFlowResults:
                     position={"rows": [2, 2], "columns": [5, 8]},
                 )
                 Widget.objects.create(
-                    name="Métrica vazia",
+                    name="",
                     type="card",
                     source="",
                     config={},

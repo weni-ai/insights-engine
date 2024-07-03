@@ -53,7 +53,7 @@ def get_dash_filters(dash: Dashboard):
         data = {
             "ended_at": {
                 "type": "date_range",
-                "label": "Data",
+                "label": None,
                 "end_sufix": "__lte",
                 "placeholder": None,
                 "start_sufix": "__gte",
