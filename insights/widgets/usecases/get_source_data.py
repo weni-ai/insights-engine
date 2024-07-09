@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime
 
 import pytz
 
@@ -18,7 +18,11 @@ def apply_timezone_to_filters(default_filters, project_timezone_str):
 
 
 def get_source_data_from_widget(
-    widget: Widget, is_report: bool = False, filters: dict = {}, user_email: str = ""
+    widget: Widget,
+    is_report: bool = False,
+    is_live=False,
+    filters: dict = {},
+    user_email: str = "",
 ):
     try:
         source = widget.source
@@ -32,7 +36,7 @@ def get_source_data_from_widget(
             )
 
         default_filters, operation, op_field, limit = widget.source_config(
-            sub_widget=filters.pop("slug", [None])[0]
+            sub_widget=filters.pop("slug", [None])[0], is_live=is_live
         )
 
         default_filters.update(filters)

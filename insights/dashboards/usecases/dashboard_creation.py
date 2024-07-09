@@ -73,6 +73,7 @@ class CreateHumanService:
                         "operation": "count",
                         "type_result": "executions",
                         "filter": {"is_active": False},
+                        "live_filter": {"ended_at__gte": "today"},
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [9, 12]},
