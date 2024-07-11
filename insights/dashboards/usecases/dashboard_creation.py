@@ -51,7 +51,7 @@ class CreateHumanService:
                     config={
                         "operation": "count",
                         "type_result": "executions",
-                        "filter": {"is_active": True, "user_id__isnull": False},
+                        "filter": {"is_active": True, "user_id__isnull": True},
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [1, 4]},
@@ -65,7 +65,6 @@ class CreateHumanService:
                         "type_result": "executions",
                         "op_field": "waiting_time",
                         "data_type": "sec",
-                        "filter": {},
                         "live_filter": {
                             "created_on__gte": "today",
                             "user_id__isnull": False,
@@ -97,7 +96,6 @@ class CreateHumanService:
                         "type_result": "executions",
                         "op_field": "message_response_time",
                         "data_type": "sec",
-                        "filter": {},
                         "live_filter": {
                             "created_on__gte": "today",
                             "user_id__isnull": False,
@@ -116,7 +114,7 @@ class CreateHumanService:
                         "type_result": "executions",
                         "filter": {
                             "is_active": True,
-                            "user_id__isnull": True,
+                            "user_id__isnull": False,
                         },
                     },
                     dashboard=dashboard_atendimento_humano,
@@ -131,7 +129,6 @@ class CreateHumanService:
                         "type_result": "executions",
                         "op_field": "interaction_time",
                         "data_type": "sec",
-                        "filter": {},
                         "live_filter": {
                             "created_on__gte": "today",
                             "user_id__isnull": False,
