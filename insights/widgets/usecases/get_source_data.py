@@ -1,10 +1,18 @@
-from datetime import datetime, time
+from datetime import datetime
 
 import pytz
 
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
+
+
+def set_live_day(default_filters):
+    start_of_day = datetime.combine(datetime.now().date(), datetime.min.time())
+
+    for key, value in default_filters.items():
+        if value == "today":
+            default_filters[key] = start_of_day
 
 
 def apply_timezone_to_filters(default_filters, project_timezone_str):
@@ -18,7 +26,11 @@ def apply_timezone_to_filters(default_filters, project_timezone_str):
 
 
 def get_source_data_from_widget(
-    widget: Widget, is_report: bool = False, filters: dict = {}, user_email: str = ""
+    widget: Widget,
+    is_report: bool = False,
+    is_live=False,
+    filters: dict = {},
+    user_email: str = "",
 ):
     try:
         source = widget.source
@@ -32,10 +44,13 @@ def get_source_data_from_widget(
             )
 
         default_filters, operation, op_field, limit = widget.source_config(
-            sub_widget=filters.pop("slug", [None])[0]
+            sub_widget=filters.pop("slug", [None])[0], is_live=is_live
         )
 
         default_filters.update(filters)
+
+        if is_live:
+            set_live_day(default_filters)
 
         project_timezone = widget.project.timezone
         apply_timezone_to_filters(default_filters, project_timezone)
