@@ -7,6 +7,14 @@ from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
 
 
+def set_live_day(default_filters):
+    start_of_day = datetime.combine(datetime.now().date(), datetime.min.time())
+
+    for key, value in default_filters.items():
+        if value == "today":
+            default_filters[key] = start_of_day
+
+
 def apply_timezone_to_filters(default_filters, project_timezone_str):
     project_timezone = pytz.timezone(project_timezone_str)
     for key in default_filters.keys():
@@ -40,6 +48,9 @@ def get_source_data_from_widget(
         )
 
         default_filters.update(filters)
+
+        if is_live:
+            set_live_day(default_filters)
 
         project_timezone = widget.project.timezone
         apply_timezone_to_filters(default_filters, project_timezone)

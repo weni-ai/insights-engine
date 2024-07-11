@@ -42,7 +42,7 @@ class Widget(BaseWidget):
         # default_filters, operation, op_field, limit
         filters = config.get("filter", {})
         if is_live:
-            filters.update(config.get("live_filter", {"ended_at__gte": ""}))
+            filters.update(config.get("live_filter", {}))
         return (
             filters,
             config.get("operation", "list"),
