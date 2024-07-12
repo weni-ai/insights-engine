@@ -19,8 +19,17 @@ def apply_timezone_to_filters(default_filters, project_timezone_str):
     project_timezone = pytz.timezone(project_timezone_str)
     for key in default_filters.keys():
         if key.endswith("__gte") or key.endswith("__lte"):
-            date_str = default_filters[key][0]
-            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            value = default_filters[key]
+            if isinstance(value, list):
+                date_str = value[0]
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            elif isinstance(value, datetime):
+                date_obj = value
+            else:
+                raise ValueError(
+                    f"Unexpected value type for filter {key}: {type(value)}"
+                )
+
             date_obj_with_tz = project_timezone.localize(date_obj)
             default_filters[key] = date_obj_with_tz.isoformat()
 
