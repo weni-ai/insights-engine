@@ -51,7 +51,7 @@ class CreateHumanService:
                     config={
                         "operation": "count",
                         "type_result": "executions",
-                        "filter": {"is_active": True, "user_id__isnull": True},
+                        "filter": {"is_active": True, "user_id__isnull": False},
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [1, 4]},
@@ -114,7 +114,7 @@ class CreateHumanService:
                         "type_result": "executions",
                         "filter": {
                             "is_active": True,
-                            "user_id__isnull": False,
+                            "user_id__isnull": True,
                         },
                     },
                     dashboard=dashboard_atendimento_humano,
