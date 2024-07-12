@@ -48,6 +48,6 @@ class RoomSQLQueryBuilder:
     def avg(self, op_field: str):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT (ROUND(COALESCE(AVG(mr.{op_field}), 0)/60, 2)) AS value FROM public.rooms_room as r INNER JOIN public.dashboard_roommetrics AS mr ON mr.room_id=r.uuid {self.join_clause} WHERE {self.where_clause};"
+        query = f"SELECT (ROUND(COALESCE(AVG(mr.{op_field}), 0), 2)) AS value FROM public.rooms_room as r INNER JOIN public.dashboard_roommetrics AS mr ON mr.room_id=r.uuid {self.join_clause} WHERE {self.where_clause};"
 
         return query, self.params
