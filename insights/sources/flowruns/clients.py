@@ -1,4 +1,4 @@
-from insights.sources.filters import ElasticSearchFilterStrategy
+from insights.sources.filter_strategies import ElasticSearchFilterStrategy
 from insights.sources.flowruns.query_builder import (
     FlowRunsElasticSearchQueryBuilder,
 )

@@ -1,10 +1,28 @@
 from insights.db.postgres.django.connection import dictfetchall, get_cursor
-from insights.sources.queues.clients import generate_sql_query
+from insights.sources.filter_strategies import PostgreSQLFilterStrategy
+from insights.sources.queues.clients import QueueSQLQueryGenerator
+from insights.sources.queues.filtersets import QueueFilterSet
+from insights.sources.queues.query_builder import QueueSQLQueryBuilder
 
 
 class QueryExecutor:
-    def execute(filters: dict, operation: str, parser: callable, *args, **kwargs):
-        query, params = generate_sql_query(filters=filters, query_type=operation)
+    def execute(
+        filters: dict,
+        operation: str,
+        parser: callable,
+        query_kwargs: dict = {},
+        *args,
+        **kwargs
+    ):
+        query_generator = QueueSQLQueryGenerator(
+            filter_strategy=PostgreSQLFilterStrategy,
+            query_builder=QueueSQLQueryBuilder,
+            filterset=QueueFilterSet,
+            filters=filters,
+            query_type=operation,
+            query_kwargs=query_kwargs,
+        )
+        query, params = query_generator.generate()
         with get_cursor(db_name="chats") as cur:
             query_exec = cur.execute(query, params)
             query_results = dictfetchall(query_exec)

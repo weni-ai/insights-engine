@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from insights.sources.filters import PostgreSQLFilterStrategy
+from insights.sources.filter_strategies import PostgreSQLFilterStrategy
 
 
 @pytest.fixture
