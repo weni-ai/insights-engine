@@ -3,7 +3,7 @@
 from insights.sources.filtersets import GenericSQLFilter
 
 
-class AgentsFilterSet:
+class AgentFilterSet:
     project = GenericSQLFilter(
         source_field="project_id",
         table_alias="pp",

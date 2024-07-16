@@ -3,7 +3,7 @@
 from insights.sources.filtersets import GenericSQLFilter
 
 
-class FlowsFilterSet:
+class FlowFilterSet:
     project = GenericSQLFilter(
         source_field="proj_uuid",
         table_alias="o",

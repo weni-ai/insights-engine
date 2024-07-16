@@ -1,5 +1,12 @@
 from insights.db.elasticsearch.connection import Connection
-from insights.sources.flowruns.clients import FlowRunsElasticSearchClient
+from insights.sources.filter_strategies import ElasticSearchFilterStrategy
+from insights.sources.flowruns.clients import (
+    FlowRunElasticSearchQueryGenerator,
+)
+from insights.sources.flowruns.filtersets import FlowRunFilterSet
+from insights.sources.flowruns.query_builder import (
+    FlowRunElasticSearchQueryBuilder,
+)
 
 
 def transform_terms_count_to_percentage(
@@ -21,16 +28,19 @@ class QueryExecutor:
         filters: dict,
         operation: str,
         parser: callable,
-        project: object,
         query_kwargs: dict = {},
         *args,
         **kwargs,
     ) -> dict:
-        filters["project"] = str(project.uuid)
-        client = FlowRunsElasticSearchClient()
-        endpoint, params = client.execute(
-            filters=filters, query_type=operation, query_kwargs=query_kwargs
+        query_generator = FlowRunElasticSearchQueryGenerator(
+            filter_strategy=ElasticSearchFilterStrategy,
+            query_builder=FlowRunElasticSearchQueryBuilder,
+            filterset=FlowRunFilterSet,
+            filters=filters,
+            query_type=operation,
+            query_kwargs=query_kwargs,
         )
+        endpoint, params = query_generator.generate()
         response = Connection(endpoint).get(params=params)
 
         if operation == "recurrence":
