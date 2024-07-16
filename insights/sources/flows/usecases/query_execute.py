@@ -1,7 +1,7 @@
 from insights.db.postgres.psycopg.connection import get_cursor
 from insights.sources.filter_strategies import PostgreSQLFilterStrategy
 from insights.sources.flows.clients import FlowSQLQueryGenerator
-from insights.sources.flows.filtersets import FlowsFilterSet
+from insights.sources.flows.filtersets import FlowFilterSet
 from insights.sources.flows.query_builder import FlowSQLQueryBuilder
 
 
@@ -17,7 +17,7 @@ class QueryExecutor:
         query_generator = FlowSQLQueryGenerator(
             filter_strategy=PostgreSQLFilterStrategy,
             query_builder=FlowSQLQueryBuilder,
-            filterset=FlowsFilterSet,
+            filterset=FlowFilterSet,
             filters=filters,
             query_type=operation,
             query_kwargs=query_kwargs,
