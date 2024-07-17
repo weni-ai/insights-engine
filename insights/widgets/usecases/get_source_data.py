@@ -73,6 +73,8 @@ def get_source_data_from_widget(
             query_kwargs["op_field"] = op_field
         if limit:
             query_kwargs["limit"] = limit
+        if project_timezone:
+            query_kwargs["timezone"] = project_timezone
 
         serialized_source = SourceQuery.execute(
             filters=default_filters,
