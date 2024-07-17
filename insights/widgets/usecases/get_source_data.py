@@ -50,7 +50,7 @@ def get_source_data_from_widget(
         if limit:
             query_kwargs["limit"] = limit
 
-        filters["project"] = str(widget.project.uuid)
+        default_filters["project"] = str(widget.project.uuid)
         serialized_source = SourceQuery.execute(
             filters=default_filters,
             operation=operation,
