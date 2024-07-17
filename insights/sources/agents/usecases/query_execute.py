@@ -3,7 +3,7 @@ from insights.sources.agents.clients import (
     AgentSQLQueryGenerator,
     AgentsRESTClient,
 )
-from insights.sources.agents.filtersets import AgentsFilterSet
+from insights.sources.agents.filtersets import AgentFilterSet
 from insights.sources.agents.query_builder import AgentSQLQueryBuilder
 from insights.sources.filter_strategies import PostgreSQLFilterStrategy
 
@@ -24,7 +24,7 @@ class QueryExecutor:
             query_generator = AgentSQLQueryGenerator(
                 filter_strategy=PostgreSQLFilterStrategy,
                 query_builder=AgentSQLQueryBuilder,
-                filterset=AgentsFilterSet,
+                filterset=AgentFilterSet,
                 filters=filters,
                 query_type=operation,
                 query_kwargs=query_kwargs,
