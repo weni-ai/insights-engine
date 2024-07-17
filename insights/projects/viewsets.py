@@ -32,7 +32,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         op_field = filters.pop("op_field", [None])[0]
         if op_field:
             query_kwargs["op_field"] = op_field
-        filters["projects"] = str(self.get_object().uuid)
+        filters["project"] = str(self.get_object().uuid)
         serialized_source = SourceQuery.execute(
             filters=filters,
             operation=operation,

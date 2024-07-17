@@ -52,7 +52,7 @@ class QueryExecutor:
                 others=terms_agg.get("agg_value", {}).get("sum_other_doc_count", 0),
                 terms_agg_buckets=terms_agg.get("agg_value", {}).get("buckets", []),
             )
-            if len(transformed_terms) <= 1:
+            if len(transformed_terms) == 1:
                 return transformed_terms[0]
             return {
                 "results": transformed_terms,
