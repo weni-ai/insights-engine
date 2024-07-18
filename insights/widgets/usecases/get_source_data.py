@@ -56,6 +56,8 @@ def get_source_data_from_widget(
             sub_widget=filters.pop("slug", [None])[0], is_live=is_live
         )
 
+        print("is_live:", is_live)
+
         default_filters.update(filters)
 
         if is_live:
