@@ -11,32 +11,3 @@ flow_runs_filters = {
 
 class FlowRunElasticSearchQueryGenerator(GenericElasticSearchQueryGenerator):
     default_query_type = "count"
-
-    # def execute(
-    #     self,
-    #     filters: dict,
-    #     query_type: str = "count",
-    #     query_kwargs: dict = {},
-    # ):
-    #     strategy = ElasticSearchFilterStrategy()
-    #     builder = FlowRunElasticSearchQueryBuilder()
-
-    #     for key, value in filters.items():
-    #         if "__" in key:
-    #             field, operation = key.split("__", 1)
-    #         elif type(value) is list:
-    #             field = key.split("__", 1)[0]
-    #             operation = "in"
-    #         else:
-    #             field, operation = key, "eq"
-
-    #         if (
-    #             field in flow_runs_filters
-    #         ):  # only consider filters describred in the flow_runs_filters dict. TODO: maybe transform this dict into a class similar to django-filters filterset classes
-    #             field = flow_runs_filters[field]["to_field"]
-    #         else:
-    #             continue
-    #         builder.add_filter(strategy, field, operation, value)
-    #     builder.build_query()
-
-    #     return getattr(builder, query_type)(**query_kwargs)
