@@ -1,4 +1,4 @@
-class FlowRunsElasticSearchQueryBuilder:
+class FlowRunElasticSearchQueryBuilder:
     def __init__(self):
         self.query_clauses = {}
         self.is_valid = False

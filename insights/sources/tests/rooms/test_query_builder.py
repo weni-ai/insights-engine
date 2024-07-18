@@ -1,6 +1,6 @@
 import pytest
 
-from insights.sources.filters import PostgreSQLFilterStrategy
+from insights.sources.filter_strategies import PostgreSQLFilterStrategy
 from insights.sources.rooms.query_builder import RoomSQLQueryBuilder
 
 

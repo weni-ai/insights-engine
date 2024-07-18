@@ -1,5 +1,8 @@
 from insights.db.postgres.psycopg.connection import get_cursor
-from insights.sources.flows.clients import generate_sql_query
+from insights.sources.filter_strategies import PostgreSQLFilterStrategy
+from insights.sources.flows.clients import FlowSQLQueryGenerator
+from insights.sources.flows.filtersets import FlowFilterSet
+from insights.sources.flows.query_builder import FlowSQLQueryBuilder
 
 
 class QueryExecutor:
@@ -7,13 +10,21 @@ class QueryExecutor:
         filters: dict,
         operation: str,
         parser: callable,
-        project: object,
+        query_kwargs: dict = {},
         *args,
         **kwargs
     ):
-        filters["project"] = str(project.uuid)
-        query, params = generate_sql_query(filters=filters, query_type=operation)
+        query_generator = FlowSQLQueryGenerator(
+            filter_strategy=PostgreSQLFilterStrategy,
+            query_builder=FlowSQLQueryBuilder,
+            filterset=FlowFilterSet,
+            filters=filters,
+            query_type=operation,
+            query_kwargs=query_kwargs,
+        )
+        query, params = query_generator.generate()
+
         with get_cursor(db_name="flows") as cur:
             query_results = cur.execute(query, params).fetchall()
         paginated_results = {"next": None, "previous": None, "results": query_results}
-        return paginated_results  # parser(paginated_results)
+        return paginated_results
