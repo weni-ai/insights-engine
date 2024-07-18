@@ -44,6 +44,7 @@ def get_source_data_from_widget(
     try:
         source = widget.source
         if is_report:
+            print("report")
             widget = widget.report
         SourceQuery = get_source(slug=source)
         query_kwargs = {}
@@ -65,6 +66,7 @@ def get_source_data_from_widget(
 
         project_timezone = widget.project.timezone
         apply_timezone_to_filters(default_filters, project_timezone)
+        print("filtros", default_filters)
 
         if operation == "list":
             tags = default_filters.pop("tags", [None])[0]
