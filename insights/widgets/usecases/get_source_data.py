@@ -76,6 +76,7 @@ def get_source_data_from_widget(
         if project_timezone:
             query_kwargs["timezone"] = project_timezone
 
+        default_filters["project"] = str(widget.project.uuid)
         serialized_source = SourceQuery.execute(
             filters=default_filters,
             operation=operation,

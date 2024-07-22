@@ -3,7 +3,13 @@ from insights.db.postgres.django.connection import (
     dictfetchone,
     get_cursor,
 )
-from insights.sources.rooms.clients import RoomRESTClient, generate_sql_query
+from insights.sources.filter_strategies import PostgreSQLFilterStrategy
+from insights.sources.rooms.clients import (
+    RoomRESTClient,
+    RoomSQLQueryGenerator,
+)
+from insights.sources.rooms.filtersets import RoomFilterSet
+from insights.sources.rooms.query_builder import RoomSQLQueryBuilder
 
 
 class QueryExecutor:
@@ -31,10 +37,16 @@ class QueryExecutor:
                 "results": query_results.get("results", []),
             }
             return paginated_results  # parser(paginated_results)
-        filters["project"] = str(project.uuid)
-        query, params = generate_sql_query(
-            filters=filters, query_type=operation, query_kwargs=query_kwargs
+
+        query_generator = RoomSQLQueryGenerator(
+            filter_strategy=PostgreSQLFilterStrategy,
+            query_builder=RoomSQLQueryBuilder,
+            filterset=RoomFilterSet,
+            filters=filters,
+            query_type=operation,
+            query_kwargs=query_kwargs,
         )
+        query, params = query_generator.generate()
         with get_cursor(db_name="chats") as cur:
             query_exec = cur.execute(query, params)
             if operation in ["count", "avg"]:
