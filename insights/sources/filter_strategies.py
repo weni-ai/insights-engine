@@ -12,7 +12,7 @@ class PostgreSQLFilterStrategy:
         elif operation == "icontains":
             return f"{table_alias}.{field} ILIKE (%s)", [f"%{value}%"]
         elif operation == "isnull":
-            placeholder = "IS NOT NULL" if value is True else "IS NULL"
+            placeholder = "IS NULL" if value is True else "IS NOT NULL"
             return f"{table_alias}.{field} {placeholder}", None
         elif operation == "or":
             if type(field) is not dict:
