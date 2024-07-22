@@ -28,7 +28,12 @@ class RoomSQLQueryBuilder:
         self.is_valid = True
 
     def timeseries_hour_group_count(
-        self, time_field: str = "created_on", limit: int = 24, *args, **kwargs
+        self,
+        time_field: str = "created_on",
+        limit: int = 24,
+        timezone: str = "UTC",
+        *args,
+        **kwargs,
     ):
         if not self.is_valid:
             self.build_query()
