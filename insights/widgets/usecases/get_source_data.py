@@ -7,18 +7,39 @@ from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
 
 
+def set_live_day(default_filters):
+    start_of_day = datetime.combine(datetime.now().date(), datetime.min.time())
+
+    for key, value in default_filters.items():
+        if value == "today":
+            default_filters[key] = start_of_day
+
+
 def apply_timezone_to_filters(default_filters, project_timezone_str):
     project_timezone = pytz.timezone(project_timezone_str)
     for key in default_filters.keys():
         if key.endswith("__gte") or key.endswith("__lte"):
-            date_str = default_filters[key][0]
-            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            value = default_filters[key]
+            if isinstance(value, list):
+                date_str = value[0]
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            elif isinstance(value, datetime):
+                date_obj = value
+            else:
+                raise ValueError(
+                    f"Unexpected value type for filter {key}: {type(value)}"
+                )
+
             date_obj_with_tz = project_timezone.localize(date_obj)
             default_filters[key] = date_obj_with_tz.isoformat()
 
 
 def get_source_data_from_widget(
-    widget: Widget, is_report: bool = False, filters: dict = {}, user_email: str = ""
+    widget: Widget,
+    is_report: bool = False,
+    is_live=False,
+    filters: dict = {},
+    user_email: str = "",
 ):
     try:
         source = widget.source
@@ -32,10 +53,13 @@ def get_source_data_from_widget(
             )
 
         default_filters, operation, op_field, limit = widget.source_config(
-            sub_widget=filters.pop("slug", [None])[0]
+            sub_widget=filters.pop("slug", [None])[0], is_live=is_live
         )
 
         default_filters.update(filters)
+
+        if is_live:
+            set_live_day(default_filters)
 
         project_timezone = widget.project.timezone
         apply_timezone_to_filters(default_filters, project_timezone)
@@ -49,6 +73,8 @@ def get_source_data_from_widget(
             query_kwargs["op_field"] = op_field
         if limit:
             query_kwargs["limit"] = limit
+        if project_timezone:
+            query_kwargs["timezone"] = project_timezone
 
         default_filters["project"] = str(widget.project.uuid)
         serialized_source = SourceQuery.execute(

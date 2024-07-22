@@ -37,6 +37,9 @@ class CreateHumanService:
                     config={
                         "limit": 12,
                         "operation": "timeseries_hour_group_count",
+                        "live_filter": {
+                            "created_on__gte": "today",
+                        },
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [1, 1], "columns": [1, 12]},
@@ -48,7 +51,7 @@ class CreateHumanService:
                     config={
                         "operation": "count",
                         "type_result": "executions",
-                        "filter": {"is_active": True, "user_id__isnull": True},
+                        "filter": {"is_active": True, "user_id__isnull": False},
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [1, 4]},
@@ -61,6 +64,12 @@ class CreateHumanService:
                         "operation": "avg",
                         "type_result": "executions",
                         "op_field": "waiting_time",
+                        "filter": {},
+                        "live_filter": {
+                            "created_on__gte": "today",
+                            "user_id__isnull": False,
+                            "is_active": False,
+                        },
                         "data_type": "sec",
                     },
                     dashboard=dashboard_atendimento_humano,
@@ -74,6 +83,7 @@ class CreateHumanService:
                         "operation": "count",
                         "type_result": "executions",
                         "filter": {"is_active": False},
+                        "live_filter": {"ended_at__gte": "today"},
                     },
                     dashboard=dashboard_atendimento_humano,
                     position={"rows": [2, 2], "columns": [9, 12]},
@@ -86,6 +96,12 @@ class CreateHumanService:
                         "operation": "avg",
                         "type_result": "executions",
                         "op_field": "message_response_time",
+                        "filter": {},
+                        "live_filter": {
+                            "created_on__gte": "today",
+                            "user_id__isnull": False,
+                            "is_active": False,
+                        },
                         "data_type": "sec",
                     },
                     dashboard=dashboard_atendimento_humano,
@@ -100,7 +116,7 @@ class CreateHumanService:
                         "type_result": "executions",
                         "filter": {
                             "is_active": True,
-                            "user_id__isnull": False,
+                            "user_id__isnull": True,
                         },
                     },
                     dashboard=dashboard_atendimento_humano,
@@ -114,6 +130,12 @@ class CreateHumanService:
                         "operation": "avg",
                         "type_result": "executions",
                         "op_field": "interaction_time",
+                        "filter": {},
+                        "live_filter": {
+                            "created_on__gte": "today",
+                            "user_id__isnull": False,
+                            "is_active": False,
+                        },
                         "data_type": "sec",
                     },
                     dashboard=dashboard_atendimento_humano,
@@ -242,6 +264,7 @@ class CreateHumanService:
             "filter": {
                 "is_active": True,
                 "attending": False,
+                "user_id__isnull": True,
             },
             "is_default": False,
         }
@@ -285,7 +308,7 @@ class CreateHumanService:
                     "hidden_name": False,
                 },
             ],
-            "filter": {"is_active": True, "attending": True},
+            "filter": {"is_active": True, "attending": True, "user_id__isnull": False},
             "is_default": False,
         }
         closed = {
@@ -341,6 +364,7 @@ class CreateHumanService:
                 },
             ],
             "filter": {"is_active": False},
+            "live_filter": {"ended_at__gte": "today"},
             "is_default": False,
         }
         table_group_report = {
@@ -361,6 +385,9 @@ class CreateHumanService:
                     source="rooms",
                     config={
                         "operation": "timeseries_hour_group_count",
+                        "live_filter": {
+                            "created_on__gte": "today",
+                        },
                     },
                     widget=pico_de_atendimento,
                 )
