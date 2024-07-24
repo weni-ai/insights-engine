@@ -65,3 +65,9 @@ class DashboardWidgetsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Widget
         fields = "__all__"
+
+
+class DashboardEditSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Dashboard
+        fields = ["name"]

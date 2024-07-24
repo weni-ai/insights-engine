@@ -9,16 +9,17 @@ from insights.widgets.models import Widget
 
 
 class CreateFlowsDashboard:
-    def __init__(self, request):
+    def __init__(self, request, params):
         self.request = request
-        self.funnel_amount = self.request.data.get("funnel_amount")
-        self.dashboard_name = self.request.data.get("dashboard_name")
+        self.funnel_amount = params.get("funnel_amount")
+        self.dashboard_name = params.get("dashboard_name")
+        self.project = params.get("project")
 
-    def create_dashboard(self, project):
+    def create_dashboard(self):
         try:
             with transaction.atomic():
                 dashboard_resultado_de_fluxo = Dashboard.objects.create(
-                    project=project,
+                    project=self.project,
                     name=self.dashboard_name,
                     description="Dashboard de resultado de fluxo personalizado",
                     is_default=False,
