@@ -13,6 +13,8 @@ class RoomSQLQueryBuilder:
                 "urn": "r",
             }  # {field_name: table_alias}
             operation = "or"
+            if type(value) is list:
+                value = value[0]
         clause, params = strategy.apply(field, operation, value, table_alias)
 
         self.where_clauses.append(clause)

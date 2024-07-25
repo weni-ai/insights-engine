@@ -1,6 +1,5 @@
 from insights.sources.filtersets import GenericSQLFilter
 
-
 # use stub files to represent it on other parts of the code
 # Use django_filters Filter class as a reference
 
@@ -43,7 +42,7 @@ class RoomFilterSet:
         source_field="uuid",
         table_alias="ctt",
         join_clause={
-            "q": "INNER JOIN public.contacts_contact AS ctt on ctt.uuid=r.contact_id",
+            "ctt": "INNER JOIN public.contacts_contact AS ctt on ctt.uuid=r.contact_id",
         },
     )
     created_on = GenericSQLFilter(

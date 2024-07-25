@@ -36,7 +36,6 @@ def get_dash_filters(dash: Dashboard):
                 "label": "Agente",
                 "field": "email",
                 "source": "agents",
-                "depends_on": {"filter": "sector", "search_param": None},
                 "placeholder": "Selecione agente",
             },
             "tags": {

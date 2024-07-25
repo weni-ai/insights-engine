@@ -87,3 +87,29 @@ class FlowRunElasticSearchQueryBuilder:
             }
         }
         return ["_search", {"size": 0, "query": self.validated_query, "aggs": aggs}]
+
+    def count_value(self, op_field: list[str, str], *args, **kwargs):
+        aggs = {
+            "values": {
+                "nested": {"path": "values"},
+                "aggs": {
+                    "agg_field": {
+                        "filter": {
+                            "bool": {
+                                "filter": [
+                                    {"term": {"values.name": op_field[0]}},
+                                    {"term": {"values.value": op_field[1]}},
+                                ]
+                            }
+                        },
+                        "aggs": {
+                            "agg_value": {"terms": {"size": 1, "field": "values.value"}}
+                        },
+                    }
+                },
+            }
+        }
+        return ["_search", {"size": 0, "query": self.validated_query, "aggs": aggs}]
+
+    def list_values(self, op_field: str, limit: int = 100, *args, **kwargs):
+        return self.recurrence(op_field=op_field, limit=limit, *args, **kwargs)

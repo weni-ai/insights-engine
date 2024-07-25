@@ -53,8 +53,15 @@ class QueryExecutor:
                 query_results = dictfetchone(query_exec)
             else:
                 query_results = dictfetchall(query_exec)
+
         if operation in ["count", "avg"]:
             paginated_results = query_results
+        elif operation == "timeseries_hour_group_count":
+            paginated_results = {
+                "next": None,
+                "previous": None,
+                "results": sorted(query_results, key=lambda x: int(x["label"][:-1])),
+            }
         else:
             paginated_results = {
                 "next": None,
