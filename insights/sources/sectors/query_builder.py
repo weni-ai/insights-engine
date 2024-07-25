@@ -17,6 +17,6 @@ class SectorSQLQueryBuilder:
     def list(self):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT s.uuid,s.name FROM public.sectors_sector AS s WHERE {self.where_clause};"
+        query = f"SELECT s.uuid,s.name FROM public.sectors_sector AS s WHERE {self.where_clause} AND is_deleted=false;"
 
         return query, self.params

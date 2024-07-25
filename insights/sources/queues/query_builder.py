@@ -23,6 +23,6 @@ class QueueSQLQueryBuilder:
     def list(self):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT q.uuid,q.name FROM public.queues_queue AS q {self.join_clause} WHERE {self.where_clause};"
+        query = f"SELECT q.uuid,q.name FROM public.queues_queue AS q {self.join_clause} WHERE {self.where_clause} AND is_deleted=false;"
 
         return query, self.params
