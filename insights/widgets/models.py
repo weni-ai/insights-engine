@@ -19,6 +19,10 @@ class BaseWidget(BaseModel, ConfigurableModel):
     class Meta:
         abstract = True
 
+    @property
+    def is_crossing_data(self):
+        return self.config.get("is_crossing_data", False)
+
 
 class Widget(BaseWidget):
     dashboard = models.ForeignKey(
