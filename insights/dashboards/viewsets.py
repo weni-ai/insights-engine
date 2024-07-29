@@ -24,6 +24,7 @@ from .serializers import (
 from .usecases import dashboard_filters
 
 from insights.dashboards.usecases.flows_dashboard_creation import CreateFlowsDashboard
+from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 
 
 class DashboardViewSet(
@@ -183,13 +184,13 @@ class DashboardViewSet(
         except Exception as err:
             return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
 
-        params = {
-            "project": project,
-            "funnel_amount": request.data.get("funnel_amount"),
-            "dashboard_name": request.data.get("dashboard_name"),
-        }
-
-        CreateFlowsDashboard(request, params)
+        flow_dashboard = FlowsDashboardCreationDTO(
+            project=project,
+            dashboard_name=request.data.get("dashboard_name"),
+            funnel_amount=request.data.get("funnel_amount"),
+            currency_type=request.data.get("currency_type"),
+        )
+        CreateFlowsDashboard(request, flow_dashboard)
 
         return Response(
             {"detail": "Custom dashboard created!"}, status=status.HTTP_201_CREATED

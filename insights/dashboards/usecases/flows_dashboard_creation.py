@@ -6,14 +6,16 @@ from insights.dashboards.usecases.exceptions import (
     InvalidWidgetsObject,
 )
 from insights.widgets.models import Widget
+from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 
 
 class CreateFlowsDashboard:
-    def __init__(self, request, params):
+    def __init__(self, request, params: FlowsDashboardCreationDTO):
         self.request = request
-        self.funnel_amount = params.get("funnel_amount")
-        self.dashboard_name = params.get("dashboard_name")
-        self.project = params.get("project")
+        self.project = params.project
+        self.dashboard_name = params.dashboard_name
+        self.funnel_amount = params.funnel_amount
+        self.currency_type = params.currency_type
 
     def create_dashboard(self):
         try:
@@ -26,6 +28,7 @@ class CreateFlowsDashboard:
                     grid=[12, 3],
                     is_deletable=True,
                     is_editable=True,
+                    config={"currency_type": self.currency_type},
                 )
                 self.create_widgets(dashboard_resultado_de_fluxo)
 
