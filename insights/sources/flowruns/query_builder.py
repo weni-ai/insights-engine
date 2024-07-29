@@ -88,7 +88,7 @@ class FlowRunElasticSearchQueryBuilder:
         }
         return ["_search", {"size": 0, "query": self.validated_query, "aggs": aggs}]
 
-    def count_value(self, op_field: list[str, str], *args, **kwargs):
+    def count_value(self, op_field: str, op_sub_field: str, *args, **kwargs):
         aggs = {
             "values": {
                 "nested": {"path": "values"},
@@ -97,8 +97,8 @@ class FlowRunElasticSearchQueryBuilder:
                         "filter": {
                             "bool": {
                                 "filter": [
-                                    {"term": {"values.name": op_field[0]}},
-                                    {"term": {"values.value": op_field[1]}},
+                                    {"term": {"values.name": op_field}},
+                                    {"term": {"values.value": op_sub_field}},
                                 ]
                             }
                         },
