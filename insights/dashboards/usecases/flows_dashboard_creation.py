@@ -36,39 +36,55 @@ class CreateFlowsDashboard:
         if self.funnel_amount == 3:
             try:
                 with transaction.atomic():
-                    for _ in range(3):
+                    positions = [
+                        {"rows": [1, 3], "columns": [1, 4]},
+                        {"rows": [1, 3], "columns": [5, 8]},
+                        {"rows": [1, 3], "columns": [9, 12]},
+                    ]
+
+                    for position in positions:
                         Widget.objects.create(
                             name="Funil",
                             type="graph_funnel",
                             source="",
                             config={},
                             dashboard=dashboard_resultado_de_fluxo,
-                            position={"rows": [1, 3], "columns": [9, 12]},
+                            position=position,
                         )
+
             except Exception as exception:
                 raise InvalidWidgetsObject(f"Error creating widgets: {exception}")
 
         elif self.funnel_amount == 2:
             try:
                 with transaction.atomic():
-                    for _ in range(2):
+                    positions = [
+                        {"rows": [1, 3], "columns": [5, 8]},
+                        {"rows": [1, 3], "columns": [9, 12]},
+                    ]
+                    for funnel_positions in positions:
                         Widget.objects.create(
                             name="Funil",
                             type="graph_funnel",
                             source="",
                             config={},
                             dashboard=dashboard_resultado_de_fluxo,
-                            position={"rows": [1, 3], "columns": [9, 12]},
+                            position=funnel_positions,
                         )
-                    for _ in range(3):
-                        Widget.objects.create(
-                            name="",
-                            type="card",
-                            source="",
-                            config={},
-                            dashboard=dashboard_resultado_de_fluxo,
-                            position={"rows": [3, 3], "columns": [5, 8]},
-                        )
+
+                        col_ranges = [[1, 4]]
+                        for i in range(3):
+                            row = [(i % 3) + 1, (i % 3) + 1]
+                            col = col_ranges[0]
+
+                            Widget.objects.create(
+                                name="",
+                                type="card",
+                                source="",
+                                config={},
+                                dashboard=dashboard_resultado_de_fluxo,
+                                position={"rows": row, "columns": col},
+                            )
             except Exception as exception:
                 raise InvalidWidgetsObject(f"Error creating widgets: {exception}")
 
@@ -83,28 +99,39 @@ class CreateFlowsDashboard:
                         dashboard=dashboard_resultado_de_fluxo,
                         position={"rows": [1, 3], "columns": [9, 12]},
                     )
-                    for _ in range(6):
+                    col_ranges = [[1, 4], [5, 8]]
+
+                    for i in range(6):
+                        group = i // 3
+                        row = [(i % 3) + 1, (i % 3) + 1]
+                        col = col_ranges[group]
                         Widget.objects.create(
                             name="",
                             type="card",
                             source="",
                             config={},
                             dashboard=dashboard_resultado_de_fluxo,
-                            position={"rows": [3, 3], "columns": [5, 8]},
+                            position={"rows": row, "columns": col},
                         )
             except Exception as exception:
                 raise InvalidWidgetsObject(f"Error creating widgets: {exception}")
 
         try:
             with transaction.atomic():
-                for _ in range(9):
+                col_ranges = [[1, 4], [5, 8], [9, 12]]
+
+                for i in range(9):
+                    group = i // 3
+                    row = [(i % 3) + 1, (i % 3) + 1]
+                    col = col_ranges[group]
+
                     Widget.objects.create(
                         name="",
                         type="card",
                         source="",
                         config={},
                         dashboard=dashboard_resultado_de_fluxo,
-                        position={"rows": [3, 3], "columns": [5, 8]},
+                        position={"rows": row, "columns": col},
                     )
         except Exception as exception:
             raise InvalidWidgetsObject(f"Error creating widgets: {exception}")
