@@ -36,6 +36,28 @@ def create_not_default_dashboard(create_project):
 
 
 @fixture
+def create_editable_dashboard(create_project):
+    return Dashboard.objects.create(
+        project=create_project,
+        name="Human Resources",
+        description="Dashboard populated with HR data, for HR managers",
+        is_default=False,
+        is_editable=True,
+    )
+
+
+@fixture
+def create_no_editable_dashboard(create_project):
+    return Dashboard.objects.create(
+        project=create_project,
+        name="Human Resources",
+        description="Dashboard populated with HR data, for HR managers",
+        is_default=False,
+        is_editable=False,
+    )
+
+
+@fixture
 def create_project_dashboard_template(create_project):
     project = create_project
     return DashboardTemplate.objects.create(

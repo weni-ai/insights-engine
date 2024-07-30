@@ -190,7 +190,7 @@ class DashboardViewSet(
             funnel_amount=request.data.get("funnel_amount"),
             currency_type=request.data.get("currency_type"),
         )
-        CreateFlowsDashboard(request, flow_dashboard)
+        CreateFlowsDashboard(params=flow_dashboard)
 
         return Response(
             {"detail": "Custom dashboard created!"}, status=status.HTTP_201_CREATED

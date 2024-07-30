@@ -10,8 +10,7 @@ from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 
 
 class CreateFlowsDashboard:
-    def __init__(self, request, params: FlowsDashboardCreationDTO):
-        self.request = request
+    def __init__(self, params: FlowsDashboardCreationDTO):
         self.project = params.project
         self.dashboard_name = params.dashboard_name
         self.funnel_amount = params.funnel_amount
