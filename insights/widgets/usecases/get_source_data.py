@@ -141,7 +141,7 @@ def cross_source_data_operation(
     operator = widget.config.get("operator")
 
     result = calculator(subwidget_1_data, subwidget_2_data, operator).evaluate()
-    return result
+    return {"result": result}
 
 
 def get_source_data_from_widget(

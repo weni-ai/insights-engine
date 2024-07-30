@@ -21,7 +21,7 @@ class BaseWidget(BaseModel, ConfigurableModel):
 
     @property
     def is_crossing_data(self):
-        return self.config.get("is_crossing_data", False)
+        return self.config.get("config_type", "default") == "crossing_data"
 
 
 class Widget(BaseWidget):
