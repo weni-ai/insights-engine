@@ -51,6 +51,7 @@ class Widget(BaseWidget):
             filters,
             config.get("operation", "list"),
             config.get("op_field", None),
+            config.get("op_sub_field", None),
             config.get("limit", None),
         )
 
@@ -77,5 +78,6 @@ class Report(BaseWidget):
             filters,
             config.get("operation", "list"),
             config.get("op_field", None),
+            config.get("op_sub_field", None),
             config.get("limit", None),
         )

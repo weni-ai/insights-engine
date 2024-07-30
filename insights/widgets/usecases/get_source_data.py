@@ -66,7 +66,7 @@ def simple_source_data_operation(
 ):
     query_kwargs = {}
 
-    default_filters, operation, op_field, limit = widget.source_config(
+    default_filters, operation, op_field, op_sub_field, limit = widget.source_config(
         sub_widget=filters.pop("slug", [None])[0], is_live=is_live
     )
 
@@ -85,6 +85,8 @@ def simple_source_data_operation(
 
     if op_field:
         query_kwargs["op_field"] = op_field
+    if op_sub_field:
+        query_kwargs["op_sub_field"] = op_sub_field
     if limit:
         query_kwargs["limit"] = limit
     if project_timezone:
@@ -126,7 +128,6 @@ def cross_source_data_operation(
     )[
         "value"
     ]  # TODO: Treat other ways(test to see if there are) to get the value(other names for the value field)
-
     filters["slug"] = "subwidget_2"
     subwidget_2_data = simple_source_data_operation(
         source_query,
