@@ -4,9 +4,7 @@ from insights.shared.models import BaseModel, ConfigurableModel
 
 
 class BaseWidget(BaseModel, ConfigurableModel):
-    name = models.CharField(
-        "Name", max_length=255, null=False, blank=False, default=None
-    )
+    name = models.CharField("Name", max_length=255, null=False, blank=True, default="")
     type = models.CharField(
         "Widget Type", max_length=50, null=False, blank=False, default=None
     )
