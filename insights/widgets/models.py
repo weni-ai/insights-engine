@@ -17,6 +17,10 @@ class BaseWidget(BaseModel, ConfigurableModel):
     class Meta:
         abstract = True
 
+    @property
+    def is_crossing_data(self):
+        return self.config.get("config_type", "default") == "crossing_data"
+
 
 class Widget(BaseWidget):
     dashboard = models.ForeignKey(
@@ -45,6 +49,7 @@ class Widget(BaseWidget):
             filters,
             config.get("operation", "list"),
             config.get("op_field", None),
+            config.get("op_sub_field", None),
             config.get("limit", None),
         )
 
@@ -71,5 +76,6 @@ class Report(BaseWidget):
             filters,
             config.get("operation", "list"),
             config.get("op_field", None),
+            config.get("op_sub_field", None),
             config.get("limit", None),
         )
