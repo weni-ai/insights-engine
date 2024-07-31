@@ -32,12 +32,11 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         op_field = filters.pop("op_field", [None])[0]
         if op_field:
             query_kwargs["op_field"] = op_field
-
+        filters["project"] = str(self.get_object().uuid)
         serialized_source = SourceQuery.execute(
             filters=filters,
             operation=operation,
             parser=parse_dict_to_json,
-            project=self.get_object(),
             user_email=self.request.user.email,
             return_format="select_input",
             query_kwargs=query_kwargs,

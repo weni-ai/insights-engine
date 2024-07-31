@@ -4,9 +4,7 @@ from insights.shared.models import BaseModel, ConfigurableModel
 
 
 class BaseWidget(BaseModel, ConfigurableModel):
-    name = models.CharField(
-        "Name", max_length=255, null=False, blank=False, default=None
-    )
+    name = models.CharField("Name", max_length=255, null=False, blank=True, default="")
     type = models.CharField(
         "Widget Type", max_length=50, null=False, blank=False, default=None
     )
@@ -37,11 +35,14 @@ class Widget(BaseWidget):
     def is_configurable(self):
         return self.dashboard.name == "Resultados de fluxos"
 
-    def source_config(self, sub_widget: str = None):
+    def source_config(self, sub_widget: str = None, is_live=False):
         config = self.config if sub_widget is None else self.config[sub_widget]
         # default_filters, operation, op_field, limit
+        filters = config.get("filter", {})
+        if is_live:
+            filters.update(config.get("live_filter", {}))
         return (
-            config.get("filter", {}),
+            filters,
             config.get("operation", "list"),
             config.get("op_field", None),
             config.get("limit", None),
@@ -60,11 +61,14 @@ class Report(BaseWidget):
     def __str__(self):
         return self.name
 
-    def source_config(self, sub_widget: str = None):
+    def source_config(self, sub_widget: str = None, is_live=False):
         config = self.config if sub_widget is None else self.config[sub_widget]
-        # default_filters, operation, op_field
+        # default_filters, operation, op_field, limit
+        filters = config.get("filter", {})
+        if is_live:
+            filters.update(config.get("live_filter", {}))
         return (
-            config.get("filter", {}),
+            filters,
             config.get("operation", "list"),
             config.get("op_field", None),
             config.get("limit", None),

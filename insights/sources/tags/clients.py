@@ -1,24 +1,5 @@
-from insights.sources.filters import PostgreSQLFilterStrategy
-from insights.sources.tags.query_builder import TagSQLQueryBuilder
+from insights.sources.clients import GenericSQLQueryGenerator
 
 
-def generate_sql_query(
-    filters: dict,
-    query_type: str = "list",
-    query_kwargs: dict = {},
-):
-    strategy = PostgreSQLFilterStrategy()
-    builder = TagSQLQueryBuilder()
-
-    for key, value in filters.items():
-        table_alias = "tg"
-        if "__" in key:
-            field, operation = key.split("__", 1)
-        elif type(value) is list:
-            field = key.split("__", 1)[0]
-            operation = "in"
-        else:
-            field, operation = key, "eq"
-        builder.add_filter(strategy, field, operation, value, table_alias)
-    builder.build_query()
-    return getattr(builder, query_type)(**query_kwargs)
+class TagSQLQueryGenerator(GenericSQLQueryGenerator):
+    default_query_type = "list"
