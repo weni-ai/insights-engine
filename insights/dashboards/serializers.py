@@ -8,7 +8,15 @@ from insights.widgets.models import Report, Widget
 class DashboardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dashboard
-        fields = ["uuid", "name", "is_default", "grid"]
+        fields = [
+            "uuid",
+            "name",
+            "is_default",
+            "grid",
+            "is_deletable",
+            "is_editable",
+            "config",
+        ]
 
 
 class DashboardIsDefaultSerializer(serializers.ModelSerializer):
