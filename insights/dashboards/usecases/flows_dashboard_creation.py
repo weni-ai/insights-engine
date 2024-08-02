@@ -30,7 +30,7 @@ class CreateFlowsDashboard:
                     config={"currency_type": self.currency_type},
                 )
                 self.create_widgets(dashboard_resultado_de_fluxo)
-
+            return dashboard_resultado_de_fluxo
         except Exception as exception:
             raise InvalidDashboardObject(f"Error creating dashboard: {exception}")
 
@@ -53,7 +53,6 @@ class CreateFlowsDashboard:
                             dashboard=dashboard_resultado_de_fluxo,
                             position=position,
                         )
-
             except Exception as exception:
                 raise InvalidWidgetsObject(f"Error creating widgets: {exception}")
 

@@ -29,7 +29,7 @@ from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 class DashboardViewSet(
     mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
-    permission_classes = [ProjectAuthPermission]
+    # permission_classes = [ProjectAuthPermission]
     serializer_class = DashboardSerializer
     pagination_class = DefaultPagination
 
@@ -193,8 +193,11 @@ class DashboardViewSet(
             funnel_amount=request.data.get("funnel_amount"),
             currency_type=request.data.get("currency_type"),
         )
-        CreateFlowsDashboard(params=flow_dashboard)
+        create_dashboard_instance = CreateFlowsDashboard(params=flow_dashboard)
 
+        dash = create_dashboard_instance.create_dashboard()
+        serialized_data = DashboardSerializer(dash)
         return Response(
-            {"detail": "Custom dashboard created!"}, status=status.HTTP_201_CREATED
+            {"dashboard created": serialized_data.data},
+            status=status.HTTP_201_CREATED,
         )
