@@ -75,6 +75,9 @@ class DashboardViewSet(
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def perform_destroy(self, instance):
+        instance.delete()
+
     @action(detail=True, methods=["patch"])
     def is_default(self, request, pk=None):
         dashboard = self.get_object()
@@ -189,7 +192,7 @@ class DashboardViewSet(
 
         flow_dashboard = FlowsDashboardCreationDTO(
             project=project,
-            dashboard_name=request.data.get("dashboard_name"),
+            dashboard_name=request.data.get("name"),
             funnel_amount=request.data.get("funnel_amount"),
             currency_type=request.data.get("currency_type"),
         )

@@ -78,4 +78,4 @@ class DashboardWidgetsSerializer(serializers.ModelSerializer):
 class DashboardEditSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dashboard
-        fields = ["name"]
+        fields = ["name", "config"]
