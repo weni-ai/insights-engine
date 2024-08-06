@@ -201,6 +201,6 @@ class DashboardViewSet(
         dash = create_dashboard_instance.create_dashboard()
         serialized_data = DashboardSerializer(dash)
         return Response(
-            {"dashboard created": serialized_data.data},
+            {"dashboard": serialized_data.data},
             status=status.HTTP_201_CREATED,
         )

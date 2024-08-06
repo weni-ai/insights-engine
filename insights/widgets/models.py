@@ -33,7 +33,7 @@ class Widget(BaseWidget):
 
     @property
     def is_configurable(self):
-        return self.dashboard.name == "Resultados de fluxos"
+        return self.dashboard.name != "Atendimento humano"
 
     def source_config(self, sub_widget: str = None, is_live=False):
         config = self.config if sub_widget is None else self.config[sub_widget]
