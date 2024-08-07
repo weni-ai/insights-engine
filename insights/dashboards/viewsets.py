@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from insights.authentication.permissions import ProjectAuthPermission
+from insights.projects.models import Project
 from insights.dashboards.models import Dashboard
 from insights.dashboards.utils import DefaultPagination
 from insights.widgets.models import Report, Widget
@@ -17,14 +18,18 @@ from .serializers import (
     DashboardSerializer,
     DashboardWidgetsSerializer,
     ReportSerializer,
+    DashboardEditSerializer,
 )
 from .usecases import dashboard_filters
+
+from insights.dashboards.usecases.flows_dashboard_creation import CreateFlowsDashboard
+from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 
 
 class DashboardViewSet(
     mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
-    permission_classes = [ProjectAuthPermission]
+    # permission_classes = [ProjectAuthPermission]
     serializer_class = DashboardSerializer
     pagination_class = DefaultPagination
 
@@ -41,6 +46,37 @@ class DashboardViewSet(
             )
 
         return Dashboard.objects.none()
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+
+        if not instance.is_editable:
+            return Response(
+                {"This dashboard is not editable."}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = DashboardEditSerializer(
+            instance, data=request.data, partial=partial
+        )
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if not instance.is_deletable:
+            return Response(
+                {"This dashboard is not deletable."}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def perform_destroy(self, instance):
+        instance.delete()
 
     @action(detail=True, methods=["patch"])
     def is_default(self, request, pk=None):
@@ -146,3 +182,25 @@ class DashboardViewSet(
         paginated_sources = paginator.paginate_queryset(sources, request)
 
         return paginator.get_paginated_response(paginated_sources)
+
+    @action(detail=False, methods=["post"])
+    def create_flows_dashboard(self, request, pk=None):
+        try:
+            project = Project.objects.get(pk=request.query_params.get("project"))
+        except Exception as err:
+            return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+
+        flow_dashboard = FlowsDashboardCreationDTO(
+            project=project,
+            dashboard_name=request.data.get("name"),
+            funnel_amount=request.data.get("funnel_amount"),
+            currency_type=request.data.get("currency_type"),
+        )
+        create_dashboard_instance = CreateFlowsDashboard(params=flow_dashboard)
+
+        dash = create_dashboard_instance.create_dashboard()
+        serialized_data = DashboardSerializer(dash)
+        return Response(
+            {"dashboard": serialized_data.data},
+            status=status.HTTP_201_CREATED,
+        )
