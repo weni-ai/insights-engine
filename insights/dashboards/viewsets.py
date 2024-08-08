@@ -29,7 +29,7 @@ from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 class DashboardViewSet(
     mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
-    # permission_classes = [ProjectAuthPermission]
+    permission_classes = [ProjectAuthPermission]
     serializer_class = DashboardSerializer
     pagination_class = DefaultPagination
 
