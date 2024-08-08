@@ -6,6 +6,7 @@ from insights.authentication.permissions import ProjectAuthPermission
 from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
+from django.conf import settings
 
 
 class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -42,3 +43,13 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             query_kwargs=query_kwargs,
         )
         return Response(serialized_source, status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get"], url_path="verify_project_indexer")
+    def verify_project_indexer(self, request, source_slug=None, *args, **kwargs):
+
+        project = Project.objects.get(pk=self.kwargs["pk"])
+
+        if str(project.pk) in settings.PROJECT_ALLOW_LIST:
+            return Response(True)
+
+        return Response(False)
