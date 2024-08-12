@@ -40,6 +40,7 @@ class QueryExecutor:
             query_type=operation,
             query_kwargs=query_kwargs,
         )
+        # vem ate aqui, chama o generate
         endpoint, params = query_generator.generate()
         response = Connection(endpoint).get(params=params)
 

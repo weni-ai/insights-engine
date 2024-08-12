@@ -65,6 +65,7 @@ class GenericElasticSearchQueryGenerator:
         self.query_kwargs = query_kwargs
 
     def generate(self):
+        # nessa função ocorre o erro
         strategy = self.filter_strategy()
         builder = self.query_builder()
         filterset = self.filterset()
