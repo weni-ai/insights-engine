@@ -111,5 +111,5 @@ class FlowRunElasticSearchQueryBuilder:
         }
         return ["_search", {"size": 0, "query": self.validated_query, "aggs": aggs}]
 
-    def list_values(self, op_field: str, limit: int = 100, *args, **kwargs):
+    def list(self, op_field: str, limit: int = 100, *args, **kwargs):
         return self.recurrence(op_field=op_field, limit=limit, *args, **kwargs)
