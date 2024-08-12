@@ -84,5 +84,5 @@ class GenericElasticSearchQueryGenerator:
             source_field = field_object.source_field
             builder.add_filter(strategy, source_field, operation, value)
         builder.build_query()
-
+        print("query type", self.query_type)
         return getattr(builder, self.query_type)(**self.query_kwargs)
