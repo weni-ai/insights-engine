@@ -42,15 +42,19 @@ class Calculator:
         self.operator = operator
 
     def sum(self):
+        print("operadores", self.operand_1, self.operand_2, self.operator)
         return self.operand_1 + self.operand_2
 
     def sub(self):
+        print("operadores", self.operand_1, self.operand_2, self.operator)
         return self.operand_1 - self.operand_2
 
     def multiply(self):
+        print("operadores", self.operand_1, self.operand_2, self.operator)
         return self.operand_1 * self.operand_2
 
     def percentage(self):
+        print("operadores", self.operand_1, self.operand_2, self.operator)
         return 100 * (self.operand_2 / self.operand_1)
 
     def evaluate(self):
