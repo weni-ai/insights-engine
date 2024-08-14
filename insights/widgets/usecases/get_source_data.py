@@ -164,6 +164,7 @@ def get_source_data_from_widget(
             raise Exception(
                 f"could not find a source with the slug {source}, make sure that the widget is configured with a supported source"
             )
+        print(f"Widget is_crossing_data: {widget.is_crossing_data}")
         operation_function = (
             cross_source_data_operation
             if widget.is_crossing_data
