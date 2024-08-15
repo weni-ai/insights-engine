@@ -71,7 +71,7 @@ def simple_source_data_operation(
     query_kwargs = {}
     print("filtro", filters)
     default_filters, operation, op_field, op_sub_field, limit = widget.source_config(
-        sub_widget=filters.pop("slug", [None]), is_live=is_live
+        sub_widget=filters.pop("slug", [None])[0], is_live=is_live
     )
 
     default_filters.update(filters)
