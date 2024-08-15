@@ -41,7 +41,6 @@ class Widget(BaseWidget):
 
     def source_config(self, sub_widget: str = None, is_live=False):
         print("subwidte", sub_widget)
-        print("sub2", self.config[sub_widget])
         config = self.config if sub_widget is None else self.config[sub_widget]
         # default_filters, operation, op_field, limit
         filters = config.get("filter", {})
