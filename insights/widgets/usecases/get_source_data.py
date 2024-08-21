@@ -70,9 +70,24 @@ def simple_source_data_operation(
 ):
     query_kwargs = {}
     print("filtro", filters)
-    default_filters, operation, op_field, op_sub_field, limit = widget.source_config(
-        sub_widget=filters.pop("slug", [None])[0], is_live=is_live
-    )
+
+    # se entrar aqui pelo cross data, tirar o [0] pois isso gera erro no cross
+    # vc pode verificar se tem slug subwidget_1 or 2
+    sub = filters.pop("slug", [None])
+    if ["sub_widget_1", "sub_widget_2"] in sub:
+        default_filters, operation, op_field, op_sub_field, limit = (
+            widget.source_config(
+                sub_widget=filters.pop("slug", [None]), is_live=is_live
+            )
+        )
+        print("default filters", default_filters)
+    else:
+        default_filters, operation, op_field, op_sub_field, limit = (
+            widget.source_config(
+                sub_widget=filters.pop("slug", [None])[0], is_live=is_live
+            )
+        )
+        print("default filters", default_filters)
 
     default_filters.update(filters)
 
