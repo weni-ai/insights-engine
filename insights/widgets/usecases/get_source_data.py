@@ -76,9 +76,7 @@ def simple_source_data_operation(
     sub = filters.pop("slug", [None])
     if sub in ["subwidget_1", "subwidget_2"]:
         default_filters, operation, op_field, op_sub_field, limit = (
-            widget.source_config(
-                sub_widget=filters.pop("slug", [None]), is_live=is_live
-            )
+            widget.source_config(sub_widget=sub, is_live=is_live)
         )
         print("default filters", default_filters)
     else:
