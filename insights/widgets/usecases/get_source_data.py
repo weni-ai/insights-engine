@@ -74,7 +74,7 @@ def simple_source_data_operation(
     # se entrar aqui pelo cross data, tirar o [0] pois isso gera erro no cross
     # vc pode verificar se tem slug subwidget_1 or 2
     sub = filters.pop("slug", [None])
-    if ["sub_widget_1", "sub_widget_2"] in sub:
+    if sub in ["sub_widget_1", "sub_widget_2"]:
         default_filters, operation, op_field, op_sub_field, limit = (
             widget.source_config(
                 sub_widget=filters.pop("slug", [None]), is_live=is_live
