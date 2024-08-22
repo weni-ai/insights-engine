@@ -86,7 +86,7 @@ def simple_source_data_operation(
             )
         )
 
-    print("default filters", default_filters)
+    print("op field simple source", op_field)
     default_filters.update(filters)
 
     if is_live:
