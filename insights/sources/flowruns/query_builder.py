@@ -57,15 +57,19 @@ class FlowRunElasticSearchQueryBuilder:
         return ["_search", {"size": 0, "query": self.validated_query, "aggs": aggs}]
 
     def sum(self, op_field, *args, **kwargs):
+        print("op field", op_field)
         return self._base_operation("sum", op_field)
 
     def avg(self, op_field, *args, **kwargs):
+        print("op field", op_field)
         return self._base_operation("avg", op_field)
 
     def max(self, op_field, *args, **kwargs):
+        print("op field", op_field)
         return self._base_operation("max", op_field)
 
     def min(self, op_field, *args, **kwargs):
+        print("op field", op_field)
         return self._base_operation("min", op_field)
 
     def recurrence(self, op_field: str, limit: int = 100, *args, **kwargs):
