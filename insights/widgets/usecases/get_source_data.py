@@ -42,19 +42,15 @@ class Calculator:
         self.operator = operator
 
     def sum(self):
-        print("operadores", self.operand_1, self.operand_2, self.operator)
         return self.operand_1 + self.operand_2
 
     def sub(self):
-        print("operadores", self.operand_1, self.operand_2, self.operator)
         return self.operand_1 - self.operand_2
 
     def multiply(self):
-        print("operadores", self.operand_1, self.operand_2, self.operator)
         return self.operand_1 * self.operand_2
 
     def percentage(self):
-        print("operadores", self.operand_1, self.operand_2, self.operator)
         return 100 * (self.operand_2 / self.operand_1)
 
     def evaluate(self):
@@ -69,16 +65,12 @@ def simple_source_data_operation(
     user_email: str = "",
 ):
     query_kwargs = {}
-    print("filtro", filters)
 
-    # se entrar aqui pelo cross data, tirar o [0] pois isso gera erro no cross
-    # vc pode verificar se tem slug subwidget_1 or 2
     sub = filters.pop("slug", [None])
     if sub in ["subwidget_1", "subwidget_2"]:
         default_filters, operation, op_field, op_sub_field, limit = (
             widget.source_config(sub_widget=sub, is_live=is_live)
         )
-        print("default filters", default_filters)
     else:
         default_filters, operation, op_field, op_sub_field, limit = (
             widget.source_config(
@@ -86,7 +78,6 @@ def simple_source_data_operation(
             )
         )
 
-    print("op field simple source", op_field)
     default_filters.update(filters)
 
     if is_live:
@@ -177,8 +168,7 @@ def get_source_data_from_widget(
             raise Exception(
                 f"could not find a source with the slug {source}, make sure that the widget is configured with a supported source"
             )
-        print(f"Widget: {widget}")
-        print(f"Widget is_crossing_data: {widget.is_crossing_data}")
+
         operation_function = (
             cross_source_data_operation
             if widget.is_crossing_data
