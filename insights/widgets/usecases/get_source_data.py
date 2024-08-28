@@ -66,9 +66,17 @@ def simple_source_data_operation(
 ):
     query_kwargs = {}
 
-    default_filters, operation, op_field, op_sub_field, limit = widget.source_config(
-        sub_widget=filters.pop("slug", [None])[0], is_live=is_live
-    )
+    sub_widget = filters.pop("slug", [None])
+    if sub_widget in ["subwidget_1", "subwidget_2"]:
+        default_filters, operation, op_field, op_sub_field, limit = (
+            widget.source_config(sub_widget=sub_widget, is_live=is_live)
+        )
+    else:
+        default_filters, operation, op_field, op_sub_field, limit = (
+            widget.source_config(
+                sub_widget=filters.pop("slug", [None])[0], is_live=is_live
+            )
+        )
 
     default_filters.update(filters)
 
@@ -141,7 +149,7 @@ def cross_source_data_operation(
     operator = widget.config.get("operator")
 
     result = calculator(subwidget_1_data, subwidget_2_data, operator).evaluate()
-    return {"result": result}
+    return {"value": result}
 
 
 def get_source_data_from_widget(
@@ -160,6 +168,7 @@ def get_source_data_from_widget(
             raise Exception(
                 f"could not find a source with the slug {source}, make sure that the widget is configured with a supported source"
             )
+
         operation_function = (
             cross_source_data_operation
             if widget.is_crossing_data
