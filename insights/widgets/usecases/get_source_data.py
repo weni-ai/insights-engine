@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytz
+from django.utils import timezone
 
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
@@ -8,7 +9,7 @@ from insights.widgets.models import Widget
 
 
 def set_live_day(default_filters):
-    start_of_day = datetime.combine(datetime.now().date(), datetime.min.time())
+    start_of_day = datetime.combine(timezone.now().date(), datetime.min.time())
 
     for key, value in default_filters.items():
         if value == "today":
@@ -34,6 +35,123 @@ def apply_timezone_to_filters(default_filters, project_timezone_str):
             default_filters[key] = date_obj_with_tz.isoformat()
 
 
+class Calculator:
+    def __init__(self, operand_1, operand_2, operator) -> None:
+        self.operand_1 = operand_1
+        self.operand_2 = operand_2
+        self.operator = operator
+
+    def sum(self):
+        return self.operand_1 + self.operand_2
+
+    def sub(self):
+        return self.operand_1 - self.operand_2
+
+    def multiply(self):
+        return self.operand_1 * self.operand_2
+
+    def percentage(self):
+        return 100 * (self.operand_2 / self.operand_1)
+
+    def evaluate(self):
+        return getattr(self, self.operator)()
+
+
+def simple_source_data_operation(
+    source_query,
+    widget: Widget,
+    is_live: bool = False,
+    filters: dict = {},
+    user_email: str = "",
+):
+    query_kwargs = {}
+
+    sub_widget = filters.pop("slug", [None])
+    if sub_widget in ["subwidget_1", "subwidget_2"]:
+        default_filters, operation, op_field, op_sub_field, limit = (
+            widget.source_config(sub_widget=sub_widget, is_live=is_live)
+        )
+    else:
+        default_filters, operation, op_field, op_sub_field, limit = (
+            widget.source_config(
+                sub_widget=filters.pop("slug", [None])[0], is_live=is_live
+            )
+        )
+
+    default_filters.update(filters)
+
+    if is_live:
+        set_live_day(default_filters)
+
+    project_timezone = widget.project.timezone
+    apply_timezone_to_filters(default_filters, project_timezone)
+
+    if operation == "list":
+        tags = default_filters.pop("tags", [None])[0]
+        if tags:
+            default_filters["tags"] = tags.split(",")
+
+    if op_field:
+        query_kwargs["op_field"] = op_field
+    if op_sub_field:
+        query_kwargs["op_sub_field"] = op_sub_field
+    if limit:
+        query_kwargs["limit"] = limit
+    if project_timezone:
+        query_kwargs["timezone"] = project_timezone
+
+    default_filters["project"] = str(widget.project.uuid)
+    serialized_source = source_query.execute(
+        filters=default_filters,
+        operation=operation,
+        parser=parse_dict_to_json,
+        project=widget.project,
+        user_email=user_email,
+        query_kwargs=query_kwargs,
+    )
+    return serialized_source
+
+
+def cross_source_data_operation(
+    source_query,
+    widget: Widget,
+    is_live: bool = False,
+    filters: dict = {},
+    user_email: str = "",
+    calculator=Calculator,
+):
+    """
+    there will always be two subwidgets to make a cross operation,
+    until the business rule is updated.
+    so we save then in fixed positions(subwidget slug) on the config dict
+    """
+    # The subwidget needs to have a operation that returns a value(count, sum, avg...), cannot be a list of values
+    filters["slug"] = "subwidget_1"
+    subwidget_1_data = simple_source_data_operation(
+        source_query,
+        widget,
+        is_live,
+        filters,
+        user_email,
+    )[
+        "value"
+    ]  # TODO: Treat other ways(test to see if there are) to get the value(other names for the value field)
+    filters["slug"] = "subwidget_2"
+    subwidget_2_data = simple_source_data_operation(
+        source_query,
+        widget,
+        is_live,
+        filters,
+        user_email,
+    )[
+        "value"
+    ]  # TODO: Treat other ways(test to see if there are) to get the value(other names for the value field)
+    operator = widget.config.get("operator")
+
+    result = calculator(subwidget_1_data, subwidget_2_data, operator).evaluate()
+    return {"value": result}
+
+
 def get_source_data_from_widget(
     widget: Widget,
     is_report: bool = False,
@@ -46,45 +164,29 @@ def get_source_data_from_widget(
         if is_report:
             widget = widget.report
         SourceQuery = get_source(slug=source)
-        query_kwargs = {}
         if SourceQuery is None:
             raise Exception(
                 f"could not find a source with the slug {source}, make sure that the widget is configured with a supported source"
             )
 
-        default_filters, operation, op_field, limit = widget.source_config(
-            sub_widget=filters.pop("slug", [None])[0], is_live=is_live
+        operation_function = (
+            cross_source_data_operation
+            if widget.is_crossing_data
+            else simple_source_data_operation
         )
 
-        default_filters.update(filters)
-
-        if is_live:
-            set_live_day(default_filters)
-
-        project_timezone = widget.project.timezone
-        apply_timezone_to_filters(default_filters, project_timezone)
-
-        if operation == "list":
-            tags = default_filters.pop("tags", [None])[0]
-            if tags:
-                default_filters["tags"] = tags.split(",")
-
-        if op_field:
-            query_kwargs["op_field"] = op_field
-        if limit:
-            query_kwargs["limit"] = limit
-        if project_timezone:
-            query_kwargs["timezone"] = project_timezone
-
-        default_filters["project"] = str(widget.project.uuid)
-        serialized_source = SourceQuery.execute(
-            filters=default_filters,
-            operation=operation,
-            parser=parse_dict_to_json,
-            project=widget.project,
+        return operation_function(
+            widget=widget,
+            source_query=SourceQuery,
+            is_live=is_live,
+            filters=filters,
             user_email=user_email,
-            query_kwargs=query_kwargs,
         )
-        return serialized_source
+
     except Widget.DoesNotExist:
         raise Exception("Widget not found.")
+
+    except KeyError:
+        raise Exception(
+            "The subwidgets operation needs to be one that returns only one object value."
+        )
