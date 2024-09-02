@@ -1,5 +1,5 @@
 class GenericSQLQueryGenerator:
-    default_query_type = "count"
+    default_query_type = "list"
 
     def __init__(
         self,

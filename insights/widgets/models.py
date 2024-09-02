@@ -47,7 +47,7 @@ class Widget(BaseWidget):
             filters.update(config.get("live_filter", {}))
         return (
             filters,
-            config.get("operation", "list"),
+            config.get("operation", None),
             config.get("op_field", None),
             config.get("op_sub_field", None),
             config.get("limit", None),
@@ -74,7 +74,7 @@ class Report(BaseWidget):
             filters.update(config.get("live_filter", {}))
         return (
             filters,
-            config.get("operation", "list"),
+            config.get("operation", None),
             config.get("op_field", None),
             config.get("op_sub_field", None),
             config.get("limit", None),
