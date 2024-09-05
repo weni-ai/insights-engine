@@ -73,9 +73,7 @@ def simple_source_data_operation(
         )
     else:
         default_filters, operation, op_field, op_sub_field, limit = (
-            widget.source_config(
-                sub_widget=filters.pop("slug", [None])[0], is_live=is_live
-            )
+            widget.source_config(sub_widget=sub[0], is_live=is_live)
         )
 
     default_filters.update(filters)
