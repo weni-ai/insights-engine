@@ -269,3 +269,7 @@ if USE_EDA:
 CHATS_URL = env("CHATS_URL")
 
 PROJECT_ALLOW_LIST = env("PROJECT_ALLOW_LIST", default=[])
+
+GROQ_OPEN_AI_URL = env.str("GROQ_OPEN_AI_URL", default="")
+GROQ_CHATGPT_TOKEN = env.str("GROQ_CHATGPT_TOKEN", default="")
+GROQ_OPEN_AI_GPT_VERSION = env.str("GROQ_OPEN_AI_GPT_VERSION", default="")
