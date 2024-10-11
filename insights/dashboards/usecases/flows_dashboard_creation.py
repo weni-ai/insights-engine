@@ -69,7 +69,7 @@ class CreateFlowsDashboard:
         for position in positions[amount]:
             Widget.objects.create(
                 name="",
-                type="empty_column",
+                type="empty_widget",
                 source="",
                 config={},
                 dashboard=dashboard,
