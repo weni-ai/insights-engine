@@ -8,14 +8,12 @@ from insights.utils import format_to_iso_utc
 
 
 class VtexOrdersRestClient(VtexAuthentication):
-    def __init__(self, auth: AuthRestClient, cache_client: CacheClient) -> None:
-        credentials = auth.get_vtex_auth()
-
+    def __init__(self, auth_params, cache_client: CacheClient) -> None:
         self.headers = {
-            "X-Vtex-Api-Apptoken": credentials["app_token"],
-            "X-Vtex-Api-Appkey": credentials["app_key"],
+            "X-Vtex-Api-Apptoken": auth_params["app_token"],
+            "X-Vtex-Api-Appkey": auth_params["app_key"],
         }
-        self.base_url = credentials["domain"]
+        self.base_url = auth_params["domain"]
         self.cache = cache_client
 
     def get_cache_key(self, query_filters):

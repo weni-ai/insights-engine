@@ -274,7 +274,6 @@ PROJECT_ALLOW_LIST = env("PROJECT_ALLOW_LIST", default=[])
 REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
 
 # channels
-
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",

@@ -6,8 +6,7 @@ from insights.internals.base import InternalAuthentication
 
 class AuthRestClient(InternalAuthentication):
     def __init__(self, project) -> None:
-        self.project = project
-        self.url = f"{settings.INTEGRATIONS_URL}/api/v1/apptypes/vtex/integration-details/{self.project.uuid}"
+        self.url = f"{settings.INTEGRATIONS_URL}/api/v1/apptypes/vtex/integration-details/{project}"
 
     def get_vtex_auth(self):
         response = requests.get(url=self.url, headers=self.headers)
