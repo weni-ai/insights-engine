@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -6,7 +7,6 @@ from insights.authentication.permissions import ProjectAuthPermission
 from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
-from django.conf import settings
 
 
 class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -14,7 +14,9 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     queryset = Project.objects.all()
 
     @action(
-        detail=True, methods=["get"], url_path="sources/(?P<source_slug>[^/.]+)/search"
+        detail=True,
+        methods=["get", "post"],
+        url_path="sources/(?P<source_slug>[^/.]+)/search",
     )
     def retrieve_source_data(self, request, source_slug=None, *args, **kwargs):
         SourceQuery = get_source(slug=source_slug)
