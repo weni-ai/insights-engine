@@ -66,7 +66,6 @@ def simple_source_data_operation(
     auth_params: dict = {},
 ):
     query_kwargs = {}
-
     sub = filters.pop("slug", [None])
     if sub in ["subwidget_1", "subwidget_2"]:
         default_filters, operation, op_field, op_sub_field, limit = (
@@ -163,10 +162,10 @@ def get_source_data_from_widget(
             )
 
         serialized_auth = {}
-        if widget.type == "vtex_data":
+        if widget.type == "vtex_order":
             auth_source = get_source(slug="vtexcredentials")
             serialized_auth: dict = auth_source.execute(
-                filters={"project": widget.dashboard.project},
+                filters={"project": "d8d6d71d-3daf-4d2e-812b-85cc252a96d8"},
                 operation="get_vtex_auth",
                 parser=parse_dict_to_json,
                 return_format="",

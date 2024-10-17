@@ -290,3 +290,7 @@ CACHES = {
         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
     }
 }
+INTEGRATIONS_URL = "https://integrations-engine.weni.ai"
+MOCKDOMAIN = (env.str("MOCKDOMAIN"),)
+MOCK_APPKEY = (env.str("MOCK_APPKEY"),)
+MOCK_APPTOKEN = (env.str("MOCK_APPTOKEN"),)

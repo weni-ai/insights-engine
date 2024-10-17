@@ -5,15 +5,16 @@ import json
 from insights.sources.vtexcredentials.clients import AuthRestClient
 from insights.sources.cache import CacheClient
 from insights.utils import format_to_iso_utc
+from django.conf import settings
 
 
 class VtexOrdersRestClient(VtexAuthentication):
     def __init__(self, auth_params, cache_client: CacheClient) -> None:
         self.headers = {
-            "X-Vtex-Api-Apptoken": auth_params["app_token"],
-            "X-Vtex-Api-Appkey": auth_params["app_key"],
+            "X-VTEX-API-AppToken": settings.MOCK_APPTOKEN,
+            "X-VTEX-API-AppKey": settings.MOCK_APPKEY,
         }
-        self.base_url = auth_params["domain"]
+        self.base_url = settings.MOCKDOMAIN
         self.cache = cache_client
 
     def get_cache_key(self, query_filters):
@@ -26,10 +27,9 @@ class VtexOrdersRestClient(VtexAuthentication):
         utm_source = query_filters.get("utm_source")
 
         if start_date is not None:
-            url = f"https://{self.base_url}.myvtex.com/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_authorizedDate=authorizedDate:[{start_date} TO {end_date}]&f_status=invoiced"
+            url = f"{self.base_url}/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_authorizedDate=authorizedDate:[{start_date} TO {end_date}]&f_status=invoiced"
         else:
-            url = f"https://{self.base_url}.myvtex.com/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_status=invoiced"
-
+            url = f"{self.base_url}/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_status=invoiced"
         return url
 
     def list(self, query_filters: dict):
@@ -52,7 +52,8 @@ class VtexOrdersRestClient(VtexAuthentication):
                 query_filters.pop("created_on__lte"), end_of_day=True
             )
 
-        query_filters["utm_source"] = query_filters.pop("utm_source")
+        if query_filters.get("utm_source", None):
+            query_filters["utm_source"] = query_filters.pop("utm_source")
 
         total_value = 0
         total_sell = 0
@@ -62,7 +63,6 @@ class VtexOrdersRestClient(VtexAuthentication):
         response = requests.get(
             self.get_vtex_endpoint(query_filters), headers=self.headers
         )
-
         data = response.json()
 
         if "list" not in data or not data["list"]:
