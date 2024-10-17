@@ -33,7 +33,7 @@ class CreateHumanService:
         try:
             with transaction.atomic():
                 pico_de_atendimento = Widget.objects.create(
-                    name="Picos de atendimentos abertos",
+                    name="human_service_dashboard.peaks_in_human_service",
                     type="graph_column",
                     source="rooms",
                     config={
@@ -47,7 +47,7 @@ class CreateHumanService:
                     position={"rows": [1, 1], "columns": [1, 12]},
                 )
                 em_andamento = Widget.objects.create(
-                    name="Em andamento",
+                    name="in_progress",
                     type="card",
                     source="rooms",
                     config={
@@ -59,7 +59,7 @@ class CreateHumanService:
                     position={"rows": [2, 2], "columns": [1, 4]},
                 )
                 Widget.objects.create(
-                    name="Tempo de espera",
+                    name="human_service_dashboard.waiting_time",
                     type="card",
                     source="rooms",
                     config={
@@ -78,7 +78,7 @@ class CreateHumanService:
                     position={"rows": [3, 3], "columns": [5, 8]},
                 )
                 encerrados = Widget.objects.create(
-                    name="Encerrados",
+                    name="closeds",
                     type="card",
                     source="rooms",
                     config={
@@ -91,7 +91,7 @@ class CreateHumanService:
                     position={"rows": [2, 2], "columns": [9, 12]},
                 )
                 Widget.objects.create(
-                    name="Tempo de resposta",
+                    name="human_service_dashboard.response_time",
                     type="card",
                     source="rooms",
                     config={
@@ -110,7 +110,7 @@ class CreateHumanService:
                     position={"rows": [3, 3], "columns": [1, 4]},
                 )
                 aguardando_atendimento = Widget.objects.create(
-                    name="Aguardando atendimento",
+                    name="human_service_dashboard.awaiting_service",
                     type="card",
                     source="rooms",
                     config={
@@ -125,7 +125,7 @@ class CreateHumanService:
                     position={"rows": [2, 2], "columns": [5, 8]},
                 )
                 Widget.objects.create(
-                    name="Tempo de interação",
+                    name="human_service_dashboard.interaction_time",
                     type="card",
                     source="rooms",
                     config={
@@ -152,61 +152,61 @@ class CreateHumanService:
                             "icon": "forum:weni-600",
                             "fields": [
                                 {
-                                    "name": "Agente",
+                                    "name": "agent",
                                     "value": "agent",
                                     "display": True,
                                     "hidden_name": False,
                                 },
                                 {
-                                    "name": "Em andamento",
+                                    "name": "in_progress",
                                     "value": "opened",
                                     "display": True,
                                     "hidden_name": False,
                                 },
                                 {
-                                    "name": "Encerrados",
+                                    "name": "closeds",
                                     "value": "closed",
                                     "display": True,
                                     "hidden_name": False,
                                 },
                                 {
-                                    "name": "Status",
+                                    "name": "table_dynamic_by_filter.status",
                                     "value": "status",
                                     "display": True,
                                     "hidden_name": True,
                                 },
                             ],
-                            "name_overwrite": "Agentes online",
+                            "name_overwrite": "online_agents",
                         },
                         "created_on": {
                             "icon": "forum:weni-600",
                             "fields": [
                                 {
-                                    "name": "Agente",
+                                    "name": "agent",
                                     "value": "agent",
                                     "display": True,
                                     "hidden_name": False,
                                 },
                                 {
-                                    "name": "Chats no período",
+                                    "name": "table_dynamic_by_filter.chats_in_period",
                                     "value": "opened",
                                     "display": True,
                                     "hidden_name": False,
                                 },
                                 {
-                                    "name": "Encerrados",
+                                    "name": "closeds",
                                     "value": "closed",
                                     "display": True,
                                     "hidden_name": False,
                                 },
                                 {
-                                    "name": "Status",
+                                    "name": "table_dynamic_by_filter.status",
                                     "value": "status",
                                     "display": True,
                                     "hidden_name": True,
                                 },
                             ],
-                            "name_overwrite": "Chats por agente",
+                            "name_overwrite": "chats_per_agents",
                         },
                     },
                     dashboard=dashboard_atendimento_humano,
@@ -230,34 +230,34 @@ class CreateHumanService:
         encerrados,
     ):
         waiting = {
-            "name": "Aguardando",
+            "name": "waiting",
             "fields": [
                 {
-                    "name": "Contato",
+                    "name": "table_group.contact",
                     "value": "contact",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "URN",
+                    "name": "table_group.urn",
                     "value": "urn",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Início",
+                    "name": "table_group.created_on",
                     "value": "created_on",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Setor",
+                    "name": "table_group.sector",
                     "value": "sector",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Fila",
+                    "name": "table_group.queue",
                     "value": "queue",
                     "display": True,
                     "hidden_name": False,
@@ -271,40 +271,40 @@ class CreateHumanService:
             "is_default": False,
         }
         in_progress = {
-            "name": "Em andamento",
+            "name": "in_progress",
             "fields": [
                 {
-                    "name": "Contato",
+                    "name": "table_group.contact",
                     "value": "contact",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "URN",
+                    "name": "table_group.urn",
                     "value": "urn",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Agente",
+                    "name": "table_group.agent",
                     "value": "agent",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Início",
+                    "name": "table_group.created_on",
                     "value": "created_on",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Setor",
+                    "name": "table_group.sector",
                     "value": "sector",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Fila",
+                    "name": "table_group.queue",
                     "value": "queue",
                     "display": True,
                     "hidden_name": False,
@@ -314,52 +314,52 @@ class CreateHumanService:
             "is_default": False,
         }
         closed = {
-            "name": "Encerrados",
+            "name": "closeds",
             "fields": [
                 {
-                    "name": "Contato",
+                    "name": "table_group.contact",
                     "value": "contact",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "URN",
+                    "name": "table_group.urn",
                     "value": "urn",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Agente",
+                    "name": "table_group.agent",
                     "value": "agent",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Início",
+                    "name": "table_group.created_on",
                     "value": "created_on",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Fim",
+                    "name": "table_group.ended_at",
                     "value": "ended_at",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Setor",
+                    "name": "table_group.sector",
                     "value": "sector",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Fila",
+                    "name": "table_group.queue",
                     "value": "queue",
                     "display": True,
                     "hidden_name": False,
                 },
                 {
-                    "name": "Tags",
+                    "name": "table_group.tags",
                     "value": "tags",
                     "display": True,
                     "hidden_name": False,
@@ -382,7 +382,7 @@ class CreateHumanService:
         try:
             with transaction.atomic():
                 Report.objects.create(
-                    name="Pico de chats abertos por hora",
+                    name="human_service_dashboard.peaks_in_human_service",
                     type="graph_column",
                     source="rooms",
                     config={
