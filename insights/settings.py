@@ -267,8 +267,33 @@ if USE_EDA:
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
 
 CHATS_URL = env("CHATS_URL")
+INTEGRATIONS_URL = env("INTEGRATIONS_URL")
 
 PROJECT_ALLOW_LIST = env("PROJECT_ALLOW_LIST", default=[])
+
+REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
+
+# channels
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL],
+        },
+    },
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+    }
+}
+INTEGRATIONS_URL = "https://integrations-engine.weni.ai"
+MOCKDOMAIN = env.str("MOCKDOMAIN")
+MOCK_APPKEY = env.str("MOCK_APPKEY")
+MOCK_APPTOKEN = env.str("MOCK_APPTOKEN")
 
 GROQ_OPEN_AI_URL = env.str("GROQ_OPEN_AI_URL", default="")
 GROQ_CHATGPT_TOKEN = env.str("GROQ_CHATGPT_TOKEN", default="")

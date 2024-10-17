@@ -68,8 +68,8 @@ class CreateFlowsDashboard:
 
         for position in positions[amount]:
             Widget.objects.create(
-                name="Funil",
-                type="graph_funnel",
+                name="",
+                type="empty_column",
                 source="",
                 config={},
                 dashboard=dashboard,
