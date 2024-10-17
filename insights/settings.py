@@ -291,9 +291,9 @@ CACHES = {
     }
 }
 INTEGRATIONS_URL = "https://integrations-engine.weni.ai"
-MOCKDOMAIN = (env.str("MOCKDOMAIN"),)
-MOCK_APPKEY = (env.str("MOCK_APPKEY"),)
-MOCK_APPTOKEN = (env.str("MOCK_APPTOKEN"),)
+MOCKDOMAIN = env.str("MOCKDOMAIN")
+MOCK_APPKEY = env.str("MOCK_APPKEY")
+MOCK_APPTOKEN = env.str("MOCK_APPTOKEN")
 
 GROQ_OPEN_AI_URL = env.str("GROQ_OPEN_AI_URL", default="")
 GROQ_CHATGPT_TOKEN = env.str("GROQ_CHATGPT_TOKEN", default="")
