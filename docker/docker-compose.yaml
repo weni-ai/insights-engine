@@ -12,6 +12,10 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-insights}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-insights}
       - POSTGRES_DB=${POSTGRES_DB:-insights}
+  redis:
+    image: redis:6.2
+    ports:
+      - 6379:6379
   insights:
     image: ${DOCKER_IMAGE_NAME:-ilha/insights}:${TAG:-latest}
     build:

@@ -22,3 +22,7 @@ class InternalAuthentication:
             "Content-Type": "application/json; charset: utf-8",
             "Authorization": self.get_module_token(),
         }
+
+
+class VtexAuthentication:
+    pass
