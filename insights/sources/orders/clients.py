@@ -33,11 +33,11 @@ class VtexOrdersRestClient(VtexAuthentication):
         return url
 
     def list(self, query_filters: dict):
-        # cache_key = self.get_cache_key(query_filters)
+        cache_key = self.get_cache_key(query_filters)
 
-        # cached_data = self.cache.get(cache_key)
-        # if cached_data:
-        #     return 200, json.loads(cached_data)
+        cached_data = self.cache.get(cache_key)
+        if cached_data:
+            return 200, json.loads(cached_data)
 
         if not query_filters.get("utm_source", None):
             return {"error": "utm_source field is mandatory"}
@@ -113,6 +113,6 @@ class VtexOrdersRestClient(VtexAuthentication):
             "medium_ticket": medium_ticket,
         }
 
-        # self.cache.set(cache_key, json.dumps(result_data), ex=3600)
+        self.cache.set(cache_key, json.dumps(result_data), ex=3600)
 
         return response.status_code, result_data
