@@ -3,6 +3,11 @@ from pytest import fixture
 from insights.dashboards.models import Dashboard, DashboardTemplate
 from insights.projects.models import Project, ProjectAuth
 from insights.users.models import User
+from insights.dashboards.models import (
+    Dashboard,
+    DashboardTemplate,
+)
+from insights.widgets.models import Widget
 
 
 @fixture
@@ -75,3 +80,13 @@ def create_project_auth(create_project, create_user):
     role = 1
 
     return ProjectAuth.objects.create(project=proj, user=user, role=role)
+
+
+@fixture
+def create_widget(create_default_dashboard):
+    return Widget.objects.create(
+        dashboard=create_default_dashboard,
+        name="Example Widget",
+        source="flows",
+        config={"example": "widget config"},
+    )
