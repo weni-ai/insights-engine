@@ -11,10 +11,10 @@ from django.conf import settings
 class VtexOrdersRestClient(VtexAuthentication):
     def __init__(self, auth_params, cache_client: CacheClient) -> None:
         self.headers = {
-            "X-VTEX-API-AppToken": settings.MOCK_APPTOKEN,
-            "X-VTEX-API-AppKey": settings.MOCK_APPKEY,
+            "X-VTEX-API-AppToken": auth_params["apptoken"],
+            "X-VTEX-API-AppKey": auth_params["appkey"],
         }
-        self.base_url = settings.MOCKDOMAIN
+        self.base_url = auth_params["domain"]
         self.cache = cache_client
 
     def get_cache_key(self, query_filters):

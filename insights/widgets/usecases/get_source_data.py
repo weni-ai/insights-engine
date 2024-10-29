@@ -6,6 +6,7 @@ from django.utils import timezone
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
+from usecases import get_tokens
 
 
 def set_live_day(default_filters):
@@ -161,16 +162,21 @@ def get_source_data_from_widget(
                 f"could not find a source with the slug {source}, make sure that the widget is configured with a supported source"
             )
 
-        serialized_auth = {}
+        # serialized_auth = {}
         if widget.type == "vtex_order":
-            auth_source = get_source(slug="vtexcredentials")
-            serialized_auth: dict = auth_source.execute(
-                filters={"project": "d8d6d71d-3daf-4d2e-812b-85cc252a96d8"},
-                operation="get_vtex_auth",
-                parser=parse_dict_to_json,
-                return_format="",
-                query_kwargs={},
-            )
+            tokens = get_tokens(project=widget.project)
+            # ESSA FUNÇÃO GET_TOKENS VAI FAZER AS VEZES DO
+            # SOURCE DO INTEGRATIONS QUE RETORNA OS TOKENS ENQUANTO
+            # O PROBLEMA DOS TOKENS É RESOLVIDO.
+
+            # auth_source = get_source(slug="vtexcredentials")
+            # serialized_auth: dict = auth_source.execute(
+            #     filters={"project": "d8d6d71d-3daf-4d2e-812b-85cc252a96d8"},
+            #     operation="get_vtex_auth",
+            #     parser=parse_dict_to_json,
+            #     return_format="",
+            #     query_kwargs={},
+            # )
 
         operation_function = (
             cross_source_data_operation
@@ -184,7 +190,7 @@ def get_source_data_from_widget(
             is_live=is_live,
             filters=filters,
             user_email=user_email,
-            auth_params=serialized_auth,
+            auth_params=tokens,
         )
 
     except Widget.DoesNotExist:

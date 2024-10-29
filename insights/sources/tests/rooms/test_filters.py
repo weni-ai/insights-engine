@@ -25,14 +25,14 @@ def test_in_operation(strategy):
 def test_after_operation(strategy):
     time = datetime.now(timezone.utc) - timedelta(hours=1)
     clause, params = strategy.apply("field", "after", time, "t")
-    assert clause == "t.field > (%s)"
+    assert clause == "t.field >= (%s)"
     assert params == [time]
 
 
 def test_before_operation(strategy):
     time = datetime.now(timezone.utc) - timedelta(hours=1)
     clause, params = strategy.apply("field", "before", time, "t")
-    assert clause == "t.field < (%s)"
+    assert clause == "t.field <= (%s)"
     assert params == [time]
 
 

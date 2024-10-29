@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
+import json
 
 import environ
 import sentry_sdk
@@ -294,6 +295,12 @@ INTEGRATIONS_URL = "https://integrations-engine.weni.ai"
 MOCKDOMAIN = env.str("MOCKDOMAIN")
 MOCK_APPKEY = env.str("MOCK_APPKEY")
 MOCK_APPTOKEN = env.str("MOCK_APPTOKEN")
+
+# Carrega os UUIDs de projetos como uma lista
+PROJECTS_VTEX = json.loads(os.getenv("PROJECTS_VTEX", "[]"))
+
+# Carrega os tokens como um dicionário
+PROJECT_TOKENS_VTEX = json.loads(os.getenv("PROJECT_TOKENS_VTEX", "{}"))
 
 GROQ_OPEN_AI_URL = env.str("GROQ_OPEN_AI_URL", default="")
 GROQ_CHATGPT_TOKEN = env.str("GROQ_CHATGPT_TOKEN", default="")
