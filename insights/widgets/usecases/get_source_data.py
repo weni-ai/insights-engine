@@ -6,7 +6,7 @@ from django.utils import timezone
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
-from usecases import get_tokens
+from insights.widgets.usecases import get_tokens
 
 
 def set_live_day(default_filters):
