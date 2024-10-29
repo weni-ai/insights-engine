@@ -30,7 +30,7 @@ lint:
 ## Docker
 
 dev_up:
-	@docker compose -f docker/docker-compose.yaml up -d postgres
+	@docker compose -f docker/docker-compose.yaml up -d postgres redis
 
 dev_down:
 	@docker compose -f docker/docker-compose.yaml down
