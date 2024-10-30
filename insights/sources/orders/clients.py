@@ -53,7 +53,7 @@ class VtexOrdersRestClient(VtexAuthentication):
             )
 
         if query_filters.get("utm_source", None):
-            query_filters["utm_source"] = query_filters.pop("utm_source")
+            query_filters["utm_source"] = query_filters.pop("utm_source")[0]
 
         total_value = 0
         total_sell = 0
