@@ -6,7 +6,7 @@ from django.utils import timezone
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
-from insights.widgets.usecases import get_tokens
+from insights.widgets.usecases.get_tokens import get_tokens
 
 
 def set_live_day(default_filters):
@@ -165,7 +165,7 @@ def get_source_data_from_widget(
 
         # serialized_auth = {}
         if widget.type == "vtex_order":
-            tokens = get_tokens(project=widget.project)
+            tokens = get_tokens(project_uuid=widget.project.uuid)
             # ESSA FUNÇÃO GET_TOKENS VAI FAZER AS VEZES DO
             # SOURCE DO INTEGRATIONS QUE RETORNA OS TOKENS ENQUANTO
             # O PROBLEMA DOS TOKENS É RESOLVIDO.
