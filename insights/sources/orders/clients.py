@@ -7,6 +7,8 @@ from insights.sources.cache import CacheClient
 from insights.utils import format_to_iso_utc
 from django.conf import settings
 
+from datetime import datetime
+
 
 class VtexOrdersRestClient(VtexAuthentication):
     def __init__(self, auth_params, cache_client: CacheClient) -> None:
@@ -22,8 +24,8 @@ class VtexOrdersRestClient(VtexAuthentication):
         return f"vtex_data:{json.dumps(query_filters, sort_keys=True)}"
 
     def get_vtex_endpoint(self, query_filters: dict, page_number: int = 1):
-        start_date = query_filters.get("start_date")
-        end_date = query_filters.get("end_date")
+        start_date = query_filters.get("ended_at__gte")
+        end_date = query_filters.get("ended_at__lte")
         utm_source = query_filters.get("utm_source")
 
         if start_date is not None:
@@ -32,25 +34,38 @@ class VtexOrdersRestClient(VtexAuthentication):
             url = f"https://{self.base_url}.myvtex.com/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_status=invoiced"
         return url
 
+    def parse_datetime(self, date_str):
+        try:
+            # Tente fazer o parse da string para datetime
+            return datetime.fromisoformat(date_str)  # Para strings ISO formatadas
+        except ValueError:
+            return None  # Retorne None se a conversão falhar
+
     def list(self, query_filters: dict):
         cache_key = self.get_cache_key(query_filters)
 
         cached_data = self.cache.get(cache_key)
         if cached_data:
-            return 200, json.loads(cached_data)
+            return json.loads(cached_data)
 
         if not query_filters.get("utm_source", None):
             return {"error": "utm_source field is mandatory"}
 
-        if query_filters.get("created_on__gte", None):
-            query_filters["start_date"] = format_to_iso_utc(
-                query_filters.pop("created_on__gte")
-            )
+        if query_filters.get("ended_at__gte", None):
+            start_date_str = query_filters["ended_at__gte"]
+            start_date = self.parse_datetime(start_date_str)
+            if start_date:
+                query_filters["ended_at__gte"] = start_date.strftime(
+                    "%Y-%m-%dT%H:%M:%S.%fZ"
+                )
 
-        if query_filters.get("created_on__lte", None):
-            query_filters["end_date"] = format_to_iso_utc(
-                query_filters.pop("created_on__lte"), end_of_day=True
-            )
+        if query_filters.get("ended_at__lte", None):
+            end_date_str = query_filters["ended_at__lte"]
+            end_date = self.parse_datetime(end_date_str)
+            if end_date:
+                query_filters["ended_at__lte"] = end_date.strftime(
+                    "%Y-%m-%dT%H:%M:%S.%fZ"
+                )
 
         if query_filters.get("utm_source", None):
             query_filters["utm_source"] = query_filters.pop("utm_source")[0]
