@@ -164,6 +164,7 @@ def get_source_data_from_widget(
             )
 
         # serialized_auth = {}
+        tokens = {}
         if widget.type == "vtex_order":
             tokens = get_tokens(project_uuid=widget.project.uuid)
             # ESSA FUNÇÃO GET_TOKENS VAI FAZER AS VEZES DO
