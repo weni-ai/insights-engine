@@ -130,4 +130,4 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         self.cache.set(cache_key, json.dumps(result_data), ex=3600)
 
-        return response.status_code, result_data
+        return result_data
