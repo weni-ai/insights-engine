@@ -6,6 +6,7 @@ from django.utils import timezone
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
 from insights.widgets.models import Widget
+from insights.widgets.usecases.get_tokens import get_tokens
 
 
 def set_live_day(default_filters):
@@ -63,6 +64,7 @@ def simple_source_data_operation(
     is_live: bool = False,
     filters: dict = {},
     user_email: str = "",
+    auth_params: dict = {},
 ):
     query_kwargs = {}
 
@@ -106,6 +108,7 @@ def simple_source_data_operation(
         project=widget.project,
         user_email=user_email,
         query_kwargs=query_kwargs,
+        auth_params=auth_params,
     )
     return serialized_source
 
@@ -117,6 +120,7 @@ def cross_source_data_operation(
     filters: dict = {},
     user_email: str = "",
     calculator=Calculator,
+    auth_params: dict = {},
 ):
     """
     there will always be two subwidgets to make a cross operation,
@@ -126,21 +130,13 @@ def cross_source_data_operation(
     # The subwidget needs to have a operation that returns a value(count, sum, avg...), cannot be a list of values
     filters["slug"] = "subwidget_1"
     subwidget_1_data = simple_source_data_operation(
-        source_query,
-        widget,
-        is_live,
-        filters,
-        user_email,
+        source_query, widget, is_live, filters, user_email, auth_params
     )[
         "value"
     ]  # TODO: Treat other ways(test to see if there are) to get the value(other names for the value field)
     filters["slug"] = "subwidget_2"
     subwidget_2_data = simple_source_data_operation(
-        source_query,
-        widget,
-        is_live,
-        filters,
-        user_email,
+        source_query, widget, is_live, filters, user_email, auth_params
     )[
         "value"
     ]  # TODO: Treat other ways(test to see if there are) to get the value(other names for the value field)
@@ -167,6 +163,23 @@ def get_source_data_from_widget(
                 f"could not find a source with the slug {source}, make sure that the widget is configured with a supported source"
             )
 
+        # serialized_auth = {}
+        tokens = {}
+        if widget.type == "vtex_order":
+            tokens = get_tokens(project_uuid=widget.project.uuid)
+            # ESSA FUNÇÃO GET_TOKENS VAI FAZER AS VEZES DO
+            # SOURCE DO INTEGRATIONS QUE RETORNA OS TOKENS ENQUANTO
+            # O PROBLEMA DOS TOKENS É RESOLVIDO.
+
+            # auth_source = get_source(slug="vtexcredentials")
+            # serialized_auth: dict = auth_source.execute(
+            #     filters={"project": "d8d6d71d-3daf-4d2e-812b-85cc252a96d8"},
+            #     operation="get_vtex_auth",
+            #     parser=parse_dict_to_json,
+            #     return_format="",
+            #     query_kwargs={},
+            # )
+
         operation_function = (
             cross_source_data_operation
             if widget.is_crossing_data
@@ -179,6 +192,7 @@ def get_source_data_from_widget(
             is_live=is_live,
             filters=filters,
             user_email=user_email,
+            auth_params=tokens,
         )
 
     except Widget.DoesNotExist:

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
+import json
 
 import environ
 import sentry_sdk
@@ -273,3 +274,28 @@ PROJECT_ALLOW_LIST = env("PROJECT_ALLOW_LIST", default=[])
 GROQ_OPEN_AI_URL = env.str("GROQ_OPEN_AI_URL", default="")
 GROQ_CHATGPT_TOKEN = env.str("GROQ_CHATGPT_TOKEN", default="")
 GROQ_OPEN_AI_GPT_VERSION = env.str("GROQ_OPEN_AI_GPT_VERSION", default="")
+
+INTEGRATIONS_URL = env("INTEGRATIONS_URL")
+
+REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
+
+# channels
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL],
+        },
+    },
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+    }
+}
+
+PROJECTS_VTEX = json.loads(os.getenv("PROJECTS_VTEX", "[]"))
+PROJECT_TOKENS_VTEX = json.loads(os.getenv("PROJECT_TOKENS_VTEX", "{}"))
