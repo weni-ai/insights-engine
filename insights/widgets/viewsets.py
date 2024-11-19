@@ -35,10 +35,12 @@ class WidgetListUpdateViewSet(
             update_data["config"] = config
 
         if widget.type != "card" or widget.type != "recurrence":
+            print("entrou no if do type card e recurrence")
             serializer = self._update(widget, update_data, partial)
             return Response(serializer.data)
 
         if config.get("operation") != "recurrence":
+            print("entrou no if co operation")
             try:
                 widget.report.delete()
             except Report.DoesNotExist:
@@ -49,6 +51,7 @@ class WidgetListUpdateViewSet(
         config["limit"] = 1
 
         if widget.type == "recurrence":
+            print("if do type que seta o limite")
             config["limit"] = 5
 
         serializer = self._update(widget, update_data, partial)
@@ -61,8 +64,9 @@ class WidgetListUpdateViewSet(
                 source=widget.source,
                 type="graph_bar",
             )
-
+        print("dentro do codigo que cria o report")
         if report_name:
+            print(report_name)
             report.name = report_name
 
         report.config = {
@@ -71,6 +75,8 @@ class WidgetListUpdateViewSet(
             "filter": widget.config.get("filter"),
             "data_suffix": "%",
         }
+
+        print("a config do report", report.config)
         report.save()
 
         return Response(serializer.data)
