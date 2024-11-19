@@ -34,7 +34,7 @@ class WidgetListUpdateViewSet(
             config.update(update_data["config"])
             update_data["config"] = config
 
-        if widget.type != "card" or widget.type != "recurrence":
+        if widget.type not in ["card", "recurrence"]:
             print("entrou no if do type card e recurrence")
             serializer = self._update(widget, update_data, partial)
             return Response(serializer.data)
