@@ -13,8 +13,8 @@ from datetime import datetime
 class VtexOrdersRestClient(VtexAuthentication):
     def __init__(self, auth_params, cache_client: CacheClient) -> None:
         self.headers = {
-            "X-VTEX-API-AppToken": auth_params["VTEX-API-AppToken"],
-            "X-VTEX-API-AppKey": auth_params["VTEX-API-AppKey"],
+            "X-VTEX-API-AppToken": auth_params["app_token"],
+            "X-VTEX-API-AppKey": auth_params["app_key"],
         }
         self.base_url = auth_params["domain"]
         self.cache = cache_client
@@ -29,9 +29,9 @@ class VtexOrdersRestClient(VtexAuthentication):
         utm_source = query_filters.get("utm_source")
 
         if start_date is not None:
-            url = f"https://{self.base_url}.myvtex.com/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_authorizedDate=authorizedDate:[{start_date} TO {end_date}]&f_status=invoiced"
+            url = f"{self.base_url}/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_authorizedDate=authorizedDate:[{start_date} TO {end_date}]&f_status=invoiced"
         else:
-            url = f"https://{self.base_url}.myvtex.com/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_status=invoiced"
+            url = f"{self.base_url}.myvtex.com/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_status=invoiced"
         return url
 
     def parse_datetime(self, date_str):
