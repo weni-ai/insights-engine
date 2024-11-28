@@ -166,7 +166,7 @@ def get_source_data_from_widget(
         if widget.type == "vtex_order":
             auth_source = get_source(slug="vtexcredentials")
             serialized_auth: dict = auth_source.execute(
-                filters={"project": widget.project},
+                filters={"project": widget.project.uuid},
                 operation="get_vtex_auth",
                 parser=parse_dict_to_json,
                 return_format="",
