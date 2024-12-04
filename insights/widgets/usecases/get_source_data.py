@@ -100,6 +100,7 @@ def simple_source_data_operation(
     apply_timezone_to_filters(default_filters, project_timezone)
     format_date(default_filters)
 
+    print("filtros apos formatar", default_filters)
     if operation == "list":
         tags = default_filters.pop("tags", [None])[0]
         if tags:
