@@ -35,6 +35,20 @@ def apply_timezone_to_filters(default_filters, project_timezone_str):
             default_filters[key] = date_obj_with_tz.isoformat()
 
 
+def format_date(default_filters):
+    for key in default_filters.keys():
+        if isinstance(default_filters[key], datetime):
+            date_obj = default_filters[key]
+            if key.endswith("__gte"):
+                default_filters[key] = date_obj.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+            elif key.endswith("__lte"):
+                default_filters[key] = date_obj.replace(
+                    hour=23, minute=59, second=59, microsecond=999999
+                )
+
+
 class Calculator:
     def __init__(self, operand_1, operand_2, operator) -> None:
         self.operand_1 = operand_1
@@ -84,6 +98,7 @@ def simple_source_data_operation(
 
     project_timezone = widget.project.timezone
     apply_timezone_to_filters(default_filters, project_timezone)
+    format_date(default_filters)
 
     if operation == "list":
         tags = default_filters.pop("tags", [None])[0]
