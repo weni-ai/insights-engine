@@ -106,7 +106,6 @@ def simple_source_data_operation(
     format_date(default_filters)
     convert_to_iso(default_filters)
 
-    print("filtros apos formatar", default_filters)
     if operation == "list":
         tags = default_filters.pop("tags", [None])[0]
         if tags:
