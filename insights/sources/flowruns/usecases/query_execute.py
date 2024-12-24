@@ -9,17 +9,25 @@ from insights.sources.flowruns.query_builder import (
 )
 
 
-def transform_terms_count_to_percentage(
+def transform_results_data(
     total: int, others: int, terms_agg_buckets: list[dict]
 ) -> list[dict]:
     transformed_results = []
+
     for term in terms_agg_buckets:
-        value = term.get("doc_count")
-        if value == 0 or value is None:
-            transformed_results.append({"label": term.get("key"), "value": 0})
+        full_value = term.get("doc_count")
+
+        if full_value == 0 or full_value is None:
+            transformed_results.append(
+                {"label": term.get("key"), "value": 0, full_value: 0}
+            )
             continue
-        percent = round(((value / total) * 100), 2)
-        transformed_results.append({"label": term.get("key"), "value": percent})
+
+        percentage = round(((full_value / total) * 100), 2)
+        transformed_results.append(
+            {"label": term.get("key"), "value": percentage, "full_value": full_value}
+        )
+
     return transformed_results
 
 
@@ -47,7 +55,7 @@ class QueryExecutor:
             terms_agg = (
                 response.get("aggregations", {}).get("values", {}).get("agg_field")
             )
-            transformed_terms = transform_terms_count_to_percentage(
+            transformed_terms = transform_results_data(
                 total=terms_agg.get("doc_count", 0),
                 others=terms_agg.get("agg_value", {}).get("sum_other_doc_count", 0),
                 terms_agg_buckets=terms_agg.get("agg_value", {}).get("buckets", []),
