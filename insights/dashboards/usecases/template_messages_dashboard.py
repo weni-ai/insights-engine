@@ -95,5 +95,7 @@ class CreateTemplateMessagesDashboard:
                 )
             )
 
+            Widget.objects.bulk_create(widgets_to_create)
+
         except Exception as exp:
             raise InvalidWidgetsObject(f"Error creating widgets: {exp}")
