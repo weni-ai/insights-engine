@@ -21,8 +21,18 @@ class TestMetaAPIClient(TestCase):
             "name": "testing",
             "parameter_format": "POSITIONAL",
             "components": [
-                {"type": "HEADER", "format": "TEXT", "text": "Test"},
-                {"type": "BODY", "text": "Just testing"},
+                {"type": "HEADER", "format": "TEXT", "text": "ATENÇÃO AO PRAZO!"},
+                {
+                    "type": "BODY",
+                    "text": "Just testing",
+                    "example": {"body_text": [["test"]]},
+                },
+                {
+                    "type": "BUTTONS",
+                    "buttons": [
+                        {"type": "URL", "text": "link", "url": "https://example.local/"}
+                    ],
+                },
             ],
             "language": "en_US",
             "status": "APPROVED",
