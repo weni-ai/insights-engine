@@ -27,6 +27,7 @@ django-filter = "^24.2"
 pytz = "^2024.1"
 django-redis = "^5.4.0"
 redis = "^5.2.0"
+responses = "^0.25.3"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.22.2"
