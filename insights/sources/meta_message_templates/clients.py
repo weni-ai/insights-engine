@@ -18,6 +18,7 @@ class MetaAPIClient:
             response = requests.get(url, headers=self.headers, timeout=60)
             response.raise_for_status()
         except requests.HTTPError as err:
-            return err
+            # TODO: Return comprehensive response
+            raise err
 
         return response.json()
