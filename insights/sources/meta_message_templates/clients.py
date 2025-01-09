@@ -1,6 +1,7 @@
 import requests
 
 from django.conf import settings
+from rest_framework.exceptions import ValidationError
 
 
 class MetaAPIClient:
@@ -18,7 +19,10 @@ class MetaAPIClient:
             response = requests.get(url, headers=self.headers, timeout=60)
             response.raise_for_status()
         except requests.HTTPError as err:
-            # TODO: Return comprehensive response
-            raise err
+            print(f"Error {err.response.text}")
+
+            raise ValidationError(
+                {"error": "An error has occurred"}, code="meta_api_error"
+            ) from err
 
         return response.json()

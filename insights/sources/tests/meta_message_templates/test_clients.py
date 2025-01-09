@@ -1,9 +1,9 @@
 import json
-import requests
 import responses
 
 from django.test import TestCase
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.tests.meta_message_templates.mock import (
@@ -49,5 +49,6 @@ class TestMetaAPIClient(TestCase):
                 body=json.dumps(MOCK_ERROR_RESPONSE_BODY),
             )
 
-            with self.assertRaises(requests.exceptions.HTTPError):
+            with self.assertRaises(ValidationError) as context:
                 client.get_template_preview(template_id=template_id)
+                self.assertEqual(context.exception.code, "meta_api_error")
