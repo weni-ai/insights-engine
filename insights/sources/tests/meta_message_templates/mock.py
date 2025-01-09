@@ -4,6 +4,15 @@ MOCK_SUCCESS_RESPONSE_BODY = {
     "components": [
         {"type": "HEADER", "format": "TEXT", "text": "Test"},
         {
+            "type": "HEADER",
+            "format": "IMAGE",
+            "example": {
+                "header_handle": [
+                    "https://scontent.whatsapp.net/v/t61.29466-34/123456789_123456789876543_1234567891234567898_n.png"
+                ]
+            },
+        },
+        {
             "type": "BODY",
             "text": "Just testing",
             "example": {"body_text": [["test"]]},
