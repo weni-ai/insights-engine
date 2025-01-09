@@ -19,7 +19,7 @@ class MetaAPIClient:
             response = requests.get(url, headers=self.headers, timeout=60)
             response.raise_for_status()
         except requests.HTTPError as err:
-            print(f"Error {err.response.text}")
+            print(f"Error ({err.response.status_code}): {err.response.text}")
 
             raise ValidationError(
                 {"error": "An error has occurred"}, code="meta_api_error"
