@@ -8,7 +8,7 @@ MAX_ANALYTICS_DAYS_PERIOD_FILTER = 90
 
 def validate_analytics_kwargs(filters: dict) -> dict:
     analytics_kwargs = {
-        k: None for k in ["waba_id", "project", "template_id", "start_date", "end_date"]
+        k: None for k in ["waba_id", "template_id", "start_date", "end_date"]
     }
     missing_fields = []
 

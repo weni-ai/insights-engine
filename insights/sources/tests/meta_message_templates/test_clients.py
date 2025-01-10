@@ -60,7 +60,7 @@ class TestMetaAPIClient(TestCase):
     def test_get_template_daily_analytics(self):
         client = MetaAPIClient()
 
-        weba_id = "0000000000000000"
+        waba_id = "0000000000000000"
         template_id = "1234567890987654"
         url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics"
 
@@ -77,7 +77,7 @@ class TestMetaAPIClient(TestCase):
             end_date = convert_date_str_to_datetime_date("2024-12-31")
 
             preview_response = client.get_messages_analytics(
-                waba_id=weba_id,
+                waba_id=waba_id,
                 template_id=template_id,
                 start_date=start_date,
                 end_date=end_date,
@@ -97,7 +97,7 @@ class TestMetaAPIClient(TestCase):
     def test_cannot_get_template_daily_analytics_when_an_error_has_occurred(self):
         client = MetaAPIClient()
 
-        weba_id = "0000000000000000"
+        waba_id = "0000000000000000"
         template_id = "1234567890987654"
         url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics"
 
@@ -115,7 +115,7 @@ class TestMetaAPIClient(TestCase):
 
             with self.assertRaises(ValidationError) as context:
                 client.get_messages_analytics(
-                    waba_id=weba_id,
+                    waba_id=waba_id,
                     template_id=template_id,
                     start_date=start_date,
                     end_date=end_date,
