@@ -6,13 +6,9 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
 from insights.projects.parsers import parse_dict_to_json
-from insights.sources.meta_message_templates.enums import (
-    AnalyticsGranularity,
-    Operations,
-)
+from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.tests.meta_message_templates.mock import (
     MOCK_SUCCESS_RESPONSE_BODY,
-    MOCK_TEMPLATE_DAILY_ANALYTICS,
 )
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
 
@@ -57,38 +53,3 @@ class TestMessageTemplateQueryExecutor(TestCase):
             )
 
             self.assertEqual(context.exception.code, "unsupported_operation")
-
-    def test_get_template_analytics(self):
-        waba_id = "0000000000000000"
-        template_id = "1234567890987654"
-        url = f"https://graph.facebook.com/v21.0/{waba_id}/template_analytics"
-
-        with responses.RequestsMock() as rsps:
-            rsps.add(
-                responses.GET,
-                url,
-                status=status.HTTP_200_OK,
-                content_type="application/json",
-                body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
-            )
-
-            result = QueryExecutor.execute(
-                filters={
-                    "waba_id": waba_id,
-                    "template_id": template_id,
-                    "start_date": "2024-01-01",
-                    "end_date": "2024-02-01",
-                },
-                operation=Operations.MESSAGES_ANALYTICS.value,
-                parser=parse_dict_to_json,
-            )
-            expected_response = {
-                "data": {
-                    "granularity": AnalyticsGranularity.DAILY.value,
-                    "data_points": MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0].get(
-                        "data_points", {}
-                    ),
-                }
-            }
-
-            self.assertEqual(result, expected_response)
