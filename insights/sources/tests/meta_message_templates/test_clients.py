@@ -11,6 +11,7 @@ from insights.sources.tests.meta_message_templates.mock import (
     MOCK_ERROR_RESPONSE_BODY,
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
+    MOCK_TEMPLATE_DAILY_ANALYTICS_INVALID_PERIOD,
 )
 from insights.utils import convert_date_str_to_datetime_date
 
@@ -61,7 +62,7 @@ class TestMetaAPIClient(TestCase):
 
         weba_id = "0000000000000000"
         template_id = "1234567890987654"
-        url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics?"
+        url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -92,3 +93,31 @@ class TestMetaAPIClient(TestCase):
             }
 
             self.assertEqual(preview_response, expected_response)
+
+    def test_cannot_get_template_daily_analytics_when_an_error_has_occurred(self):
+        client = MetaAPIClient()
+
+        weba_id = "0000000000000000"
+        template_id = "1234567890987654"
+        url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics"
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                url,
+                status=status.HTTP_400_BAD_REQUEST,
+                content_type="application/json",
+                body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS_INVALID_PERIOD),
+            )
+
+            start_date = convert_date_str_to_datetime_date("2022-01-01")
+            end_date = convert_date_str_to_datetime_date("2024-12-31")
+
+            with self.assertRaises(ValidationError) as context:
+                client.get_messages_analytics(
+                    waba_id=weba_id,
+                    template_id=template_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                self.assertEqual(context.exception.code, "meta_api_error")

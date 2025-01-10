@@ -67,3 +67,18 @@ MOCK_TEMPLATE_DAILY_ANALYTICS = {
     ],
     "paging": {"cursors": {"before": "ZNSKLL", "after": "NJAPQOOQZ"}},
 }
+
+
+MOCK_TEMPLATE_DAILY_ANALYTICS_INVALID_PERIOD = {
+    "error": {
+        "message": "Invalid parameter",
+        "type": "OAuthException",
+        "code": 100,
+        "error_data": "Invalid start and end times. End time requested is before start time.",
+        "error_subcode": 4182001,
+        "is_transient": False,
+        "error_user_title": "Horas de início e de término incorretas",
+        "error_user_msg": "Start time must be earlier than end time.",
+        "fbtrace_id": "XLZSJnaBAvqHAVkqlappqAK",
+    }
+}

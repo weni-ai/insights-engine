@@ -62,6 +62,7 @@ class MetaAPIClient:
             response = requests.get(
                 url, headers=self.headers, params=params, timeout=60
             )
+            response.raise_for_status()
 
         except requests.HTTPError as err:
             print(f"Error ({err.response.status_code}): {err.response.text}")
