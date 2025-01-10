@@ -2,7 +2,7 @@ from rest_framework.exceptions import ValidationError
 
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.enums import Operations
-from insights.sources.tests.meta_message_templates.validators import (
+from insights.sources.meta_message_templates.validators import (
     validate_analytics_kwargs,
 )
 
