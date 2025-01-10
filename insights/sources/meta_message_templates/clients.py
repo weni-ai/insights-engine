@@ -16,6 +16,21 @@ class MetaAPIClient:
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
 
+    def get_template_preview(self, template_id: str):
+        url = f"{self.base_host_url}/v21.0/{template_id}"
+
+        try:
+            response = requests.get(url, headers=self.headers, timeout=60)
+            response.raise_for_status()
+        except requests.HTTPError as err:
+            print(f"Error ({err.response.status_code}): {err.response.text}")
+
+            raise ValidationError(
+                {"error": "An error has occurred"}, code="meta_api_error"
+            ) from err
+
+        return response.json()
+
     def get_messages_analytics(
         self,
         waba_id: str,
@@ -43,7 +58,7 @@ class MetaAPIClient:
             response = requests.get(
                 url, headers=self.headers, params=params, timeout=60
             )
-            response.raise_for_status()
+
         except requests.HTTPError as err:
             print(f"Error ({err.response.status_code}): {err.response.text}")
 

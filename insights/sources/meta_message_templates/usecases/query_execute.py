@@ -16,6 +16,14 @@ class QueryExecutor:
     ):
         client = MetaAPIClient()
 
+        if operation == Operations.TEMPLATE_PREVIEW.value:
+            if not (template_id := filters.get("template_id")):
+                raise ValidationError(
+                    "Template id is required", code="template_id_missing"
+                )
+
+            return client.get_template_preview(template_id=template_id)
+
         if operation == Operations.MESSAGES_ANALYTICS.value:
             analytics_kwargs = {
                 k: None
