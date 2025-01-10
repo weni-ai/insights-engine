@@ -18,12 +18,12 @@ class MetaAPIClient:
 
     def get_messages_analytics(
         self,
-        business_account_id: str,
+        waba_id: str,
         template_id: str,
         start_date: date,
         end_date: date,
     ):
-        url = f"{self.base_host_url}/v21.0/{business_account_id}/template_analytics?"
+        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
 
         metrics_types = [
             MetricsTypes.SENT.value,

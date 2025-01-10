@@ -17,10 +17,13 @@ class QueryExecutor:
         client = MetaAPIClient()
 
         if operation == Operations.MESSAGES_ANALYTICS.value:
-            required_fields = ["project", "template_id", "start_date", "end_date"]
+            analytics_kwargs = {
+                k: None
+                for k in ["waba_id", "project", "template_id", "start_date", "end_date"]
+            }
             missing_fields = []
 
-            for field in required_fields:
+            for field in analytics_kwargs.keys():
                 if field not in filters:
                     missing_fields.append(field)
 
@@ -34,11 +37,6 @@ class QueryExecutor:
 
             # TODO: Validate dates
 
-            return client.get_messages_analytics(
-                business_account_id="todo",
-                template_id=filters.get("template_id"),
-                start_date=filters.get("start_date"),
-                end_date=filters.get("end_date"),
-            )
+            return client.get_messages_analytics(**analytics_kwargs)
 
         raise ValidationError("Unsupported operation", code="unsupported_operation")
