@@ -15,6 +15,7 @@ from insights.sources.meta_message_templates.enums import (
 from insights.sources.meta_message_templates.utils import (
     format_messages_metrics_data_points,
 )
+from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.tests.meta_message_templates.mock import (
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
