@@ -299,3 +299,5 @@ CACHES = {
 
 PROJECTS_VTEX = json.loads(os.getenv("PROJECTS_VTEX", "[]"))
 PROJECT_TOKENS_VTEX = json.loads(os.getenv("PROJECT_TOKENS_VTEX", "{}"))
+
+WHATSAPP_API_ACCESS_TOKEN = env.str("WHATSAPP_API_ACCESS_TOKEN", default="")
