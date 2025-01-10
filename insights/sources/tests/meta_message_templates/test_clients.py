@@ -7,6 +7,9 @@ from rest_framework.exceptions import ValidationError
 
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.enums import AnalyticsGranularity
+from insights.sources.meta_message_templates.utils import (
+    format_messages_metrics_data_points,
+)
 from insights.sources.tests.meta_message_templates.mock import (
     MOCK_ERROR_RESPONSE_BODY,
     MOCK_SUCCESS_RESPONSE_BODY,
@@ -86,8 +89,10 @@ class TestMetaAPIClient(TestCase):
             expected_response = {
                 "data": {
                     "granularity": AnalyticsGranularity.DAILY.value,
-                    "data_points": MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0].get(
-                        "data_points", {}
+                    "data_points": format_messages_metrics_data_points(
+                        MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0].get(
+                            "data_points", {}
+                        )
                     ),
                 }
             }
