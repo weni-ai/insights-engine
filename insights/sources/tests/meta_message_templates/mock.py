@@ -39,3 +39,31 @@ MOCK_ERROR_RESPONSE_BODY = {
         "fbtrace_id": "fjXJSSiOahsAHSshASQEOEQ",
     }
 }
+
+MOCK_TEMPLATE_DAILY_ANALYTICS = {
+    "data": [
+        {
+            "granularity": "DAILY",
+            "product_type": "cloud_api",
+            "data_points": [
+                {
+                    "template_id": "123456789098765",
+                    "start": 1733011200,
+                    "end": 1733097600,
+                    "sent": 0,
+                    "delivered": 0,
+                    "read": 0,
+                },
+                {
+                    "template_id": "123456789098765",
+                    "start": 1733097600,
+                    "end": 1733184000,
+                    "sent": 0,
+                    "delivered": 0,
+                    "read": 0,
+                },
+            ],
+        }
+    ],
+    "paging": {"cursors": {"before": "ZNSKLL", "after": "NJAPQOOQZ"}},
+}

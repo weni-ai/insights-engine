@@ -4,7 +4,10 @@ from datetime import date
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
 
-from insights.sources.meta_message_templates.enums import MetricsTypes
+from insights.sources.meta_message_templates.enums import (
+    AnalyticsGranularity,
+    MetricsTypes,
+)
 from insights.utils import convert_date_to_unix_timestamp
 
 
@@ -48,6 +51,7 @@ class MetaAPIClient:
         ]
 
         params = {
+            "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
             "end": convert_date_to_unix_timestamp(end_date),
             "metric_types": ",".join(metrics_types),
@@ -66,4 +70,13 @@ class MetaAPIClient:
                 {"error": "An error has occurred"}, code="meta_api_error"
             ) from err
 
-        return response.json()
+        meta_response = response.json()
+
+        response = {
+            "data": {
+                "granularity": AnalyticsGranularity.DAILY.value,
+                "data_points": meta_response.get("data")[0].get("data_points", {}),
+            }
+        }
+
+        return response

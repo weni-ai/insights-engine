@@ -6,10 +6,13 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
 from insights.sources.meta_message_templates.clients import MetaAPIClient
+from insights.sources.meta_message_templates.enums import AnalyticsGranularity
 from insights.sources.tests.meta_message_templates.mock import (
     MOCK_ERROR_RESPONSE_BODY,
     MOCK_SUCCESS_RESPONSE_BODY,
+    MOCK_TEMPLATE_DAILY_ANALYTICS,
 )
+from insights.utils import convert_date_str_to_datetime_date
 
 
 class TestMetaAPIClient(TestCase):
@@ -52,3 +55,40 @@ class TestMetaAPIClient(TestCase):
             with self.assertRaises(ValidationError) as context:
                 client.get_template_preview(template_id=template_id)
                 self.assertEqual(context.exception.code, "meta_api_error")
+
+    def test_get_template_daily_analytics(self):
+        client = MetaAPIClient()
+
+        weba_id = "0000000000000000"
+        template_id = "1234567890987654"
+        url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics?"
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                url,
+                status=status.HTTP_200_OK,
+                content_type="application/json",
+                body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
+            )
+
+            start_date = convert_date_str_to_datetime_date("2024-12-01")
+            end_date = convert_date_str_to_datetime_date("2024-12-31")
+
+            preview_response = client.get_messages_analytics(
+                waba_id=weba_id,
+                template_id=template_id,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            expected_response = {
+                "data": {
+                    "granularity": AnalyticsGranularity.DAILY.value,
+                    "data_points": MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0].get(
+                        "data_points", {}
+                    ),
+                }
+            }
+
+            self.assertEqual(preview_response, expected_response)
