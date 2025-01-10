@@ -2,6 +2,8 @@ import json
 import responses
 
 from django.test import TestCase
+from django.utils import timezone
+from django.utils.timezone import timedelta
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
@@ -9,6 +11,9 @@ from insights.projects.parsers import parse_dict_to_json
 from insights.sources.meta_message_templates.enums import (
     AnalyticsGranularity,
     Operations,
+)
+from insights.sources.meta_message_templates.utils import (
+    format_messages_metrics_data_points,
 )
 from insights.sources.tests.meta_message_templates.mock import (
     MOCK_SUCCESS_RESPONSE_BODY,
@@ -76,8 +81,8 @@ class TestMessageTemplateQueryExecutor(TestCase):
                 filters={
                     "waba_id": waba_id,
                     "template_id": template_id,
-                    "start_date": "2024-01-01",
-                    "end_date": "2024-02-01",
+                    "start_date": str(timezone.now().date() - timedelta(days=7)),
+                    "end_date": str(timezone.now().date()),
                 },
                 operation=Operations.MESSAGES_ANALYTICS.value,
                 parser=parse_dict_to_json,
@@ -85,8 +90,10 @@ class TestMessageTemplateQueryExecutor(TestCase):
             expected_response = {
                 "data": {
                     "granularity": AnalyticsGranularity.DAILY.value,
-                    "data_points": MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0].get(
-                        "data_points", {}
+                    "data_points": format_messages_metrics_data_points(
+                        MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0].get(
+                            "data_points", {}
+                        )
                     ),
                 }
             }
