@@ -1,4 +1,6 @@
 from datetime import date
+
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from insights.utils import convert_date_str_to_datetime_date
@@ -37,15 +39,13 @@ def validate_analytics_kwargs(filters: dict) -> dict:
                 code="invalid_date_format",
             ) from err
 
-    validate_analytics_selected_period(
-        analytics_kwargs.get("start_date"), analytics_kwargs.get("end_date")
-    )
+    validate_analytics_selected_period(analytics_kwargs.get("start_date"))
 
     return analytics_kwargs
 
 
-def validate_analytics_selected_period(start_date: date, end_date: date):
-    if (end_date - start_date).days > MAX_ANALYTICS_DAYS_PERIOD_FILTER:
+def validate_analytics_selected_period(start_date: date):
+    if (timezone.now().date() - start_date).days > MAX_ANALYTICS_DAYS_PERIOD_FILTER:
         raise ValidationError(
             {"start_date": "Start must be within the query period of the last 90 days."}
         )
