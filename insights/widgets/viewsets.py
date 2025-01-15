@@ -34,7 +34,7 @@ class WidgetListUpdateViewSet(
             config.update(update_data["config"])
             update_data["config"] = config
 
-        if widget.type != "card":
+        if widget.type not in {"card", "recurrence"}:
             serializer = self._update(widget, update_data, partial)
             return Response(serializer.data)
 
@@ -47,6 +47,10 @@ class WidgetListUpdateViewSet(
             return Response(serializer.data)
 
         config["limit"] = 1
+
+        if widget.type == "recurrence":
+            config["limit"] = min(update_data.get("limit", 1), 5)
+
         serializer = self._update(widget, update_data, partial)
         widget.refresh_from_db()
         try:
