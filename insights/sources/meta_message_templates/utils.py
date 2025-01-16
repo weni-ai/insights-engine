@@ -13,10 +13,36 @@ def format_message_metrics_data(data: dict):
     }
 
 
-def format_messages_metrics_data_points(data_points: list[dict]):
-    results = []
+def format_messages_metrics_data(data: dict) -> dict:
+    data_points: dict = data.get("data_points", [])
+
+    status_count = {
+        "sent": {
+            "value": 0,
+        },
+        "delivered": {
+            "value": 0,
+        },
+        "read": {
+            "value": 0,
+        },
+        "clicked": {
+            "value": 0,
+        },
+    }
+    formatted_data_points = []
 
     for data in data_points:
-        results.append(format_message_metrics_data(data))
+        result = format_message_metrics_data(data)
 
-    return results
+        formatted_data_points.append(result)
+
+        for status in ("sent", "delivered", "read", "clicked"):
+            status_count[status]["value"] += result.get(status)
+
+    for status in ("sent", "delivered", "read", "clicked"):
+        status_count[status]["percentage"] = round(
+            (status_count[status]["value"] / status_count["sent"]["value"]) * 100, 2
+        )
+
+    return {"status_count": status_count, "data_points": formatted_data_points}
