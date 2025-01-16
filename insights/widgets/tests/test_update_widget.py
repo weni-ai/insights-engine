@@ -25,7 +25,7 @@ class TestUpdateWidget(APITestCase):
             source="",
             position={"rows": [1, 3], "columns": [9, 12]},
             config={},
-            type="recurrence",
+            type="empty_column",
         )
 
         self.token = Token.objects.create(user=self.user)

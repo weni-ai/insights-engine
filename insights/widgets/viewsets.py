@@ -34,8 +34,9 @@ class WidgetListUpdateViewSet(
             config.update(update_data["config"])
             update_data["config"] = config
 
+        serializer = self._update(widget, update_data, partial)
+
         if widget.type not in {"card", "recurrence"}:
-            serializer = self._update(widget, update_data, partial)
             return Response(serializer.data)
 
         if config.get("operation") != "recurrence":
@@ -43,7 +44,6 @@ class WidgetListUpdateViewSet(
                 widget.report.delete()
             except Report.DoesNotExist:
                 pass
-            serializer = self._update(widget, update_data, partial)
             return Response(serializer.data)
 
         config["limit"] = 1
@@ -51,7 +51,6 @@ class WidgetListUpdateViewSet(
         if widget.type == "recurrence":
             config["limit"] = min(update_data.get("limit", 1), 5)
 
-        serializer = self._update(widget, update_data, partial)
         widget.refresh_from_db()
         try:
             report = widget.report
