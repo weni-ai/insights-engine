@@ -39,6 +39,7 @@ class TestUpdateWidget(APITestCase):
             "source": "flowruns",
             "config": {
                 "operation": "recurrence",
+                "op_field": "example",
                 "limit": 5,
                 "filter": {"flow": "cce1d832-c36f-49a7-9181-d65d3e7ff262"},
             },
