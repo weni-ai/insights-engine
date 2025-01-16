@@ -24,4 +24,4 @@ def convert_date_to_unix_timestamp(dt: date) -> int:
 
 
 def convert_date_str_to_datetime_date(date_str: str) -> date:
-    return datetime.strptime(date_str, "%Y-%m-%d")
+    return datetime.strptime(date_str, "%Y-%m-%d").date()
