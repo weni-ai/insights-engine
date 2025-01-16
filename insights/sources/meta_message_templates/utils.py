@@ -7,7 +7,7 @@ def format_message_metrics_data(data: dict):
     return {
         "date": dt,
         "sent": data.get("sent"),
-        "delivered": data.get("sent"),
+        "delivered": data.get("delivered"),
         "read": data.get("read"),
         "clicked": sum([btn.get("count", 0) for btn in data.get("clicked", [])]),
     }
