@@ -2,6 +2,9 @@ from rest_framework.exceptions import ValidationError
 
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.enums import Operations
+from insights.sources.meta_message_templates.validators import (
+    validate_analytics_kwargs,
+)
 
 
 class QueryExecutor:
@@ -23,5 +26,10 @@ class QueryExecutor:
                 )
 
             return client.get_template_preview(template_id=template_id)
+
+        if operation == Operations.MESSAGES_ANALYTICS.value:
+            analytics_kwargs = validate_analytics_kwargs(filters)
+
+            return client.get_messages_analytics(**analytics_kwargs)
 
         raise ValidationError("Unsupported operation", code="unsupported_operation")

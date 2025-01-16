@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 import pytz
 
 
@@ -17,3 +17,11 @@ def format_to_iso_utc(date_str, end_of_day=False):
 
     except ValueError:
         return None
+
+
+def convert_date_to_unix_timestamp(dt: date) -> int:
+    return int(datetime.combine(dt, datetime.min.time()).timestamp())
+
+
+def convert_date_str_to_datetime_date(date_str: str) -> date:
+    return datetime.strptime(date_str, "%Y-%m-%d").date()

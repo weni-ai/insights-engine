@@ -39,3 +39,60 @@ MOCK_ERROR_RESPONSE_BODY = {
         "fbtrace_id": "fjXJSSiOahsAHSshASQEOEQ",
     }
 }
+
+MOCK_TEMPLATE_DAILY_ANALYTICS = {
+    "data": [
+        {
+            "granularity": "DAILY",
+            "product_type": "cloud_api",
+            "data_points": [
+                {
+                    "template_id": "123456789098765",
+                    "start": 1733011200,
+                    "end": 1733097600,
+                    "sent": 1,
+                    "delivered": 2,
+                    "read": 3,
+                    "clicked": [
+                        {
+                            "type": "quick_reply_button",
+                            "button_content": "Contact Support",
+                            "count": 2,
+                        },
+                    ],
+                },
+                {
+                    "template_id": "123456789098765",
+                    "start": 1733097600,
+                    "end": 1733184000,
+                    "sent": 5,
+                    "delivered": 6,
+                    "read": 7,
+                    "clicked": [
+                        {
+                            "type": "quick_reply_button",
+                            "button_content": "Contact Support",
+                            "count": 1,
+                        },
+                    ],
+                },
+            ],
+        }
+    ],
+    "paging": {"cursors": {"before": "ZNSKLL", "after": "NJAPQOOQZ"}},
+}
+
+
+MOCK_TEMPLATE_DAILY_ANALYTICS_INVALID_PERIOD = {
+    "error": {
+        "message": "Invalid parameter",
+        "type": "OAuthException",
+        "code": 100,
+        "error_data": "Invalid start and end times. End time requested is before start time.",
+        "error_subcode": 4182001,
+        "is_transient": False,
+        "error_user_title": "Horas de início e de término incorretas",
+        "error_user_msg": "Start time must be earlier than end time.",
+        "fbtrace_id": "XLZSJnaBAvqHAVkqlappqAK",
+    }
+}
