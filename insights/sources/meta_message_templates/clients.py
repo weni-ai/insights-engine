@@ -10,7 +10,6 @@ from insights.sources.meta_message_templates.enums import (
 )
 from insights.sources.meta_message_templates.utils import (
     format_messages_metrics_data,
-    format_messages_metrics_data_points,
 )
 from insights.utils import convert_date_to_unix_timestamp
 
