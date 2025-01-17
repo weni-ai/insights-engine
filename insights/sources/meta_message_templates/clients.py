@@ -9,7 +9,7 @@ from insights.sources.meta_message_templates.enums import (
     MetricsTypes,
 )
 from insights.sources.meta_message_templates.utils import (
-    format_messages_metrics_data_points,
+    format_messages_metrics_data,
 )
 from insights.utils import convert_date_to_unix_timestamp
 
@@ -75,15 +75,5 @@ class MetaAPIClient:
             ) from err
 
         meta_response = response.json()
-        data_points = format_messages_metrics_data_points(
-            meta_response.get("data")[0].get("data_points", {})
-        )
 
-        response = {
-            "data": {
-                "granularity": AnalyticsGranularity.DAILY.value,
-                "data_points": data_points,
-            }
-        }
-
-        return response
+        return {"data": format_messages_metrics_data(meta_response.get("data")[0])}

@@ -9,11 +9,10 @@ from rest_framework.exceptions import ValidationError
 
 from insights.projects.parsers import parse_dict_to_json
 from insights.sources.meta_message_templates.enums import (
-    AnalyticsGranularity,
     Operations,
 )
 from insights.sources.meta_message_templates.utils import (
-    format_messages_metrics_data_points,
+    format_messages_metrics_data,
 )
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.tests.meta_message_templates.mock import (
@@ -89,14 +88,9 @@ class TestMessageTemplateQueryExecutor(TestCase):
                 parser=parse_dict_to_json,
             )
             expected_response = {
-                "data": {
-                    "granularity": AnalyticsGranularity.DAILY.value,
-                    "data_points": format_messages_metrics_data_points(
-                        MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0].get(
-                            "data_points", {}
-                        )
-                    ),
-                }
+                "data": format_messages_metrics_data(
+                    MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0]
+                )
             }
 
             self.assertEqual(result, expected_response)
