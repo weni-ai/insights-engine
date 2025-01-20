@@ -47,10 +47,13 @@ class WidgetListUpdateViewSet(
                 pass
             return Response(serializer.data)
 
-        config["limit"] = 1
-
         if widget.type == "recurrence":
-            config["limit"] = min(update_data.get("limit", 1), 5)
+            config["limit"] = min(config.get("limit", 1), 5)
+        else:
+            config["limit"] = 1
+
+        widget.config = config
+        widget.save()
 
         try:
             report = widget.report
