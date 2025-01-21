@@ -83,6 +83,7 @@ def simple_source_data_operation(
     filters: dict = {},
     user_email: str = "",
     auth_params: dict = {},
+    extra_query_kwargs: dict = {},
 ):
     query_kwargs = {}
 
@@ -120,9 +121,11 @@ def simple_source_data_operation(
     if project_timezone:
         query_kwargs["timezone"] = project_timezone
 
-    if widget.name == "human_service_dashboard.peaks_in_human_service" and limit == 12:
-        query_kwargs["start_hour"] = 7
-        query_kwargs["end_hour"] = 18
+    timeseries_hour_kwargs = extra_query_kwargs.get("timeseries_hour_kwargs", {})
+
+    for field in ("start_hour", "end_hour"):
+        if field in timeseries_hour_kwargs:
+            query_kwargs[field] = timeseries_hour_kwargs.get(field)
 
     default_filters["project"] = str(widget.project.uuid)
     serialized_source = source_query.execute(
@@ -204,6 +207,17 @@ def get_source_data_from_widget(
             else simple_source_data_operation
         )
 
+        extra_query_kwargs = {}
+
+        if (
+            widget.name == "human_service_dashboard.peaks_in_human_service"
+            and is_report is False
+        ):
+            extra_query_kwargs["timeseries_hour_kwargs"] = {
+                "start_hour": 7,
+                "end_hour": 18,
+            }
+
         return operation_function(
             widget=widget,
             source_query=SourceQuery,
@@ -211,6 +225,7 @@ def get_source_data_from_widget(
             filters=filters,
             user_email=user_email,
             auth_params=serialized_auth,
+            extra_query_kwargs=extra_query_kwargs,
         )
 
     except Widget.DoesNotExist:
