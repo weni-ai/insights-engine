@@ -120,6 +120,10 @@ def simple_source_data_operation(
     if project_timezone:
         query_kwargs["timezone"] = project_timezone
 
+    if widget.name == "human_service_dashboard.peaks_in_human_service" and limit == 12:
+        query_kwargs["start_hour"] = 7
+        query_kwargs["end_hour"] = 18
+
     default_filters["project"] = str(widget.project.uuid)
     serialized_source = source_query.execute(
         filters=default_filters,
