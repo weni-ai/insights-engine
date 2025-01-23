@@ -128,6 +128,6 @@ class MetaAPIClient:
             ) from err
 
         meta_response = response.json()
-        data_points = meta_response.get("data", {}).get("data_points", [])
+        data_points = meta_response.get("data", {})[0].get("data_points", [])
 
         return {"data": format_button_metrics_data(buttons, data_points)}
