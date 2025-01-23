@@ -46,3 +46,26 @@ def format_messages_metrics_data(data: dict) -> dict:
         )
 
     return {"status_count": status_count, "data_points": formatted_data_points}
+
+
+def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
+    sent = 0
+    buttons_data = {}
+
+    for button in buttons:
+        buttons_data[button.get("text")] = {"clicked": 0}
+
+    for data in data_points:
+        sent += data.get("sent")
+
+        if not (clicked_buttons := data.get("clicked", None)):
+            continue
+
+        for btn in clicked_buttons:
+            key = btn.get("button_content")
+            buttons_data[key]["clicked"] += btn.get("count")
+
+    for k, v in buttons_data.items():
+        buttons_data[k]["sent"] = sent
+
+    return buttons_data
