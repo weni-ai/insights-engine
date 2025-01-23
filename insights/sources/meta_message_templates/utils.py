@@ -72,11 +72,13 @@ def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
     response = []
 
     for key, btn_data in buttons_data.items():
+        click_rate = 0 if sent == 0 else round((btn_data["clicked"] / sent) * 100, 2)
+
         btn = {
             "label": key,
             "type": btn_data.get("type"),
             "total": btn_data.get("clicked"),
-            "click_rate": round((btn_data["clicked"] / sent) * 100, 2),
+            "click_rate": click_rate,
         }
         response.append(btn)
 
