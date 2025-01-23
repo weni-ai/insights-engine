@@ -97,7 +97,7 @@ class MetaAPIClient:
                 break
 
         if buttons == []:
-            return  # TODO: Deal with this case
+            return {"data": []}
 
         url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
 
