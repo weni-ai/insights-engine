@@ -53,7 +53,7 @@ def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
     buttons_data = {}
 
     for button in buttons:
-        buttons_data[button.get("text")] = {"clicked": 0}
+        buttons_data[button.get("text")] = {"type": button.get("type"), "clicked": 0}
 
     for data in data_points:
         sent += data.get("sent")
@@ -63,9 +63,21 @@ def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
 
         for btn in clicked_buttons:
             key = btn.get("button_content")
+
+            if key not in buttons_data:
+                continue
+
             buttons_data[key]["clicked"] += btn.get("count")
 
-    for k, v in buttons_data.items():
-        buttons_data[k]["sent"] = sent
+    response = []
 
-    return buttons_data
+    for key, btn_data in buttons_data.items():
+        btn = {
+            "label": key,
+            "type": btn_data.get("type"),
+            "total": btn_data.get("clicked"),
+            "click_rate": round((btn_data["clicked"] / sent) * 100, 2),
+        }
+        response.append(btn)
+
+    return response
