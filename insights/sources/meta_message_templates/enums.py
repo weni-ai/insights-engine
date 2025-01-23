@@ -4,7 +4,7 @@ from enum import Enum
 class Operations(Enum):
     TEMPLATE_PREVIEW = "template_preview"
     MESSAGES_ANALYTICS = "messages_analytics"
-    BUTTONS_ANALYTICS = "buttonS_analytics"
+    BUTTONS_ANALYTICS = "buttons_analytics"
 
 
 class AnalyticsGranularity(Enum):
