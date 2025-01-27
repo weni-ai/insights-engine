@@ -9,6 +9,7 @@ from insights.sources.meta_message_templates.enums import (
     MetricsTypes,
 )
 from insights.sources.meta_message_templates.utils import (
+    format_button_metrics_data,
     format_messages_metrics_data,
 )
 from insights.utils import convert_date_to_unix_timestamp
@@ -77,3 +78,56 @@ class MetaAPIClient:
         meta_response = response.json()
 
         return {"data": format_messages_metrics_data(meta_response.get("data")[0])}
+
+    def get_buttons_analytics(
+        self,
+        waba_id: str,
+        template_id: str,
+        start_date: date,
+        end_date: date,
+    ):
+        template_data: dict = self.get_template_preview(template_id=template_id)
+        components = template_data.get("components", [])
+
+        buttons = []
+
+        for component in components:
+            if component.get("type", "") == "BUTTONS":
+                buttons = component.get("buttons", [])
+                break
+
+        if buttons == []:
+            return {"data": []}
+
+        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
+
+        metrics_types = [
+            MetricsTypes.SENT.value,
+            MetricsTypes.CLICKED.value,
+        ]
+
+        params = {
+            "granularity": AnalyticsGranularity.DAILY.value,
+            "start": convert_date_to_unix_timestamp(start_date),
+            "end": convert_date_to_unix_timestamp(end_date),
+            "metric_types": ",".join(metrics_types),
+            "template_ids": template_id,
+        }
+
+        try:
+            response = requests.get(
+                url, headers=self.headers, params=params, timeout=60
+            )
+            response.raise_for_status()
+
+        except requests.HTTPError as err:
+            print(f"Error ({err.response.status_code}): {err.response.text}")
+
+            raise ValidationError(
+                {"error": "An error has occurred"}, code="meta_api_error"
+            ) from err
+
+        meta_response = response.json()
+        data_points = meta_response.get("data", {})[0].get("data_points", [])
+
+        return {"data": format_button_metrics_data(buttons, data_points)}
