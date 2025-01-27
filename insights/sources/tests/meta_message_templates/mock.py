@@ -20,7 +20,11 @@ MOCK_SUCCESS_RESPONSE_BODY = {
         {
             "type": "BUTTONS",
             "buttons": [
-                {"type": "URL", "text": "link", "url": "https://example.local/"}
+                {
+                    "type": "URL",
+                    "text": "Access service",
+                    "url": "https://example.local/",
+                }
             ],
         },
     ],
@@ -56,7 +60,7 @@ MOCK_TEMPLATE_DAILY_ANALYTICS = {
                     "clicked": [
                         {
                             "type": "quick_reply_button",
-                            "button_content": "Contact Support",
+                            "button_content": "Access service",
                             "count": 2,
                         },
                     ],
@@ -71,7 +75,7 @@ MOCK_TEMPLATE_DAILY_ANALYTICS = {
                     "clicked": [
                         {
                             "type": "quick_reply_button",
-                            "button_content": "Contact Support",
+                            "button_content": "Access service",
                             "count": 1,
                         },
                     ],

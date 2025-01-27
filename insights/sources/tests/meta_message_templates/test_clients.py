@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.utils import (
+    format_button_metrics_data,
     format_messages_metrics_data,
 )
 from insights.sources.tests.meta_message_templates.mock import (
@@ -120,3 +121,53 @@ class TestMetaAPIClient(TestCase):
                     end_date=end_date,
                 )
                 self.assertEqual(context.exception.code, "meta_api_error")
+
+    def test_get_template_buttons_analytics(self):
+        client = MetaAPIClient()
+
+        waba_id = "0000000000000000"
+        template_id = "1234567890987654"
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                f"{self.base_host_url}/v21.0/{template_id}",
+                status=status.HTTP_200_OK,
+                content_type="application/json",
+                body=json.dumps(MOCK_SUCCESS_RESPONSE_BODY),
+            )
+            rsps.add(
+                responses.GET,
+                f"{self.base_host_url}/v21.0/0000000000000000/template_analytics",
+                status=status.HTTP_200_OK,
+                content_type="application/json",
+                body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
+            )
+
+            start_date = convert_date_str_to_datetime_date("2024-12-01")
+            end_date = convert_date_str_to_datetime_date("2024-12-31")
+
+            preview_response = client.get_buttons_analytics(
+                waba_id=waba_id,
+                template_id=template_id,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            buttons = []
+
+            for component in MOCK_SUCCESS_RESPONSE_BODY["components"]:
+                if component.get("type", "") == "BUTTONS":
+                    buttons = component.get("buttons", [])
+                    break
+
+            expected_response = {
+                "data": format_button_metrics_data(
+                    buttons,
+                    MOCK_TEMPLATE_DAILY_ANALYTICS.get("data", {})[0].get(
+                        "data_points", []
+                    ),
+                )
+            }
+
+            self.assertEqual(preview_response, expected_response)
