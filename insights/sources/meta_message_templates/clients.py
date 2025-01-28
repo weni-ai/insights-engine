@@ -1,3 +1,4 @@
+import json
 import requests
 
 from datetime import date
@@ -13,15 +14,24 @@ from insights.sources.meta_message_templates.utils import (
     format_messages_metrics_data,
 )
 from insights.utils import convert_date_to_unix_timestamp
+from insights.sources.cache import CacheClient
 
 
 class MetaAPIClient:
     base_host_url = "https://graph.facebook.com"
     access_token = settings.WHATSAPP_API_ACCESS_TOKEN
 
+    def __init__(self):
+        self.cache = CacheClient()
+
     @property
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
+
+    def get_analytics_cache_key(
+        self, waba_id: str, template_id: str, params: dict
+    ) -> str:
+        return f"meta_msgs_analytics:{waba_id}:{template_id}:{json.dumps(params, sort_keys=True)}"
 
     def get_template_preview(self, template_id: str):
         url = f"{self.base_host_url}/v21.0/{template_id}"
@@ -62,6 +72,13 @@ class MetaAPIClient:
             "template_ids": template_id,
         }
 
+        cache_key = self.get_analytics_cache_key(
+            waba_id=waba_id, template_id=template_id, params=params
+        )
+
+        if cached_response := self.cache.get(cache_key):
+            return json.loads(cached_response)
+
         try:
             response = requests.get(
                 url, headers=self.headers, params=params, timeout=60
@@ -76,8 +93,11 @@ class MetaAPIClient:
             ) from err
 
         meta_response = response.json()
+        response = {"data": format_messages_metrics_data(meta_response.get("data")[0])}
 
-        return {"data": format_messages_metrics_data(meta_response.get("data")[0])}
+        self.cache.set(cache_key, json.dumps(response, default=str), 3600)  # 1h
+
+        return response
 
     def get_buttons_analytics(
         self,

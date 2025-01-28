@@ -2,7 +2,7 @@ from datetime import datetime
 
 
 def format_message_metrics_data(data: dict):
-    dt = datetime.fromtimestamp(data.get("start")).date()
+    dt = str(datetime.fromtimestamp(data.get("start")).date())
 
     return {
         "date": dt,
