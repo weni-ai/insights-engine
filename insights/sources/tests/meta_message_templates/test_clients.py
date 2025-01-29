@@ -69,8 +69,6 @@ class TestMetaAPIClient(TestCase):
             self.assertEqual(len(rsps.calls), 1)  # number of calls has not changed
 
     def test_cannot_get_template_preview_when_template_does_not_exist(self):
-        client = MetaAPIClient()
-
         template_id = "1234567890987654"
         url = f"{self.base_host_url}/v21.0/{template_id}"
 
@@ -84,12 +82,10 @@ class TestMetaAPIClient(TestCase):
             )
 
             with self.assertRaises(ValidationError) as context:
-                client.get_template_preview(template_id=template_id)
+                self.client.get_template_preview(template_id=template_id)
                 self.assertEqual(context.exception.code, "meta_api_error")
 
     def test_get_template_daily_analytics(self):
-        client = MetaAPIClient()
-
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
         url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics"
@@ -112,11 +108,11 @@ class TestMetaAPIClient(TestCase):
             "template_ids": template_id,
         }
 
-        cache_key = client.get_analytics_cache_key(
+        cache_key = self.client.get_analytics_cache_key(
             waba_id=waba_id, template_id=template_id, params=params
         )
 
-        self.assertIsNone(client.cache.get(cache_key))
+        self.assertIsNone(self.client.cache.get(cache_key))
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -127,7 +123,7 @@ class TestMetaAPIClient(TestCase):
                 body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
             )
 
-            response = client.get_messages_analytics(
+            response = self.client.get_messages_analytics(
                 waba_id=waba_id,
                 template_id=template_id,
                 start_date=start_date,
@@ -144,13 +140,13 @@ class TestMetaAPIClient(TestCase):
 
             self.assertEqual(len(rsps.calls), 1)  # URL called once
 
-            cached_response = client.cache.get(cache_key)
+            cached_response = self.client.cache.get(cache_key)
             self.assertIsNotNone(cached_response)
 
             self.assertEqual(expected_response, json.loads(cached_response))
 
             # URL should not called again due to cached response
-            client.get_messages_analytics(
+            self.client.get_messages_analytics(
                 waba_id=waba_id,
                 template_id=template_id,
                 start_date=start_date,
@@ -160,8 +156,6 @@ class TestMetaAPIClient(TestCase):
             self.assertEqual(len(rsps.calls), 1)
 
     def test_cannot_get_template_daily_analytics_when_an_error_has_occurred(self):
-        client = MetaAPIClient()
-
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
         url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics"
@@ -179,7 +173,7 @@ class TestMetaAPIClient(TestCase):
             end_date = convert_date_str_to_datetime_date("2024-12-31")
 
             with self.assertRaises(ValidationError) as context:
-                client.get_messages_analytics(
+                self.client.get_messages_analytics(
                     waba_id=waba_id,
                     template_id=template_id,
                     start_date=start_date,
@@ -188,8 +182,6 @@ class TestMetaAPIClient(TestCase):
                 self.assertEqual(context.exception.code, "meta_api_error")
 
     def test_get_template_buttons_analytics(self):
-        client = MetaAPIClient()
-
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
 
@@ -209,11 +201,11 @@ class TestMetaAPIClient(TestCase):
             "template_ids": template_id,
         }
 
-        cache_key = client.get_button_analytics_cache_key(
+        cache_key = self.client.get_button_analytics_cache_key(
             waba_id=waba_id, template_id=template_id, params=params
         )
 
-        self.assertIsNone(client.cache.get(cache_key))
+        self.assertIsNone(self.client.cache.get(cache_key))
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -231,7 +223,7 @@ class TestMetaAPIClient(TestCase):
                 body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
             )
 
-            preview_response = client.get_buttons_analytics(
+            preview_response = self.client.get_buttons_analytics(
                 waba_id=waba_id,
                 template_id=template_id,
                 start_date=start_date,
@@ -258,13 +250,13 @@ class TestMetaAPIClient(TestCase):
 
             self.assertEqual(len(rsps.calls), 2)  # each URL called once
 
-            cached_response = client.cache.get(cache_key)
+            cached_response = self.client.cache.get(cache_key)
             self.assertIsNotNone(cached_response)
 
             self.assertEqual(expected_response, json.loads(cached_response))
 
             # URLs should not called again due to cached response
-            client.get_buttons_analytics(
+            self.client.get_buttons_analytics(
                 waba_id=waba_id,
                 template_id=template_id,
                 start_date=start_date,
