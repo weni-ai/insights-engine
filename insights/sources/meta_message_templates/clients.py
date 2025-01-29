@@ -28,11 +28,6 @@ class MetaAPIClient:
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
 
-    def get_analytics_cache_key(
-        self, waba_id: str, template_id: str, params: dict
-    ) -> str:
-        return f"meta_msgs_analytics:{waba_id}:{template_id}:{json.dumps(params, sort_keys=True)}"
-
     def get_template_preview(self, template_id: str):
         url = f"{self.base_host_url}/v21.0/{template_id}"
 
@@ -47,6 +42,11 @@ class MetaAPIClient:
             ) from err
 
         return response.json()
+
+    def get_analytics_cache_key(
+        self, waba_id: str, template_id: str, params: dict
+    ) -> str:
+        return f"meta_msgs_analytics:{waba_id}:{template_id}:{json.dumps(params, sort_keys=True)}"
 
     def get_messages_analytics(
         self,
@@ -99,6 +99,11 @@ class MetaAPIClient:
 
         return response
 
+    def get_button_analytics_cache_key(
+        self, waba_id: str, template_id: str, params: dict
+    ) -> str:
+        return f"meta_button_analytics:{waba_id}:{template_id}:{json.dumps(params, sort_keys=True)}"
+
     def get_buttons_analytics(
         self,
         waba_id: str,
@@ -106,6 +111,26 @@ class MetaAPIClient:
         start_date: date,
         end_date: date,
     ):
+        metrics_types = [
+            MetricsTypes.SENT.value,
+            MetricsTypes.CLICKED.value,
+        ]
+
+        params = {
+            "granularity": AnalyticsGranularity.DAILY.value,
+            "start": convert_date_to_unix_timestamp(start_date),
+            "end": convert_date_to_unix_timestamp(end_date),
+            "metric_types": ",".join(metrics_types),
+            "template_ids": template_id,
+        }
+
+        cache_key = self.get_button_analytics_cache_key(
+            waba_id=waba_id, template_id=template_id, params=params
+        )
+
+        if cached_response := self.cache.get(cache_key):
+            return json.loads(cached_response)
+
         template_data: dict = self.get_template_preview(template_id=template_id)
         components = template_data.get("components", [])
 
@@ -120,19 +145,6 @@ class MetaAPIClient:
             return {"data": []}
 
         url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
-
-        metrics_types = [
-            MetricsTypes.SENT.value,
-            MetricsTypes.CLICKED.value,
-        ]
-
-        params = {
-            "granularity": AnalyticsGranularity.DAILY.value,
-            "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
-            "metric_types": ",".join(metrics_types),
-            "template_ids": template_id,
-        }
 
         try:
             response = requests.get(
@@ -149,5 +161,8 @@ class MetaAPIClient:
 
         meta_response = response.json()
         data_points = meta_response.get("data", {})[0].get("data_points", [])
+        response = {"data": format_button_metrics_data(buttons, data_points)}
 
-        return {"data": format_button_metrics_data(buttons, data_points)}
+        self.cache.set(cache_key, json.dumps(response, default=str), 3600)  # 1h
+
+        return response
