@@ -179,6 +179,28 @@ class TestMetaAPIClient(TestCase):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
 
+        start_date = convert_date_str_to_datetime_date("2024-12-01")
+        end_date = convert_date_str_to_datetime_date("2024-12-31")
+
+        metrics_types = [
+            MetricsTypes.SENT.value,
+            MetricsTypes.CLICKED.value,
+        ]
+
+        params = {
+            "granularity": AnalyticsGranularity.DAILY.value,
+            "start": convert_date_to_unix_timestamp(start_date),
+            "end": convert_date_to_unix_timestamp(end_date),
+            "metric_types": ",".join(metrics_types),
+            "template_ids": template_id,
+        }
+
+        cache_key = client.get_button_analytics_cache_key(
+            waba_id=waba_id, template_id=template_id, params=params
+        )
+
+        self.assertIsNone(client.cache.get(cache_key))
+
         with responses.RequestsMock() as rsps:
             rsps.add(
                 responses.GET,
@@ -194,9 +216,6 @@ class TestMetaAPIClient(TestCase):
                 content_type="application/json",
                 body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
             )
-
-            start_date = convert_date_str_to_datetime_date("2024-12-01")
-            end_date = convert_date_str_to_datetime_date("2024-12-31")
 
             preview_response = client.get_buttons_analytics(
                 waba_id=waba_id,
@@ -222,3 +241,20 @@ class TestMetaAPIClient(TestCase):
             }
 
             self.assertEqual(preview_response, expected_response)
+
+            self.assertEqual(len(rsps.calls), 2)  # each URL called once
+
+            cached_response = client.cache.get(cache_key)
+            self.assertIsNotNone(cached_response)
+
+            self.assertEqual(expected_response, json.loads(cached_response))
+
+            # URLs should not called again due to cached response
+            client.get_buttons_analytics(
+                waba_id=waba_id,
+                template_id=template_id,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            self.assertEqual(len(rsps.calls), 2)
