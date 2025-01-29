@@ -31,16 +31,19 @@ from insights.sources.cache import CacheClient
 class TestMetaAPIClient(TestCase):
     def setUp(self):
         self.base_host_url = "https://graph.facebook.com"
+        self.client: MetaAPIClient = MetaAPIClient()
         cache.clear()
 
     def tearDown(self):
         cache.clear()
 
     def test_get_template_preview(self):
-        client = MetaAPIClient()
-
         template_id = "1234567890987654"
         url = f"{self.base_host_url}/v21.0/{template_id}"
+
+        cache_key = self.client.get_template_preview_cache_key(template_id=template_id)
+
+        self.assertIsNone(self.client.cache.get(cache_key))
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -51,8 +54,19 @@ class TestMetaAPIClient(TestCase):
                 body=json.dumps(MOCK_SUCCESS_RESPONSE_BODY),
             )
 
-            preview_response = client.get_template_preview(template_id=template_id)
+            preview_response = self.client.get_template_preview(template_id=template_id)
             self.assertEqual(preview_response, MOCK_SUCCESS_RESPONSE_BODY)
+
+            self.assertEqual(len(rsps.calls), 1)  # URL called once
+
+            cached_response = self.client.cache.get(cache_key)
+            self.assertIsNotNone(cached_response)
+
+            self.assertEqual(json.loads(cached_response), MOCK_SUCCESS_RESPONSE_BODY)
+
+            # URL should not be called again due to cache
+            self.client.get_template_preview(template_id=template_id)
+            self.assertEqual(len(rsps.calls), 1)  # number of calls has not changed
 
     def test_cannot_get_template_preview_when_template_does_not_exist(self):
         client = MetaAPIClient()
