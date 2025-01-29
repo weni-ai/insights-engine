@@ -26,6 +26,7 @@ from rest_framework.routers import DefaultRouter
 
 from insights.dashboards.viewsets import DashboardViewSet
 from insights.projects.viewsets import ProjectViewSet
+from insights.sources.meta_message_templates.views import MetaMessageTemplatesView
 from insights.widgets.viewsets import WidgetListUpdateViewSet
 
 urlpatterns = []
@@ -35,6 +36,11 @@ router = DefaultRouter()
 router.register(r"widgets", WidgetListUpdateViewSet, basename="widget")
 router.register(r"dashboards", DashboardViewSet, basename="dashboard")
 router.register(r"projects", ProjectViewSet, basename="project")
+router.register(
+    r"meta-message-templates",
+    MetaMessageTemplatesView,
+    basename="meta-message-templates",
+)
 
 urlpatterns += [
     path("", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
