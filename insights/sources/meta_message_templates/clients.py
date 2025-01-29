@@ -23,12 +23,21 @@ class MetaAPIClient:
 
     def __init__(self):
         self.cache = CacheClient()
+        self.cache_ttl = 3600  # 1h
 
     @property
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
 
+    def get_template_preview_cache_key(self, template_id: str) -> str:
+        return f"meta_template_preview:{template_id}"
+
     def get_template_preview(self, template_id: str):
+        cache_key = self.get_template_preview_cache_key(template_id=template_id)
+
+        if cached_response := self.cache.get(cache_key):
+            return json.loads(cached_response)
+
         url = f"{self.base_host_url}/v21.0/{template_id}"
 
         try:
@@ -41,7 +50,10 @@ class MetaAPIClient:
                 {"error": "An error has occurred"}, code="meta_api_error"
             ) from err
 
-        return response.json()
+        response = response.json()
+        self.cache.set(cache_key, json.dumps(response, default=str), self.cache_ttl)
+
+        return response
 
     def get_analytics_cache_key(
         self, waba_id: str, template_id: str, params: dict
@@ -95,7 +107,7 @@ class MetaAPIClient:
         meta_response = response.json()
         response = {"data": format_messages_metrics_data(meta_response.get("data")[0])}
 
-        self.cache.set(cache_key, json.dumps(response, default=str), 3600)  # 1h
+        self.cache.set(cache_key, json.dumps(response, default=str), self.cache_ttl)
 
         return response
 
@@ -163,6 +175,6 @@ class MetaAPIClient:
         data_points = meta_response.get("data", {})[0].get("data_points", [])
         response = {"data": format_button_metrics_data(buttons, data_points)}
 
-        self.cache.set(cache_key, json.dumps(response, default=str), 3600)  # 1h
+        self.cache.set(cache_key, json.dumps(response, default=str), self.cache_ttl)
 
         return response
