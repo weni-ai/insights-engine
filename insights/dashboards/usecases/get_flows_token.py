@@ -1,4 +1,5 @@
 import requests
+from django.conf import settings
 
 
 class UpdateContactName:
@@ -11,7 +12,7 @@ class UpdateContactName:
     def get_contact_name(self, contact_uuid):
         response = requests.get(
             headers=self.headers,
-            url=f"https://flows.weni.ai/api/v2/contacts.json?uuid={contact_uuid}",
+            url=f"{settings.FLOWS_URL}/api/v2/contacts.json?uuid={contact_uuid}",
         )
         response_data = response.json()
 
