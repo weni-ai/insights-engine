@@ -7,6 +7,9 @@ from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 from insights.users.usecases import CreateUserUseCase
 
+import requests
+from django.conf import settings
+
 LOGGER = logging.getLogger("weni_django_oidc")
 
 User = get_user_model()
@@ -51,3 +54,33 @@ class WeniOIDCAuthenticationBackend(OIDCAuthenticationBackend):
         check_module_permission(claims, user)
 
         return user
+
+
+class FlowsInternalAuthentication:
+    def get_module_token(self):
+        request = requests.post(
+            url=settings.OIDC_OP_TOKEN_ENDPOINT,
+            data={
+                "client_id": settings.OIDC_RP_CLIENT_ID,
+                "client_secret": settings.OIDC_RP_CLIENT_SECRET,
+                "grant_type": "client_credentials",
+            },
+        )
+        token = request.json().get("access_token")
+        return f"Bearer {token}"
+
+    @property
+    def headers(self):
+        return {
+            "Content-Type": "application/json; charset: utf-8",
+            "Authorization": self.get_module_token(),
+        }
+
+    def get_flows_user_api_token(self, project_uuid: str, user_email: str):
+        params = dict(project=project_uuid, user=user_email)
+        response = requests.get(
+            url=f"{settings.FLOWS_URL}/api/v2/internals/users/api-token",
+            params=params,
+            headers=self.headers,
+        )
+        return response

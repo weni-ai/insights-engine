@@ -115,6 +115,8 @@ PSYCOPG_DATABASES = {
 
 FLOWS_ES_DATABASE = env.str(var="FLOWS_ES_DATABASE", default="https://localhost:9000")
 
+WENI_DASHBOARD = env.str("WENI_DASHBOARD", default="")
+FLOWS_URL = env.str("FLOWS_URL", default="")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
