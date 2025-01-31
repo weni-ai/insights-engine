@@ -52,7 +52,8 @@ class FlowsContactsRestClient(FlowsInternalAuthentication):
                         },
                     ]
                 }
-            }
+            },
+            "sort": [{"created_on": {"order": "desc"}}],
         }
 
         response = requests.get(url, params=params, json=query).json()
