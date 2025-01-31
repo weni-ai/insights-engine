@@ -79,7 +79,7 @@ class FlowsInternalAuthentication:
     def get_flows_user_api_token(self, project_uuid: str, user_email: str):
         params = dict(project=project_uuid, user=user_email)
         response = requests.get(
-            url="https://flows.weni.ai/api/v2/internals/users/api-token",
+            url=f"{settings.FLOWS_URL}/api/v2/internals/users/api-token",
             params=params,
             headers=self.headers,
         )
