@@ -219,6 +219,8 @@ class DashboardViewSet(
         op_field = request.query_params.get("op_field")
         label = request.query_params.get("label")
         user = request.query_params.get("user_email")
+        ended_at_gte = request.query_params.get("ended_at__gte")
+        ended_at_lte = request.query_params.get("ended_at__lte")
 
         flows_contact_client = FlowsContactsRestClient()
 
@@ -230,5 +232,7 @@ class DashboardViewSet(
             op_field=op_field,
             label=label,
             user=user,
+            ended_at_gte=ended_at_gte,
+            ended_at_lte=ended_at_lte,
         )
         return Response(contacts_list, status.HTTP_200_OK)
