@@ -4,7 +4,7 @@ from django.conf import settings
 
 from insights.authentication.authentication import FlowsInternalAuthentication
 from insights.dashboards.usecases.get_flows_token import UpdateContactName
-from insights.utils import get_token_flows_authentication
+from insights.utils import get_token_flows_authentication, format_to_iso_utc
 
 
 class FlowsContactsRestClient(FlowsInternalAuthentication):
@@ -18,6 +18,8 @@ class FlowsContactsRestClient(FlowsInternalAuthentication):
         op_field=None,
         label=None,
         user=None,
+        ended_at_gte=None,
+        ended_at_lte=None,
     ):
         page_number = int(page_number) if page_number else 1
         page_size = int(page_size) if page_size else 10
@@ -30,6 +32,9 @@ class FlowsContactsRestClient(FlowsInternalAuthentication):
             "from": page_from,
             "size": page_size,
         }
+
+        end_date_gte = format_to_iso_utc(ended_at_gte, end_of_day=False)
+        end_date_lte = format_to_iso_utc(ended_at_lte, end_of_day=True)
 
         query = {
             "query": {
@@ -50,12 +55,19 @@ class FlowsContactsRestClient(FlowsInternalAuthentication):
                                 },
                             }
                         },
+                        {
+                            "range": {
+                                "modified_on": {
+                                    "gte": end_date_gte,
+                                    "lte": end_date_lte,
+                                }
+                            }
+                        },
                     ]
                 }
             },
             "sort": [{"created_on": {"order": "desc"}}],
         }
-
         response = requests.get(url, params=params, json=query).json()
 
         total_items = response["hits"]["total"]["value"]
