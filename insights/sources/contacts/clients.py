@@ -57,7 +57,7 @@ class FlowsContactsRestClient(FlowsInternalAuthentication):
                         },
                         {
                             "range": {
-                                "ended_at": {
+                                "modified_on": {
                                     "gte": end_date_gte,
                                     "lte": end_date_lte,
                                 }
