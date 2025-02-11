@@ -57,6 +57,6 @@ class VtexOrdersViewSet(viewsets.ViewSet):
         }
 
         service = OrdersService(project_uuid)
-        utm_revenue = service.get_utm_revenue(feature, filters)
+        response_data = service.get_utm_revenue(feature, filters)
 
-        return Response({"utm_revenue": utm_revenue}, status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK)
