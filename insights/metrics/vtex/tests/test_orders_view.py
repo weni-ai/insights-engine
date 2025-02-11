@@ -12,7 +12,7 @@ class BaseTestVtexOrdersView(APITestCase):
     base_url = "/v1/metrics/vtex/orders/"
 
     def get_utm_revenue(self, query_params: dict | None = None) -> Response:
-        url = self.base_url + "utm_revenue/"
+        url = self.base_url + "from_utm_source/"
 
         return self.client.get(url, query_params)
 
@@ -45,29 +45,15 @@ class TestVtexOrdersViewAsAuthenticatedUser(BaseTestVtexOrdersView):
         response = self.get_utm_revenue(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["feature"][0].code, "required")
+        self.assertEqual(response.data["utm_source"][0].code, "required")
         self.assertEqual(response.data["start_date"][0].code, "required")
         self.assertEqual(response.data["end_date"][0].code, "required")
-
-    @with_project_auth
-    def test_cannot_get_utm_revenue_with_invalid_feature(self):
-        query_params = {
-            "project_uuid": self.project.uuid,
-            "feature": "invalid_feature",
-            "start_date": "2023-09-01",
-            "end_date": "2023-09-04",
-        }
-
-        response = self.get_utm_revenue(query_params)
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["feature"][0].code, "invalid_feature")
 
     @with_project_auth
     def test_cannot_get_utm_revenue_with_invalid_date_format(self):
         query_params = {
             "project_uuid": self.project.uuid,
-            "feature": "utm_revenue",
+            "utm_source": "weniabandonedcart",
             "start_date": "2023-09-01",
             "end_date": "invalid_date_format",
         }
@@ -98,7 +84,7 @@ class TestVtexOrdersViewAsAuthenticatedUser(BaseTestVtexOrdersView):
 
         query_params = {
             "project_uuid": self.project.uuid,
-            "feature": "abandoned_cart",
+            "utm_source": "weniabandonedcart",
             "start_date": "2023-09-01",
             "end_date": "2023-09-04",
         }
