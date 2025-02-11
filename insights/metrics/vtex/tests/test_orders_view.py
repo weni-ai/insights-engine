@@ -17,8 +17,8 @@ class BaseTestVtexOrdersView(APITestCase):
         return self.client.get(url, query_params)
 
 
-class TestVtexOrdersViewAsAnonymousUser(BaseTestVtexOrdersView):
-    def test_get_utm_revenue_without_project_uuid(self):
+class test_get_utm_revenue_without_project_uuid(BaseTestVtexOrdersView):
+    def test_cannot_get_utm_revenue_when_unauthenticated(self):
         response = self.get_utm_revenue()
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
