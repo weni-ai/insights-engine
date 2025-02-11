@@ -18,18 +18,6 @@ class OrdersService:
     def _get_client(self) -> VtexOrdersRestClient:
         return VtexOrdersRestClient(self._get_credentials(), CacheClient())
 
-    def _get_utm_source_from_feature(self, feature: str) -> str:
-        features = {"abandoned_cart": "weniabandonedcart"}
-
-        utm_source = features.get(feature)
-
-        if not utm_source:
-            raise ValidationError(
-                {"feature": [_("Invalid feature")]}, code="invalid_feature"
-            )
-
-        return utm_source
-
     def _get_past_dates(self, start_date, end_date):
         period = (end_date - start_date).days
 
@@ -41,8 +29,8 @@ class OrdersService:
     def _calculate_increase_percentage(self, past_value, current_value):
         return round(((current_value - past_value) / past_value) * 100, 2)
 
-    def get_utm_revenue(self, feature, filters: dict) -> int:
-        filters["utm_source"] = self._get_utm_source_from_feature(feature)
+    def get_metrics_from_utm_source(self, utm_source, filters: dict) -> int:
+        filters["utm_source"] = utm_source
 
         start_date = filters.pop("start_date")
         end_date = filters.pop("end_date")
