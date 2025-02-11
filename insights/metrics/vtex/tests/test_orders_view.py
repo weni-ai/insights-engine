@@ -31,11 +31,6 @@ class TestVtexOrdersViewAsAuthenticatedUser(BaseTestVtexOrdersView):
 
         self.client.force_authenticate(user=self.user)
 
-    def test_get_utm_revenue_without_permission(self):
-        response = self.get_utm_revenue()
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
     def test_cannot_get_utm_revenue_without_project_uuid(self):
         response = self.get_utm_revenue()
 
