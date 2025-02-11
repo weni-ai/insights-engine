@@ -92,5 +92,5 @@ class TestVtexOrdersViewAsAuthenticatedUser(BaseTestVtexOrdersView):
         response = self.get_utm_revenue(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("utm_revenue", response.data)
-        self.assertEqual(response.data["utm_revenue"], expected_utm_revenue)
+        self.assertIn("revenue", response.data)
+        self.assertEqual(response.data["revenue"]["value"], expected_utm_revenue)
