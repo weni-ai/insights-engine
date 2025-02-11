@@ -52,10 +52,12 @@ class OrdersService:
         past_value = past_data.get("accumulatedTotal")
 
         response = {
-            "utm_revenue": current_value,
-            "utm_revenue_increase_percentage": self._calculate_increase_percentage(
-                past_value, current_value
-            ),
+            "revenue": {
+                "value": current_value,
+                "increase_percentage": self._calculate_increase_percentage(
+                    past_value, current_value
+                ),
+            }
         }
 
         return response
