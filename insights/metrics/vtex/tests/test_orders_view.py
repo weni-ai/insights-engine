@@ -42,26 +42,45 @@ class TestVtexOrdersViewAsAuthenticatedUser(BaseTestVtexOrdersView):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @with_project_auth
-    @patch("insights.sources.orders.clients.VtexOrdersRestClient.list")
-    def test_cannot_get_utm_revenue_without_feature(self, mock_list):
-        mock_list.return_value = {
-            "countSell": 1,
-            "accumulatedTotal": 50.21,
-            "ticketMax": 50.21,
-            "ticketMin": 50.21,
-            "medium_ticket": 50.21,
-        }
-
+    def test_cannot_get_utm_revenue_without_required_fields(self):
         query_params = {
             "project_uuid": self.project.uuid,
-            "ended_at__gte": "2023-09-01T00:00:00.000Z",
-            "ended_at__lte": "2023-09-04T00:00:00.000Z",
         }
 
         response = self.get_utm_revenue(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["feature"][0].code, "missing_feature")
+        self.assertEqual(response.data["feature"][0].code, "required")
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+
+    @with_project_auth
+    def test_cannot_get_utm_revenue_with_invalid_feature(self):
+        query_params = {
+            "project_uuid": self.project.uuid,
+            "feature": "invalid_feature",
+            "start_date": "2023-09-01",
+            "end_date": "2023-09-04",
+        }
+
+        response = self.get_utm_revenue(query_params)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["feature"][0].code, "invalid_feature")
+
+    @with_project_auth
+    def test_cannot_get_utm_revenue_with_invalid_date_format(self):
+        query_params = {
+            "project_uuid": self.project.uuid,
+            "feature": "utm_revenue",
+            "start_date": "2023-09-01",
+            "end_date": "invalid_date_format",
+        }
+
+        response = self.get_utm_revenue(query_params)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"][0].code, "invalid_date_format")
 
     @with_project_auth
     @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
@@ -85,8 +104,8 @@ class TestVtexOrdersViewAsAuthenticatedUser(BaseTestVtexOrdersView):
         query_params = {
             "project_uuid": self.project.uuid,
             "feature": "abandoned_cart",
-            "ended_at__gte": "2023-09-01T00:00:00.000Z",
-            "ended_at__lte": "2023-09-04T00:00:00.000Z",
+            "start_date": "2023-09-01",
+            "end_date": "2023-09-04",
         }
 
         response = self.get_utm_revenue(query_params)

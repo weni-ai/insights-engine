@@ -1,5 +1,8 @@
 from drf_spectacular.utils import extend_schema
 from django.utils.translation import gettext_lazy as _
+from datetime import datetime
+from django.utils import timezone
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -18,14 +21,35 @@ class VtexOrdersViewSet(viewsets.ViewSet):
     @action(methods=["get"], detail=False)
     def utm_revenue(self, request: Request) -> Response:
         project_uuid = request.query_params.get("project_uuid", None)
-        feature = request.query_params.get("feature", None)
 
-        if not feature:
+        missing_fields = {}
+
+        for field in ("feature", "start_date", "end_date"):
+            if not request.query_params.get(field):
+                missing_fields[field] = [_("Required")]
+
+        if missing_fields:
             raise ValidationError(
-                {"feature": [_("This field is required.")]}, code="missing_feature"
+                missing_fields,
+                code="required",
             )
 
-        # TODO: add dates
+        feature = request.query_params.get("feature", None)
+        start_date_str = request.query_params.get("start_date", None)
+        end_date_str = request.query_params.get("end_date", None)
+
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+        except ValueError as e:
+            raise ValidationError(
+                {"detail": [_("Invalid date format. Use YYYY-MM-DD.")]},
+                code="invalid_date_format",
+            ) from e
+
+        start_date = timezone.make_aware(start_date)
+        end_date = timezone.make_aware(end_date)
+
         filters = {
             "project_uuid": project_uuid,
             "feature": feature,

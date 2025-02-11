@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from insights.sources.cache import CacheClient
@@ -22,12 +23,14 @@ class OrdersService:
         utm_source = features.get(feature)
 
         if not utm_source:
-            raise ValidationError(f"Invalid feature: {feature}")
+            raise ValidationError(
+                {"feature": [_("Invalid feature")]}, code="invalid_feature"
+            )
 
         return utm_source
 
     def get_utm_revenue(self, feature, filters: dict) -> int:
-        filters["utm_source"] = feature
+        filters["utm_source"] = self._get_utm_source_from_feature(feature)
 
         data = self._get_client().list(filters)
         value = data.get("accumulatedTotal")
