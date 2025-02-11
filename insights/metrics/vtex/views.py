@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from django.utils.translation import gettext_lazy as _
 from datetime import datetime
 from django.utils import timezone
@@ -17,7 +17,6 @@ from insights.metrics.vtex.services.orders_service import OrdersService
 class VtexOrdersViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
 
-    # TODO: add extend schema with required params
     @action(methods=["get"], detail=False)
     def utm_revenue(self, request: Request) -> Response:
         project_uuid = request.query_params.get("project_uuid", None)
