@@ -18,12 +18,12 @@ class VtexOrdersViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
 
     @action(methods=["get"], detail=False)
-    def utm_revenue(self, request: Request) -> Response:
+    def from_utm_source(self, request: Request) -> Response:
         project_uuid = request.query_params.get("project_uuid", None)
 
         missing_fields = {}
 
-        for field in ("feature", "start_date", "end_date"):
+        for field in ("utm_source", "start_date", "end_date"):
             if not request.query_params.get(field):
                 missing_fields[field] = [_("Required")]
 
@@ -33,7 +33,7 @@ class VtexOrdersViewSet(viewsets.ViewSet):
                 code="required",
             )
 
-        feature = request.query_params.get("feature", None)
+        utm_source = request.query_params.get("utm_source", None)
         start_date_str = request.query_params.get("start_date", None)
         end_date_str = request.query_params.get("end_date", None)
 
@@ -51,12 +51,11 @@ class VtexOrdersViewSet(viewsets.ViewSet):
 
         filters = {
             "project_uuid": project_uuid,
-            "feature": feature,
             "start_date": start_date,
             "end_date": end_date,
         }
 
         service = OrdersService(project_uuid)
-        response_data = service.get_utm_revenue(feature, filters)
+        response_data = service.get_metrics_from_utm_source(utm_source, filters)
 
         return Response(response_data, status=status.HTTP_200_OK)
