@@ -39,7 +39,7 @@ class OrdersService:
         return past_start_date, past_end_date
 
     def _calculate_increase_percentage(self, past_value, current_value):
-        return round(((current_value - past_value) / current_value) * 100, 2)
+        return round(((current_value - past_value) / past_value) * 100, 2)
 
     def get_utm_revenue(self, feature, filters: dict) -> int:
         filters["utm_source"] = self._get_utm_source_from_feature(feature)
