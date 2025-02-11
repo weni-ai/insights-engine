@@ -52,6 +52,8 @@ class VtexOrdersViewSet(viewsets.ViewSet):
         filters = {
             "project_uuid": project_uuid,
             "feature": feature,
+            "start_date": start_date,
+            "end_date": end_date,
         }
 
         service = OrdersService(project_uuid)
