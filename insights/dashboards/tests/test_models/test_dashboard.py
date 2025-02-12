@@ -1,7 +1,9 @@
 import pytest
 from django.db.utils import IntegrityError
+from django.test import TestCase
 
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import HUMAN_SERVICE_DASHBOARD_NAME, Dashboard
+from insights.projects.models import Project
 
 
 @pytest.mark.django_db
@@ -42,3 +44,44 @@ def test_can_only_have_one_default_dashboard(create_project, create_default_dash
             description="Dashboard populated with HR data, for HR managers",
             is_default=True,
         )
+
+
+class TestDashboardModel(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.human_service_dashboard = Dashboard.objects.create(
+            project=self.project,
+            name=HUMAN_SERVICE_DASHBOARD_NAME,
+            description="Example",
+            is_default=False,
+        )
+
+    def test_delete_non_default_dashboard(self):
+        self.assertFalse(self.human_service_dashboard.is_default)
+
+        dashboard = Dashboard.objects.create(
+            project=self.project,
+            name="Example",
+            description="Example",
+            is_default=False,
+        )
+
+        dashboard.delete()
+
+        self.human_service_dashboard.refresh_from_db(fields=["is_default"])
+        self.assertFalse(self.human_service_dashboard.is_default)
+
+    def test_delete_default_dashboard(self):
+        self.assertFalse(self.human_service_dashboard.is_default)
+
+        dashboard = Dashboard.objects.create(
+            project=self.project,
+            name="Example",
+            description="Example",
+            is_default=True,
+        )
+
+        dashboard.delete()
+
+        self.human_service_dashboard.refresh_from_db(fields=["is_default"])
+        self.assertTrue(self.human_service_dashboard.is_default)
