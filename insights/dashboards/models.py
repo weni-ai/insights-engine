@@ -67,4 +67,4 @@ class Dashboard(BaseModel, ConfigurableModel):
 
                 return deleted
 
-        deleted = super().delete(using, keep_parents)
+        return super().delete(using, keep_parents)
