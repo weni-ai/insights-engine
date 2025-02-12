@@ -65,9 +65,11 @@ class TestDashboardModel(TestCase):
             description="Example",
             is_default=False,
         )
+        dashboard_id = dashboard.uuid
 
         dashboard.delete()
 
+        self.assertFalse(Dashboard.objects.filter(uuid=dashboard_id).exists())
         self.human_service_dashboard.refresh_from_db(fields=["is_default"])
         self.assertFalse(self.human_service_dashboard.is_default)
 
@@ -80,8 +82,10 @@ class TestDashboardModel(TestCase):
             description="Example",
             is_default=True,
         )
+        dashboard_id = dashboard.uuid
 
         dashboard.delete()
 
+        self.assertFalse(Dashboard.objects.filter(uuid=dashboard_id).exists())
         self.human_service_dashboard.refresh_from_db(fields=["is_default"])
         self.assertTrue(self.human_service_dashboard.is_default)
