@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     "insights.sources",
     "insights.users",
     "insights.widgets",
+    "insights.metrics",
+    "insights.metrics.vtex",
     # 3rd party apps
     "django_filters",
     "corsheaders",

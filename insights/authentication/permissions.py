@@ -26,3 +26,15 @@ class WidgetAuthPermission(permissions.BasePermission):
         if not auth:
             raise PermissionDenied("User does not have permission for this project")
         return True
+
+
+class ProjectAuthQueryParamPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        project_uuid = request.query_params.get("project_uuid")
+
+        if not project_uuid:
+            return False
+
+        return ProjectAuth.objects.filter(
+            project__uuid=project_uuid, user=request.user, role=1
+        ).exists()
