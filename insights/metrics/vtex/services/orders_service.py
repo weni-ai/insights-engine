@@ -41,6 +41,7 @@ class OrdersService:
         # for the current period:
         data = self._get_client().list(filters)
         current_value = data.get("accumulatedTotal")
+        current_orders_placed = data.get("countSell")
 
         # for the past period:
         past_start_date, past_end_date = self._get_past_dates(start_date, end_date)
@@ -50,6 +51,7 @@ class OrdersService:
 
         past_data = self._get_client().list(filters)
         past_value = past_data.get("accumulatedTotal")
+        past_orders_placed = past_data.get("countSell")
 
         response = {
             "revenue": {
@@ -57,7 +59,13 @@ class OrdersService:
                 "increase_percentage": self._calculate_increase_percentage(
                     past_value, current_value
                 ),
-            }
+            },
+            "orders_placed": {
+                "value": data.get("countSell"),
+                "increase_percentage": self._calculate_increase_percentage(
+                    past_orders_placed, current_orders_placed
+                ),
+            },
         }
 
         return response
