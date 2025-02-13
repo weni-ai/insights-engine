@@ -1,6 +1,10 @@
-from django.db import models
+from contextlib import suppress
+from django.db import models, transaction
 
 from insights.shared.models import BaseModel, ConfigurableModel
+
+
+HUMAN_SERVICE_DASHBOARD_NAME = "Atendimento humano"
 
 
 class DashboardTemplate(BaseModel, ConfigurableModel):
@@ -48,3 +52,19 @@ class Dashboard(BaseModel, ConfigurableModel):
                 name="unique_default_dashboard_per_project",
             )
         ]
+
+    def delete(self, using=None, keep_parents=False):
+        if self.is_default:
+            with transaction.atomic():
+                deleted = super().delete(using, keep_parents)
+
+                with suppress(Dashboard.DoesNotExist):
+                    human_service_dashboard = Dashboard.objects.get(
+                        project=self.project, name=HUMAN_SERVICE_DASHBOARD_NAME
+                    )
+                    human_service_dashboard.is_default = True
+                    human_service_dashboard.save(update_fields=["is_default"])
+
+                return deleted
+
+        return super().delete(using, keep_parents)
