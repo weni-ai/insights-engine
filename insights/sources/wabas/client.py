@@ -10,5 +10,6 @@ class WeniIntegrationsClient(InternalAuthentication):
 
     def get_wabas_for_project(self):
         response = requests.get(url=self.url, headers=self.headers, timeout=60)
+        wabas = response.json().get("data")
 
-        return response.json()
+        return wabas
