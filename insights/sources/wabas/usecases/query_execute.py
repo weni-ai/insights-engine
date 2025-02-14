@@ -11,6 +11,6 @@ class QueryExecutor:
         **kwargs
     ):
         client = WeniIntegrationsClient(project_uuid=filters.get("project"))
-        tokens = client.get_wabas_for_project()
+        wabas = client.get_wabas_for_project()
 
-        return tokens
+        return wabas
