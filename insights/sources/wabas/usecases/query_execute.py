@@ -1,4 +1,4 @@
-from insights.sources.wabas.client import WeniIntegrationsClient
+from insights.sources.wabas.clients import WeniIntegrationsClient
 
 
 class QueryExecutor:
