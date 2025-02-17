@@ -4,13 +4,15 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.metrics.meta.permissions import ProjectWABAPermission
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
 
 
 class WhatsAppMessageTemplatesView(GenericViewSet):
     query_executor = QueryExecutor
-    # TODO: Add permission
+    permission_classes = [ProjectAuthQueryParamPermission, ProjectWABAPermission]
 
     @action(detail=False, methods=["get"], url_name="preview", url_path="preview")
     def preview_template(self, request: Request) -> Response:
