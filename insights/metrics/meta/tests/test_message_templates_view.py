@@ -1,5 +1,3 @@
-import json
-import responses
 from unittest.mock import patch
 
 from django.core.cache import cache
@@ -17,7 +15,6 @@ from insights.sources.meta_message_templates.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )
-from insights.sources.meta_message_templates.validators import ANALYTICS_REQUIRED_FIELDS
 from insights.sources.tests.meta_message_templates.mock import (
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
