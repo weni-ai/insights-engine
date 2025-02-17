@@ -1,13 +1,17 @@
 import json
 import responses
+from unittest.mock import patch
 
-from django.urls import reverse
+from django.core.cache import cache
 from django.utils import timezone
 from django.utils.timezone import timedelta
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
 
+from insights.authentication.authentication import User
+from insights.authentication.tests.decorators import with_project_auth
+from insights.projects.models import Project
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.utils import (
     format_button_metrics_data,
@@ -40,34 +44,104 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
 class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
     def setUp(self):
         self.meta_api_client: MetaAPIClient = MetaAPIClient()
+        self.user = User.objects.create()
+        self.project = Project.objects.create(name="test_project")
 
-        return super().setUp()
+        self.client.force_authenticate(self.user)
+        cache.clear()
 
-    def test_get_preview(self):
+    def test_cannot_get_preview_without_project_uuid_and_waba_id(self):
+        response = self.get_preview({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_cannot_get_preview_when_waba_id_is_not_related_to_project(
+        self, mock_wabas
+    ):
+        waba_id = "0000000000000000"
         template_id = "1234567890987654"
+        mock_wabas.return_value = []
+        response = self.get_preview(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+                "template_id": template_id,
+            }
+        )
 
-        url = f"{self.meta_api_client.base_host_url}/v21.0/{template_id}"
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        with responses.RequestsMock() as rsps:
-            rsps.add(
-                responses.GET,
-                url,
-                status=status.HTTP_200_OK,
-                content_type="application/json",
-                body=json.dumps(MOCK_SUCCESS_RESPONSE_BODY),
-            )
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_cannot_get_preview_when_user_does_not_have_project_permission(
+        self, mock_wabas
+    ):
+        waba_id = "0000000000000000"
+        template_id = "1234567890987654"
+        mock_wabas.return_value = [
+            {"waba_id": waba_id},
+        ]
 
-            response = self.get_preview({"template_id": template_id})
+        response = self.get_preview(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+                "template_id": template_id,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
+    )
+    def test_get_preview(self, mock_preview, mock_wabas):
+        waba_id = "0000000000000000"
+        template_id = "1234567890987654"
+        mock_wabas.return_value = [
+            {"waba_id": waba_id},
+        ]
+        mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
+
+        response = self.get_preview(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+                "template_id": template_id,
+            }
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, MOCK_SUCCESS_RESPONSE_BODY)
 
-    def test_cannot_get_preview_missing_template_id(self):
-        response = self.get_preview({})
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_cannot_get_preview_missing_template_id(self, mock_wabas):
+        waba_id = "0000000000000000"
+
+        mock_wabas.return_value = [
+            {"waba_id": waba_id},
+        ]
+
+        response = self.get_preview(
+            {"waba_id": waba_id, "project_uuid": self.project.uuid}
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["error"].code, "template_id_missing")
 
+    @with_project_auth
     def test_get_messages_analytics(self):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
@@ -102,6 +176,7 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
 
         self.assertEqual(response.data, expected_response)
 
+    @with_project_auth
     def test_cannot_get_messages_analytics_missing_required_params(self):
         response = self.get_messages_analytics({})
 
