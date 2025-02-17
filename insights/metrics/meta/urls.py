@@ -8,9 +8,9 @@ namespace = "insights_metrics_meta"
 
 router = routers.DefaultRouter()
 router.register(
-    r"whatsapp_message_templates",
+    r"whatsapp-message-templates",
     WhatsAppMessageTemplatesView,
-    basename="whatsapp_message_templates",
+    basename="whatsapp-message-templates",
 )
 
 urlpatterns = [
