@@ -25,6 +25,8 @@ from .usecases import dashboard_filters
 from insights.dashboards.usecases.flows_dashboard_creation import CreateFlowsDashboard
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 
+from insights.sources.contacts.clients import FlowsContactsRestClient
+
 
 class DashboardViewSet(
     mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
@@ -204,3 +206,33 @@ class DashboardViewSet(
             {"dashboard": serialized_data.data},
             status=status.HTTP_201_CREATED,
         )
+
+    @action(
+        detail=False,
+        methods=["get"],
+    )
+    def get_contacts_results(self, request, pk=None, flow_uuid=None):
+        flow_uuid = request.query_params.get("flow_uuid")
+        page_number = request.query_params.get("page_number")
+        page_size = request.query_params.get("page_size")
+        project_uuid = request.query_params.get("project_uuid")
+        op_field = request.query_params.get("op_field")
+        label = request.query_params.get("label")
+        user = request.query_params.get("user_email")
+        ended_at_gte = request.query_params.get("ended_at__gte")
+        ended_at_lte = request.query_params.get("ended_at__lte")
+
+        flows_contact_client = FlowsContactsRestClient()
+
+        contacts_list = flows_contact_client.get_flows_contacts(
+            flow_uuid=flow_uuid,
+            page_number=page_number,
+            page_size=page_size,
+            project_uuid=project_uuid,
+            op_field=op_field,
+            label=label,
+            user=user,
+            ended_at_gte=ended_at_gte,
+            ended_at_lte=ended_at_lte,
+        )
+        return Response(contacts_list, status.HTTP_200_OK)

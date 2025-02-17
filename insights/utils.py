@@ -1,5 +1,6 @@
 from datetime import date, datetime
 import pytz
+from insights.authentication.authentication import FlowsInternalAuthentication
 
 
 def format_to_iso_utc(date_str, end_of_day=False):
@@ -25,3 +26,14 @@ def convert_date_to_unix_timestamp(dt: date) -> int:
 
 def convert_date_str_to_datetime_date(date_str: str) -> date:
     return datetime.strptime(date_str, "%Y-%m-%d").date()
+
+
+def get_token_flows_authentication(project_uuid, user_email):
+    response_token = FlowsInternalAuthentication().get_flows_user_api_token(
+        project_uuid, user_email
+    )
+
+    token_data = response_token.json()
+    api_token = token_data.get("api_token")
+
+    return api_token

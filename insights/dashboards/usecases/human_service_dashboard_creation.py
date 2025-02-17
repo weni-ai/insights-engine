@@ -2,7 +2,7 @@ import copy
 
 from django.db import transaction
 
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import HUMAN_SERVICE_DASHBOARD_NAME, Dashboard
 from insights.dashboards.usecases.exceptions import (
     InvalidDashboardObject,
     InvalidReportsObject,
@@ -17,7 +17,7 @@ class CreateHumanService:
             with transaction.atomic():
                 atendimento_humano = Dashboard.objects.create(
                     project=project,
-                    name="Atendimento humano",
+                    name=HUMAN_SERVICE_DASHBOARD_NAME,
                     description="Dashboard de atendimento humano",
                     is_default=True,
                     grid=[18, 3],

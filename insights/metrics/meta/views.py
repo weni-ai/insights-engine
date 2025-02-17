@@ -8,7 +8,7 @@ from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
 
 
-class MetaMessageTemplatesView(GenericViewSet):
+class WhatsAppMessageTemplatesView(GenericViewSet):
     query_executor = QueryExecutor
     # TODO: Add permission
 
