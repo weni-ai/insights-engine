@@ -154,11 +154,12 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         mock_wabas.return_value = [
             {"waba_id": waba_id},
         ]
-        mock_analytics.return_value = {
+        expected_response = {
             "data": format_messages_metrics_data(
                 MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0]
             )
         }
+        mock_analytics.return_value = expected_response
 
         response = self.get_messages_analytics(
             {
@@ -171,13 +172,6 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        expected_response = {
-            "data": format_messages_metrics_data(
-                MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0]
-            )
-        }
-
         self.assertEqual(response.data, expected_response)
 
     def test_cannot_get_messages_analytics_without_project_uuid_and_waba_id(self):
@@ -252,36 +246,72 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
             {"error": "Required fields are missing: template_id, start_date, end_date"},
         )
 
-    def test_get_buttons_analytics(self):
+    def test_cannot_get_buttons_analytics_without_project_uuid_and_waba_id(self):
+        response = self.get_buttons_analytics({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_cannot_get_buttons_analytics_when_waba_id_is_not_related_to_project(
+        self, mock_wabas
+    ):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
+        mock_wabas.return_value = []
+        response = self.get_buttons_analytics(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+                "template_id": template_id,
+            }
+        )
 
-        with responses.RequestsMock() as rsps:
-            rsps.add(
-                responses.GET,
-                f"{self.meta_api_client.base_host_url}/v21.0/{template_id}",
-                status=status.HTTP_200_OK,
-                content_type="application/json",
-                body=json.dumps(MOCK_SUCCESS_RESPONSE_BODY),
-            )
-            rsps.add(
-                responses.GET,
-                f"{self.meta_api_client.base_host_url}/v21.0/{waba_id}/template_analytics",
-                status=status.HTTP_200_OK,
-                content_type="application/json",
-                body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
-            )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-            response = self.get_buttons_analytics(
-                {
-                    "waba_id": waba_id,
-                    "template_id": template_id,
-                    "start_date": str(timezone.now().date() - timedelta(days=7)),
-                    "end_date": str(timezone.now().date()),
-                }
-            )
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_cannot_get_buttons_analytics_when_user_does_not_have_project_permission(
+        self, mock_wabas
+    ):
+        waba_id = "0000000000000000"
+        template_id = "1234567890987654"
+        mock_wabas.return_value = [
+            {"waba_id": waba_id},
+        ]
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.get_buttons_analytics(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+                "template_id": template_id,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_buttons_analytics"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
+    )
+    def test_get_buttons_analytics(
+        self, mock_preview, mock_buttons_analytics, mock_wabas
+    ):
+        waba_id = "0000000000000000"
+        template_id = "1234567890987654"
+        mock_wabas.return_value = [
+            {"waba_id": waba_id},
+        ]
+        mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
 
         for component in MOCK_SUCCESS_RESPONSE_BODY["components"]:
             if component.get("type", "") == "BUTTONS":
@@ -295,16 +325,38 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
             )
         }
 
+        mock_buttons_analytics.return_value = expected_response
+
+        response = self.get_buttons_analytics(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+                "template_id": template_id,
+                "start_date": str(timezone.now().date() - timedelta(days=7)),
+                "end_date": str(timezone.now().date()),
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_response)
 
-    def test_cannot_get_buttons_analytics_missing_required_params(self):
-        response = self.get_buttons_analytics({})
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_cannot_get_buttons_analytics_missing_required_params(self, mock_wabas):
+        waba_id = "0000000000000000"
+        mock_wabas.return_value = [
+            {"waba_id": waba_id},
+        ]
+
+        response = self.get_buttons_analytics(
+            {"waba_id": waba_id, "project_uuid": self.project.uuid}
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["error"].code, "required_fields_missing")
         self.assertEqual(
             response.data,
-            {
-                "error": f"Required fields are missing: {', '.join(ANALYTICS_REQUIRED_FIELDS)}"
-            },
+            {"error": "Required fields are missing: template_id, start_date, end_date"},
         )
