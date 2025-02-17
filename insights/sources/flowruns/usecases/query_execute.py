@@ -66,6 +66,8 @@ class QueryExecutor:
                 "results": transformed_terms,
             }
         elif operation == "count":
+            print("executou aqui")
+            print(operation)
             return {"value": response.get("count", 0)}
         else:
             return (

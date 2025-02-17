@@ -118,6 +118,7 @@ class DashboardViewSet(
     def get_widget_data(self, request, pk=None, widget_uuid=None):
         # try:
         widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+        print("widget", widget.name)
         filters = dict(request.data or request.query_params or {})
         filters.pop("project", None)
         is_live = filters.pop("is_live", False)

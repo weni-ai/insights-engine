@@ -99,6 +99,10 @@ def simple_source_data_operation(
 
     default_filters.update(filters)
 
+    print("filtros", default_filters)
+    print("operacao", operation)
+    print("op_field", op_field)
+
     if is_live:
         set_live_day(default_filters)
 
@@ -207,7 +211,7 @@ def get_source_data_from_widget(
             if widget.is_crossing_data
             else simple_source_data_operation
         )
-
+        print("operacao selecionada", operation_function)
         extra_query_kwargs = {}
 
         if (
