@@ -148,6 +148,7 @@ def cross_source_data_operation(
     user_email: str = "",
     calculator=Calculator,
     auth_params: dict = {},
+    extra_query_kwargs=None,
 ):
     """
     there will always be two subwidgets to make a cross operation,
