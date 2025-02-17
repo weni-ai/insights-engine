@@ -50,6 +50,7 @@ urlpatterns += [
         name="swagger-ui",
     ),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("v1/metrics/", include("insights.metrics.urls")),
     path("v1/", include(router.urls)),
 ]
 
