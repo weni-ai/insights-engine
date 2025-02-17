@@ -70,9 +70,13 @@ class Calculator:
         return self.operand_1 * self.operand_2
 
     def percentage(self):
+        if self.operand_1 == 0:
+            return 0
         return 100 * (self.operand_2 / self.operand_1)
 
     def evaluate(self):
+        if self.operand_1 is None or self.operand_2 is None:
+            return 0
         return getattr(self, self.operator)()
 
 
