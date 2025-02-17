@@ -22,17 +22,17 @@ from insights.sources.tests.meta_message_templates.mock import (
 
 class BaseTestMetaMessageTemplatesView(APITestCase):
     def get_preview(self, query_params: dict) -> Response:
-        url = "/v1/metrics/meta/whatsapp_message_templates/preview/"
+        url = "/v1/metrics/meta/whatsapp-message-templates/preview/"
 
         return self.client.get(url, query_params)
 
     def get_messages_analytics(self, query_params: dict) -> Response:
-        url = "/v1/metrics/meta/whatsapp_message_templates/messages-analytics/"
+        url = "/v1/metrics/meta/whatsapp-message-templates/messages-analytics/"
 
         return self.client.get(url, query_params)
 
     def get_buttons_analytics(self, query_params: dict) -> Response:
-        url = "/v1/metrics/meta/whatsapp_message_templates/buttons-analytics/"
+        url = "/v1/metrics/meta/whatsapp-message-templates/buttons-analytics/"
 
         return self.client.get(url, query_params)
 
