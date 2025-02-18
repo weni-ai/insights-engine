@@ -1,10 +1,10 @@
-class MissingFiltersException(Exception):
+class MissingFiltersError(Exception):
     pass
 
 
-class InvalidDateFormat(Exception):
+class InvalidDateFormatError(Exception):
     pass
 
 
-class InvalidDateRange(Exception):
+class InvalidDateRangeError(Exception):
     pass

@@ -1,7 +1,7 @@
 from datetime import date
 from django.test import TestCase
 
-from insights.metrics.skills.exceptions import InvalidDateFormat
+from insights.metrics.skills.exceptions import InvalidDateFormatError
 from insights.metrics.skills.validators import validate_date_str
 
 
@@ -14,5 +14,5 @@ class TestDateStringValidator(TestCase):
     def test_invalid_date_str(self):
         date_str = "2023-13-01"
 
-        with self.assertRaises(InvalidDateFormat):
+        with self.assertRaises(InvalidDateFormatError):
             validate_date_str(date_str)

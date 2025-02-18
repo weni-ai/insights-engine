@@ -2,7 +2,10 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
-from insights.metrics.skills.exceptions import InvalidDateRange, MissingFiltersException
+from insights.metrics.skills.exceptions import (
+    InvalidDateRangeError,
+    MissingFiltersError,
+)
 from insights.metrics.skills.services.abandoned_cart import AbandonedCartSkillService
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.utils import (
@@ -19,9 +22,7 @@ class TestAbandonedCartSkillService(TestCase):
         filters = {}
         service = self.service_class(self.project, filters)
 
-        with self.assertRaisesMessage(
-            MissingFiltersException, "Missing required filters"
-        ):
+        with self.assertRaisesMessage(MissingFiltersError, "Missing required filters"):
             service.validate_filters(filters)
 
     def test_validate_filters_with_start_date_greater_than_end_date(self):
@@ -32,7 +33,7 @@ class TestAbandonedCartSkillService(TestCase):
         service = self.service_class(self.project, filters)
 
         with self.assertRaisesMessage(
-            InvalidDateRange, "End date must be greater than start date"
+            InvalidDateRangeError, "End date must be greater than start date"
         ):
             service.validate_filters(filters)
 
@@ -44,7 +45,7 @@ class TestAbandonedCartSkillService(TestCase):
         service = self.service_class(self.project, filters)
 
         with self.assertRaisesMessage(
-            InvalidDateRange, "Date range must not exceed 45 days"
+            InvalidDateRangeError, "Date range must not exceed 45 days"
         ):
             service.validate_filters(filters)
 

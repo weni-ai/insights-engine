@@ -1,10 +1,26 @@
+from insights.metrics.skills.exceptions import MissingFiltersError
 from insights.metrics.skills.services.base import BaseSkillMetricsService
+from insights.metrics.skills.validators import validate_date_str
 
 
 class AbandonedCartSkillService(BaseSkillMetricsService):
     def validate_filters(self, filters: dict):
-        # TODO
-        return filters
+        required_fields = ["start_date", "end_date"]
+        missing_fields = []
+        valid_fields = {}
+
+        for field in required_fields:
+            if field not in filters:
+                missing_fields.append(field)
+            else:
+                valid_fields[field] = validate_date_str(filters[field])
+
+        if missing_fields:
+            raise MissingFiltersError(
+                f"Missing required fields: {', '.join(missing_fields)}"
+            )
+
+        return valid_fields
 
     def get_metrics(self):
         filters = self.validate_filters(self.filters)
