@@ -1,12 +1,17 @@
 from unittest.mock import patch
 
 from django.test import TestCase
+from django.utils import timezone
+from django.utils.timezone import timedelta
 
 from insights.metrics.skills.exceptions import (
     InvalidDateRangeError,
     MissingFiltersError,
 )
-from insights.metrics.skills.services.abandoned_cart import AbandonedCartSkillService
+from insights.metrics.skills.services.abandoned_cart import (
+    ABANDONED_CART_METRICS_START_DATE_MAX_DAYS,
+    AbandonedCartSkillService,
+)
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.utils import (
     format_messages_metrics_data,
@@ -29,8 +34,8 @@ class TestAbandonedCartSkillService(TestCase):
 
     def test_validate_filters_with_start_date_greater_than_end_date(self):
         filters = {
-            "start_date": "2023-01-05",
-            "end_date": "2023-01-01",
+            "start_date": (timezone.now()).date().isoformat(),
+            "end_date": (timezone.now() - timedelta(days=5)).date().isoformat(),
         }
         service = self.service_class(self.project, filters)
 
@@ -39,15 +44,26 @@ class TestAbandonedCartSkillService(TestCase):
         ):
             service.validate_filters(filters)
 
-    def test_validate_filters_with_invalid_date_range_period_length(self):
+    def test_validate_filters_with_invalid_start_date(self):
         filters = {
-            "start_date": "2023-01-01",
-            "end_date": "2023-03-10",
+            "start_date": (
+                timezone.now()
+                - timedelta(days=ABANDONED_CART_METRICS_START_DATE_MAX_DAYS + 1)
+            )
+            .date()
+            .isoformat(),
+            "end_date": (
+                timezone.now()
+                - timedelta(days=ABANDONED_CART_METRICS_START_DATE_MAX_DAYS - 10)
+            )
+            .date()
+            .isoformat(),
         }
         service = self.service_class(self.project, filters)
 
         with self.assertRaisesMessage(
-            InvalidDateRangeError, "Date range must not exceed 45 days"
+            InvalidDateRangeError,
+            f"Start date must be within the last {ABANDONED_CART_METRICS_START_DATE_MAX_DAYS} days",
         ):
             service.validate_filters(filters)
 
