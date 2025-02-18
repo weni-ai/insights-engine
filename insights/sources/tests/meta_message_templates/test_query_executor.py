@@ -53,7 +53,7 @@ class TestMessageTemplateQueryExecutor(TestCase):
                 operation=Operations.LIST_TEMPLATES.value,
                 parser=parse_dict_to_json,
             )
-            self.assertEqual(context.exception.code, code="waba_id_missing")
+            self.assertEqual(context.exception.code, "waba_id_missing")
 
     def test_template_preview_operation(self):
         template_id = "1234567890987654"
