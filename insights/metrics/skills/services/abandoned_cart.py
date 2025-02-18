@@ -1,4 +1,7 @@
-from insights.metrics.skills.exceptions import MissingFiltersError
+from insights.metrics.skills.exceptions import (
+    InvalidDateRangeError,
+    MissingFiltersError,
+)
 from insights.metrics.skills.services.base import BaseSkillMetricsService
 from insights.metrics.skills.validators import validate_date_str
 
@@ -14,6 +17,9 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
                 missing_fields.append(field)
             else:
                 valid_fields[field] = validate_date_str(filters[field])
+
+        if valid_fields["start_date"] > valid_fields["end_date"]:
+            raise InvalidDateRangeError("End date must be greater than start date")
 
         if missing_fields:
             raise MissingFiltersError(

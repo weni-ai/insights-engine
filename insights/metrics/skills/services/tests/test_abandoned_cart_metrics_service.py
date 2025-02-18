@@ -22,7 +22,9 @@ class TestAbandonedCartSkillService(TestCase):
         filters = {}
         service = self.service_class(self.project, filters)
 
-        with self.assertRaisesMessage(MissingFiltersError, "Missing required filters"):
+        with self.assertRaisesMessage(
+            MissingFiltersError, "Missing required fields: start_date, end_date"
+        ):
             service.validate_filters(filters)
 
     def test_validate_filters_with_start_date_greater_than_end_date(self):
