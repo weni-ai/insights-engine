@@ -20,12 +20,12 @@ from insights.sources.tests.meta_message_templates.mock import (
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
     MOCK_TEMPLATE_DAILY_ANALYTICS_INVALID_PERIOD,
+    MOCK_TEMPLATES_LIST_BODY,
 )
 from insights.utils import (
     convert_date_str_to_datetime_date,
     convert_date_to_unix_timestamp,
 )
-from insights.sources.cache import CacheClient
 
 
 class TestMetaAPIClient(TestCase):
@@ -36,6 +36,23 @@ class TestMetaAPIClient(TestCase):
 
     def tearDown(self):
         cache.clear()
+
+    def test_list_templates(self):
+        waba_id = "1234567890987654"
+        url = f"{self.base_host_url}/v21.0/{waba_id}/message_templates"
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                url,
+                status=status.HTTP_200_OK,
+                content_type="application/json",
+                body=json.dumps(MOCK_TEMPLATES_LIST_BODY),
+            )
+
+            response_data = self.client.get_templates_list(waba_id=waba_id)
+            self.assertEqual(response_data, MOCK_TEMPLATES_LIST_BODY)
+            self.assertEqual(len(rsps.calls), 1)
 
     def test_get_template_preview(self):
         template_id = "1234567890987654"

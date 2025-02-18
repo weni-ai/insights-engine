@@ -1,3 +1,64 @@
+MOCK_TEMPLATES_LIST_BODY = {
+    "data": [
+        {
+            "name": "example",
+            "parameter_format": "POSITIONAL",
+            "components": [
+                {
+                    "type": "BODY",
+                    "text": "Hello, {{1}}, this is an example",
+                    "example": {
+                        "body_text": [
+                            [
+                                "Jane",
+                            ]
+                        ]
+                    },
+                },
+                {
+                    "type": "BUTTONS",
+                    "buttons": [
+                        {"type": "QUICK_REPLY", "text": "Continue"},
+                        {"type": "QUICK_REPLY", "text": "Cancel"},
+                    ],
+                },
+            ],
+            "language": "en_US",
+            "status": "APPROVED",
+            "category": "MARKETING",
+            "id": "123456789098765",
+        },
+        {
+            "name": "example_2",
+            "parameter_format": "POSITIONAL",
+            "components": [
+                {
+                    "type": "BODY",
+                    "text": "Hello, {{1}}, this is another example",
+                    "example": {
+                        "body_text": [
+                            [
+                                "Jane",
+                            ]
+                        ]
+                    },
+                },
+                {
+                    "type": "BUTTONS",
+                    "buttons": [
+                        {"type": "QUICK_REPLY", "text": "Continue"},
+                        {"type": "QUICK_REPLY", "text": "Cancel"},
+                    ],
+                },
+            ],
+            "language": "en_US",
+            "status": "APPROVED",
+            "category": "MARKETING",
+            "id": "123456789098767",
+        },
+    ]
+}
+
 MOCK_SUCCESS_RESPONSE_BODY = {
     "name": "testing",
     "parameter_format": "POSITIONAL",
