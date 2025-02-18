@@ -4,3 +4,7 @@ class MissingFiltersException(Exception):
 
 class InvalidDateFormat(Exception):
     pass
+
+
+class InvalidDateRange(Exception):
+    pass

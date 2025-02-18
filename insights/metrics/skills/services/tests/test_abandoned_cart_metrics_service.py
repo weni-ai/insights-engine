@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
-from insights.metrics.skills.exceptions import MissingFiltersException
+from insights.metrics.skills.exceptions import InvalidDateRange, MissingFiltersException
 from insights.metrics.skills.services.abandoned_cart import AbandonedCartSkillService
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.utils import (
@@ -13,13 +13,38 @@ from insights.sources.meta_message_templates.utils import (
 class TestAbandonedCartSkillService(TestCase):
     def setUp(self):
         self.service_class = AbandonedCartSkillService
+        self.project = Project.objects.create()
 
     def test_missing_filters_on_validation(self):
         filters = {}
-        service = self.service_class(filters)
+        service = self.service_class(self.project, filters)
 
         with self.assertRaisesMessage(
             MissingFiltersException, "Missing required filters"
+        ):
+            service.validate_filters(filters)
+
+    def test_validate_filters_with_start_date_greater_than_end_date(self):
+        filters = {
+            "start_date": "2023-01-05",
+            "end_date": "2023-01-01",
+        }
+        service = self.service_class(self.project, filters)
+
+        with self.assertRaisesMessage(
+            InvalidDateRange, "End date must be greater than start date"
+        ):
+            service.validate_filters(filters)
+
+    def test_validate_filters_with_invalid_date_range_period_length(self):
+        filters = {
+            "start_date": "2023-01-01",
+            "end_date": "2023-03-10",
+        }
+        service = self.service_class(self.project, filters)
+
+        with self.assertRaisesMessage(
+            InvalidDateRange, "Date range must not exceed 45 days"
         ):
             service.validate_filters(filters)
 
@@ -90,13 +115,11 @@ class TestAbandonedCartSkillService(TestCase):
             "medium_ticket": 50.21,
         }
 
-        project = Project.objects.create()
-
         filters = {
             "start_date": "2023-01-05",
             "end_date": "2023-01-10",
         }
-        service = self.service_class(project, filters)
+        service = self.service_class(self.project, filters)
         metrics = service.get_metrics()
 
         expected_metrics = [
