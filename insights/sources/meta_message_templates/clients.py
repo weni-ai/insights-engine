@@ -18,7 +18,7 @@ from insights.sources.cache import CacheClient
 
 
 class MetaAPIClient:
-    base_host_url = "https://graph.facebook.com"
+    base_host_url = "https://graph.facebook.com/v21.0"
     access_token = settings.WHATSAPP_API_ACCESS_TOKEN
 
     def __init__(self):
@@ -30,7 +30,7 @@ class MetaAPIClient:
         return {"Authorization": f"Bearer {self.access_token}"}
 
     def get_templates_list(self, waba_id: str, name: str | None = None):
-        url = f"{self.base_host_url}/v21.0/{waba_id}/message_templates"
+        url = f"{self.base_host_url}/{waba_id}/message_templates"
 
         params = {
             "limit": 9999,
@@ -62,7 +62,7 @@ class MetaAPIClient:
         if cached_response := self.cache.get(cache_key):
             return json.loads(cached_response)
 
-        url = f"{self.base_host_url}/v21.0/{template_id}"
+        url = f"{self.base_host_url}/{template_id}"
 
         try:
             response = requests.get(url, headers=self.headers, timeout=60)
@@ -91,7 +91,7 @@ class MetaAPIClient:
         start_date: date,
         end_date: date,
     ):
-        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
+        url = f"{self.base_host_url}/{waba_id}/template_analytics?"
 
         metrics_types = [
             MetricsTypes.SENT.value,
@@ -182,7 +182,7 @@ class MetaAPIClient:
         if buttons == []:
             return {"data": []}
 
-        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
+        url = f"{self.base_host_url}/{waba_id}/template_analytics?"
 
         try:
             response = requests.get(
