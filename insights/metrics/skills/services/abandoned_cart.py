@@ -196,7 +196,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         currency_symbol = ""
 
         if currency_code := orders_metrics.get("revenue", {}).get("currency_code"):
-            currency_symbol = numbers.get_currency_symbol(currency_code, locale="en")
+            currency_symbol = numbers.get_currency_symbol(currency_code)
 
         data = [
             {
