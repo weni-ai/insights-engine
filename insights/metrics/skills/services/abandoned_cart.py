@@ -39,6 +39,11 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             else:
                 valid_fields[field] = validate_date_str(filters[field])
 
+        if missing_fields:
+            raise MissingFiltersError(
+                f"Missing required fields: {', '.join(missing_fields)}"
+            )
+
         if valid_fields["start_date"] > valid_fields["end_date"]:
             raise InvalidDateRangeError("End date must be greater than start date")
 
@@ -48,11 +53,6 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         ):
             raise InvalidDateRangeError(
                 f"Start date must be within the last {ABANDONED_CART_METRICS_START_DATE_MAX_DAYS} days"
-            )
-
-        if missing_fields:
-            raise MissingFiltersError(
-                f"Missing required fields: {', '.join(missing_fields)}"
             )
 
         return valid_fields
