@@ -20,6 +20,12 @@ class QueryExecutor:
         client = MetaAPIClient()
 
         match operation:
+            case Operations.LIST_TEMPLATES.value:
+                if not (waba_id := filters.get("waba_id")):
+                    raise ValidationError("WABA id is required", code="waba_id_missing")
+
+                return client.get_templates_list(waba_id=waba_id)
+
             case Operations.TEMPLATE_PREVIEW.value:
                 if not (template_id := filters.get("template_id")):
                     raise ValidationError(

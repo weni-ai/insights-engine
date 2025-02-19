@@ -18,7 +18,7 @@ from insights.sources.cache import CacheClient
 
 
 class MetaAPIClient:
-    base_host_url = "https://graph.facebook.com"
+    base_host_url = "https://graph.facebook.com/v21.0"
     access_token = settings.WHATSAPP_API_ACCESS_TOKEN
 
     def __init__(self):
@@ -29,6 +29,27 @@ class MetaAPIClient:
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
 
+    def get_templates_list(self, waba_id: str):
+        url = f"{self.base_host_url}/{waba_id}/message_templates"
+
+        params = {
+            "limit": 9999,
+        }
+
+        try:
+            response = requests.get(
+                url, headers=self.headers, params=params, timeout=60
+            )
+            response.raise_for_status()
+        except requests.HTTPError as err:
+            print(f"Error ({err.response.status_code}): {err.response.text}")
+
+            raise ValidationError(
+                {"error": "An error has occurred"}, code="meta_api_error"
+            ) from err
+
+        return response.json()
+
     def get_template_preview_cache_key(self, template_id: str) -> str:
         return f"meta_template_preview:{template_id}"
 
@@ -38,7 +59,7 @@ class MetaAPIClient:
         if cached_response := self.cache.get(cache_key):
             return json.loads(cached_response)
 
-        url = f"{self.base_host_url}/v21.0/{template_id}"
+        url = f"{self.base_host_url}/{template_id}"
 
         try:
             response = requests.get(url, headers=self.headers, timeout=60)
@@ -67,7 +88,7 @@ class MetaAPIClient:
         start_date: date,
         end_date: date,
     ):
-        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
+        url = f"{self.base_host_url}/{waba_id}/template_analytics?"
 
         metrics_types = [
             MetricsTypes.SENT.value,
@@ -156,7 +177,7 @@ class MetaAPIClient:
         if buttons == []:
             return {"data": []}
 
-        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
+        url = f"{self.base_host_url}/{waba_id}/template_analytics?"
 
         try:
             response = requests.get(

@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class Operations(Enum):
+    LIST_TEMPLATES = "list_templates"
     TEMPLATE_PREVIEW = "template_preview"
     MESSAGES_ANALYTICS = "messages_analytics"
     BUTTONS_ANALYTICS = "buttons_analytics"
