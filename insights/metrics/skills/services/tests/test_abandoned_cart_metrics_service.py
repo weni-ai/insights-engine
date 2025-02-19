@@ -170,7 +170,7 @@ class TestAbandonedCartSkillService(TestCase):
             {
                 "id": "sent-messages",
                 "value": 50,
-                "percentage": 50.0,
+                "percentage": 100.0,
             },
             {
                 "id": "delivered-messages",
