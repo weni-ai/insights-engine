@@ -159,4 +159,29 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             start_date=filters.get("start_date"), end_date=filters.get("end_date")
         )
 
-        return {}
+        # TODO: Add VTEX metrics data
+
+        data = [
+            {
+                "id": "sent-messages",
+                "value": messages_metrics["sent-messages"]["value"],
+                "percentage": messages_metrics["sent-messages"]["percentage"],
+            },
+            {
+                "id": "delivered-messages",
+                "value": messages_metrics["delivered-messages"]["value"],
+                "percentage": messages_metrics["delivered-messages"]["percentage"],
+            },
+            {
+                "id": "read-messages",
+                "value": messages_metrics["read-messages"]["value"],
+                "percentage": messages_metrics["read-messages"]["percentage"],
+            },
+            {
+                "id": "interactions",
+                "value": messages_metrics["interactions"]["value"],
+                "percentage": messages_metrics["interactions"]["percentage"],
+            },
+        ]
+
+        return data
