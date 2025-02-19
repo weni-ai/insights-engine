@@ -6,12 +6,11 @@ from rest_framework.exceptions import ValidationError
 from insights.utils import convert_date_str_to_datetime_date
 
 MAX_ANALYTICS_DAYS_PERIOD_FILTER = 90
+ANALYTICS_REQUIRED_FIELDS = ["waba_id", "template_id", "start_date", "end_date"]
 
 
 def validate_analytics_kwargs(filters: dict) -> dict:
-    analytics_kwargs = {
-        k: None for k in ["waba_id", "template_id", "start_date", "end_date"]
-    }
+    analytics_kwargs = {k: None for k in ANALYTICS_REQUIRED_FIELDS}
     missing_fields = []
 
     for field in analytics_kwargs.keys():
@@ -20,11 +19,11 @@ def validate_analytics_kwargs(filters: dict) -> dict:
 
         analytics_kwargs[field] = filters.get(field)
 
-        if missing_fields:
-            raise ValidationError(
-                {"error": f"Required fields are missing: {', '.join(missing_fields)}"},
-                code="required_fields_missing",
-            )
+    if missing_fields:
+        raise ValidationError(
+            {"error": f"Required fields are missing: {', '.join(missing_fields)}"},
+            code="required_fields_missing",
+        )
 
     for dt_field in ["start_date", "end_date"]:
         try:
