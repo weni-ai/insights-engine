@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -17,6 +18,10 @@ from insights.metrics.skills.services.factories import SkillMetricsServiceFactor
 class SkillsMetricsView(APIView):
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
 
+    @extend_schema(
+        parameters=[SkillMetricsQueryParamsSerializer],
+        responses={status.HTTP_200_OK: dict},
+    )
     def get(self, request: Request) -> Response:
         serializer = SkillMetricsQueryParamsSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
