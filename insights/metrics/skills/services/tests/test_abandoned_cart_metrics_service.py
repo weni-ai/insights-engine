@@ -72,9 +72,34 @@ class TestAbandonedCartSkillService(TestCase):
     @patch(
         "insights.sources.meta_message_templates.clients.MetaAPIClient.get_messages_analytics"
     )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
+    )
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
     def test_get_metrics(
-        self, mock_messages_analytics, mock_get_vtex_auth, mock_vtex_orders_list
+        self,
+        mock_wabas,
+        mock_templates_list,
+        mock_messages_analytics,
+        mock_get_vtex_auth,
+        mock_vtex_orders_list,
     ):
+        mock_wabas.return_value = [
+            {
+                "waba_id": "123456789098765",
+            },
+        ]
+        mock_templates_list.return_value = {
+            "data": [
+                {
+                    "name": "weni_abandoned_cart",
+                    "id": "123456789098765",
+                },
+            ]
+        }
+
         data_points_for_period = [
             {
                 "template_id": "123456789098765",
@@ -135,8 +160,8 @@ class TestAbandonedCartSkillService(TestCase):
         }
 
         filters = {
-            "start_date": "2023-01-05",
-            "end_date": "2023-01-10",
+            "start_date": (timezone.now() - timedelta(days=5)).date().isoformat(),
+            "end_date": (timezone.now()).date().isoformat(),
         }
         service = self.service_class(self.project, filters)
         metrics = service.get_metrics()
@@ -150,17 +175,17 @@ class TestAbandonedCartSkillService(TestCase):
             {
                 "id": "delivered-messages",
                 "value": 45,
-                "percentage": 50.0,
+                "percentage": 125.0,
             },
             {
                 "id": "read-messages",
                 "value": 40,
-                "percentage": 50.0,
+                "percentage": 166.67,
             },
             {
                 "id": "interactions",
                 "value": 35,
-                "percentage": -8.0,
+                "percentage": 250,
             },
             {
                 "id": "utm-revenue",
