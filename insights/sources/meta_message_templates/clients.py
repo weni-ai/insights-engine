@@ -29,12 +29,15 @@ class MetaAPIClient:
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
 
-    def get_templates_list(self, waba_id: str):
+    def get_templates_list(self, waba_id: str, name: str | None = None):
         url = f"{self.base_host_url}/v21.0/{waba_id}/message_templates"
 
         params = {
             "limit": 9999,
         }
+
+        if name:
+            params["name"] = name
 
         try:
             response = requests.get(

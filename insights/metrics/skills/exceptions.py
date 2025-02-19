@@ -8,3 +8,7 @@ class InvalidDateFormatError(Exception):
 
 class InvalidDateRangeError(Exception):
     pass
+
+
+class TemplateNotFound(Exception):
+    pass
