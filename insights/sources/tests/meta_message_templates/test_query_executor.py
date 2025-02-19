@@ -1,6 +1,7 @@
 import json
 import responses
 
+from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
@@ -25,6 +26,12 @@ from insights.sources.meta_message_templates.usecases.query_execute import Query
 
 
 class TestMessageTemplateQueryExecutor(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
     def test_list_templates_operation(self):
         waba_id = "12345678"
         url = f"https://graph.facebook.com/v21.0/{waba_id}/message_templates"
