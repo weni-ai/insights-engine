@@ -166,6 +166,7 @@ class TestAbandonedCartSkillService(TestCase):
             "ticketMax": 50.21,
             "ticketMin": 50.21,
             "medium_ticket": 50.21,
+            "currencyCode": "BRL",
         }
 
         filters = {

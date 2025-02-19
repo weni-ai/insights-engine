@@ -1,5 +1,7 @@
 from functools import cached_property
 import json
+
+from babel import numbers
 from django.utils import timezone
 from django.utils.timezone import timedelta
 
@@ -191,6 +193,11 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             start_date=filters.get("start_date"), end_date=filters.get("end_date")
         )
 
+        currency_symbol = ""
+
+        if currency_code := orders_metrics.get("revenue", {}).get("currency_code"):
+            currency_symbol = numbers.get_currency_symbol(currency_code, locale="en")
+
         data = [
             {
                 "id": "sent-messages",
@@ -218,7 +225,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
                 "percentage": orders_metrics.get("revenue", {}).get(
                     "increase_percentage", 0.0
                 ),
-                "prefix": "R$",  # TODO: Change
+                "prefix": currency_symbol,
             },
             {
                 "id": "orders-placed",
