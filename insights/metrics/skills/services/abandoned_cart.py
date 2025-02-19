@@ -1,4 +1,5 @@
 from functools import cached_property
+import json
 from django.utils import timezone
 from django.utils.timezone import timedelta
 
@@ -10,6 +11,7 @@ from insights.metrics.skills.exceptions import (
 from insights.metrics.skills.services.base import BaseSkillMetricsService
 from insights.metrics.skills.validators import validate_date_str
 from insights.metrics.vtex.services.orders_service import OrdersService
+from insights.sources.cache import CacheClient
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.wabas.clients import WeniIntegrationsClient
 
@@ -21,6 +23,8 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
     def __init__(self, project, filters):
         super().__init__(project, filters)
         self.meta_api_client = MetaAPIClient()
+        self.cache_client = CacheClient()
+        self.cache_ttl = 3600  # 1h
 
     def validate_filters(self, filters: dict):
         required_fields = ["start_date", "end_date"]
@@ -174,6 +178,12 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
     def get_metrics(self):
         filters = self.validate_filters(self.filters)
+
+        cache_key = f"metrics_abandoned_cart_{self.project.uuid}:{json.dumps(filters, sort_keys=True, default=str)}"
+
+        if cached_data := self.cache_client.get(cache_key):
+            return json.loads(cached_data)
+
         messages_metrics = self._get_message_templates_metrics(
             start_date=filters.get("start_date"), end_date=filters.get("end_date")
         )
@@ -218,5 +228,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
                 ),
             },
         ]
+
+        self.cache_client.set(cache_key, json.dumps(data, default=str), self.cache_ttl)
 
         return data

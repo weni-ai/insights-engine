@@ -1,5 +1,7 @@
+import json
 from unittest.mock import patch
 
+from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
@@ -13,6 +15,7 @@ from insights.metrics.skills.services.abandoned_cart import (
     AbandonedCartSkillService,
 )
 from insights.projects.models import Project
+from insights.sources.cache import CacheClient
 from insights.sources.meta_message_templates.utils import (
     format_messages_metrics_data,
 )
@@ -22,6 +25,12 @@ class TestAbandonedCartSkillService(TestCase):
     def setUp(self):
         self.service_class = AbandonedCartSkillService
         self.project = Project.objects.create()
+        self.cache_client = CacheClient()
+
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
 
     def test_missing_filters_on_validation(self):
         filters = {}
@@ -164,6 +173,10 @@ class TestAbandonedCartSkillService(TestCase):
             "end_date": (timezone.now()).date().isoformat(),
         }
         service = self.service_class(self.project, filters)
+
+        cache_key = f"metrics_abandoned_cart_{self.project.uuid}:{json.dumps(filters, sort_keys=True, default=str)}"
+        self.assertIsNone(self.cache_client.get(cache_key))
+
         metrics = service.get_metrics()
 
         expected_metrics = [
@@ -201,3 +214,4 @@ class TestAbandonedCartSkillService(TestCase):
         ]
 
         self.assertEqual(metrics, expected_metrics)
+        self.assertEqual(json.loads(self.cache_client.get(cache_key)), expected_metrics)
