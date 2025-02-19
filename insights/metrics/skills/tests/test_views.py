@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+from django.utils import timezone
+from django.utils.timezone import timedelta
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
@@ -36,14 +38,38 @@ class TestSkillsMetricsViewAsAuthenticatedUser(BaseTestSkillsMetrisView):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @with_project_auth
-    def test_cannot_get_metrics_for_skill_without_required_fields(self):
+    def test_cannot_get_metrics_without_skill_name(self):
         response = self.get_metrics_for_skill({"project_uuid": self.project.uuid})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["skill"][0].code, "required")
+
+    @with_project_auth
+    def test_cannot_get_metrics_with_invalid_skill_name(self):
+        invalid_skill_name = "example"
+
+        response = self.get_metrics_for_skill(
+            {"project_uuid": self.project.uuid, "skill": invalid_skill_name}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], f"Invalid skill name: {invalid_skill_name}"
+        )
+
+    @with_project_auth
+    def test_cannot_get_metrics_for_the_abandoned_cart_skill_without_dates(self):
+        response = self.get_metrics_for_skill(
+            {"project_uuid": self.project.uuid, "skill": "abandoned_cart"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["error"], "Missing required fields: start_date, end_date"
+        )
 
     @with_project_auth
     @patch(
-        "insights.metrics.skills.services.abandoned_cart.AbandonedCartService.get_metrics"
+        "insights.metrics.skills.services.abandoned_cart.AbandonedCartSkillService.get_metrics"
     )
     def test_get_metrics_for_the_abandoned_cart_skill(self, mock_metrics):
         expected_metrics = [
@@ -85,6 +111,8 @@ class TestSkillsMetricsViewAsAuthenticatedUser(BaseTestSkillsMetrisView):
             {
                 "project_uuid": self.project.uuid,
                 "skill": "abandoned_cart",
+                "start_date": (timezone.now() - timedelta(days=7)).date(),
+                "end_date": timezone.now().date(),
             }
         )
 
