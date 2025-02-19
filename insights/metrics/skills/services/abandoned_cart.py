@@ -9,6 +9,7 @@ from insights.metrics.skills.exceptions import (
 )
 from insights.metrics.skills.services.base import BaseSkillMetricsService
 from insights.metrics.skills.validators import validate_date_str
+from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.wabas.clients import WeniIntegrationsClient
 
@@ -90,15 +91,6 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         template_id, waba_id = self._whatsapp_template_id_and_waba
         period = (end_date - start_date).days
 
-        print("start date")
-        print(start_date)
-
-        print("end date")
-        print(end_date)
-
-        print("period")
-        print(period)
-
         raw_start_date = start_date - timedelta(days=(period))
         raw_end_date = end_date
 
@@ -111,15 +103,6 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
         past_period_data_points = metrics.get("data", {}).get("data_points")[:period]
         current_period_data_points = metrics.get("data", {}).get("data_points")[period:]
-
-        print("data points")
-        print(metrics.get("data", {}).get("data_points"))
-
-        print("past data points")
-        print(past_period_data_points)
-
-        print("current data points")
-        print(current_period_data_points)
 
         past_period_data = {
             "sent": 0,
@@ -176,13 +159,27 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
         return data
 
+    def _get_orders_metrics(self, start_date, end_date) -> dict:
+        utm_source = "weniabandonedcart"
+        service = OrdersService(project_uuid=self.project.uuid)
+
+        filters = {
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+
+        return service.get_metrics_from_utm_source(
+            utm_source=utm_source, filters=filters
+        )
+
     def get_metrics(self):
         filters = self.validate_filters(self.filters)
         messages_metrics = self._get_message_templates_metrics(
             start_date=filters.get("start_date"), end_date=filters.get("end_date")
         )
-
-        # TODO: Add VTEX metrics data
+        orders_metrics = self._get_orders_metrics(
+            start_date=filters.get("start_date"), end_date=filters.get("end_date")
+        )
 
         data = [
             {
@@ -204,6 +201,21 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
                 "id": "interactions",
                 "value": messages_metrics["interactions"]["value"],
                 "percentage": messages_metrics["interactions"]["percentage"],
+            },
+            {
+                "id": "utm-revenue",
+                "value": orders_metrics.get("revenue", {}).get("value", 0),
+                "percentage": orders_metrics.get("revenue", {}).get(
+                    "increase_percentage", 0.0
+                ),
+                "prefix": "R$",  # TODO: Change
+            },
+            {
+                "id": "orders-placed",
+                "value": orders_metrics.get("orders_placed", {}).get("value", 0),
+                "percentage": orders_metrics.get("orders_placed", {}).get(
+                    "increase_percentage", 0.0
+                ),
             },
         ]
 
