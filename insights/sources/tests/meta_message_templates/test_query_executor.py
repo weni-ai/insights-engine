@@ -19,11 +19,42 @@ from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.tests.meta_message_templates.mock import (
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
+    MOCK_TEMPLATES_LIST_BODY,
 )
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
 
 
 class TestMessageTemplateQueryExecutor(TestCase):
+    def test_list_templates_operation(self):
+        waba_id = "12345678"
+        url = f"https://graph.facebook.com/v21.0/{waba_id}/message_templates"
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                url,
+                status=status.HTTP_200_OK,
+                content_type="application/json",
+                body=json.dumps(MOCK_TEMPLATES_LIST_BODY),
+            )
+
+            result = QueryExecutor.execute(
+                filters={"waba_id": waba_id},
+                operation=Operations.LIST_TEMPLATES.value,
+                parser=parse_dict_to_json,
+            )
+
+            self.assertEqual(result, MOCK_TEMPLATES_LIST_BODY)
+
+    def test_cannot_list_templates_when_missing_waba_id(self):
+        with self.assertRaises(ValidationError) as context:
+            QueryExecutor.execute(
+                filters={},
+                operation=Operations.LIST_TEMPLATES.value,
+                parser=parse_dict_to_json,
+            )
+            self.assertEqual(context.exception.code, "waba_id_missing")
+
     def test_template_preview_operation(self):
         template_id = "1234567890987654"
         url = f"https://graph.facebook.com/v21.0/{template_id}"

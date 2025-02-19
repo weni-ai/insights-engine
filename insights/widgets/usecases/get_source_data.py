@@ -70,7 +70,7 @@ class Calculator:
         return self.operand_1 * self.operand_2
 
     def percentage(self):
-        return 100 * (self.operand_2 / self.operand_1)
+        return 100 * (self.operand_1 / self.operand_2)
 
     def evaluate(self):
         return getattr(self, self.operator)()
@@ -148,6 +148,7 @@ def cross_source_data_operation(
     user_email: str = "",
     calculator=Calculator,
     auth_params: dict = {},
+    extra_query_kwargs: dict = None,
 ):
     """
     there will always be two subwidgets to make a cross operation,

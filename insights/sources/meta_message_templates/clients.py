@@ -29,6 +29,27 @@ class MetaAPIClient:
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
 
+    def get_templates_list(self, waba_id: str):
+        url = f"{self.base_host_url}/v21.0/{waba_id}/message_templates"
+
+        params = {
+            "limit": 9999,
+        }
+
+        try:
+            response = requests.get(
+                url, headers=self.headers, params=params, timeout=60
+            )
+            response.raise_for_status()
+        except requests.HTTPError as err:
+            print(f"Error ({err.response.status_code}): {err.response.text}")
+
+            raise ValidationError(
+                {"error": "An error has occurred"}, code="meta_api_error"
+            ) from err
+
+        return response.json()
+
     def get_template_preview_cache_key(self, template_id: str) -> str:
         return f"meta_template_preview:{template_id}"
 
