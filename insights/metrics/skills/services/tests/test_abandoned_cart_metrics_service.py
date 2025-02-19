@@ -9,6 +9,7 @@ from django.utils.timezone import timedelta
 from insights.metrics.skills.exceptions import (
     InvalidDateRangeError,
     MissingFiltersError,
+    TemplateNotFound,
 )
 from insights.metrics.skills.services.abandoned_cart import (
     ABANDONED_CART_METRICS_START_DATE_MAX_DAYS,
@@ -75,6 +76,32 @@ class TestAbandonedCartSkillService(TestCase):
             f"Start date must be within the last {ABANDONED_CART_METRICS_START_DATE_MAX_DAYS} days",
         ):
             service.validate_filters(filters)
+
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
+    )
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_cannot_whatsapp_template_id_and_waba_when_template_is_not_found(
+        self, mock_wabas, mock_templates_list
+    ):
+        mock_wabas.return_value = [
+            {
+                "waba_id": "123456789098765",
+            },
+        ]
+        mock_templates_list.return_value = {
+            "data": [
+                {
+                    "name": "not_the_one_you_are_looking_for",
+                    "id": "123456789098765",
+                },
+            ]
+        }
+
+        with self.assertRaises(TemplateNotFound):
+            self.service_class(self.project, {})._whatsapp_template_id_and_waba
 
     @patch("insights.sources.orders.clients.VtexOrdersRestClient.list")
     @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
