@@ -12,7 +12,7 @@ class QueryExecutor:
     def execute(
         filters: dict,
         operation: str,
-        parser: callable,
+        parser: callable = None,
         query_kwargs={},
         *args,
         **kwargs,
@@ -29,7 +29,8 @@ class QueryExecutor:
             case Operations.TEMPLATE_PREVIEW.value:
                 if not (template_id := filters.get("template_id")):
                     raise ValidationError(
-                        "Template id is required", code="template_id_missing"
+                        {"error": "'template_id' is required"},
+                        code="template_id_missing",
                     )
 
                 return client.get_template_preview(template_id=template_id)
