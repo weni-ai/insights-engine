@@ -85,6 +85,8 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         pages = data["paging"]["pages"] if "paging" in data else 1
 
+        currency_code = None
+
         # botar o max_workers em variavel de ambiente
         with ThreadPoolExecutor(max_workers=10) as executor:
             page_futures = {
@@ -108,6 +110,9 @@ class VtexOrdersRestClient(VtexAuthentication):
                                 total_sell += 1
                                 max_value = max(max_value, result["totalValue"])
                                 min_value = min(min_value, result["totalValue"])
+
+                                if currency_code is None:
+                                    currency_code = result["currencyCode"]
                     else:
                         print(
                             f"Request failed with status code: {response.status_code}"
@@ -126,6 +131,7 @@ class VtexOrdersRestClient(VtexAuthentication):
             "ticketMax": max_value,
             "ticketMin": min_value,
             "medium_ticket": medium_ticket,
+            "currencyCode": currency_code,
         }
 
         self.cache.set(cache_key, json.dumps(result_data), ex=3600)
