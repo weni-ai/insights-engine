@@ -67,7 +67,10 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         for waba in self._project_wabas:
             templates = self.meta_api_client.get_templates_list(waba_id=waba, name=name)
 
-            if len(templates.get("data", [])) > 0:
+            if (
+                len(templates.get("data", [])) > 0
+                and templates["data"][0]["name"] == name
+            ):
                 template_id = templates["data"][0]["id"]
                 waba_id = waba["waba_id"]
                 break
@@ -77,9 +80,24 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
         return template_id, waba_id
 
+    def _calculate_increase_percentage(self, current: int, past: int):
+        if past == 0:
+            return 0
+
+        return round(((current - past) / past) * 100, 2)
+
     def _get_message_templates_metrics(self, start_date, end_date) -> dict:
         template_id, waba_id = self._whatsapp_template_id_and_waba
-        period = (end_date - start_date).days()
+        period = (end_date - start_date).days
+
+        print("start date")
+        print(start_date)
+
+        print("end date")
+        print(end_date)
+
+        print("period")
+        print(period)
 
         raw_start_date = start_date - timedelta(days=(period))
         raw_end_date = end_date
@@ -91,8 +109,17 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             end_date=raw_end_date,
         )
 
-        past_period_data_points = metrics.get("data_points")[:period]
-        current_period_data_points = metrics.get("data_points")[period:]
+        past_period_data_points = metrics.get("data", {}).get("data_points")[:period]
+        current_period_data_points = metrics.get("data", {}).get("data_points")[period:]
+
+        print("data points")
+        print(metrics.get("data", {}).get("data_points"))
+
+        print("past data points")
+        print(past_period_data_points)
+
+        print("current data points")
+        print(current_period_data_points)
 
         past_period_data = {
             "sent": 0,
@@ -123,30 +150,26 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         data = {
             "sent-messages": {
                 "value": current_period_data["sent"],
-                "percentage": round(
-                    (current_period_data["sent"] / past_period_data["sent"]) * 100, 2
+                "percentage": self._calculate_increase_percentage(
+                    current_period_data["sent"], past_period_data["sent"]
                 ),
             },
             "delivered-messages": {
                 "value": current_period_data["delivered"],
-                "percentage": round(
-                    (current_period_data["delivered"] / past_period_data["delivered"])
-                    * 100,
-                    2,
+                "percentage": self._calculate_increase_percentage(
+                    current_period_data["delivered"], past_period_data["delivered"]
                 ),
             },
             "read-messages": {
                 "value": current_period_data["read"],
-                "percentage": round(
-                    (current_period_data["read"] / past_period_data["read"]) * 100, 2
+                "percentage": self._calculate_increase_percentage(
+                    current_period_data["read"], past_period_data["read"]
                 ),
             },
             "interactions": {
                 "value": current_period_data["clicked"],
-                "percentage": round(
-                    (current_period_data["clicked"] / past_period_data["clicked"])
-                    * 100,
-                    2,
+                "percentage": self._calculate_increase_percentage(
+                    current_period_data["clicked"], past_period_data["clicked"]
                 ),
             },
         }

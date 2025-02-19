@@ -106,6 +106,7 @@ class MetaAPIClient:
             "end": convert_date_to_unix_timestamp(end_date),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
+            "limit": 9999,
         }
 
         cache_key = self.get_analytics_cache_key(
@@ -158,6 +159,7 @@ class MetaAPIClient:
             "end": convert_date_to_unix_timestamp(end_date),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
+            "limit": 9999,
         }
 
         cache_key = self.get_button_analytics_cache_key(
