@@ -29,12 +29,15 @@ class MetaAPIClient:
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
 
-    def get_templates_list(self, waba_id: str):
+    def get_templates_list(self, waba_id: str, name: str | None = None):
         url = f"{self.base_host_url}/{waba_id}/message_templates"
 
         params = {
             "limit": 9999,
         }
+
+        if name:
+            params["name"] = name
 
         try:
             response = requests.get(
@@ -103,6 +106,7 @@ class MetaAPIClient:
             "end": convert_date_to_unix_timestamp(end_date),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
+            "limit": 9999,
         }
 
         cache_key = self.get_analytics_cache_key(
@@ -155,6 +159,7 @@ class MetaAPIClient:
             "end": convert_date_to_unix_timestamp(end_date),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
+            "limit": 9999,
         }
 
         cache_key = self.get_button_analytics_cache_key(

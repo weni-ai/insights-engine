@@ -41,8 +41,12 @@ def format_messages_metrics_data(data: dict) -> dict:
             status_count[status]["value"] += result.get(status)
 
     for status in ("delivered", "read", "clicked"):
-        status_count[status]["percentage"] = round(
-            (status_count[status]["value"] / status_count["sent"]["value"]) * 100, 2
+        status_count[status]["percentage"] = (
+            round(
+                (status_count[status]["value"] / status_count["sent"]["value"]) * 100, 2
+            )
+            if status_count["sent"]["value"] > 0
+            else 0
         )
 
     return {"status_count": status_count, "data_points": formatted_data_points}
