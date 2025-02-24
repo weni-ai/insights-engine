@@ -2,12 +2,16 @@ from unittest.mock import patch
 
 from django.utils import timezone
 from django.utils.timezone import timedelta
+from django.contrib.auth.models import Permission
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
 
 from insights.authentication.authentication import User
-from insights.authentication.tests.decorators import with_project_auth
+from insights.authentication.tests.decorators import (
+    with_internal_auth,
+    with_project_auth,
+)
 from insights.projects.models import Project
 
 
@@ -122,3 +126,67 @@ class TestSkillsMetricsViewAsAuthenticatedUser(BaseTestSkillsMetrisView):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class TestSkillsMetricsViewAsInternalUser(BaseTestSkillsMetrisView):
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(email="test@mail.com")
+        self.project = Project.objects.create()
+
+        self.client.force_authenticate(self.user)
+
+    @with_internal_auth
+    @patch(
+        "insights.metrics.skills.services.abandoned_cart.AbandonedCartSkillService.get_metrics"
+    )
+    def test_can_get_metrics_for_skill(self, mock_metrics):
+        expected_metrics = [
+            {
+                "id": "sent-messages",
+                "value": 50,
+                "percentage": 100.0,
+            },
+            {
+                "id": "delivered-messages",
+                "value": 45,
+                "percentage": 125.0,
+            },
+            {
+                "id": "read-messages",
+                "value": 40,
+                "percentage": 166.67,
+            },
+            {
+                "id": "interactions",
+                "value": 35,
+                "percentage": 250,
+            },
+            {
+                "id": "utm-revenue",
+                "value": 5000,
+                "percentage": 0,
+                "prefix": "R$",
+            },
+            {
+                "id": "orders-placed",
+                "value": 200,
+                "percentage": 0,
+            },
+        ]
+        mock_metrics.return_value = expected_metrics
+
+        response = self.get_metrics_for_skill(
+            {
+                "project_uuid": self.project.uuid,
+                "skill": "abandoned_cart",
+                "start_date": (timezone.now() - timedelta(days=7)).date(),
+                "end_date": timezone.now().date(),
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_cannot_get_metrics_for_skill_without_internal_permission(self):
+        response = self.get_metrics_for_skill({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

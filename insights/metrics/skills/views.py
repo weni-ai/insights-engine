@@ -6,7 +6,10 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from sentry_sdk import capture_exception
 
-from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.authentication.permissions import (
+    InternalAuthenticationPermission,
+    ProjectAuthQueryParamPermission,
+)
 from insights.metrics.skills.exceptions import (
     InvalidDateRangeError,
     MissingFiltersError,
@@ -16,7 +19,10 @@ from insights.metrics.skills.services.factories import SkillMetricsServiceFactor
 
 
 class SkillsMetricsView(APIView):
-    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+    permission_classes = [
+        IsAuthenticated,
+        (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
+    ]
 
     @extend_schema(
         parameters=[SkillMetricsQueryParamsSerializer],
