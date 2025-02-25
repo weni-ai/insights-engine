@@ -1,5 +1,7 @@
 from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.request import Request
+from rest_framework.views import APIView
 
 from insights.projects.models import Project, ProjectAuth
 
@@ -38,3 +40,8 @@ class ProjectAuthQueryParamPermission(permissions.BasePermission):
         return ProjectAuth.objects.filter(
             project__uuid=project_uuid, user=request.user, role=1
         ).exists()
+
+
+class InternalAuthenticationPermission(permissions.BasePermission):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        return request.user.has_perm("users.can_communicate_internally")
