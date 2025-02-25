@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -18,6 +19,9 @@ from insights.metrics.skills.exceptions import (
 from insights.metrics.skills.serializers import SkillMetricsQueryParamsSerializer
 from insights.metrics.skills.services.factories import SkillMetricsServiceFactory
 from insights.projects.models import Project
+
+
+logger = logging.getLogger(__name__)
 
 
 class SkillsMetricsView(APIView):
@@ -54,9 +58,15 @@ class SkillsMetricsView(APIView):
         try:
             metrics = service.get_metrics()
         except (MissingFiltersError, InvalidDateRangeError) as e:
+            logger.exception(
+                "Error getting metrics for skill: %s", str(e), exc_info=True
+            )
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             capture_exception(e)
+            logger.exception(
+                "Error getting metrics for skill: %s", str(e), exc_info=True
+            )
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
