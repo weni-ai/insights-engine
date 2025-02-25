@@ -140,40 +140,7 @@ class TestSkillsMetricsViewAsInternalUser(BaseTestSkillsMetrisView):
         "insights.metrics.skills.services.abandoned_cart.AbandonedCartSkillService.get_metrics"
     )
     def test_can_get_metrics_for_skill(self, mock_metrics):
-        expected_metrics = [
-            {
-                "id": "sent-messages",
-                "value": 50,
-                "percentage": 100.0,
-            },
-            {
-                "id": "delivered-messages",
-                "value": 45,
-                "percentage": 125.0,
-            },
-            {
-                "id": "read-messages",
-                "value": 40,
-                "percentage": 166.67,
-            },
-            {
-                "id": "interactions",
-                "value": 35,
-                "percentage": 250,
-            },
-            {
-                "id": "utm-revenue",
-                "value": 5000,
-                "percentage": 0,
-                "prefix": "R$",
-            },
-            {
-                "id": "orders-placed",
-                "value": 200,
-                "percentage": 0,
-            },
-        ]
-        mock_metrics.return_value = expected_metrics
+        mock_metrics.return_value = {}
 
         response = self.get_metrics_for_skill(
             {
