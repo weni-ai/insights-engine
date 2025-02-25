@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -16,6 +17,7 @@ from insights.metrics.skills.exceptions import (
 )
 from insights.metrics.skills.serializers import SkillMetricsQueryParamsSerializer
 from insights.metrics.skills.services.factories import SkillMetricsServiceFactory
+from insights.projects.models import Project
 
 
 class SkillsMetricsView(APIView):
@@ -36,11 +38,15 @@ class SkillsMetricsView(APIView):
         filters.pop("skill", None)
         filters.pop("project_uuid", None)
 
+        project = get_object_or_404(
+            Project, uuid=request.query_params.get("project_uuid")
+        )
+
         try:
             service = SkillMetricsServiceFactory().get_service(
-                request.query_params.get("skill"),
-                request.query_params.get("project_uuid"),
-                filters,
+                skill_name=request.query_params.get("skill"),
+                project=project,
+                filters=filters,
             )
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
