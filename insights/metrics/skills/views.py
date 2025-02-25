@@ -58,7 +58,15 @@ class SkillsMetricsView(APIView):
         except Exception as e:
             capture_exception(e)
             return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    "error": str(e),
+                    "details": {
+                        "type": e.__class__.__name__,
+                        "module": e.__class__.__module__,
+                        "traceback": str(e.__traceback__),
+                    },
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         return Response(metrics, status=status.HTTP_200_OK)
