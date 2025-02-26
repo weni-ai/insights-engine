@@ -243,7 +243,12 @@ class DashboardViewSet(
         methods=["get"],
     )
     def get_custom_status(self, request, project=None):
-        project = Project.objects.get(pk=project)
+        project_id = request.query_params.get('project')
+        if not project_id:
+            return Response(
+                {"detail": "Parâmetro project é obrigatório"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         custom_status_client = CustomStatusRESTClient(project)
 
         query_filters = dict(request.data or request.query_params or {})
