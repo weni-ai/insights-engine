@@ -15,6 +15,7 @@ from insights.authentication.permissions import (
 from insights.metrics.skills.exceptions import (
     InvalidDateRangeError,
     MissingFiltersError,
+    TemplateNotFound,
 )
 from insights.metrics.skills.serializers import SkillMetricsQueryParamsSerializer
 from insights.metrics.skills.services.factories import SkillMetricsServiceFactory
@@ -57,7 +58,7 @@ class SkillsMetricsView(APIView):
 
         try:
             metrics = service.get_metrics()
-        except (MissingFiltersError, InvalidDateRangeError) as e:
+        except (MissingFiltersError, InvalidDateRangeError, TemplateNotFound) as e:
             logger.exception(
                 "Error getting metrics for skill: %s", str(e), exc_info=True
             )
