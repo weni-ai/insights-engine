@@ -1,11 +1,14 @@
 from functools import cached_property
 import json
+import logging
 
 from babel import numbers
 from django.utils import timezone
 from django.utils.timezone import timedelta
+from sentry_sdk import capture_exception
 
 from insights.metrics.skills.exceptions import (
+    ErrorGettingOrdersMetrics,
     InvalidDateRangeError,
     MissingFiltersError,
     TemplateNotFound,
@@ -19,6 +22,8 @@ from insights.sources.wabas.clients import WeniIntegrationsClient
 
 
 ABANDONED_CART_METRICS_START_DATE_MAX_DAYS = 45
+
+logger = logging.getLogger(__name__)
 
 
 class AbandonedCartSkillService(BaseSkillMetricsService):
@@ -174,9 +179,15 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             "end_date": end_date,
         }
 
-        return service.get_metrics_from_utm_source(
-            utm_source=utm_source, filters=filters
-        )
+        try:
+            return service.get_metrics_from_utm_source(
+                utm_source=utm_source, filters=filters
+            )
+        except Exception as e:
+            capture_exception(e)
+            logger.error("Error getting orders from VTEX: %s", e, exc_info=True)
+
+            raise ErrorGettingOrdersMetrics("Error getting orders from VTEX") from e
 
     def get_metrics(self):
         filters = self.validate_filters(self.filters)

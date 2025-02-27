@@ -27,16 +27,19 @@ class OrdersService:
         return past_start_date, past_end_date
 
     def _calculate_increase_percentage(self, past_value, current_value):
+        if past_value == 0:
+            return 0
+
         return round(((current_value - past_value) / past_value) * 100, 2)
 
     def get_metrics_from_utm_source(self, utm_source, filters: dict) -> int:
-        filters["utm_source"] = utm_source
+        filters["utm_source"] = (utm_source,)
 
         start_date = filters.pop("start_date")
         end_date = filters.pop("end_date")
 
-        filters["ended_at__gte"] = start_date
-        filters["ended_at__lte"] = end_date
+        filters["ended_at__gte"] = str(start_date)
+        filters["ended_at__lte"] = str(end_date)
 
         # for the current period:
         data = self._get_client().list(filters)
@@ -47,8 +50,8 @@ class OrdersService:
         # for the past period:
         past_start_date, past_end_date = self._get_past_dates(start_date, end_date)
 
-        filters["ended_at__gte"] = past_start_date
-        filters["ended_at__lte"] = past_end_date
+        filters["ended_at__gte"] = str(past_start_date)
+        filters["ended_at__lte"] = str(past_end_date)
 
         past_data = self._get_client().list(filters)
         past_value = past_data.get("accumulatedTotal")
