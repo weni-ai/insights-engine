@@ -14,5 +14,5 @@ class TemplateNotFound(Exception):
     pass
 
 
-class ErrorGettingOrdersFromVTEX(Exception):
+class ErrorGettingOrdersMetrics(Exception):
     pass

@@ -5,11 +5,10 @@ import logging
 from babel import numbers
 from django.utils import timezone
 from django.utils.timezone import timedelta
-from django.conf import settings
 from sentry_sdk import capture_exception
 
 from insights.metrics.skills.exceptions import (
-    ErrorGettingOrdersFromVTEX,
+    ErrorGettingOrdersMetrics,
     InvalidDateRangeError,
     MissingFiltersError,
     TemplateNotFound,
@@ -25,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 ABANDONED_CART_METRICS_START_DATE_MAX_DAYS = 45
+
+logger = logging.getLogger(__name__)
 
 
 class AbandonedCartSkillService(BaseSkillMetricsService):
@@ -199,7 +200,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             capture_exception(e)
             logger.error("Error getting orders from VTEX: %s", e, exc_info=True)
 
-            raise ErrorGettingOrdersFromVTEX("Error getting orders from VTEX") from e
+            raise ErrorGettingOrdersMetrics("Error getting orders from VTEX") from e
 
     def get_metrics(self):
         filters = self.validate_filters(self.filters)
