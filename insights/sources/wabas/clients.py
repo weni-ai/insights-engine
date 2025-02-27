@@ -1,5 +1,6 @@
 from django.conf import settings
 import requests
+import json
 
 from insights.internals.base import InternalAuthentication
 from insights.sources.cache import CacheClient
@@ -14,11 +15,11 @@ class WeniIntegrationsClient(InternalAuthentication):
 
     def get_wabas_for_project(self):
         if cached_response := self.cache.get(self.cache_key):
-            return cached_response
+            return json.loads(cached_response)
 
         response = requests.get(url=self.url, headers=self.headers, timeout=60)
         wabas = response.json().get("data", [])
 
-        self.cache.set(self.cache_key, wabas, self.cache_ttl)
+        self.cache.set(self.cache_key, json.dumps(wabas), self.cache_ttl)
 
         return wabas

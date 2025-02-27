@@ -1,3 +1,5 @@
+import logging
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -6,17 +8,28 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from sentry_sdk import capture_exception
 
-from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.authentication.permissions import (
+    InternalAuthenticationPermission,
+    ProjectAuthQueryParamPermission,
+)
 from insights.metrics.skills.exceptions import (
     InvalidDateRangeError,
     MissingFiltersError,
+    TemplateNotFound,
 )
 from insights.metrics.skills.serializers import SkillMetricsQueryParamsSerializer
 from insights.metrics.skills.services.factories import SkillMetricsServiceFactory
+from insights.projects.models import Project
+
+
+logger = logging.getLogger(__name__)
 
 
 class SkillsMetricsView(APIView):
-    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+    permission_classes = [
+        IsAuthenticated,
+        (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
+    ]
 
     @extend_schema(
         parameters=[SkillMetricsQueryParamsSerializer],
@@ -30,21 +43,31 @@ class SkillsMetricsView(APIView):
         filters.pop("skill", None)
         filters.pop("project_uuid", None)
 
+        project = get_object_or_404(
+            Project, uuid=request.query_params.get("project_uuid")
+        )
+
         try:
             service = SkillMetricsServiceFactory().get_service(
-                request.query_params.get("skill"),
-                request.query_params.get("project_uuid"),
-                filters,
+                skill_name=request.query_params.get("skill"),
+                project=project,
+                filters=filters,
             )
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             metrics = service.get_metrics()
-        except (MissingFiltersError, InvalidDateRangeError) as e:
+        except (MissingFiltersError, InvalidDateRangeError, TemplateNotFound) as e:
+            logger.exception(
+                "Error getting metrics for skill: %s", str(e), exc_info=True
+            )
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             capture_exception(e)
+            logger.exception(
+                "Error getting metrics for skill: %s", str(e), exc_info=True
+            )
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
