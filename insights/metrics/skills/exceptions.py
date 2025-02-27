@@ -12,3 +12,7 @@ class InvalidDateRangeError(Exception):
 
 class TemplateNotFound(Exception):
     pass
+
+
+class ErrorGettingOrdersFromVTEX(Exception):
+    pass

@@ -1,11 +1,15 @@
 from functools import cached_property
 import json
+import logging
 
 from babel import numbers
 from django.utils import timezone
 from django.utils.timezone import timedelta
+from django.conf import settings
+from sentry_sdk import capture_exception
 
 from insights.metrics.skills.exceptions import (
+    ErrorGettingOrdersFromVTEX,
     InvalidDateRangeError,
     MissingFiltersError,
     TemplateNotFound,
@@ -16,6 +20,8 @@ from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.sources.cache import CacheClient
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.wabas.clients import WeniIntegrationsClient
+
+logger = logging.getLogger(__name__)
 
 
 ABANDONED_CART_METRICS_START_DATE_MAX_DAYS = 45
@@ -94,7 +100,13 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return round(((current - past) / past) * 100, 2)
 
     def _get_message_templates_metrics(self, start_date, end_date) -> dict:
-        template_id, waba_id = self._whatsapp_template_id_and_waba
+        # TEMPORARY, this should be used only in the development and staging environments
+        template_id = getattr(settings, "WHATSAPP_ABANDONED_CART_TEMPLATE_ID", None)
+        waba_id = getattr(settings, "WHATSAPP_ABANDONED_CART_WABA_ID", None)
+
+        if not template_id or not waba_id:
+            template_id, waba_id = self._whatsapp_template_id_and_waba
+
         period = (end_date - start_date).days
 
         raw_start_date = start_date - timedelta(days=(period))
@@ -166,7 +178,12 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return data
 
     def _get_orders_metrics(self, start_date, end_date) -> dict:
-        utm_source = "weniabandonedcart"
+        if not (
+            utm_source := getattr(settings, "WHATSAPP_ABANDONED_CART_UTM_SOURCE", None)
+        ):
+            # TEMPORARY, this should be used only in the development and staging environments
+            utm_source = "weniabandonedcart"
+
         service = OrdersService(project_uuid=self.project.uuid)
 
         filters = {
@@ -174,9 +191,15 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             "end_date": end_date,
         }
 
-        return service.get_metrics_from_utm_source(
-            utm_source=utm_source, filters=filters
-        )
+        try:
+            return service.get_metrics_from_utm_source(
+                utm_source=utm_source, filters=filters
+            )
+        except Exception as e:
+            capture_exception(e)
+            logger.error("Error getting orders from VTEX: %s", e, exc_info=True)
+
+            raise ErrorGettingOrdersFromVTEX("Error getting orders from VTEX") from e
 
     def get_metrics(self):
         filters = self.validate_filters(self.filters)
