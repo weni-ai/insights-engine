@@ -3,6 +3,7 @@ import json
 import logging
 
 from babel import numbers
+from django.conf import settings
 from django.utils import timezone
 from django.utils.timezone import timedelta
 from sentry_sdk import capture_exception

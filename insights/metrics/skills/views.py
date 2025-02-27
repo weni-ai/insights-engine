@@ -26,9 +26,13 @@ logger = logging.getLogger(__name__)
 
 
 class SkillsMetricsView(APIView):
+    # permission_classes = [
+    #     IsAuthenticated,
+    #     (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
+    # ]
+    # Temporary
     permission_classes = [
         IsAuthenticated,
-        (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
     ]
 
     @extend_schema(
