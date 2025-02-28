@@ -94,7 +94,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
     def _calculate_increase_percentage(self, current: int, past: int):
         if past == 0:
-            return 0
+            return 100 if current > 0 else 0
 
         return round(((current - past) / past) * 100, 2)
 

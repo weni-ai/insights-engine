@@ -28,7 +28,7 @@ class OrdersService:
 
     def _calculate_increase_percentage(self, past_value, current_value):
         if past_value == 0:
-            return 0
+            return 100 if current_value > 0 else 0
 
         return round(((current_value - past_value) / past_value) * 100, 2)
 
