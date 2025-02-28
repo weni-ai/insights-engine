@@ -13,6 +13,7 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS,
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
+from insights.metrics.meta.serializers import MessageTemplatesQueryParamsSerializer
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
 
@@ -32,9 +33,11 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         # TODO: Filter by category
         # TODO: Filter by language
         # TODO: Add search by name
-        # TODO: Add pagination
+        serializer = MessageTemplatesQueryParamsSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+
         data = self.query_executor.execute(
-            filters=request.query_params, operation=Operations.LIST_TEMPLATES.value
+            filters=serializer.validated_data, operation=Operations.LIST_TEMPLATES.value
         )
 
         return Response(data, status=status.HTTP_200_OK)

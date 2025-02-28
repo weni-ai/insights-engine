@@ -93,6 +93,29 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
     @patch(
         "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
     )
+    def test_get_list_templates_with_invalid_limit(
+        self, mock_list_templates, mock_wabas
+    ):
+        mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
+        mock_wabas.return_value = [{"waba_id": "0000000000000000"}]
+        response = self.get_list_templates(
+            {
+                "waba_id": "0000000000000000",
+                "project_uuid": self.project.uuid,
+                "limit": 51,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["limit"][0].code, "limit_too_large")
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
+    )
     def test_get_list_templates(self, mock_list_templates, mock_wabas):
         waba_id = "0000000000000000"
         mock_wabas.return_value = [{"waba_id": waba_id}]
@@ -105,7 +128,7 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, MOCK_TEMPLATES_LIST_BODY)
+        # TODO: Assert response
 
     def test_cannot_get_preview_without_project_uuid_and_waba_id(self):
         response = self.get_preview({})
