@@ -80,7 +80,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         )
         data = response.json()
 
-        if "list" not in data or not data["list"]:
+        if "list" not in data:
             return response.status_code, data
 
         pages = data["paging"]["pages"] if "paging" in data else 1
