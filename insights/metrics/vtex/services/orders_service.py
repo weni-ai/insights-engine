@@ -50,6 +50,7 @@ class OrdersService:
         # for the past period:
         past_start_date, past_end_date = self._get_past_dates(start_date, end_date)
 
+        filters["utm_source"] = (utm_source,)
         filters["ended_at__gte"] = str(past_start_date)
         filters["ended_at__lte"] = str(past_end_date)
 
