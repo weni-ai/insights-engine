@@ -14,6 +14,42 @@ WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS = [
         location=OpenApiParameter.QUERY,
         required=True,
     ),
+    OpenApiParameter(
+        name="limit",
+        type=int,
+        location=OpenApiParameter.QUERY,
+        required=False,
+    ),
+    OpenApiParameter(
+        name="after",
+        type=str,
+        location=OpenApiParameter.QUERY,
+        required=False,
+    ),
+    OpenApiParameter(
+        name="before",
+        type=str,
+        location=OpenApiParameter.QUERY,
+        required=False,
+    ),
+    OpenApiParameter(
+        name="search",
+        type=str,
+        location=OpenApiParameter.QUERY,
+        required=False,
+    ),
+    OpenApiParameter(
+        name="category",
+        type=str,
+        location=OpenApiParameter.QUERY,
+        required=False,
+    ),
+    OpenApiParameter(
+        name="language",
+        type=str,
+        location=OpenApiParameter.QUERY,
+        required=False,
+    ),
 ]
 
 WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS = [

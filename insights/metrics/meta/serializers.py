@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 
 class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
+    waba_id = serializers.CharField(required=False)
     limit = serializers.IntegerField(required=False, default=10)
     after = serializers.CharField(required=False)
     before = serializers.CharField(required=False)

@@ -128,7 +128,6 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # TODO: Assert response
 
     def test_cannot_get_preview_without_project_uuid_and_waba_id(self):
         response = self.get_preview({})
