@@ -30,9 +30,6 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         url_path="list-templates",
     )
     def list_templates(self, request: Request) -> Response:
-        # TODO: Filter by category
-        # TODO: Filter by language
-        # TODO: Add search by name
         serializer = MessageTemplatesQueryParamsSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 

@@ -5,6 +5,9 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
     limit = serializers.IntegerField(required=False, default=10)
     after = serializers.CharField(required=False)
     before = serializers.CharField(required=False)
+    search = serializers.CharField(required=False)
+    category = serializers.CharField(required=False)
+    language = serializers.CharField(required=False)
 
     def validate_limit(self, value):
         max_limit = 20
@@ -15,3 +18,11 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
             )
 
         return value
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        if "search" in attrs:
+            data["name"] = attrs.pop("search")
+
+        return data
