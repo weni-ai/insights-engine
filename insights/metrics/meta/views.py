@@ -10,8 +10,10 @@ from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.meta.permissions import ProjectWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
+    WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS,
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
+from insights.metrics.meta.serializers import MessageTemplatesQueryParamsSerializer
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
 
@@ -19,6 +21,23 @@ from insights.sources.meta_message_templates.usecases.query_execute import Query
 class WhatsAppMessageTemplatesView(GenericViewSet):
     query_executor = QueryExecutor
     permission_classes = [ProjectAuthQueryParamPermission, ProjectWABAPermission]
+
+    @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS)
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="list-templates",
+        url_path="list-templates",
+    )
+    def list_templates(self, request: Request) -> Response:
+        serializer = MessageTemplatesQueryParamsSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+
+        data = self.query_executor.execute(
+            filters=serializer.validated_data, operation=Operations.LIST_TEMPLATES.value
+        )
+
+        return Response(data, status=status.HTTP_200_OK)
 
     @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS)
     @action(detail=False, methods=["get"], url_name="preview", url_path="preview")
