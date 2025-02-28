@@ -1,6 +1,21 @@
 from drf_spectacular.openapi import OpenApiParameter
 
 
+WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS = [
+    OpenApiParameter(
+        name="project_uuid",
+        type=str,
+        location=OpenApiParameter.QUERY,
+        required=True,
+    ),
+    OpenApiParameter(
+        name="waba_id",
+        type=str,
+        location=OpenApiParameter.QUERY,
+        required=True,
+    ),
+]
+
 WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS = [
     OpenApiParameter(
         name="project_uuid",
