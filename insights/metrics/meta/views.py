@@ -101,15 +101,3 @@ class WhatsappIntegrationWebhookView(APIView):
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    # TODO: Add schema
-    def delete(self, request: Request) -> Response:
-        serializer = WhatsappIntegrationWebhookDeleteSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        Dashboard.objects.filter(
-            project__uuid=serializer.validated_data["project_uuid"],
-            config__waba_id=serializer.validated_data["waba_id"],
-        ).delete()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
