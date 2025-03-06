@@ -18,10 +18,16 @@ from insights.sources.meta_message_templates.utils import (
 from insights.sources.tests.meta_message_templates.mock import (
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
+    MOCK_TEMPLATES_LIST_BODY,
 )
 
 
 class BaseTestMetaMessageTemplatesView(APITestCase):
+    def get_list_templates(self, query_params: dict) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/list-templates/"
+
+        return self.client.get(url, query_params)
+
     def get_preview(self, query_params: dict) -> Response:
         url = "/v1/metrics/meta/whatsapp-message-templates/preview/"
 
@@ -46,6 +52,83 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
 
         self.client.force_authenticate(self.user)
         cache.clear()
+
+    def test_cannot_get_list_templates_without_project_uuid_and_waba_id(self):
+        response = self.get_list_templates({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_get_list_templates_when_user_does_not_have_project_permission(self):
+        response = self.get_list_templates(
+            {
+                "project_uuid": self.project.uuid,
+                "waba_id": "0000000000000000",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_cannot_get_list_templates_when_waba_id_is_not_related_to_project(
+        self, mock_wabas
+    ):
+        waba_id = "0000000000000000"
+        mock_wabas.return_value = []
+        response = self.get_list_templates(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
+    )
+    def test_get_list_templates_with_invalid_limit(
+        self, mock_list_templates, mock_wabas
+    ):
+        mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
+        mock_wabas.return_value = [{"waba_id": "0000000000000000"}]
+        response = self.get_list_templates(
+            {
+                "waba_id": "0000000000000000",
+                "project_uuid": self.project.uuid,
+                "limit": 51,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["limit"][0].code, "limit_too_large")
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
+    )
+    def test_get_list_templates(self, mock_list_templates, mock_wabas):
+        waba_id = "0000000000000000"
+        mock_wabas.return_value = [{"waba_id": waba_id}]
+        mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
+        response = self.get_list_templates(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, MOCK_TEMPLATES_LIST_BODY)
 
     def test_cannot_get_preview_without_project_uuid_and_waba_id(self):
         response = self.get_preview({})
