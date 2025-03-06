@@ -6,6 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
+from django.utils import translation
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.meta.choices import (
