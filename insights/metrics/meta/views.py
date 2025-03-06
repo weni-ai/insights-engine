@@ -17,7 +17,6 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
 from insights.metrics.meta.serializers import (
-    WhatsappIntegrationWebhookDeleteSerializer,
     WhatsappIntegrationWebhookSerializer,
 )
 from insights.projects.models import Project
