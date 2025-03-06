@@ -16,7 +16,10 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
-from insights.metrics.meta.serializers import WhatsappIntegrationWebhookSerializer
+from insights.metrics.meta.serializers import (
+    WhatsappIntegrationWebhookDeleteSerializer,
+    WhatsappIntegrationWebhookSerializer,
+)
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
@@ -101,5 +104,12 @@ class WhatsappIntegrationWebhookView(APIView):
 
     # TODO: Add schema
     def delete(self, request: Request) -> Response:
-        # TODO: Implement this
+        serializer = WhatsappIntegrationWebhookDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        Dashboard.objects.filter(
+            project__uuid=serializer.validated_data["project_uuid"],
+            config__waba_id=serializer.validated_data["waba_id"],
+        ).delete()
+
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -227,7 +227,8 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
             }
         )
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "project_not_found")
 
     @with_internal_auth
     def test_cannot_remove_integration_when_integration_does_not_exist(self):
@@ -238,4 +239,5 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
             }
         )
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["waba_id"][0].code, "waba_id_not_found")
