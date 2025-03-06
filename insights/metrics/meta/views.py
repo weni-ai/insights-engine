@@ -5,8 +5,10 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
+from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.metrics.meta.choices import WhatsAppMessageTemplatesCategories
 from insights.metrics.meta.permissions import ProjectWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
@@ -56,3 +58,22 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         )
 
         return Response(data, status=status.HTTP_200_OK)
+
+    # TODO: Add schema
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="categories",
+        url_path="categories",
+        permission_classes=[IsAuthenticated],
+    )
+    def categories(self, request: Request) -> Response:
+        all_categories = [
+            {
+                "value": category.value,
+                "display_name": category.label,
+            }
+            for category in WhatsAppMessageTemplatesCategories
+        ]
+
+        return Response({"categories": all_categories}, status=status.HTTP_200_OK)

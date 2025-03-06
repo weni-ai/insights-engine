@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
+from insights.metrics.meta.choices import WhatsAppMessageTemplatesCategories
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.utils import (
@@ -36,6 +37,11 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
         url = "/v1/metrics/meta/whatsapp-message-templates/buttons-analytics/"
 
         return self.client.get(url, query_params)
+
+    def get_categories(self) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/categories/"
+
+        return self.client.get(url)
 
 
 class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
@@ -356,4 +362,21 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         self.assertEqual(
             response.data,
             {"error": "Required fields are missing: template_id, start_date, end_date"},
+        )
+
+    def test_get_categories(self):
+        response = self.get_categories()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {
+                "categories": [
+                    {
+                        "value": category.value,
+                        "display_name": category.label,
+                    }
+                    for category in WhatsAppMessageTemplatesCategories
+                ]
+            },
         )
