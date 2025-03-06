@@ -70,7 +70,10 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
 class WhatsappIntegrationWebhookView(APIView):
     permission_classes = [InternalAuthenticationPermission]
 
-    # TODO: Add schema
+    @extend_schema(
+        request=WhatsappIntegrationWebhookSerializer,
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
     def post(self, request: Request) -> Response:
         serializer = WhatsappIntegrationWebhookSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
