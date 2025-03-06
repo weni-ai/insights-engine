@@ -149,6 +149,7 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 
 DEFAULT_LANGUAGE = "en-us"
+LOCALE_PATHS = [os.path.join(BASE_DIR, "insights/locale")]
 
 USE_I18N = True
 
