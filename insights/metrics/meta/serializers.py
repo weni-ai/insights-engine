@@ -1,6 +1,9 @@
 from rest_framework import serializers
 
-from insights.metrics.meta.choices import WhatsAppMessageTemplatesCategories
+from insights.metrics.meta.choices import (
+    WhatsAppMessageTemplatesCategories,
+    WhatsAppMessageTemplatesLanguages,
+)
 
 
 class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
@@ -12,7 +15,9 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
     category = serializers.ChoiceField(
         choices=WhatsAppMessageTemplatesCategories, required=False
     )
-    language = serializers.CharField(required=False)
+    language = serializers.ChoiceField(
+        choices=WhatsAppMessageTemplatesLanguages, required=False
+    )
 
     def validate_limit(self, value):
         max_limit = 20

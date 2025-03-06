@@ -162,7 +162,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
     )
-    def test_get_list_templates_with_invalid_category(
+    def test_cannot_get_list_templates_with_invalid_category(
         self, mock_list_templates, mock_wabas
     ):
         mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
@@ -178,6 +178,30 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["category"][0].code, "invalid_choice")
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
+    )
+    def test_cannot_get_list_templates_with_invalid_language(
+        self, mock_list_templates, mock_wabas
+    ):
+        mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
+        mock_wabas.return_value = [{"waba_id": "0000000000000000"}]
+
+        response = self.get_list_templates(
+            {
+                "waba_id": "0000000000000000",
+                "project_uuid": self.project.uuid,
+                "language": "INVALID_LANGUAGE",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["language"][0].code, "invalid_choice")
 
     @with_project_auth
     @patch(
