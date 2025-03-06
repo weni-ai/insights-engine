@@ -114,13 +114,12 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         permission_classes=[IsAuthenticated],
     )
     def languages(self, request: Request) -> Response:
-        with translation.override(request.headers.get("Accept-Language", "en")):
-            all_languages = [
-                {
-                    "value": language.value,
-                    "display_name": language.label,
-                }
-                for language in WhatsAppMessageTemplatesLanguages
-            ]
+        all_languages = [
+            {
+                "value": language.value,
+                "display_name": language.label,
+            }
+            for language in WhatsAppMessageTemplatesLanguages
+        ]
 
         return Response({"languages": all_languages}, status=status.HTTP_200_OK)
