@@ -3,6 +3,7 @@ from rest_framework.test import APITestCase
 from rest_framework.response import Response
 from rest_framework import status
 
+from insights.authentication.tests.decorators import User, with_internal_auth
 from insights.dashboards.models import Dashboard
 from insights.projects.models import Project
 
@@ -11,12 +12,12 @@ class BaseTestWhatsappIntegrationWebhook(APITestCase):
     def receive_integration_data(self, data: dict) -> Response:
         url = "/v1/metrics/meta/internal/whatsapp-integration/"
 
-        return self.client.post(url, data)
+        return self.client.post(url, data, format="json")
 
     def remove_integration(self, data: dict) -> Response:
         url = "/v1/metrics/meta/internal/whatsapp-integration/"
 
-        return self.client.delete(url, data)
+        return self.client.delete(url, data, format="json")
 
 
 class TestWhatsappIntegrationWebhookAsAnonymousUser(BaseTestWhatsappIntegrationWebhook):
@@ -34,12 +35,24 @@ class TestWhatsappIntegrationWebhookAsAnonymousUser(BaseTestWhatsappIntegrationW
 class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
     BaseTestWhatsappIntegrationWebhook
 ):
+    def setUp(self):
+        super().setUp()
+
+        self.user = User.objects.create_user(email="test@test.com")
+        self.client.force_authenticate(user=self.user)
+
+    def test_cannot_receive_integration_data_when_not_internal_user(self):
+        response = self.receive_integration_data({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_internal_auth
     def test_receive_new_integration_data(self):
         project = Project.objects.create()
 
         self.assertFalse(
             Dashboard.objects.filter(
-                project=project, config__is_whatsapp_integration=True
+                project=project, config={"is_whatsapp_integration": True}
             ).exists()
         )
 
@@ -70,6 +83,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
         self.assertIn("default_template", dashboard.config)
         self.assertIsNone(dashboard.config["default_template"])
 
+    @with_internal_auth
     def test_receive_integration_data_when_integration_already_exists(self):
         project = Project.objects.create()
         waba_id = "1234567890"
@@ -109,6 +123,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
             dashboard.config["phone_number"]["id"], payload["phone_number"]["id"]
         )
 
+    @with_internal_auth
     def test_cannot_receive_integration_when_missing_required_fields(self):
         response = self.receive_integration_data({})
 
@@ -117,6 +132,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
         self.assertEqual(response.data["waba_id"][0].code, "required")
         self.assertEqual(response.data["phone_number"][0].code, "required")
 
+    @with_internal_auth
     def test_cannot_receive_integration_when_missing_phone_number_required_fields(self):
         response = self.receive_integration_data(
             {
@@ -132,6 +148,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
             response.data["phone_number"]["display_phone_number"][0].code, "required"
         )
 
+    @with_internal_auth
     def test_cannot_receive_integration_for_non_existent_project(self):
         response = self.receive_integration_data(
             {
@@ -144,16 +161,28 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
             }
         )
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_cannot_receive_integration_data_when_not_internal_user(self):
+        response = self.receive_integration_data({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_internal_auth
     def test_remove_integration(self):
         project = Project.objects.create()
         waba_id = "1234567890"
 
         Dashboard.objects.create(
             project=project,
-            config__is_whatsapp_integration=True,
-            config__waba_id=waba_id,
+            config={
+                "is_whatsapp_integration": True,
+                "waba_id": waba_id,
+                "phone_number": {
+                    "id": "123456789123456",
+                    "display_phone_number": "+55 82 98877 6655",
+                },
+            },
         )
 
         self.assertTrue(
@@ -181,6 +210,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
             ).exists()
         )
 
+    @with_internal_auth
     def test_cannot_remove_integration_when_missing_required_fields(self):
         response = self.remove_integration({})
 
@@ -188,6 +218,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
         self.assertEqual(response.data["project_uuid"][0].code, "required")
         self.assertEqual(response.data["waba_id"][0].code, "required")
 
+    @with_internal_auth
     def test_cannot_remove_integration_for_non_existent_project(self):
         response = self.remove_integration(
             {
@@ -198,6 +229,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    @with_internal_auth
     def test_cannot_remove_integration_when_integration_does_not_exist(self):
         response = self.remove_integration(
             {

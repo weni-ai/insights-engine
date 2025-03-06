@@ -1,17 +1,23 @@
 from drf_spectacular.utils import extend_schema
-from drf_spectacular.openapi import OpenApiParameter
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
+from rest_framework.views import APIView
 
-from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.authentication.permissions import (
+    InternalAuthenticationPermission,
+    ProjectAuthQueryParamPermission,
+)
+from insights.dashboards.models import Dashboard
 from insights.metrics.meta.permissions import ProjectWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
+from insights.metrics.meta.serializers import WhatsappIntegrationWebhookSerializer
+from insights.projects.models import Project
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
 
@@ -56,3 +62,44 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         )
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class WhatsappIntegrationWebhookView(APIView):
+    permission_classes = [InternalAuthenticationPermission]
+
+    # TODO: Add schema
+    def post(self, request: Request) -> Response:
+        serializer = WhatsappIntegrationWebhookSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        project = Project.objects.get(uuid=serializer.validated_data["project_uuid"])
+
+        config = {
+            "is_whatsapp_integration": True,
+            "waba_id": serializer.validated_data["waba_id"],
+            "phone_number": serializer.validated_data["phone_number"],
+            "default_template": None,
+        }
+
+        existing_dashboard = Dashboard.objects.filter(
+            project=project,
+            config__waba_id=serializer.validated_data["waba_id"],
+            config__is_whatsapp_integration=True,
+        ).first()
+
+        if existing_dashboard:
+            existing_dashboard.config = config
+            existing_dashboard.save(update_fields=["config"])
+
+        else:
+            Dashboard.objects.create(
+                project=project,
+                config=config,
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # TODO: Add schema
+    def delete(self, request: Request) -> Response:
+        # TODO: Implement this
+        return Response(status=status.HTTP_204_NO_CONTENT)
