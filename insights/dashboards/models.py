@@ -40,6 +40,7 @@ class Dashboard(BaseModel, ConfigurableModel):
     grid = models.JSONField("Grid", default=list)
     is_deletable = models.BooleanField("Is detetable?", default=False)
     is_editable = models.BooleanField("Is editable?", default=False)
+    config = models.JSONField("Dashboard Configuration", null=True, blank=True)
 
     def __str__(self):
         return f"{self.project.name} - {self.name}"
