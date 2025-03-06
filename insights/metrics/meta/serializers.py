@@ -47,10 +47,10 @@ class MessageTemplatesCategoriesSerializer(serializers.Serializer):
     categories = MessageTemplatesCategorySerializer(many=True)
 
 
-class MessageTemplatesLanguagesSerializer(serializers.Serializer):
+class MessageTemplatesLanguageSerializer(serializers.Serializer):
     value = serializers.CharField()
     display_name = serializers.CharField()
 
 
 class MessageTemplatesLanguagesSerializer(serializers.Serializer):
-    languages = MessageTemplatesLanguagesSerializer(many=True)
+    languages = MessageTemplatesLanguageSerializer(many=True)
