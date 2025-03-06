@@ -31,3 +31,12 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
             data["name"] = attrs.pop("search")
 
         return data
+
+
+class MessageTemplatesCategorySerializer(serializers.Serializer):
+    value = serializers.CharField()
+    display_name = serializers.CharField()
+
+
+class MessageTemplatesCategoriesSerializer(serializers.Serializer):
+    categories = MessageTemplatesCategorySerializer(many=True)

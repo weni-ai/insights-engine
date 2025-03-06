@@ -15,7 +15,10 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS,
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
-from insights.metrics.meta.serializers import MessageTemplatesQueryParamsSerializer
+from insights.metrics.meta.serializers import (
+    MessageTemplatesCategoriesSerializer,
+    MessageTemplatesQueryParamsSerializer,
+)
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
 
@@ -78,7 +81,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
 
         return Response(data, status=status.HTTP_200_OK)
 
-    # TODO: Add schema
+    @extend_schema(responses={200: MessageTemplatesCategoriesSerializer})
     @action(
         detail=False,
         methods=["get"],
