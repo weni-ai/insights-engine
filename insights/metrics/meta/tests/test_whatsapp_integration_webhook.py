@@ -162,6 +162,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "project_not_found")
 
     def test_cannot_receive_integration_data_when_not_internal_user(self):
         response = self.receive_integration_data({})
