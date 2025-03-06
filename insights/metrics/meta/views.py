@@ -8,7 +8,10 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
-from insights.metrics.meta.choices import WhatsAppMessageTemplatesCategories
+from insights.metrics.meta.choices import (
+    WhatsAppMessageTemplatesCategories,
+    WhatsAppMessageTemplatesLanguages,
+)
 from insights.metrics.meta.permissions import ProjectWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
@@ -17,6 +20,7 @@ from insights.metrics.meta.schema import (
 )
 from insights.metrics.meta.serializers import (
     MessageTemplatesCategoriesSerializer,
+    MessageTemplatesLanguagesSerializer,
     MessageTemplatesQueryParamsSerializer,
 )
 from insights.sources.meta_message_templates.enums import Operations
@@ -81,7 +85,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
 
         return Response(data, status=status.HTTP_200_OK)
 
-    @extend_schema(responses={200: MessageTemplatesCategoriesSerializer})
+    @extend_schema(responses={status.HTTP_200_OK: MessageTemplatesCategoriesSerializer})
     @action(
         detail=False,
         methods=["get"],
@@ -99,3 +103,22 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         ]
 
         return Response({"categories": all_categories}, status=status.HTTP_200_OK)
+
+    @extend_schema(responses={status.HTTP_200_OK: MessageTemplatesLanguagesSerializer})
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="languages",
+        url_path="languages",
+        permission_classes=[IsAuthenticated],
+    )
+    def languages(self, request: Request) -> Response:
+        all_languages = [
+            {
+                "value": language.value,
+                "display_name": language.label,
+            }
+            for language in WhatsAppMessageTemplatesLanguages
+        ]
+
+        return Response({"languages": all_languages}, status=status.HTTP_200_OK)

@@ -9,7 +9,10 @@ from rest_framework.response import Response
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
-from insights.metrics.meta.choices import WhatsAppMessageTemplatesCategories
+from insights.metrics.meta.choices import (
+    WhatsAppMessageTemplatesCategories,
+    WhatsAppMessageTemplatesLanguages,
+)
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.utils import (
@@ -49,8 +52,45 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
 
         return self.client.get(url)
 
+    def get_languages(self) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/languages/"
 
-class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
+        return self.client.get(url)
+
+
+class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesView):
+    def test_cannot_get_list_templates_when_not_authenticated(self):
+        response = self.get_list_templates({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_preview_when_not_authenticated(self):
+        response = self.get_preview({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_messages_analytics_when_not_authenticated(self):
+        response = self.get_messages_analytics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_buttons_analytics_when_not_authenticated(self):
+        response = self.get_buttons_analytics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_categories_when_not_authenticated(self):
+        response = self.get_categories()
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_languages_when_not_authenticated(self):
+        response = self.get_languages()
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplatesView):
     def setUp(self):
         self.meta_api_client: MetaAPIClient = MetaAPIClient()
         self.user = User.objects.create()
@@ -484,6 +524,20 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
                         "display_name": category.label,
                     }
                     for category in WhatsAppMessageTemplatesCategories
+                ]
+            },
+        )
+
+    def test_get_languages(self):
+        response = self.get_languages()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {
+                "languages": [
+                    {"value": language.value, "display_name": language.label}
+                    for language in WhatsAppMessageTemplatesLanguages
                 ]
             },
         )
