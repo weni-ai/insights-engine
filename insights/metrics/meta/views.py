@@ -116,9 +116,12 @@ class WhatsappIntegrationWebhookView(APIView):
             existing_dashboard.save(update_fields=["config"])
 
         else:
+            name = f"Meta - {serializer.validated_data['phone_number']['display_phone_number']}"
+
             Dashboard.objects.create(
                 project=project,
                 config=config,
+                name=name,
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
