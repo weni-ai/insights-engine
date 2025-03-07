@@ -112,9 +112,9 @@ class WhatsappIntegrationWebhookView(APIView):
         serializer = WhatsappIntegrationWebhookRemoveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        project = Project.objects.get(uuid=serializer.validated_data["project_uuid"])
         Dashboard.objects.filter(
-            project=project, config__waba_id=serializer.validated_data["waba_id"]
+            project__uuid=serializer.validated_data["project_uuid"],
+            config__waba_id=serializer.validated_data["waba_id"],
         ).delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
