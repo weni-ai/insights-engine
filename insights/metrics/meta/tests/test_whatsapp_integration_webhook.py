@@ -187,17 +187,13 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
         self.assertEqual(response.data["project_uuid"][0].code, "project_not_found")
 
     @with_internal_auth
-    def test_cannot_remove_integration_when_integration_does_not_exist(self):
+    def test_remove_integration_when_dashboard_does_not_exist(self):
+        # The API responds with 204 even when the dashboard doesn't exist
+        # because it is not relevant (in this case) for the caller to know
+        # weather a dashboard exists or not.
+        # This API just needs to listen to these requests and, if necessary,
+        # remove the dashboard from the database.
         project = Project.objects.create()
-
-        # Dashboard for the same project but with a different waba_id
-        Dashboard.objects.create(
-            project=project,
-            config={
-                "is_whatsapp_integration": True,
-                "waba_id": "625988779966554",
-            },
-        )
 
         response = self.remove_integration(
             {
@@ -206,8 +202,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
             }
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["waba_id"][0].code, "waba_id_not_found")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     @with_internal_auth
     def test_remove_integration(self):

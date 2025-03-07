@@ -35,13 +35,3 @@ class WhatsappIntegrationWebhookRemoveSerializer(serializers.Serializer):
             )
 
         return value
-
-    def validate_waba_id(self, value) -> str:
-        if not Dashboard.objects.filter(
-            project__uuid=self.initial_data["project_uuid"], config__waba_id=value
-        ).exists():
-            raise serializers.ValidationError(
-                "Waba ID not found", code="waba_id_not_found"
-            )
-
-        return value
