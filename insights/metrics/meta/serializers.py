@@ -49,3 +49,16 @@ class WhatsappIntegrationWebhookSerializer(serializers.Serializer):
             )
 
         return value
+
+
+class WhatsappIntegrationWebhookRemoveSerializer(serializers.Serializer):
+    project_uuid = serializers.UUIDField(required=True)
+    waba_id = serializers.CharField(required=True)
+
+    def validate_project_uuid(self, value) -> uuid.UUID:
+        if not Project.objects.filter(uuid=value).exists():
+            raise serializers.ValidationError(
+                "Project not found", code="project_not_found"
+            )
+
+        return value
