@@ -70,7 +70,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return [waba for waba in wabas if waba["waba_id"]]
 
     @cached_property
-    def _whatsapp_template_id_and_waba(self):
+    def _whatsapp_template_ids_and_waba(self):
         name = "weni_abandoned_cart"
 
         template_ids = []
@@ -102,7 +102,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         if not template_ids or not waba_id:
             raise TemplateNotFound("No abandoned cart template found for the project")
 
-        return ",".join(template_ids), waba_id
+        return template_ids, waba_id
 
     def _calculate_increase_percentage(self, current: int, past: int):
         if past == 0:
@@ -111,7 +111,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return round(((current - past) / past) * 100, 2)
 
     def _get_message_templates_metrics(self, start_date, end_date) -> dict:
-        template_ids, waba_id = self._whatsapp_template_id_and_waba
+        template_ids, waba_id = self._whatsapp_template_ids_and_waba
         period = (end_date - start_date).days
 
         raw_start_date = start_date - timedelta(days=(period))
