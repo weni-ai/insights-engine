@@ -100,7 +100,7 @@ class MetaAPIClient:
     def get_messages_analytics(
         self,
         waba_id: str,
-        template_id: str,
+        template_id: str | list[str],
         start_date: date,
         end_date: date,
     ):
@@ -112,6 +112,9 @@ class MetaAPIClient:
             MetricsTypes.READ.value,
             MetricsTypes.CLICKED.value,
         ]
+
+        if isinstance(template_id, list):
+            template_id = ",".join(template_id)
 
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,

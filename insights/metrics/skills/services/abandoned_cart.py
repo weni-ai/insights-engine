@@ -70,27 +70,36 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return [waba for waba in wabas if waba["waba_id"]]
 
     @cached_property
-    def _whatsapp_template_id_and_waba(self):
+    def _whatsapp_template_ids_and_waba(self):
         name = "weni_abandoned_cart"
 
-        template_id = None
+        template_ids = []
         waba_id = None
 
+        most_recent_template_name = ""
+
         for waba in self._project_wabas:
-            templates = self.meta_api_client.get_templates_list(waba_id=waba, name=name)
+            templates = self.meta_api_client.get_templates_list(
+                waba_id=waba["waba_id"], name=name
+            )
 
-            if (
-                len(templates.get("data", [])) > 0
-                and templates["data"][0]["name"] == name
-            ):
-                template_id = templates["data"][0]["id"]
-                waba_id = waba["waba_id"]
-                break
+            if len(templates.get("data", [])) == 0:
+                continue
 
-        if not template_id or not waba_id:
+            for template in templates.get("data", []):
+                if template["name"] >= most_recent_template_name:
+                    if template["name"] == most_recent_template_name:
+                        template_ids.append(template["id"])
+                    else:
+                        template_ids = [template["id"]]
+
+                    most_recent_template_name = template["name"]
+                    waba_id = waba["waba_id"]
+
+        if not template_ids or not waba_id:
             raise TemplateNotFound("No abandoned cart template found for the project")
 
-        return template_id, waba_id
+        return template_ids, waba_id
 
     def _calculate_increase_percentage(self, current: int, past: int):
         if past == 0:
@@ -99,7 +108,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return round(((current - past) / past) * 100, 2)
 
     def _get_message_templates_metrics(self, start_date, end_date) -> dict:
-        template_id, waba_id = self._whatsapp_template_id_and_waba
+        template_ids, waba_id = self._whatsapp_template_ids_and_waba
         period = (end_date - start_date).days
 
         raw_start_date = start_date - timedelta(days=(period))
@@ -107,13 +116,12 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
         metrics = self.meta_api_client.get_messages_analytics(
             waba_id=waba_id,
-            template_id=template_id,
+            template_id=template_ids,
             start_date=raw_start_date,
             end_date=raw_end_date,
         )
 
-        past_period_data_points = metrics.get("data", {}).get("data_points")[:period]
-        current_period_data_points = metrics.get("data", {}).get("data_points")[period:]
+        data_points = metrics.get("data", {}).get("data_points")
 
         past_period_data = {
             "sent": 0,
@@ -122,12 +130,6 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             "clicked": 0,
         }
 
-        for day_data in past_period_data_points:
-            past_period_data["sent"] += day_data["sent"]
-            past_period_data["delivered"] += day_data["delivered"]
-            past_period_data["read"] += day_data["read"]
-            past_period_data["clicked"] += day_data["clicked"]
-
         current_period_data = {
             "sent": 0,
             "delivered": 0,
@@ -135,11 +137,18 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             "clicked": 0,
         }
 
-        for day_data in current_period_data_points:
-            current_period_data["sent"] += day_data["sent"]
-            current_period_data["delivered"] += day_data["delivered"]
-            current_period_data["read"] += day_data["read"]
-            current_period_data["clicked"] += day_data["clicked"]
+        for day_data in data_points:
+            if day_data["date"] < str(start_date):
+                past_period_data["sent"] += day_data["sent"]
+                past_period_data["delivered"] += day_data["delivered"]
+                past_period_data["read"] += day_data["read"]
+                past_period_data["clicked"] += day_data["clicked"]
+
+            else:
+                current_period_data["sent"] += day_data["sent"]
+                current_period_data["delivered"] += day_data["delivered"]
+                current_period_data["read"] += day_data["read"]
+                current_period_data["clicked"] += day_data["clicked"]
 
         data = {
             "sent-messages": {
