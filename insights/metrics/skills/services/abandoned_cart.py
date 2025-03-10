@@ -76,7 +76,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         template_ids = []
         waba_id = None
 
-        most_recent_template_name = None
+        most_recent_template_name = ""
 
         for waba in self._project_wabas:
             templates = self.meta_api_client.get_templates_list(
@@ -87,10 +87,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
                 continue
 
             for template in templates.get("data", []):
-                if (
-                    not most_recent_template_name
-                    or template["name"] >= most_recent_template_name
-                ):
+                if template["name"] >= most_recent_template_name:
                     if template["name"] == most_recent_template_name:
                         template_ids.append(template["id"])
                     else:
