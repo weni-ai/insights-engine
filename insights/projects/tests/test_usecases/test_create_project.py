@@ -1,7 +1,5 @@
 from uuid import uuid4
 
-import pytest
-
 from django.test import TestCase
 
 from insights.projects.usecases.create import ProjectsUseCase
