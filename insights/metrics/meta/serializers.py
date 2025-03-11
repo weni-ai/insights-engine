@@ -1,3 +1,4 @@
+from typing import Literal
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
@@ -51,19 +52,36 @@ class BaseFavoriteTemplatesSerializer(serializers.Serializer):
 
         return fields
 
-
-class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
-    def save(self, **kwargs):
-        dashboard = self.validated_data["dashboard"]
+    def _update_favorites_list(
+        self,
+        dashboard: Dashboard,
+        template_id: str,
+        operation: Literal["add", "remove"],
+    ):
         config = dashboard.config.copy() if dashboard.config else {}
 
         if not config.get("favorite_templates"):
             config["favorite_templates"] = []
 
-        config["favorite_templates"].append(self.validated_data["template_id"])
+        if operation == "add":
+            config["favorite_templates"].append(template_id)
+
+        elif operation == "remove":
+            config["favorite_templates"].remove(template_id)
 
         dashboard.config = config
         dashboard.save(update_fields=["config"])
+
+        return dashboard
+
+
+class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
+    def save(self, **kwargs):
+        dashboard = self._update_favorites_list(
+            self.validated_data["dashboard"],
+            self.validated_data["template_id"],
+            "add",
+        )
 
         return dashboard
 
@@ -82,12 +100,10 @@ class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplatesSerializer):
         return super().validate(attrs)
 
     def save(self, **kwargs):
-        dashboard = self.validated_data["dashboard"]
-        config = dashboard.config.copy() if dashboard.config else {}
-
-        config["favorite_templates"].remove(self.validated_data["template_id"])
-
-        dashboard.config = config
-        dashboard.save(update_fields=["config"])
+        dashboard = self._update_favorites_list(
+            self.validated_data["dashboard"],
+            self.validated_data["template_id"],
+            "remove",
+        )
 
         return dashboard
