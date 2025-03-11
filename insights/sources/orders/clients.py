@@ -1,3 +1,4 @@
+from urllib.parse import urlencode
 import requests
 from insights.internals.base import VtexAuthentication
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -11,12 +12,29 @@ from datetime import datetime
 
 
 class VtexOrdersRestClient(VtexAuthentication):
-    def __init__(self, auth_params, cache_client: CacheClient) -> None:
-        self.headers = {
-            "X-VTEX-API-AppToken": auth_params["app_token"],
-            "X-VTEX-API-AppKey": auth_params["app_key"],
-        }
-        self.base_url = auth_params["domain"]
+    def __init__(
+        self,
+        auth_params: dict,
+        cache_client: CacheClient,
+        use_io_proxy: bool = False,
+    ) -> None:
+        self.use_io_proxy = use_io_proxy
+        self.headers = {}
+
+        if not use_io_proxy:
+            self.headers = {
+                "X-VTEX-API-AppToken": auth_params.get("app_token"),
+                "X-VTEX-API-AppKey": auth_params.get("app_key"),
+            }
+
+        self.base_url = auth_params.get("domain")
+
+        if "https://" not in self.base_url:
+            self.base_url = f"https://{self.base_url}"
+
+        if "myvtex.com" not in self.base_url:
+            self.base_url = f"{self.base_url}.myvtex.com"
+
         self.cache = cache_client
 
     def get_cache_key(self, query_filters):
@@ -28,10 +46,24 @@ class VtexOrdersRestClient(VtexAuthentication):
         end_date = query_filters.get("ended_at__lte")
         utm_source = query_filters.get("utm_source")
 
+        # When the app is integrated with VTEX IO, we use the IO as a proxy to get the orders list
+        # instead of making requests directly to the VTEX API
+        path = "/_v/orders/" if self.use_io_proxy else "/api/oms/pvt/orders/"
+
+        query_params = {
+            "f_UtmSource": utm_source,
+            "per_page": 100,
+            "page": page_number,
+            "f_status": "invoiced",
+        }
+
         if start_date is not None:
-            url = f"{self.base_url}/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_authorizedDate=authorizedDate:[{start_date} TO {end_date}]&f_status=invoiced"
-        else:
-            url = f"{self.base_url}.myvtex.com/api/oms/pvt/orders/?f_UtmSource={utm_source}&per_page=100&page={page_number}&f_status=invoiced"
+            query_params["f_authorizedDate"] = (
+                f"authorizedDate:[{start_date} TO {end_date}]"
+            )
+
+        url = f"{self.base_url}{path}?{urlencode(query_params)}"
+
         return url
 
     def parse_datetime(self, date_str):
