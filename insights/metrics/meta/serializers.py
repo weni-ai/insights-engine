@@ -1,3 +1,4 @@
+from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from insights.dashboards.models import Dashboard
@@ -32,7 +33,7 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
         return data
 
 
-class AddTemplateToFavoritesSerializer(serializers.Serializer):
+class BaseFavoriteTemplatesSerializer(serializers.Serializer):
     dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all())
     template_id = serializers.CharField()
 
@@ -50,6 +51,8 @@ class AddTemplateToFavoritesSerializer(serializers.Serializer):
 
         return fields
 
+
+class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
     def save(self, **kwargs):
         dashboard = self.validated_data["dashboard"]
         config = dashboard.config.copy() if dashboard.config else {}
@@ -58,6 +61,31 @@ class AddTemplateToFavoritesSerializer(serializers.Serializer):
             config["favorite_templates"] = []
 
         config["favorite_templates"].append(self.validated_data["template_id"])
+
+        dashboard.config = config
+        dashboard.save(update_fields=["config"])
+
+        return dashboard
+
+
+class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplatesSerializer):
+    def validate(self, attrs):
+        config = attrs.get("dashboard").config or {}
+        favorite_templates = config.get("favorite_templates") or []
+
+        if attrs.get("template_id") not in favorite_templates:
+            raise serializers.ValidationError(
+                {"template_id": [_("Template not in favorites")]},
+                code="template_not_in_favorites",
+            )
+
+        return super().validate(attrs)
+
+    def save(self, **kwargs):
+        dashboard = self.validated_data["dashboard"]
+        config = dashboard.config.copy() if dashboard.config else {}
+
+        config["favorite_templates"].remove(self.validated_data["template_id"])
 
         dashboard.config = config
         dashboard.save(update_fields=["config"])

@@ -49,6 +49,11 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
 
         return self.client.post(url, data)
 
+    def remove_template_from_favorites(self, data: dict) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/remove-template-from-favorites/"
+
+        return self.client.post(url, data)
+
 
 class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
     def setUp(self):
@@ -497,3 +502,78 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         self.assertIsInstance(favorite_templates, list)
         self.assertEqual(len(favorite_templates), 1)
         self.assertEqual(favorite_templates[0], "1234567890987654")
+
+    @with_project_auth
+    def test_cannot_remove_template_from_favorites_without_required_fields(self):
+        response = self.remove_template_from_favorites({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["dashboard"][0].code, "required")
+        self.assertEqual(response.data["template_id"][0].code, "required")
+
+    @with_project_auth
+    def test_cannot_remove_template_from_favorites_when_dashboard_is_not_related_to_project(
+        self,
+    ):
+        project = Project.objects.create(name="test_project")
+        dashboard = Dashboard.objects.create(name="test_dashboard", project=project)
+
+        response = self.remove_template_from_favorites(
+            {
+                "dashboard": dashboard.uuid,
+                "template_id": "1234567890987654",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["dashboard"][0].code, "does_not_exist")
+
+    @with_project_auth
+    def test_cannot_remove_template_from_favorites_when_template_is_not_in_favorites(
+        self,
+    ):
+        dashboard = Dashboard.objects.create(
+            name="test_dashboard", project=self.project
+        )
+
+        response = self.remove_template_from_favorites(
+            {
+                "dashboard": dashboard.uuid,
+                "template_id": "1234567890987654",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["template_id"][0].code, "template_not_in_favorites"
+        )
+
+    @with_project_auth
+    def test_remove_template_from_favorites(self):
+        dashboard = Dashboard.objects.create(
+            name="test_dashboard", project=self.project
+        )
+
+        template_id = "1234567890987654"
+
+        dashboard.config = {"favorite_templates": [template_id]}
+        dashboard.save(update_fields=["config"])
+
+        response = self.remove_template_from_favorites(
+            {
+                "dashboard": dashboard.uuid,
+                "template_id": template_id,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        dashboard.refresh_from_db()
+
+        self.assertIsNotNone(dashboard.config)
+        self.assertIn("favorite_templates", dashboard.config)
+
+        favorite_templates = dashboard.config.get("favorite_templates")
+
+        self.assertIsInstance(favorite_templates, list)
+        self.assertEqual(len(favorite_templates), 0)

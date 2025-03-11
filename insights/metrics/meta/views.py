@@ -16,6 +16,7 @@ from insights.metrics.meta.schema import (
 from insights.metrics.meta.serializers import (
     MessageTemplatesQueryParamsSerializer,
     AddTemplateToFavoritesSerializer,
+    RemoveTemplateFromFavoritesSerializer,
 )
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
@@ -92,6 +93,26 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
     )
     def add_template_to_favorites(self, request: Request) -> Response:
         serializer = AddTemplateToFavoritesSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        request=RemoveTemplateFromFavoritesSerializer,
+        responses={204: "No Content"},
+    )
+    @action(
+        detail=False,
+        methods=["post"],
+        url_name="remove-template-from-favorites",
+        url_path="remove-template-from-favorites",
+        permission_classes=[IsAuthenticated],
+    )
+    def remove_template_from_favorites(self, request: Request) -> Response:
+        serializer = RemoveTemplateFromFavoritesSerializer(
             data=request.data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
