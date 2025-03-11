@@ -2,6 +2,7 @@ from django.utils.timezone import timedelta
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
+from insights.internals.base import InternalAuthentication
 from insights.projects.models import Project
 from insights.sources.cache import CacheClient
 from insights.sources.orders.clients import VtexOrdersRestClient
@@ -16,10 +17,16 @@ class OrdersService:
     def _get_credentials(self) -> VtexCredentialsDTO:
         return VtexAuthClient(self.project.uuid).get_vtex_auth()
 
+    def _get_internal_token(self):
+        return InternalAuthentication().get_module_token()
+
     def _get_client(self) -> VtexOrdersRestClient:
         if self.project.vtex_account:
             return VtexOrdersRestClient(
-                {"domain": self.project.vtex_account},
+                {
+                    "domain": self.project.vtex_account,
+                    "internal_token": self._get_internal_token(),
+                },
                 CacheClient(),
                 use_io_proxy=True,
             )

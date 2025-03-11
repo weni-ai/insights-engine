@@ -20,8 +20,11 @@ class VtexOrdersRestClient(VtexAuthentication):
     ) -> None:
         self.use_io_proxy = use_io_proxy
         self.headers = {}
+        self.internal_token = None
 
-        if not use_io_proxy:
+        if self.use_io_proxy:
+            self.internal_token = auth_params.get("internal_token")
+        else:
             self.headers = {
                 "X-VTEX-API-AppToken": auth_params.get("app_token"),
                 "X-VTEX-API-AppKey": auth_params.get("app_key"),
@@ -46,16 +49,21 @@ class VtexOrdersRestClient(VtexAuthentication):
         end_date = query_filters.get("ended_at__lte")
         utm_source = query_filters.get("utm_source")
 
-        # When the app is integrated with VTEX IO, we use the IO as a proxy to get the orders list
-        # instead of making requests directly to the VTEX API
-        path = "/_v/orders/" if self.use_io_proxy else "/api/oms/pvt/orders/"
-
         query_params = {
             "f_UtmSource": utm_source,
             "per_page": 100,
             "page": page_number,
             "f_status": "invoiced",
         }
+
+        if self.use_io_proxy:
+            # When the app is integrated with VTEX IO, we use the IO as a proxy to get the orders list
+            # instead of making requests directly to the VTEX API
+            path = "/_v/orders/"
+            query_params["token"] = self.internal_token
+
+        else:
+            path = "/api/oms/pvt/orders/"
 
         if start_date is not None:
             query_params["f_authorizedDate"] = (
