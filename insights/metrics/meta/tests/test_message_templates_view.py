@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
+from insights.dashboards.models import Dashboard
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.utils import (
@@ -42,6 +43,11 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
         url = "/v1/metrics/meta/whatsapp-message-templates/buttons-analytics/"
 
         return self.client.get(url, query_params)
+
+    def add_template_to_favorites(self, data: dict) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/add-template-to-favorites/"
+
+        return self.client.post(url, data)
 
 
 class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
@@ -440,3 +446,54 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
             response.data,
             {"error": "Required fields are missing: template_id, start_date, end_date"},
         )
+
+    @with_project_auth
+    def test_cannot_add_template_to_favorites_without_required_fields(self):
+        response = self.add_template_to_favorites({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["dashboard"][0].code, "required")
+        self.assertEqual(response.data["template_id"][0].code, "required")
+
+    @with_project_auth
+    def test_cannot_add_template_to_favorites_when_dashboard_is_not_related_to_project(
+        self,
+    ):
+        project = Project.objects.create(name="test_project")
+        dashboard = Dashboard.objects.create(name="test_dashboard", project=project)
+
+        response = self.add_template_to_favorites(
+            {
+                "dashboard": dashboard.uuid,
+                "template_id": "1234567890987654",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["dashboard"][0].code, "does_not_exist")
+
+    @with_project_auth
+    def test_add_template_to_favorites(self):
+        dashboard = Dashboard.objects.create(
+            name="test_dashboard", project=self.project
+        )
+
+        response = self.add_template_to_favorites(
+            {
+                "dashboard": dashboard.uuid,
+                "template_id": "1234567890987654",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        dashboard.refresh_from_db()
+
+        self.assertIsNotNone(dashboard.config)
+        self.assertIn("favorite_templates", dashboard.config)
+
+        favorite_templates = dashboard.config.get("favorite_templates")
+
+        self.assertIsInstance(favorite_templates, list)
+        self.assertEqual(len(favorite_templates), 1)
+        self.assertEqual(favorite_templates[0], "1234567890987654")

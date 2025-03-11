@@ -1,5 +1,8 @@
 from rest_framework import serializers
 
+from insights.dashboards.models import Dashboard
+from insights.projects.models import ProjectAuth
+
 
 class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
     waba_id = serializers.CharField(required=False)
@@ -27,3 +30,36 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
             data["name"] = attrs.pop("search")
 
         return data
+
+
+class AddTemplateToFavoritesSerializer(serializers.Serializer):
+    dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all())
+    template_id = serializers.CharField()
+
+    def _get_dashboard_queryset(self):
+        user = self.context["request"].user
+        project_auths = ProjectAuth.objects.filter(user=user)
+
+        return Dashboard.objects.filter(
+            project__in=project_auths.values_list("project", flat=True)
+        )
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["dashboard"].queryset = self._get_dashboard_queryset()
+
+        return fields
+
+    def save(self, **kwargs):
+        dashboard = self.validated_data["dashboard"]
+        config = dashboard.config.copy() if dashboard.config else {}
+
+        if not config.get("favorite_templates"):
+            config["favorite_templates"] = []
+
+        config["favorite_templates"].append(self.validated_data["template_id"])
+
+        dashboard.config = config
+        dashboard.save(update_fields=["config"])
+
+        return dashboard
