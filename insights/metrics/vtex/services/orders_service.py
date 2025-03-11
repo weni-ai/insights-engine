@@ -15,12 +15,21 @@ class OrdersService:
         self.project = project
 
     def _get_credentials(self) -> VtexCredentialsDTO:
+        """
+        Get the credentials for the project
+        """
         return VtexAuthClient(self.project.uuid).get_vtex_auth()
 
     def _get_internal_token(self):
+        """
+        Get the internal token for the project
+        """
         return InternalAuthentication().get_module_token()
 
     def _get_client(self) -> VtexOrdersRestClient:
+        """
+        Get the client for the project
+        """
         if self.project.vtex_account:
             return VtexOrdersRestClient(
                 {
