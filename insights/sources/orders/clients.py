@@ -62,8 +62,9 @@ class VtexOrdersRestClient(VtexAuthentication):
         }
 
         if self.use_io_proxy:
-            # When the app is integrated with VTEX IO, we use the IO as a proxy to get the orders list
-            # instead of making requests directly to the VTEX API
+            # Using IO as a proxy to get the orders list
+            # because, when the app is integrated with VTEX IO, we can't make requests directly to the VTEX API
+            # as we don't have the app key and app token
             path = "/_v/orders/"
             query_params["token"] = (
                 self.internal_token if not redact_token else "REDACTED"
