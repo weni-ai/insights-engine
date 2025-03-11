@@ -21,6 +21,7 @@ class ProjectConsumer(EDAConsumer):
                 is_template=body.get("is_template"),
                 date_format=body.get("date_format"),
                 timezone=body.get("timezone"),
+                vtex_account=body.get("vtex_account"),
             )
 
             authorizations = body.get("authorizations", [])
