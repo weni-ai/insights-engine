@@ -1,14 +1,17 @@
 from urllib.parse import urlencode
 import requests
+from sentry_sdk import capture_message
 from insights.internals.base import VtexAuthentication
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 from insights.sources.vtexcredentials.clients import AuthRestClient
 from insights.sources.cache import CacheClient
-from insights.utils import format_to_iso_utc
 from django.conf import settings
+import logging
 
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class VtexOrdersRestClient(VtexAuthentication):
@@ -44,7 +47,9 @@ class VtexOrdersRestClient(VtexAuthentication):
         """Gere uma chave única para o cache baseada nos filtros de consulta."""
         return f"vtex_data:{json.dumps(query_filters, sort_keys=True)}"
 
-    def get_vtex_endpoint(self, query_filters: dict, page_number: int = 1):
+    def get_vtex_endpoint(
+        self, query_filters: dict, page_number: int = 1, redact_token: bool = False
+    ):
         start_date = query_filters.get("ended_at__gte")
         end_date = query_filters.get("ended_at__lte")
         utm_source = query_filters.get("utm_source")
@@ -60,7 +65,9 @@ class VtexOrdersRestClient(VtexAuthentication):
             # When the app is integrated with VTEX IO, we use the IO as a proxy to get the orders list
             # instead of making requests directly to the VTEX API
             path = "/_v/orders/"
-            query_params["token"] = self.internal_token
+            query_params["token"] = (
+                self.internal_token if not redact_token else "REDACTED"
+            )
 
         else:
             path = "/api/oms/pvt/orders/"
@@ -73,6 +80,26 @@ class VtexOrdersRestClient(VtexAuthentication):
         url = f"{self.base_url}{path}?{urlencode(query_params)}"
 
         return url
+
+    def get_orders_list(self, query_filters: dict):
+        endpoint = self.get_vtex_endpoint(query_filters)
+        response = requests.get(endpoint, headers=self.headers, timeout=60)
+
+        if not response.ok:
+            if "token=" in endpoint:
+                endpoint = self.get_vtex_endpoint(query_filters, redact_token=True)
+            capture_message(
+                f"Error fetching orders. URL: {endpoint}. Status code: {response.status_code}. Response: {response.text}",
+                level="error",
+            )
+            logger.error(
+                "Error fetching orders. URL: %s. Status code: %s. Response: %s",
+                endpoint,
+                response.status_code,
+                response.text,
+            )
+
+        return response
 
     def parse_datetime(self, date_str):
         try:
@@ -115,9 +142,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         max_value = float("-inf")
         min_value = float("inf")
 
-        response = requests.get(
-            self.get_vtex_endpoint(query_filters), headers=self.headers
-        )
+        response = self.get_orders_list(query_filters)
         data = response.json()
 
         if "list" not in data:
