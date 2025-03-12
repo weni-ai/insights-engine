@@ -7,6 +7,7 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.metrics.meta.models import FavoriteTemplate
 from insights.metrics.meta.permissions import ProjectWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
@@ -14,6 +15,7 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
 from insights.metrics.meta.serializers import (
+    FavoriteTemplatesQueryParamsSerializer,
     FavoriteTemplatesSerializer,
     MessageTemplatesQueryParamsSerializer,
     AddTemplateToFavoritesSerializer,
@@ -134,3 +136,33 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         serializer.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        parameters=FavoriteTemplatesQueryParamsSerializer,
+        responses={status.HTTP_200_OK: FavoriteTemplatesSerializer(many=True)},
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="favorites",
+        url_path="favorites",
+        permission_classes=[IsAuthenticated],
+    )
+    def get_favorite_templates(self, request: Request) -> Response:
+        serializer = FavoriteTemplatesQueryParamsSerializer(
+            data=request.query_params, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        favorites_queryset = FavoriteTemplate.objects.filter(
+            dashboard=serializer.validated_data["dashboard"]
+        )
+
+        page = self.paginate_queryset(favorites_queryset)
+
+        if page is not None:
+            serializer = FavoriteTemplatesSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = FavoriteTemplatesSerializer(favorites_queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
