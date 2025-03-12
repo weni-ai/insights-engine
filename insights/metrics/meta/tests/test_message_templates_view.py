@@ -478,6 +478,29 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         self.assertEqual(response.data["dashboard"][0].code, "does_not_exist")
 
     @with_project_auth
+    def test_cannot_add_template_to_favorites_when_template_is_already_in_favorites(
+        self,
+    ):
+        dashboard = Dashboard.objects.create(
+            name="test_dashboard", project=self.project
+        )
+
+        dashboard.config = {"favorite_templates": ["1234567890987654"]}
+        dashboard.save(update_fields=["config"])
+
+        response = self.add_template_to_favorites(
+            {
+                "dashboard": dashboard.uuid,
+                "template_id": "1234567890987654",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["template_id"][0].code, "template_already_in_favorites"
+        )
+
+    @with_project_auth
     def test_add_template_to_favorites(self):
         dashboard = Dashboard.objects.create(
             name="test_dashboard", project=self.project

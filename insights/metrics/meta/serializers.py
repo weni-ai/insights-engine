@@ -76,6 +76,18 @@ class BaseFavoriteTemplatesSerializer(serializers.Serializer):
 
 
 class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
+    def validate(self, attrs):
+        config = attrs.get("dashboard").config or {}
+        favorite_templates = config.get("favorite_templates") or []
+
+        if attrs.get("template_id") in favorite_templates:
+            raise serializers.ValidationError(
+                {"template_id": [_("Template already in favorites")]},
+                code="template_already_in_favorites",
+            )
+
+        return super().validate(attrs)
+
     def save(self, **kwargs):
         dashboard = self._update_favorites_list(
             self.validated_data["dashboard"],
