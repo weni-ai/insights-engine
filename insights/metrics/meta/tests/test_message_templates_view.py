@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.dashboards.models import Dashboard
+from insights.metrics.meta.models import FavoriteTemplate
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.utils import (
@@ -485,8 +486,11 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
             name="test_dashboard", project=self.project
         )
 
-        dashboard.config = {"favorite_templates": ["1234567890987654"]}
-        dashboard.save(update_fields=["config"])
+        FavoriteTemplate.objects.create(
+            dashboard=dashboard,
+            template_id="1234567890987654",
+            name="test_template",
+        )
 
         response = self.add_template_to_favorites(
             {
@@ -501,30 +505,33 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         )
 
     @with_project_auth
-    def test_add_template_to_favorites(self):
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
+    )
+    def test_add_template_to_favorites(self, mock_preview):
+        mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
+
         dashboard = Dashboard.objects.create(
             name="test_dashboard", project=self.project
         )
 
+        template_id = MOCK_SUCCESS_RESPONSE_BODY.get("id")
+        template_name = MOCK_SUCCESS_RESPONSE_BODY.get("name")
+
         response = self.add_template_to_favorites(
             {
                 "dashboard": dashboard.uuid,
-                "template_id": "1234567890987654",
+                "template_id": template_id,
             }
         )
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        dashboard.refresh_from_db()
+        favorite = FavoriteTemplate.objects.get(
+            dashboard=dashboard, template_id=template_id
+        )
 
-        self.assertIsNotNone(dashboard.config)
-        self.assertIn("favorite_templates", dashboard.config)
-
-        favorite_templates = dashboard.config.get("favorite_templates")
-
-        self.assertIsInstance(favorite_templates, list)
-        self.assertEqual(len(favorite_templates), 1)
-        self.assertEqual(favorite_templates[0], "1234567890987654")
+        self.assertEqual(favorite.name, template_name)
 
     @with_project_auth
     def test_cannot_remove_template_from_favorites_without_required_fields(self):
@@ -579,8 +586,9 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
 
         template_id = "1234567890987654"
 
-        dashboard.config = {"favorite_templates": [template_id]}
-        dashboard.save(update_fields=["config"])
+        FavoriteTemplate.objects.create(
+            dashboard=dashboard, template_id=template_id, name="test_template"
+        )
 
         response = self.remove_template_from_favorites(
             {
@@ -591,12 +599,8 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        dashboard.refresh_from_db()
-
-        self.assertIsNotNone(dashboard.config)
-        self.assertIn("favorite_templates", dashboard.config)
-
-        favorite_templates = dashboard.config.get("favorite_templates")
-
-        self.assertIsInstance(favorite_templates, list)
-        self.assertEqual(len(favorite_templates), 0)
+        self.assertFalse(
+            FavoriteTemplate.objects.filter(
+                dashboard=dashboard, template_id=template_id
+            ).exists()
+        )

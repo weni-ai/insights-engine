@@ -14,6 +14,7 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
 from insights.metrics.meta.serializers import (
+    FavoriteTemplatesSerializer,
     MessageTemplatesQueryParamsSerializer,
     AddTemplateToFavoritesSerializer,
     RemoveTemplateFromFavoritesSerializer,
@@ -82,7 +83,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
 
     @extend_schema(
         request=AddTemplateToFavoritesSerializer,
-        responses={204: "No Content"},
+        responses={200: FavoriteTemplatesSerializer},
     )
     @action(
         detail=False,
@@ -96,9 +97,23 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
             data=request.data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        preview_filters = {
+            "template_id": serializer.validated_data["template_id"],
+        }
+
+        template_preview = self.query_executor.execute(
+            filters=preview_filters, operation=Operations.TEMPLATE_PREVIEW.value
+        )
+        template_name = template_preview.get("name")
+
+        serializer.context["template_name"] = template_name
+        favorite = serializer.save()
+
+        return Response(
+            FavoriteTemplatesSerializer(favorite).data,
+            status=status.HTTP_200_OK,
+        )
 
     @extend_schema(
         request=RemoveTemplateFromFavoritesSerializer,

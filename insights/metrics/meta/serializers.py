@@ -3,6 +3,7 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from insights.dashboards.models import Dashboard
+from insights.metrics.meta.models import FavoriteTemplate
 from insights.projects.models import ProjectAuth
 
 
@@ -52,35 +53,13 @@ class BaseFavoriteTemplatesSerializer(serializers.Serializer):
 
         return fields
 
-    def _update_favorites_list(
-        self,
-        dashboard: Dashboard,
-        template_id: str,
-        operation: Literal["add", "remove"],
-    ):
-        config = dashboard.config.copy() if dashboard.config else {}
-
-        if not config.get("favorite_templates"):
-            config["favorite_templates"] = []
-
-        if operation == "add":
-            config["favorite_templates"].append(template_id)
-
-        elif operation == "remove":
-            config["favorite_templates"].remove(template_id)
-
-        dashboard.config = config
-        dashboard.save(update_fields=["config"])
-
-        return dashboard
-
 
 class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
     def validate(self, attrs):
-        config = attrs.get("dashboard").config or {}
-        favorite_templates = config.get("favorite_templates") or []
-
-        if attrs.get("template_id") in favorite_templates:
+        if FavoriteTemplate.objects.filter(
+            dashboard=attrs.get("dashboard"),
+            template_id=attrs.get("template_id"),
+        ).exists():
             raise serializers.ValidationError(
                 {"template_id": [_("Template already in favorites")]},
                 code="template_already_in_favorites",
@@ -89,33 +68,35 @@ class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
         return super().validate(attrs)
 
     def save(self, **kwargs):
-        dashboard = self._update_favorites_list(
-            self.validated_data["dashboard"],
-            self.validated_data["template_id"],
-            "add",
-        )
+        name = self.context["template_name"]
 
-        return dashboard
+        return FavoriteTemplate.objects.create(
+            dashboard=self.validated_data["dashboard"],
+            template_id=self.validated_data["template_id"],
+            name=name,
+        )
 
 
 class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplatesSerializer):
     def validate(self, attrs):
-        config = attrs.get("dashboard").config or {}
-        favorite_templates = config.get("favorite_templates") or []
-
-        if attrs.get("template_id") not in favorite_templates:
+        if not FavoriteTemplate.objects.filter(
+            dashboard=attrs.get("dashboard"),
+            template_id=attrs.get("template_id"),
+        ).exists():
             raise serializers.ValidationError(
                 {"template_id": [_("Template not in favorites")]},
                 code="template_not_in_favorites",
             )
-
         return super().validate(attrs)
 
     def save(self, **kwargs):
-        dashboard = self._update_favorites_list(
-            self.validated_data["dashboard"],
-            self.validated_data["template_id"],
-            "remove",
-        )
+        return FavoriteTemplate.objects.filter(
+            dashboard=self.validated_data["dashboard"],
+            template_id=self.validated_data["template_id"],
+        ).delete()
 
-        return dashboard
+
+class FavoriteTemplatesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FavoriteTemplate
+        fields = ["id", "template_id", "name"]
