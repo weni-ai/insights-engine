@@ -101,7 +101,9 @@ class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplateOperationSeriali
 
 class FavoriteTemplatesSerializer(serializers.ModelSerializer):
     waba_id = serializers.SerializerMethodField()
-    project_uuid = serializers.UUIDField(source="dashboard.project.uuid")
+    project_uuid = serializers.UUIDField(
+        source="dashboard.project.uuid", read_only=True
+    )
 
     class Meta:
         model = FavoriteTemplate
