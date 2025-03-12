@@ -34,9 +34,8 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
         return data
 
 
-class BaseFavoriteTemplatesSerializer(serializers.Serializer):
+class BaseFavoriteTemplateSerializer(serializers.Serializer):
     dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all())
-    template_id = serializers.CharField()
 
     def _get_dashboard_queryset(self):
         user = self.context["request"].user
@@ -51,6 +50,10 @@ class BaseFavoriteTemplatesSerializer(serializers.Serializer):
         fields["dashboard"].queryset = self._get_dashboard_queryset()
 
         return fields
+
+
+class BaseFavoriteTemplateOperationSerializer(BaseFavoriteTemplateSerializer):
+    template_id = serializers.CharField()
 
     def _update_favorites_list(
         self,
@@ -75,7 +78,7 @@ class BaseFavoriteTemplatesSerializer(serializers.Serializer):
         return dashboard
 
 
-class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
+class AddTemplateToFavoritesSerializer(BaseFavoriteTemplateOperationSerializer):
     def validate(self, attrs):
         config = attrs.get("dashboard").config or {}
         favorite_templates = config.get("favorite_templates") or []
@@ -98,7 +101,7 @@ class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
         return dashboard
 
 
-class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplatesSerializer):
+class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplateOperationSerializer):
     def validate(self, attrs):
         config = attrs.get("dashboard").config or {}
         favorite_templates = config.get("favorite_templates") or []
@@ -119,3 +122,14 @@ class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplatesSerializer):
         )
 
         return dashboard
+
+
+class FavoriteTemplatesQueryParamsSerializer(BaseFavoriteTemplateSerializer):
+    pass
+
+
+class FavoriteTemplateListSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField()
+    waba_id = serializers.SerializerMethodField()
+    project_uuid = serializers.SerializerMethodField()

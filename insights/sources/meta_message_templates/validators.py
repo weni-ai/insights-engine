@@ -48,3 +48,17 @@ def validate_analytics_selected_period(start_date: date):
         raise ValidationError(
             {"start_date": "Start must be within the query period of the last 90 days."}
         )
+
+
+def validate_list_templates_filters(filters: dict):
+    if not filters.get("waba_id", None):
+        raise ValidationError("WABA id is required", code="waba_id_missing")
+
+    allowed_filters = ["waba_id", "name", "limit", "before", "after"]
+    valid_filters = {}
+
+    for filter in allowed_filters:
+        if filter in filters:
+            valid_filters[filter] = filters[filter]
+
+    return valid_filters

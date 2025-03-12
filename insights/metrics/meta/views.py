@@ -7,6 +7,7 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.dashboards.models import Dashboard
 from insights.metrics.meta.permissions import ProjectWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
@@ -14,6 +15,8 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
 from insights.metrics.meta.serializers import (
+    FavoriteTemplateListSerializer,
+    FavoriteTemplatesQueryParamsSerializer,
     MessageTemplatesQueryParamsSerializer,
     AddTemplateToFavoritesSerializer,
     RemoveTemplateFromFavoritesSerializer,
@@ -119,3 +122,17 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         serializer.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # TODO: Add schema
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="favorites",
+        url_path="favorites",
+        permission_classes=[IsAuthenticated],
+    )
+    def favorite_templates(self, request: Request) -> Response:
+        serializer = FavoriteTemplatesQueryParamsSerializer(
+            data=request.query_params, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)

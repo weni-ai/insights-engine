@@ -54,6 +54,11 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
 
         return self.client.post(url, data)
 
+    def get_favorite_templates(self, query_params: dict) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/favorites/"
+
+        return self.client.get(url, query_params)
+
 
 class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
     def setUp(self):
@@ -600,3 +605,36 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
 
         self.assertIsInstance(favorite_templates, list)
         self.assertEqual(len(favorite_templates), 0)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
+    )
+    def test_get_favorite_templates(self, mock_get_templates_list):
+        waba_id = "0000000000000000"
+        dashboard = Dashboard.objects.create(
+            name="test_dashboard",
+            project=self.project,
+            config={
+                "waba_id": waba_id,
+                "favorite_templates": ["123456789098765", "123456789098767"],
+            },
+        )
+
+        mock_get_templates_list.return_value = MOCK_TEMPLATES_LIST_BODY
+
+        response = self.get_favorite_templates({"dashboard": dashboard.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        expected_response_body = [
+            {
+                "id": template["id"],
+                "name": template["name"],
+                "waba_id": waba_id,
+                "project_uuid": dashboard.project.uuid,
+            }
+            for template in MOCK_TEMPLATES_LIST_BODY.get("data")
+        ]
+
+        self.assertEqual(response.data, expected_response_body)
