@@ -517,7 +517,9 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
 
         dashboard = Dashboard.objects.create(
-            name="test_dashboard", project=self.project
+            name="test_dashboard",
+            project=self.project,
+            config={"waba_id": "0000000000000000"},
         )
 
         template_id = MOCK_SUCCESS_RESPONSE_BODY.get("id")
@@ -608,4 +610,51 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
             FavoriteTemplate.objects.filter(
                 dashboard=dashboard, template_id=template_id
             ).exists()
+        )
+
+    def test_cannot_get_favorite_templates_without_project_authorization(self):
+        dashboard = Dashboard.objects.create(
+            name="test_dashboard", project=self.project
+        )
+
+        FavoriteTemplate.objects.create(
+            dashboard=dashboard, template_id="1234567890987654", name="test_template"
+        )
+
+        response = self.get_favorite_templates({"dashboard": dashboard.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["dashboard"][0].code, "does_not_exist")
+
+    @with_project_auth
+    def test_get_favorite_templates(self):
+        waba_id = "1234567890987654"
+
+        dashboard = Dashboard.objects.create(
+            name="test_dashboard",
+            project=self.project,
+            config={"waba_id": waba_id},
+        )
+
+        favorite = FavoriteTemplate.objects.create(
+            dashboard=dashboard, template_id="1234567890987654", name="test_template"
+        )
+
+        response = self.get_favorite_templates({"dashboard": dashboard.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("count", response.data)
+        self.assertIn("results", response.data)
+        self.assertEqual(
+            response.data["count"],
+            FavoriteTemplate.objects.filter(dashboard=dashboard).count(),
+        )
+        self.assertEqual(
+            response.data["results"][0],
+            {
+                "template_id": favorite.template_id,
+                "name": favorite.name,
+                "waba_id": waba_id,
+                "project_uuid": str(dashboard.project.uuid),
+            },
         )
