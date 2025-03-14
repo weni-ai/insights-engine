@@ -98,7 +98,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         all_categories = [
             {
                 "value": category.value,
-                "display_name": category.label,
+                "name": category.label,
             }
             for category in WhatsAppMessageTemplatesCategories
         ]
@@ -117,7 +117,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         all_languages = [
             {
                 "value": language.value,
-                "display_name": language.label,
+                "name": language.label,
             }
             for language in WhatsAppMessageTemplatesLanguages
         ]

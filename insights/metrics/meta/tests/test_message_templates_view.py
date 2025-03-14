@@ -545,7 +545,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
                 "categories": [
                     {
                         "value": category.value,
-                        "display_name": category.label,
+                        "name": category.label,
                     }
                     for category in WhatsAppMessageTemplatesCategories
                 ]
@@ -560,7 +560,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
             response.data,
             {
                 "languages": [
-                    {"value": language.value, "display_name": language.label}
+                    {"value": language.value, "name": language.label}
                     for language in WhatsAppMessageTemplatesLanguages
                 ]
             },

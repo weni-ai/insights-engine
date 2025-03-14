@@ -40,7 +40,7 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
 
 class MessageTemplatesCategorySerializer(serializers.Serializer):
     value = serializers.CharField()
-    display_name = serializers.CharField()
+    name = serializers.CharField()
 
 
 class MessageTemplatesCategoriesSerializer(serializers.Serializer):
@@ -49,7 +49,7 @@ class MessageTemplatesCategoriesSerializer(serializers.Serializer):
 
 class MessageTemplatesLanguageSerializer(serializers.Serializer):
     value = serializers.CharField()
-    display_name = serializers.CharField()
+    name = serializers.CharField()
 
 
 class MessageTemplatesLanguagesSerializer(serializers.Serializer):
