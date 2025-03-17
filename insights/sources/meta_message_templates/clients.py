@@ -29,12 +29,25 @@ class MetaAPIClient:
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
 
-    def get_templates_list(self, waba_id: str, name: str | None = None):
+    def get_templates_list(
+        self,
+        waba_id: str,
+        name: str | None = None,
+        limit: int = 9999,
+        before: str | None = None,
+        after: str | None = None,
+    ):
         url = f"{self.base_host_url}/{waba_id}/message_templates"
 
         params = {
-            "limit": 9999,
+            "limit": limit,
         }
+
+        if before:
+            params["before"] = before
+
+        elif after:
+            params["after"] = after
 
         if name:
             params["name"] = name
@@ -87,7 +100,7 @@ class MetaAPIClient:
     def get_messages_analytics(
         self,
         waba_id: str,
-        template_id: str,
+        template_id: str | list[str],
         start_date: date,
         end_date: date,
     ):
@@ -99,6 +112,9 @@ class MetaAPIClient:
             MetricsTypes.READ.value,
             MetricsTypes.CLICKED.value,
         ]
+
+        if isinstance(template_id, list):
+            template_id = ",".join(template_id)
 
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
