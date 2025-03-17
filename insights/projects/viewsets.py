@@ -55,3 +55,37 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             return Response(True)
 
         return Response(False)
+
+    
+    @action(detail=False, methods=["get"], url_path="release_flows_dashboard")
+    def release_flows_dashboard(self, request, *args, **kwargs):
+        try:
+            project_uuid = request.query_params.get("project_uuid")
+            if not project_uuid:
+                return Response(
+                    {"detail": "project_uuid is required"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            project = Project.objects.get(uuid=project_uuid)
+            
+            project.config["allowed_project"] = True
+            project.save()
+
+            return Response({"success": True}, status=status.HTTP_200_OK)
+            
+        except Project.DoesNotExist:
+            return Response(
+                {"detail": "Project not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=["get"], url_path="get_allowed_projects")
+    def get_allowed_projects(self, request, *args, **kwargs):
+        projects = Project.objects.filter(config__allowed_project=True).values("org_id")
+        return Response(list(projects), status=status.HTTP_200_OK)
