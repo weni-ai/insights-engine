@@ -43,7 +43,7 @@ class DashboardViewSet(
                 Dashboard.objects.filter(project_id=project_id)
                 .exclude(
                     Q(name="Resultados de fluxos")
-                    & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
+                    & ~Q(project_config__allowed_project__isnull=True)
                 )
                 .order_by("created_on")
             )

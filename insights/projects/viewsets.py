@@ -49,7 +49,9 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")
     def verify_project_indexer(self, request, source_slug=None, *args, **kwargs):
 
-        project = Project.objects.get(pk=self.kwargs["pk"])
+        project = Project.objects.filter(
+            pk=self.kwargs["pk"], config__allowed_project=True
+        ).first()
 
         if str(project.pk) in settings.PROJECT_ALLOW_LIST:
             return Response(True)
