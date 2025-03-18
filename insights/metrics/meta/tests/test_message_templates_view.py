@@ -518,12 +518,16 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
             name="test_dashboard", project=self.project
         )
 
-        for i in range(FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD):
-            FavoriteTemplate.objects.create(
-                dashboard=dashboard,
-                template_id=str(i),
-                name="test_template",
-            )
+        FavoriteTemplate.objects.bulk_create(
+            [
+                FavoriteTemplate(
+                    dashboard=dashboard,
+                    template_id=str(i),
+                    name="test_template",
+                )
+                for i in range(FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD)
+            ]
+        )
 
         response = self.add_template_to_favorites(
             {
