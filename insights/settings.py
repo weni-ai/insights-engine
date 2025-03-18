@@ -204,7 +204,7 @@ LOGGING["handlers"]["console"] = {
 OIDC_ENABLED = env.bool("OIDC_ENABLED", default=False)
 if OIDC_ENABLED:
     REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"].append(
-        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+        "insights.authentication.authentication.WeniOIDCAuthentication"
     )
     INSTALLED_APPS = (*INSTALLED_APPS, "mozilla_django_oidc")
     LOGGING["loggers"]["mozilla_django_oidc"] = {
@@ -308,3 +308,13 @@ PROJECTS_VTEX = json.loads(os.getenv("PROJECTS_VTEX", "[]"))
 PROJECT_TOKENS_VTEX = json.loads(os.getenv("PROJECT_TOKENS_VTEX", "{}"))
 
 WHATSAPP_API_ACCESS_TOKEN = env.str("WHATSAPP_API_ACCESS_TOKEN", default="")
+
+# TEMPORARY, this should be used only in the development and staging environments
+WHATSAPP_ABANDONED_CART_TEMPLATE_ID = env.str(
+    "WHATSAPP_ABANDONED_CART_TEMPLATE_ID", default=""
+)
+WHATSAPP_ABANDONED_CART_WABA_ID = env.str("WHATSAPP_ABANDONED_CART_WABA_ID", default="")
+VTEX_ORDERS_CREDENTIALS = env.str("VTEX_ORDERS_CREDENTIALS", default="")
+WHATSAPP_ABANDONED_CART_UTM_SOURCE = env.str(
+    "WHATSAPP_ABANDONED_CART_UTM_SOURCE", default=""
+)

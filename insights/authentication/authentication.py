@@ -89,7 +89,12 @@ class FlowsInternalAuthentication:
 
 class WeniOIDCAuthentication(OIDCAuthentication):
     def authenticate(self, request):
-        user, token = super(WeniOIDCAuthentication, self).authenticate(request)
+        auth = super(WeniOIDCAuthentication, self).authenticate(request)
+
+        if auth is None:
+            return None
+
+        user, token = auth
 
         if not user.is_anonymous:
             try:
