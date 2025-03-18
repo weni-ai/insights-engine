@@ -1,4 +1,3 @@
-from typing import Literal
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
@@ -8,6 +7,10 @@ from insights.metrics.meta.models import (
     FavoriteTemplate,
 )
 from insights.projects.models import ProjectAuth
+from insights.metrics.meta.choices import (
+    WhatsAppMessageTemplatesCategories,
+    WhatsAppMessageTemplatesLanguages,
+)
 
 
 class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
@@ -16,8 +19,12 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
     after = serializers.CharField(required=False)
     before = serializers.CharField(required=False)
     search = serializers.CharField(required=False)
-    category = serializers.CharField(required=False)
-    language = serializers.CharField(required=False)
+    category = serializers.ChoiceField(
+        choices=WhatsAppMessageTemplatesCategories, required=False
+    )
+    language = serializers.ChoiceField(
+        choices=WhatsAppMessageTemplatesLanguages, required=False
+    )
 
     def validate_limit(self, value):
         max_limit = 20
@@ -130,6 +137,24 @@ class FavoriteTemplatesSerializer(serializers.ModelSerializer):
         config = obj.dashboard.config or {}
 
         return config.get("waba_id")
+
+
+class MessageTemplatesCategorySerializer(serializers.Serializer):
+    value = serializers.CharField()
+    name = serializers.CharField()
+
+
+class MessageTemplatesCategoriesSerializer(serializers.Serializer):
+    categories = MessageTemplatesCategorySerializer(many=True)
+
+
+class MessageTemplatesLanguageSerializer(serializers.Serializer):
+    value = serializers.CharField()
+    name = serializers.CharField()
+
+
+class MessageTemplatesLanguagesSerializer(serializers.Serializer):
+    languages = MessageTemplatesLanguageSerializer(many=True)
 
 
 class FavoriteTemplatesQueryParamsSerializer(BaseFavoriteTemplateSerializer):

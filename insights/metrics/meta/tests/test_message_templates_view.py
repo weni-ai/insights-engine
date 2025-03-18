@@ -14,6 +14,10 @@ from insights.metrics.meta.models import (
     FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD,
     FavoriteTemplate,
 )
+from insights.metrics.meta.choices import (
+    WhatsAppMessageTemplatesCategories,
+    WhatsAppMessageTemplatesLanguages,
+)
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.utils import (
@@ -63,8 +67,65 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
 
         return self.client.get(url, query_params)
 
+    def get_categories(self) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/categories/"
 
-class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
+        return self.client.get(url)
+
+    def get_languages(self) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/languages/"
+
+        return self.client.get(url)
+
+
+class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesView):
+    def test_cannot_get_list_templates_when_not_authenticated(self):
+        response = self.get_list_templates({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_preview_when_not_authenticated(self):
+        response = self.get_preview({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_messages_analytics_when_not_authenticated(self):
+        response = self.get_messages_analytics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_buttons_analytics_when_not_authenticated(self):
+        response = self.get_buttons_analytics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_add_template_to_favorites_when_not_authenticated(self):
+        response = self.add_template_to_favorites({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_remove_template_from_favorites_when_not_authenticated(self):
+        response = self.remove_template_from_favorites({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_favorite_templates_when_not_authenticated(self):
+        response = self.get_favorite_templates({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_categories_when_not_authenticated(self):
+        response = self.get_categories()
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_languages_when_not_authenticated(self):
+        response = self.get_languages()
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplatesView):
     def setUp(self):
         self.meta_api_client: MetaAPIClient = MetaAPIClient()
         self.user = User.objects.create()
@@ -128,6 +189,54 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["limit"][0].code, "limit_too_large")
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
+    )
+    def test_cannot_get_list_templates_with_invalid_category(
+        self, mock_list_templates, mock_wabas
+    ):
+        mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
+        mock_wabas.return_value = [{"waba_id": "0000000000000000"}]
+
+        response = self.get_list_templates(
+            {
+                "waba_id": "0000000000000000",
+                "project_uuid": self.project.uuid,
+                "category": "INVALID_CATEGORY",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["category"][0].code, "invalid_choice")
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
+    )
+    def test_cannot_get_list_templates_with_invalid_language(
+        self, mock_list_templates, mock_wabas
+    ):
+        mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
+        mock_wabas.return_value = [{"waba_id": "0000000000000000"}]
+
+        response = self.get_list_templates(
+            {
+                "waba_id": "0000000000000000",
+                "project_uuid": self.project.uuid,
+                "language": "INVALID_LANGUAGE",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["language"][0].code, "invalid_choice")
 
     @with_project_auth
     @patch(
@@ -688,5 +797,36 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
                 "name": favorite.name,
                 "waba_id": waba_id,
                 "project_uuid": str(dashboard.project.uuid),
+            },
+        )
+
+    def test_get_categories(self):
+        response = self.get_categories()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {
+                "categories": [
+                    {
+                        "value": category.value,
+                        "name": category.label,
+                    }
+                    for category in WhatsAppMessageTemplatesCategories
+                ]
+            },
+        )
+
+    def test_get_languages(self):
+        response = self.get_languages()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {
+                "languages": [
+                    {"value": language.value, "name": language.label}
+                    for language in WhatsAppMessageTemplatesLanguages
+                ]
             },
         )
