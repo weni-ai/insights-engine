@@ -99,6 +99,8 @@ class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesVi
     def test_cannot_remove_template_from_favorites_when_not_authenticated(self):
         response = self.remove_template_from_favorites({})
 
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_cannot_get_categories_when_not_authenticated(self):
         response = self.get_categories()
 
