@@ -106,6 +106,11 @@ class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesVi
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_cannot_get_favorite_templates_when_not_authenticated(self):
+        response = self.get_favorite_templates({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_cannot_get_categories_when_not_authenticated(self):
         response = self.get_categories()
 
