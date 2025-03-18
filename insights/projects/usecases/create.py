@@ -26,6 +26,7 @@ class ProjectsUseCase:
             is_template=project_dto.is_template,
             timezone=project_dto.timezone,
             date_format=project_dto.date_format,
+            vtex_account=project_dto.vtex_account,
         )
         CreateHumanService().create_dashboard(project)
         return project

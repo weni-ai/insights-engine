@@ -5,8 +5,13 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
+from django.utils import translation
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.metrics.meta.choices import (
+    WhatsAppMessageTemplatesCategories,
+    WhatsAppMessageTemplatesLanguages,
+)
 from insights.metrics.meta.permissions import ProjectWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
@@ -18,6 +23,8 @@ from insights.metrics.meta.serializers import (
     MessageTemplatesQueryParamsSerializer,
     AddTemplateToFavoritesSerializer,
     RemoveTemplateFromFavoritesSerializer,
+    MessageTemplatesCategoriesSerializer,
+    MessageTemplatesLanguagesSerializer,
 )
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
@@ -134,3 +141,41 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         serializer.save()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(responses={status.HTTP_200_OK: MessageTemplatesCategoriesSerializer})
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="categories",
+        url_path="categories",
+        permission_classes=[IsAuthenticated],
+    )
+    def categories(self, request: Request) -> Response:
+        all_categories = [
+            {
+                "value": category.value,
+                "name": category.label,
+            }
+            for category in WhatsAppMessageTemplatesCategories
+        ]
+
+        return Response({"categories": all_categories}, status=status.HTTP_200_OK)
+
+    @extend_schema(responses={status.HTTP_200_OK: MessageTemplatesLanguagesSerializer})
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="languages",
+        url_path="languages",
+        permission_classes=[IsAuthenticated],
+    )
+    def languages(self, request: Request) -> Response:
+        all_languages = [
+            {
+                "value": language.value,
+                "name": language.label,
+            }
+            for language in WhatsAppMessageTemplatesLanguages
+        ]
+
+        return Response({"languages": all_languages}, status=status.HTTP_200_OK)
