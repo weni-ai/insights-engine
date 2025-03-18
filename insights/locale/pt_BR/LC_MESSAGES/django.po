@@ -1,0 +1,102 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-03-06 13:38+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+#: insights/metrics/meta/choices.py:6
+msgid "Account Update"
+msgstr "Atualização de Conta"
+
+#: insights/metrics/meta/choices.py:7
+msgid "Alert Update"
+msgstr "Atualização de Alerta"
+
+#: insights/metrics/meta/choices.py:8
+msgid "Appointment Update"
+msgstr "Atualização de Agendamento"
+
+#: insights/metrics/meta/choices.py:9
+msgid "Authentication"
+msgstr "Autenticação"
+
+#: insights/metrics/meta/choices.py:10
+msgid "Auto Reply"
+msgstr "Resposta Automática"
+
+#: insights/metrics/meta/choices.py:11
+msgid "Issue Resolution"
+msgstr "Resolução de Problema"
+
+#: insights/metrics/meta/choices.py:12
+msgid "Marketing"
+msgstr "Marketing"
+
+#: insights/metrics/meta/choices.py:13
+msgid "OTP"
+msgstr "OTP"
+
+#: insights/metrics/meta/choices.py:14
+msgid "Payment Update"
+msgstr "Atualização de Pagamento"
+
+#: insights/metrics/meta/choices.py:15
+msgid "Personal Finance Update"
+msgstr "Atualização de Finanças Pessoais"
+
+#: insights/metrics/meta/choices.py:16
+msgid "Reservation Update"
+msgstr "Atualização de Reserva"
+
+#: insights/metrics/meta/choices.py:17
+msgid "Shipping Update"
+msgstr "Atualização de Envio"
+
+#: insights/metrics/meta/choices.py:18
+msgid "Ticket Update"
+msgstr "Atualização de Bilhete"
+
+#: insights/metrics/meta/choices.py:19
+msgid "Transactional"
+msgstr "Transacional"
+
+#: insights/metrics/meta/choices.py:20
+msgid "Transportation Update"
+msgstr "Atualização de Transporte"
+
+#: insights/metrics/meta/choices.py:21
+msgid "Utility"
+msgstr "Utilitário"
+
+#: insights/metrics/vtex/views.py:28
+msgid "Required"
+msgstr "Obrigatório"
+
+#: insights/metrics/vtex/views.py:45
+msgid "Invalid date format. Use YYYY-MM-DD."
+msgstr "Formato de data inválido. Use YYYY-MM-DD."
+
+#: insights/shared/models.py:16
+msgid "Created on"
+msgstr "Criado em"
+
+#: insights/shared/models.py:18
+msgid "Modified on"
+msgstr "Modificado em"
+
+#: insights/shared/models.py:32
+msgid "config"
+msgstr "configuração"

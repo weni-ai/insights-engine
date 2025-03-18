@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from insights.metrics.meta.choices import WhatsAppMessageTemplatesCategories
+
 
 class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
     waba_id = serializers.CharField(required=False)
@@ -7,7 +9,9 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
     after = serializers.CharField(required=False)
     before = serializers.CharField(required=False)
     search = serializers.CharField(required=False)
-    category = serializers.CharField(required=False)
+    category = serializers.ChoiceField(
+        choices=WhatsAppMessageTemplatesCategories, required=False
+    )
     language = serializers.CharField(required=False)
 
     def validate_limit(self, value):
@@ -27,3 +31,12 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
             data["name"] = attrs.pop("search")
 
         return data
+
+
+class MessageTemplatesCategorySerializer(serializers.Serializer):
+    value = serializers.CharField()
+    display_name = serializers.CharField()
+
+
+class MessageTemplatesCategoriesSerializer(serializers.Serializer):
+    categories = MessageTemplatesCategorySerializer(many=True)
