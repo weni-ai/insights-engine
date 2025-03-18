@@ -4,6 +4,7 @@ from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.validators import (
     validate_analytics_kwargs,
+    validate_list_templates_filters,
 )
 
 
@@ -21,10 +22,9 @@ class QueryExecutor:
 
         match operation:
             case Operations.LIST_TEMPLATES.value:
-                if not (waba_id := filters.get("waba_id")):
-                    raise ValidationError("WABA id is required", code="waba_id_missing")
+                valid_filters = validate_list_templates_filters(filters)
 
-                return client.get_templates_list(waba_id=waba_id)
+                return client.get_templates_list(**valid_filters)
 
             case Operations.TEMPLATE_PREVIEW.value:
                 if not (template_id := filters.get("template_id")):
