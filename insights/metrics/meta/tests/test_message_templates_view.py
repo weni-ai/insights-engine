@@ -10,7 +10,10 @@ from rest_framework.response import Response
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.dashboards.models import Dashboard
-from insights.metrics.meta.models import FavoriteTemplate
+from insights.metrics.meta.models import (
+    FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD,
+    FavoriteTemplate,
+)
 from insights.projects.models import Project
 from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.meta_message_templates.utils import (
@@ -507,6 +510,31 @@ class TestMetaMessageTemplatesView(BaseTestMetaMessageTemplatesView):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data["template_id"][0].code, "template_already_in_favorites"
+        )
+
+    @with_project_auth
+    def test_cannot_add_template_to_favorites_when_the_limit_is_reached(self):
+        dashboard = Dashboard.objects.create(
+            name="test_dashboard", project=self.project
+        )
+
+        for i in range(FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD):
+            FavoriteTemplate.objects.create(
+                dashboard=dashboard,
+                template_id=str(i),
+                name="test_template",
+            )
+
+        response = self.add_template_to_favorites(
+            {
+                "dashboard": dashboard.uuid,
+                "template_id": str(FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD),
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["dashboard"][0].code, "favorite_template_limit_reached"
         )
 
     @with_project_auth
