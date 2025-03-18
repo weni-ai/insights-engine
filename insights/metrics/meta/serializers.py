@@ -42,9 +42,8 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
         return data
 
 
-class BaseFavoriteTemplatesSerializer(serializers.Serializer):
+class BaseFavoriteTemplateSerializer(serializers.Serializer):
     dashboard = serializers.PrimaryKeyRelatedField(queryset=Dashboard.objects.all())
-    template_id = serializers.CharField()
 
     def _get_dashboard_queryset(self):
         user = self.context["request"].user
@@ -61,7 +60,11 @@ class BaseFavoriteTemplatesSerializer(serializers.Serializer):
         return fields
 
 
-class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
+class BaseFavoriteTemplateOperationSerializer(BaseFavoriteTemplateSerializer):
+    template_id = serializers.CharField()
+
+
+class AddTemplateToFavoritesSerializer(BaseFavoriteTemplateOperationSerializer):
     def validate(self, attrs):
         if FavoriteTemplate.objects.filter(
             dashboard=attrs.get("dashboard"),
@@ -84,7 +87,7 @@ class AddTemplateToFavoritesSerializer(BaseFavoriteTemplatesSerializer):
         )
 
 
-class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplatesSerializer):
+class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplateOperationSerializer):
     def validate(self, attrs):
         if not FavoriteTemplate.objects.filter(
             dashboard=attrs.get("dashboard"),
@@ -104,9 +107,19 @@ class RemoveTemplateFromFavoritesSerializer(BaseFavoriteTemplatesSerializer):
 
 
 class FavoriteTemplatesSerializer(serializers.ModelSerializer):
+    waba_id = serializers.SerializerMethodField()
+    project_uuid = serializers.UUIDField(
+        source="dashboard.project.uuid", read_only=True
+    )
+
     class Meta:
         model = FavoriteTemplate
-        fields = ["id", "template_id", "name"]
+        fields = ["template_id", "name", "waba_id", "project_uuid"]
+
+    def get_waba_id(self, obj: FavoriteTemplate) -> str:
+        config = obj.dashboard.config or {}
+
+        return config.get("waba_id")
 
 
 class MessageTemplatesCategorySerializer(serializers.Serializer):
@@ -125,3 +138,7 @@ class MessageTemplatesLanguageSerializer(serializers.Serializer):
 
 class MessageTemplatesLanguagesSerializer(serializers.Serializer):
     languages = MessageTemplatesLanguageSerializer(many=True)
+
+
+class FavoriteTemplatesQueryParamsSerializer(BaseFavoriteTemplateSerializer):
+    pass
