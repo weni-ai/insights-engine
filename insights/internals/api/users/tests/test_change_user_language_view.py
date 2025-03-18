@@ -46,3 +46,15 @@ class TestChangeUserLanguageViewAsAuthenticatedUser(BaseTestChangeUserLanguageVi
         self.user.refresh_from_db(fields=["language"])
 
         self.assertEqual(self.user.language, new_language)
+
+    @with_internal_auth
+    def test_cannot_change_language_when_user_does_not_exist(self):
+        response = self.change_user_language(
+            {"email": "non-existent@test.com", "language": "pt-br"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["email"][0].code,
+            "does_not_exist",
+        )
