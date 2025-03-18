@@ -1,6 +1,9 @@
 from django.db import models
 
 
+FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD = 5
+
+
 class FavoriteTemplate(models.Model):
     dashboard = models.ForeignKey(
         "dashboards.Dashboard",
