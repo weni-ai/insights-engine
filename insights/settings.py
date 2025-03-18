@@ -82,7 +82,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "insights.middleware.UserLanguageMiddleware",
 ]
 
 ROOT_URLCONF = "insights.urls"
@@ -205,7 +204,7 @@ LOGGING["handlers"]["console"] = {
 OIDC_ENABLED = env.bool("OIDC_ENABLED", default=False)
 if OIDC_ENABLED:
     REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"].append(
-        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+        "insights.authentication.authentication.WeniOIDCAuthentication"
     )
     INSTALLED_APPS = (*INSTALLED_APPS, "mozilla_django_oidc")
     LOGGING["loggers"]["mozilla_django_oidc"] = {
