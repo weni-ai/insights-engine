@@ -4,7 +4,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
-
+from mozilla_django_oidc.contrib.drf import OIDCAuthentication
+from django.utils import translation
 from insights.users.usecases import CreateUserUseCase
 
 import requests
@@ -84,3 +85,16 @@ class FlowsInternalAuthentication:
             headers=self.headers,
         )
         return response
+
+
+class WeniOIDCAuthentication(OIDCAuthentication):
+    def authenticate(self, request):
+        user, token = super(WeniOIDCAuthentication, self).authenticate(request)
+
+        if not user.is_anonymous:
+            try:
+                translation.activate(user.language)
+            except Exception as e:
+                LOGGER.error("Error activating language %s: %s", user.language, e)
+
+        return user, token
