@@ -33,10 +33,7 @@ from insights.sources.meta_message_templates.usecases.query_execute import Query
 
 class WhatsAppMessageTemplatesView(GenericViewSet):
     query_executor = QueryExecutor
-    # permission_classes = [ProjectAuthQueryParamPermission, ProjectWABAPermission]
-
-    # Temporary: just for testing purposes
-    permission_classes = [ProjectAuthQueryParamPermission]
+    permission_classes = [ProjectAuthQueryParamPermission, ProjectWABAPermission]
 
     @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS)
     @action(

@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework.permissions import BasePermission
 
 from insights.sources.wabas.clients import WeniIntegrationsClient
@@ -17,6 +18,10 @@ class ProjectWABAPermission(BasePermission):
 
         if not project_uuid or not waba_id:
             return False
+
+        # Temporary: just for testing purposes
+        if project_uuid == settings.TEMP_TEST_TEMPLATES_DASH_PROJECT_UUID:
+            return True
 
         integrations_client = WeniIntegrationsClient(project_uuid=project_uuid)
         wabas_data = integrations_client.get_wabas_for_project()
