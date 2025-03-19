@@ -59,6 +59,18 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
             filters=request.query_params, operation=Operations.TEMPLATE_PREVIEW.value
         )
 
+        waba_id = request.query_params.get("waba_id")
+        template_id = request.query_params.get("template_id")
+
+        is_favorite = FavoriteTemplate.objects.filter(
+            dashboard__config__waba_id=waba_id, template_id=template_id
+        ).exists()
+
+        data = {
+            "is_favorite": is_favorite,
+            **data,
+        }
+
         return Response(data, status=status.HTTP_200_OK)
 
     @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS)
