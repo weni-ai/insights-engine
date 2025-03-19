@@ -307,16 +307,18 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
+    @patch("insights.metrics.meta.views.get_edit_template_url_from_template_data")
     @patch(
         "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
     )
-    def test_get_preview(self, mock_preview, mock_wabas):
+    def test_get_preview(self, mock_preview, mock_edit_template_url, mock_wabas):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
         mock_wabas.return_value = [
             {"waba_id": waba_id},
         ]
         mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
+        mock_edit_template_url.return_value = None
 
         response = self.get_preview(
             {
@@ -328,7 +330,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
         expected_response = MOCK_SUCCESS_RESPONSE_BODY.copy()
         expected_response["is_favorite"] = False
-
+        expected_response["edit_template_url"] = None
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_response)
 
@@ -336,10 +338,13 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
+    @patch("insights.metrics.meta.views.get_edit_template_url_from_template_data")
     @patch(
         "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
     )
-    def test_get_preview_for_favorite_template(self, mock_preview, mock_wabas):
+    def test_get_preview_for_favorite_template(
+        self, mock_preview, mock_edit_template_url, mock_wabas
+    ):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
         dashboard = Dashboard.objects.create(
@@ -352,7 +357,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
             {"waba_id": waba_id},
         ]
         mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
-
+        mock_edit_template_url.return_value = None
         response = self.get_preview(
             {
                 "waba_id": waba_id,
@@ -363,6 +368,46 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
         expected_response = MOCK_SUCCESS_RESPONSE_BODY.copy()
         expected_response["is_favorite"] = True
+        expected_response["edit_template_url"] = None
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_response)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch("insights.metrics.meta.views.get_edit_template_url_from_template_data")
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
+    )
+    def test_get_preview_with_edit_template_url(
+        self, mock_preview, mock_edit_template_url, mock_wabas
+    ):
+        waba_id = "0000000000000000"
+        template_id = "1234567890987654"
+        mock_wabas.return_value = [
+            {"waba_id": waba_id},
+        ]
+        mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
+
+        example_edit_template_url = (
+            "integrations:apps/my/wpp-cloud/123456/templates/edit/123456"
+        )
+
+        mock_edit_template_url.return_value = example_edit_template_url
+
+        response = self.get_preview(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+                "template_id": template_id,
+            }
+        )
+
+        expected_response = MOCK_SUCCESS_RESPONSE_BODY.copy()
+        expected_response["is_favorite"] = False
+        expected_response["edit_template_url"] = example_edit_template_url
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_response)

@@ -8,7 +8,8 @@ from insights.sources.cache import CacheClient
 
 class WeniIntegrationsClient(InternalAuthentication):
     def __init__(self, project_uuid: str):
-        self.url = f"{settings.INTEGRATIONS_URL}/api/v1/apptypes/wpp-cloud/list_wpp-cloud/{project_uuid}"
+        self.project_uuid = project_uuid
+        self.base_url = f"{settings.INTEGRATIONS_URL}"
         self.cache = CacheClient()
         self.cache_ttl = 300  # 5m
         self.cache_key = f"wabas:{project_uuid}"
@@ -17,9 +18,23 @@ class WeniIntegrationsClient(InternalAuthentication):
         if cached_response := self.cache.get(self.cache_key):
             return json.loads(cached_response)
 
-        response = requests.get(url=self.url, headers=self.headers, timeout=60)
+        url = f"{self.base_url}/api/v1/apptypes/wpp-cloud/list_wpp-cloud/{self.project_uuid}"
+
+        response = requests.get(url=url, headers=self.headers, timeout=60)
         wabas = response.json().get("data", [])
 
         self.cache.set(self.cache_key, json.dumps(wabas), self.cache_ttl)
 
         return wabas
+
+    def get_template_data_by_id(self, project_uuid: str, template_id: str):
+        # TODO: Change this URL with the correct one, when available
+        url = f"{self.base_url}/api/v1/apptypes/wpp-cloud/get_template_data_by_id/"
+        response = requests.get(
+            url=url,
+            headers=self.headers,
+            timeout=60,
+            params={"project": project_uuid, "template_id": template_id},
+        )
+
+        return response

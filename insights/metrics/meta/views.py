@@ -27,6 +27,7 @@ from insights.metrics.meta.serializers import (
     MessageTemplatesCategoriesSerializer,
     MessageTemplatesLanguagesSerializer,
 )
+from insights.metrics.meta.utils import get_edit_template_url_from_template_data
 from insights.sources.meta_message_templates.enums import Operations
 from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
 
@@ -66,8 +67,14 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
             dashboard__config__waba_id=waba_id, template_id=template_id
         ).exists()
 
+        project_uuid = request.query_params.get("project_uuid")
+        edit_template_url = get_edit_template_url_from_template_data(
+            project_uuid, template_id
+        )
+
         data = {
             "is_favorite": is_favorite,
+            "edit_template_url": edit_template_url,
             **data,
         }
 
