@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from django.utils.translation import gettext_lazy as _
 from datetime import datetime
@@ -12,6 +13,7 @@ from rest_framework.request import Request
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.vtex.services.orders_service import OrdersService
+from insights.projects.models import Project
 
 
 class VtexOrdersViewSet(viewsets.ViewSet):
@@ -55,7 +57,8 @@ class VtexOrdersViewSet(viewsets.ViewSet):
             "end_date": end_date,
         }
 
-        service = OrdersService(project_uuid)
+        project = get_object_or_404(Project, uuid=project_uuid)
+        service = OrdersService(project)
         response_data = service.get_metrics_from_utm_source(utm_source, filters)
 
         return Response(response_data, status=status.HTTP_200_OK)
