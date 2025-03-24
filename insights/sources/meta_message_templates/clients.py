@@ -36,11 +36,20 @@ class MetaAPIClient:
         limit: int = 9999,
         before: str | None = None,
         after: str | None = None,
+        language: str | None = None,
+        category: str | None = None,
     ):
         url = f"{self.base_host_url}/{waba_id}/message_templates"
 
         params = {
-            "limit": limit,
+            k: v
+            for k, v in {
+                "name": name,
+                "limit": limit,
+                "language": language,
+                "category": category,
+            }.items()
+            if v is not None
         }
 
         if before:
@@ -48,9 +57,6 @@ class MetaAPIClient:
 
         elif after:
             params["after"] = after
-
-        if name:
-            params["name"] = name
 
         try:
             response = requests.get(
