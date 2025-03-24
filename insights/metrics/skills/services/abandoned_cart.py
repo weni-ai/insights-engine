@@ -189,13 +189,18 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return data
 
     def _get_orders_metrics(self, start_date, end_date) -> dict:
-        if not (
-            utm_source := getattr(settings, "WHATSAPP_ABANDONED_CART_UTM_SOURCE", None)
+        if (
+            not (
+                utm_source := getattr(
+                    settings, "WHATSAPP_ABANDONED_CART_UTM_SOURCE", None
+                )
+            )
+            or self.project.vtex_account is not None
         ):
             # TEMPORARY, this should be used only in the development and staging environments
             utm_source = "weniabandonedcart"
 
-        service = OrdersService(project_uuid=self.project.uuid)
+        service = OrdersService(self.project)
 
         filters = {
             "start_date": start_date,
