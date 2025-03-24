@@ -23,6 +23,6 @@ class ChangeUserLanguageSerializer(serializers.ModelSerializer):
         fields = ["email", "language"]
 
     def save(self):
-        user = User.objects.get(email=self.validated_data["email"])
-        user.language = self.validated_data["language"]
-        return user.save()
+        User.objects.filter(email=self.validated_data["email"]).update(
+            language=self.validated_data["language"]
+        )
