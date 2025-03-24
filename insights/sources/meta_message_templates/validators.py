@@ -15,10 +15,10 @@ def validate_analytics_kwargs(filters: dict) -> dict:
     filters = filters.copy()
 
     if "date_start" in filters:
-        filters["start_date"] = filters.pop("date_start")
+        filters["start_date"] = filters.pop("date_start")[0]
 
     if "date_end" in filters:
-        filters["end_date"] = filters.pop("date_end")
+        filters["end_date"] = filters.pop("date_end")[0]
 
     for field in analytics_kwargs.keys():
         if field not in filters:
