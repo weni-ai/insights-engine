@@ -329,8 +329,46 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
             }
         )
 
+        expected_response = MOCK_SUCCESS_RESPONSE_BODY.copy()
+        expected_response["is_favorite"] = False
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, MOCK_SUCCESS_RESPONSE_BODY)
+        self.assertEqual(response.data, expected_response)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    @patch(
+        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
+    )
+    def test_get_preview_for_favorite_template(self, mock_preview, mock_wabas):
+        waba_id = "0000000000000000"
+        template_id = "1234567890987654"
+        dashboard = Dashboard.objects.create(
+            name="test_dashboard", project=self.project, config={"waba_id": waba_id}
+        )
+        FavoriteTemplate.objects.create(
+            dashboard=dashboard, template_id=template_id, name="test_template"
+        )
+        mock_wabas.return_value = [
+            {"waba_id": waba_id},
+        ]
+        mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
+
+        response = self.get_preview(
+            {
+                "waba_id": waba_id,
+                "project_uuid": self.project.uuid,
+                "template_id": template_id,
+            }
+        )
+
+        expected_response = MOCK_SUCCESS_RESPONSE_BODY.copy()
+        expected_response["is_favorite"] = True
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_response)
 
     @with_project_auth
     @patch(
