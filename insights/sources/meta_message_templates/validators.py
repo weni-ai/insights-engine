@@ -13,6 +13,8 @@ def validate_analytics_kwargs(filters: dict) -> dict:
     analytics_kwargs = {k: None for k in ANALYTICS_REQUIRED_FIELDS}
     missing_fields = []
 
+    filters = filters.copy()
+
     if "date_start" in filters:
         filters["start_date"] = filters.pop("date_start")
 
