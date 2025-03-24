@@ -128,7 +128,7 @@ class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesVi
 class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplatesView):
     def setUp(self):
         self.meta_api_client: MetaAPIClient = MetaAPIClient()
-        self.user = User.objects.create()
+        self.user = User.objects.create(language="pt_BR")
         self.project = Project.objects.create(name="test_project")
 
         self.client.force_authenticate(self.user)
