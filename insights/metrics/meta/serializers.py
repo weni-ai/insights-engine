@@ -5,7 +5,10 @@ from insights.projects.models import Project
 from django.utils.translation import gettext as _
 
 from insights.dashboards.models import Dashboard
-from insights.metrics.meta.models import FavoriteTemplate
+from insights.metrics.meta.models import (
+    FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD,
+    FavoriteTemplate,
+)
 from insights.projects.models import ProjectAuth
 from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesCategories,
@@ -100,6 +103,20 @@ class BaseFavoriteTemplateOperationSerializer(BaseFavoriteTemplateSerializer):
 
 
 class AddTemplateToFavoritesSerializer(BaseFavoriteTemplateOperationSerializer):
+    def validate_dashboard(self, dashboard: Dashboard) -> Dashboard:
+        if (
+            FavoriteTemplate.objects.filter(
+                dashboard=dashboard,
+            ).count()
+            >= FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD
+        ):
+            raise serializers.ValidationError(
+                _("Favorite template limit reached"),
+                code="favorite_template_limit_reached",
+            )
+
+        return dashboard
+
     def validate(self, attrs):
         if FavoriteTemplate.objects.filter(
             dashboard=attrs.get("dashboard"),
