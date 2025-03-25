@@ -1,4 +1,5 @@
 import json
+import logging
 import requests
 
 from datetime import date
@@ -15,6 +16,9 @@ from insights.sources.meta_message_templates.utils import (
 )
 from insights.utils import convert_date_to_unix_timestamp
 from insights.sources.cache import CacheClient
+
+
+logger = logging.getLogger(__name__)
 
 
 class MetaAPIClient:
@@ -36,11 +40,20 @@ class MetaAPIClient:
         limit: int = 9999,
         before: str | None = None,
         after: str | None = None,
+        language: str | None = None,
+        category: str | None = None,
     ):
         url = f"{self.base_host_url}/{waba_id}/message_templates"
 
         params = {
-            "limit": limit,
+            k: v
+            for k, v in {
+                "name": name,
+                "limit": limit,
+                "language": language,
+                "category": category,
+            }.items()
+            if v is not None
         }
 
         if before:
@@ -49,16 +62,17 @@ class MetaAPIClient:
         elif after:
             params["after"] = after
 
-        if name:
-            params["name"] = name
-
         try:
             response = requests.get(
                 url, headers=self.headers, params=params, timeout=60
             )
             response.raise_for_status()
         except requests.HTTPError as err:
-            print(f"Error ({err.response.status_code}): {err.response.text}")
+            logger.error(
+                "Error getting templates list: %s",
+                err.response.text,
+                exc_info=True,
+            )
 
             raise ValidationError(
                 {"error": "An error has occurred"}, code="meta_api_error"
@@ -81,7 +95,11 @@ class MetaAPIClient:
             response = requests.get(url, headers=self.headers, timeout=60)
             response.raise_for_status()
         except requests.HTTPError as err:
-            print(f"Error ({err.response.status_code}): {err.response.text}")
+            logger.error(
+                "Error getting template preview: %s",
+                err.response.text,
+                exc_info=True,
+            )
 
             raise ValidationError(
                 {"error": "An error has occurred"}, code="meta_api_error"
@@ -139,7 +157,11 @@ class MetaAPIClient:
             response.raise_for_status()
 
         except requests.HTTPError as err:
-            print(f"Error ({err.response.status_code}): {err.response.text}")
+            logger.error(
+                "Error getting messages analytics: %s",
+                err.response.text,
+                exc_info=True,
+            )
 
             raise ValidationError(
                 {"error": "An error has occurred"}, code="meta_api_error"
@@ -207,7 +229,11 @@ class MetaAPIClient:
             response.raise_for_status()
 
         except requests.HTTPError as err:
-            print(f"Error ({err.response.status_code}): {err.response.text}")
+            logger.error(
+                "Error getting buttons analytics: %s",
+                err.response.text,
+                exc_info=True,
+            )
 
             raise ValidationError(
                 {"error": "An error has occurred"}, code="meta_api_error"

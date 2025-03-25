@@ -61,11 +61,23 @@ def validate_list_templates_filters(filters: dict):
     if not filters.get("waba_id", None):
         raise ValidationError("WABA id is required", code="waba_id_missing")
 
-    allowed_filters = ["waba_id", "name", "limit", "before", "after"]
+    allowed_filters = [
+        "waba_id",
+        "name",
+        "limit",
+        "before",
+        "after",
+        "language",
+        "category",
+        "search",
+    ]
     valid_filters = {}
 
-    for filter in allowed_filters:
-        if filter in filters:
-            valid_filters[filter] = filters[filter]
+    for filter_name in allowed_filters:
+        if filter_name in filters:
+            valid_filters[filter_name] = filters[filter_name]
+
+    if "search" in filters:
+        valid_filters["name"] = filters["search"]
 
     return valid_filters
