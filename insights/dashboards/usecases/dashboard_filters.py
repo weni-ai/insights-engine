@@ -48,6 +48,16 @@ def get_dash_filters(dash: Dashboard):
             },
         }
         return data
+    elif dash.config is not None and dash.config.get("is_whatsapp_integration") is True:
+        return {
+            "date": {
+                "type": "date_range",
+                "label": None,
+                "end_sufix": "_end",
+                "placeholder": None,
+                "start_sufix": "_start",
+            },
+        }
     else:
         data = {
             "ended_at": {
