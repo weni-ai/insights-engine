@@ -1,7 +1,7 @@
 from rest_framework.exceptions import ValidationError
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
-from insights.sources.meta_message_templates.validators import (
+from insights.metrics.meta.validators import (
     validate_analytics_kwargs,
     validate_list_templates_filters,
 )

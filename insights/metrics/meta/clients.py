@@ -6,11 +6,8 @@ from datetime import date, timedelta
 from django.conf import settings
 from rest_framework.exceptions import ValidationError, NotFound
 
-from insights.sources.meta_message_templates.enums import (
-    AnalyticsGranularity,
-    MetricsTypes,
-)
-from insights.sources.meta_message_templates.utils import (
+from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
+from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )
