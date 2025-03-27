@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from insights.utils import convert_date_str_to_datetime_date
@@ -58,7 +59,9 @@ def validate_analytics_selected_period(start_date: date):
 
 def validate_list_templates_filters(filters: dict):
     if not filters.get("waba_id", None):
-        raise ValidationError("WABA id is required", code="waba_id_missing")
+        raise ValidationError(
+            {"error": _("WABA id is required")}, code="waba_id_missing"
+        )
 
     allowed_filters = [
         "waba_id",
