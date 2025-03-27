@@ -85,4 +85,7 @@ def validate_list_templates_filters(filters: dict):
     if "search" in filters:
         valid_filters["name"] = filters["search"]
 
+    if "fields" in filters:
+        valid_filters["fields"] = filters["fields"].split(",")
+
     return valid_filters
