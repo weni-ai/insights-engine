@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 from sentry_sdk import capture_exception
 
+from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.skills.exceptions import (
     ErrorGettingOrdersMetrics,
     InvalidDateRangeError,
@@ -17,7 +18,6 @@ from insights.metrics.skills.services.base import BaseSkillMetricsService
 from insights.metrics.skills.validators import validate_date_str
 from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.sources.cache import CacheClient
-from insights.sources.meta_message_templates.clients import MetaAPIClient
 from insights.sources.wabas.clients import WeniIntegrationsClient
 
 
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class AbandonedCartSkillService(BaseSkillMetricsService):
     def __init__(self, project, filters):
         super().__init__(project, filters)
-        self.meta_api_client = MetaAPIClient()
+        self.meta_api_client = MetaGraphAPIClient()
         self.cache_client = CacheClient()
         self.cache_ttl = 3600  # 1h
 
