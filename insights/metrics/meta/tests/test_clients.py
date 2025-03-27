@@ -7,11 +7,11 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
-from insights.sources.meta_message_templates.enums import (
+from insights.metrics.meta.enums import (
     AnalyticsGranularity,
     MetricsTypes,
 )
-from insights.sources.meta_message_templates.utils import (
+from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )

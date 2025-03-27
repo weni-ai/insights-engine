@@ -14,7 +14,7 @@ from insights.metrics.meta.tests.mock import (
     MOCK_TEMPLATE_DAILY_ANALYTICS,
     MOCK_TEMPLATES_LIST_BODY,
 )
-from insights.sources.meta_message_templates.utils import (
+from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )

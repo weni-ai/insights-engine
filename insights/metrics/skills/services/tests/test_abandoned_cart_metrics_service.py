@@ -17,7 +17,7 @@ from insights.metrics.skills.services.abandoned_cart import (
 )
 from insights.projects.models import Project
 from insights.sources.cache import CacheClient
-from insights.sources.meta_message_templates.utils import (
+from insights.metrics.meta.utils import (
     format_messages_metrics_data,
 )
 
@@ -77,9 +77,7 @@ class TestAbandonedCartSkillService(TestCase):
         ):
             service.validate_filters(filters)
 
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     @patch(
         "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
@@ -105,12 +103,8 @@ class TestAbandonedCartSkillService(TestCase):
 
     @patch("insights.sources.orders.clients.VtexOrdersRestClient.list")
     @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_messages_analytics"
-    )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     @patch(
         "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )

@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.dashboards.models import Dashboard
+from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.meta.models import (
     FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD,
     FavoriteTemplate,
@@ -19,12 +20,11 @@ from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesLanguages,
 )
 from insights.projects.models import Project
-from insights.sources.meta_message_templates.clients import MetaAPIClient
-from insights.sources.meta_message_templates.utils import (
+from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )
-from insights.sources.tests.meta_message_templates.mock import (
+from insights.metrics.meta.tests.mock import (
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
     MOCK_TEMPLATES_LIST_BODY,
@@ -127,7 +127,7 @@ class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesVi
 
 class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplatesView):
     def setUp(self):
-        self.meta_api_client: MetaAPIClient = MetaAPIClient()
+        self.meta_api_client: MetaGraphAPIClient = MetaGraphAPIClient()
         self.user = User.objects.create(language="pt_BR")
         self.project = Project.objects.create(name="test_project")
 
