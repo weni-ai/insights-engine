@@ -18,7 +18,7 @@ from insights.metrics.skills.services.base import BaseSkillMetricsService
 from insights.metrics.skills.validators import validate_date_str
 from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.sources.cache import CacheClient
-from insights.sources.wabas.clients import WeniIntegrationsClient
+from insights.sources.integrations.clients import WeniIntegrationsClient
 
 
 ABANDONED_CART_METRICS_START_DATE_MAX_DAYS = 45
@@ -64,8 +64,8 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
     @cached_property
     def _project_wabas(self) -> list[dict]:
-        client = WeniIntegrationsClient(self.project.uuid)
-        wabas = client.get_wabas_for_project()
+        client = WeniIntegrationsClient()
+        wabas = client.get_wabas_for_project(self.project.uuid)
 
         return [waba for waba in wabas if waba["waba_id"]]
 

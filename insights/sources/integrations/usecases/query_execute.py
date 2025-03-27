@@ -1,4 +1,4 @@
-from insights.sources.wabas.clients import WeniIntegrationsClient
+from insights.sources.integrations.clients import WeniIntegrationsClient
 
 
 class QueryExecutor:
@@ -10,7 +10,7 @@ class QueryExecutor:
         *args,
         **kwargs
     ):
-        client = WeniIntegrationsClient(project_uuid=filters.get("project"))
-        wabas = client.get_wabas_for_project()
+        client = WeniIntegrationsClient()
+        wabas = client.get_wabas_for_project(filters.get("project"))
 
         return wabas

@@ -3,6 +3,7 @@ import logging
 import requests
 
 from datetime import date, timedelta
+
 from django.conf import settings
 from rest_framework.exceptions import ValidationError, NotFound
 

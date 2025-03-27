@@ -151,7 +151,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_list_templates_when_waba_id_is_not_related_to_project(
         self, mock_wabas
@@ -169,7 +169,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     def test_get_list_templates_with_invalid_limit(
@@ -190,7 +190,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     def test_cannot_get_list_templates_with_invalid_category(
@@ -212,7 +212,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     def test_cannot_get_list_templates_with_invalid_language(
@@ -234,7 +234,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     def test_get_list_templates(self, mock_list_templates, mock_wabas):
@@ -258,7 +258,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_preview_when_waba_id_is_not_related_to_project(
         self, mock_wabas
@@ -277,7 +277,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_preview_when_user_does_not_have_project_permission(
         self, mock_wabas
@@ -300,7 +300,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview")
     def test_get_preview(self, mock_preview, mock_wabas):
@@ -327,7 +327,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview")
     def test_get_preview_for_favorite_template(self, mock_preview, mock_wabas):
@@ -360,7 +360,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_preview_missing_template_id(self, mock_wabas):
         waba_id = "0000000000000000"
@@ -378,7 +378,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
     def test_get_messages_analytics(self, mock_analytics, mock_wabas):
@@ -414,7 +414,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_messages_analytics_when_waba_id_is_not_related_to_project(
         self, mock_wabas
@@ -433,7 +433,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_messages_analytics_when_user_does_not_have_project_permission(
         self, mock_wabas
@@ -456,7 +456,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_messages_analytics_missing_required_params(self, mock_wabas):
         response = self.get_messages_analytics({})
@@ -486,7 +486,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_buttons_analytics_when_waba_id_is_not_related_to_project(
         self, mock_wabas
@@ -505,7 +505,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_buttons_analytics_when_user_does_not_have_project_permission(
         self, mock_wabas
@@ -528,7 +528,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_buttons_analytics")
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview")
@@ -571,7 +571,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
     @with_project_auth
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_get_buttons_analytics_missing_required_params(self, mock_wabas):
         waba_id = "0000000000000000"

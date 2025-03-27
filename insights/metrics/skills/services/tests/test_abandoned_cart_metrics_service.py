@@ -81,7 +81,7 @@ class TestAbandonedCartSkillService(TestCase):
         "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
     )
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_cannot_whatsapp_template_id_and_waba_when_template_is_not_found(
         self, mock_wabas, mock_templates_list
@@ -112,7 +112,7 @@ class TestAbandonedCartSkillService(TestCase):
         "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
     )
     @patch(
-        "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
     def test_get_metrics(
         self,
