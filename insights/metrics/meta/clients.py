@@ -2,15 +2,13 @@ import json
 import logging
 import requests
 
-from datetime import date
+from datetime import date, timedelta
+
 from django.conf import settings
 from rest_framework.exceptions import ValidationError, NotFound
 
-from insights.sources.meta_message_templates.enums import (
-    AnalyticsGranularity,
-    MetricsTypes,
-)
-from insights.sources.meta_message_templates.utils import (
+from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
+from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )
@@ -21,7 +19,7 @@ from insights.sources.cache import CacheClient
 logger = logging.getLogger(__name__)
 
 
-class MetaAPIClient:
+class MetaGraphAPIClient:
     base_host_url = "https://graph.facebook.com/v21.0"
     access_token = settings.WHATSAPP_API_ACCESS_TOKEN
 
@@ -139,7 +137,7 @@ class MetaAPIClient:
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
@@ -197,7 +195,7 @@ class MetaAPIClient:
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
