@@ -36,6 +36,7 @@ class MetaGraphAPIClient:
         waba_id: str,
         name: str | None = None,
         limit: int = 9999,
+        fields: list[str] | None = None,
         before: str | None = None,
         after: str | None = None,
         language: str | None = None,
@@ -48,6 +49,7 @@ class MetaGraphAPIClient:
             for filter_name, filter_value in {
                 "name": name,
                 "limit": limit,
+                "fields": ",".join(fields) if fields else None,
                 "language": language,
                 "category": category,
             }.items()
