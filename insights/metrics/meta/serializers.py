@@ -28,6 +28,7 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
     language = serializers.ChoiceField(
         choices=WhatsAppMessageTemplatesLanguages, required=False
     )
+    fields = serializers.ListField(child=serializers.CharField(), required=False)
 
     def validate_limit(self, value):
         max_limit = 20
