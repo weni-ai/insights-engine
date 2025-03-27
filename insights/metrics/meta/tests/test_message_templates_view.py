@@ -171,9 +171,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     def test_get_list_templates_with_invalid_limit(
         self, mock_list_templates, mock_wabas
     ):
@@ -194,9 +192,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     def test_cannot_get_list_templates_with_invalid_category(
         self, mock_list_templates, mock_wabas
     ):
@@ -218,9 +214,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     def test_cannot_get_list_templates_with_invalid_language(
         self, mock_list_templates, mock_wabas
     ):
@@ -242,9 +236,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_templates_list"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     def test_get_list_templates(self, mock_list_templates, mock_wabas):
         waba_id = "0000000000000000"
         mock_wabas.return_value = [{"waba_id": waba_id}]
@@ -310,9 +302,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview")
     def test_get_preview(self, mock_preview, mock_wabas):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
@@ -339,9 +329,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview")
     def test_get_preview_for_favorite_template(self, mock_preview, mock_wabas):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
@@ -392,9 +380,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_messages_analytics"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
     def test_get_messages_analytics(self, mock_analytics, mock_wabas):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
@@ -544,12 +530,8 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.wabas.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_buttons_analytics"
-    )
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_buttons_analytics")
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview")
     def test_get_buttons_analytics(
         self, mock_preview, mock_buttons_analytics, mock_wabas
     ):
@@ -689,9 +671,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         )
 
     @with_project_auth
-    @patch(
-        "insights.sources.meta_message_templates.clients.MetaAPIClient.get_template_preview"
-    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview")
     def test_add_template_to_favorites(self, mock_preview):
         mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
 
