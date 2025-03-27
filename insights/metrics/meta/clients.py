@@ -49,7 +49,7 @@ class MetaGraphAPIClient:
             for filter_name, filter_value in {
                 "name": name,
                 "limit": limit,
-                "fields": ",".join(fields) if fields else None,
+                "fields": fields,
                 "language": language,
                 "category": category,
             }.items()
