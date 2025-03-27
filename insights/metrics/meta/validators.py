@@ -74,6 +74,7 @@ def validate_list_templates_filters(filters: dict):
         "language",
         "category",
         "search",
+        "fields",
     ]
     valid_filters = {}
 
