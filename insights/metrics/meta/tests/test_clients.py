@@ -1,3 +1,4 @@
+from datetime import timedelta
 import json
 import responses
 
@@ -120,7 +121,7 @@ class TestMetaGraphAPIClient(TestCase):
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
@@ -214,7 +215,7 @@ class TestMetaGraphAPIClient(TestCase):
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
