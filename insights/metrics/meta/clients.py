@@ -3,14 +3,12 @@ import logging
 import requests
 
 from datetime import date, timedelta
-from django.conf import settings
-from rest_framework.exceptions import ValidationError
 
-from insights.sources.meta_message_templates.enums import (
-    AnalyticsGranularity,
-    MetricsTypes,
-)
-from insights.sources.meta_message_templates.utils import (
+from django.conf import settings
+from rest_framework.exceptions import ValidationError, NotFound
+
+from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
+from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )
@@ -21,7 +19,7 @@ from insights.sources.cache import CacheClient
 logger = logging.getLogger(__name__)
 
 
-class MetaAPIClient:
+class MetaGraphAPIClient:
     base_host_url = "https://graph.facebook.com/v21.0"
     access_token = settings.WHATSAPP_API_ACCESS_TOKEN
 
@@ -46,14 +44,14 @@ class MetaAPIClient:
         url = f"{self.base_host_url}/{waba_id}/message_templates"
 
         params = {
-            k: v
-            for k, v in {
+            filter_name: filter_value
+            for filter_name, filter_value in {
                 "name": name,
                 "limit": limit,
                 "language": language,
                 "category": category,
             }.items()
-            if v is not None
+            if filter_value is not None
         }
 
         if before:
@@ -69,8 +67,9 @@ class MetaAPIClient:
             response.raise_for_status()
         except requests.HTTPError as err:
             logger.error(
-                "Error getting templates list: %s",
+                "Error getting templates list: %s. Original exception: %s",
                 err.response.text,
+                err,
                 exc_info=True,
             )
 
@@ -96,8 +95,9 @@ class MetaAPIClient:
             response.raise_for_status()
         except requests.HTTPError as err:
             logger.error(
-                "Error getting template preview: %s",
+                "Error getting template preview: %s. Original exception: %s",
                 err.response.text,
+                err,
                 exc_info=True,
             )
 
@@ -158,8 +158,9 @@ class MetaAPIClient:
 
         except requests.HTTPError as err:
             logger.error(
-                "Error getting messages analytics: %s",
+                "Error getting messages analytics: %s. Original exception: %s",
                 err.response.text,
+                err,
                 exc_info=True,
             )
 
@@ -229,9 +230,15 @@ class MetaAPIClient:
             response.raise_for_status()
 
         except requests.HTTPError as err:
+            if err.response.status_code == 404:
+                raise NotFound(
+                    {"error": "Template not found"}, code="template_not_found"
+                ) from err
+
             logger.error(
-                "Error getting buttons analytics: %s",
+                "Error getting buttons analytics: %s. Original exception: %s",
                 err.response.text,
+                err,
                 exc_info=True,
             )
 

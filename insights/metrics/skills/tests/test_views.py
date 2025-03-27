@@ -2,7 +2,6 @@ from unittest.mock import patch
 
 from django.utils import timezone
 from django.utils.timezone import timedelta
-from django.contrib.auth.models import Permission
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.response import Response

@@ -1,3 +1,4 @@
+from datetime import timedelta
 import json
 import responses
 
@@ -6,16 +7,16 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
-from insights.sources.meta_message_templates.clients import MetaAPIClient
-from insights.sources.meta_message_templates.enums import (
+from insights.metrics.meta.clients import MetaGraphAPIClient
+from insights.metrics.meta.enums import (
     AnalyticsGranularity,
     MetricsTypes,
 )
-from insights.sources.meta_message_templates.utils import (
+from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )
-from insights.sources.tests.meta_message_templates.mock import (
+from insights.metrics.meta.tests.mock import (
     MOCK_ERROR_RESPONSE_BODY,
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
@@ -28,10 +29,10 @@ from insights.utils import (
 )
 
 
-class TestMetaAPIClient(TestCase):
+class TestMetaGraphAPIClient(TestCase):
     def setUp(self):
         self.base_host_url = "https://graph.facebook.com"
-        self.client: MetaAPIClient = MetaAPIClient()
+        self.client: MetaGraphAPIClient = MetaGraphAPIClient()
         cache.clear()
 
     def tearDown(self):
@@ -120,7 +121,7 @@ class TestMetaAPIClient(TestCase):
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
@@ -214,7 +215,7 @@ class TestMetaAPIClient(TestCase):
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
