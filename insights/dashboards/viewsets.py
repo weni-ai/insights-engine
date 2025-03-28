@@ -83,15 +83,16 @@ class DashboardViewSet(
 
     @action(detail=True, methods=["patch"])
     def is_default(self, request, pk=None):
-        dashboard = self.get_object()
+        dashboard: Dashboard = self.get_object()
+
         serializer = DashboardIsDefaultSerializer(
             dashboard, data=request.data, partial=True
         )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"])
     def list_widgets(self, request, pk=None):
@@ -243,7 +244,7 @@ class DashboardViewSet(
         methods=["get"],
     )
     def get_custom_status(self, request, project=None):
-        project = Project.objects.get(pk=request.query_params.get('project'))
+        project = Project.objects.get(pk=request.query_params.get("project"))
         custom_status_client = CustomStatusRESTClient(project)
 
         query_filters = dict(request.data or request.query_params or {})
