@@ -28,12 +28,11 @@ from insights.metrics.meta.serializers import (
     MessageTemplatesLanguagesSerializer,
 )
 from insights.metrics.meta.utils import get_edit_template_url_from_template_data
-from insights.sources.meta_message_templates.enums import Operations
-from insights.sources.meta_message_templates.usecases.query_execute import QueryExecutor
+from insights.metrics.meta.services import MetaMessageTemplatesService
 
 
 class WhatsAppMessageTemplatesView(GenericViewSet):
-    query_executor = QueryExecutor
+    service = MetaMessageTemplatesService()
     permission_classes = [ProjectAuthQueryParamPermission, ProjectWABAPermission]
 
     @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS)
@@ -47,18 +46,14 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         serializer = MessageTemplatesQueryParamsSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
-        data = self.query_executor.execute(
-            filters=serializer.validated_data, operation=Operations.LIST_TEMPLATES.value
-        )
+        data = self.service.get_templates_list(filters=serializer.validated_data)
 
         return Response(data, status=status.HTTP_200_OK)
 
     @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS)
     @action(detail=False, methods=["get"], url_name="preview", url_path="preview")
     def preview_template(self, request: Request) -> Response:
-        data = self.query_executor.execute(
-            filters=request.query_params, operation=Operations.TEMPLATE_PREVIEW.value
-        )
+        data = self.service.get_template_preview(filters=request.query_params)
 
         waba_id = request.query_params.get("waba_id")
         template_id = request.query_params.get("template_id")
@@ -88,9 +83,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         url_path="messages-analytics",
     )
     def messages_analytics(self, request: Request) -> Response:
-        data = self.query_executor.execute(
-            filters=request.query_params, operation=Operations.MESSAGES_ANALYTICS.value
-        )
+        data = self.service.get_messages_analytics(filters=request.query_params)
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -102,9 +95,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         url_path="buttons-analytics",
     )
     def buttons_analytics(self, request: Request) -> Response:
-        data = self.query_executor.execute(
-            filters=request.query_params, operation=Operations.BUTTONS_ANALYTICS.value
-        )
+        data = self.service.get_buttons_analytics(filters=request.query_params)
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -129,9 +120,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
             "template_id": serializer.validated_data["template_id"],
         }
 
-        template_preview = self.query_executor.execute(
-            filters=preview_filters, operation=Operations.TEMPLATE_PREVIEW.value
-        )
+        template_preview = self.service.get_template_preview(filters=preview_filters)
         template_name = template_preview.get("name")
 
         serializer.context["template_name"] = template_name
