@@ -28,6 +28,7 @@ from insights.metrics.meta.serializers import (
     MessageTemplatesLanguagesSerializer,
 )
 from insights.metrics.meta.services import MetaMessageTemplatesService
+from insights.sources.integrations.clients import WeniIntegrationsClient
 
 
 class WhatsAppMessageTemplatesView(GenericViewSet):
@@ -211,3 +212,23 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         ]
 
         return Response({"languages": all_languages}, status=status.HTTP_200_OK)
+
+    # TODO: Add schema
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="wabas",
+        url_path="wabas",
+        permission_classes=[IsAuthenticated],
+    )
+    def wabas(self, request: Request) -> Response:
+        project_uuid = request.query_params.get("project_uuid")
+
+        wabas_data, status_code = WeniIntegrationsClient().get_wabas_for_project(
+            project_uuid
+        )
+
+        if not status.is_success(status_code):
+            return Response(wabas_data, status=status_code)
+
+        return Response({"results": wabas_data}, status=status.HTTP_200_OK)

@@ -1,9 +1,14 @@
-from django.conf import settings
+import logging
 import requests
 import json
 
+from django.conf import settings
+from rest_framework import status
 from insights.internals.base import InternalAuthentication
 from insights.sources.cache import CacheClient
+
+
+logger = logging.getLogger(__name__)
 
 
 class WeniIntegrationsClient(InternalAuthentication):
@@ -20,8 +25,19 @@ class WeniIntegrationsClient(InternalAuthentication):
             return json.loads(cached_response)
 
         response = requests.get(url=url, headers=self.headers, timeout=60)
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error fetching wabas for project %s: %s - %s",
+                project_uuid,
+                response.status_code,
+                response.text,
+            )
+
+            return {"error": response.text}, response.status_code
+
         wabas = response.json().get("data", [])
 
         self.cache.set(cache_key, json.dumps(wabas), cache_ttl)
 
-        return wabas
+        return wabas, response.status_code
