@@ -77,6 +77,11 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
 
         return self.client.get(url)
 
+    def get_wabas(self, query_params: dict) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/wabas/"
+
+        return self.client.get(url, query_params)
+
 
 class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesView):
     def test_cannot_get_list_templates_when_not_authenticated(self):
@@ -121,6 +126,11 @@ class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesVi
 
     def test_cannot_get_languages_when_not_authenticated(self):
         response = self.get_languages()
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_wabas_when_not_authenticated(self):
+        response = self.get_wabas({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -846,5 +856,53 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
                     {"value": language.value, "name": language.label}
                     for language in WhatsAppMessageTemplatesLanguages
                 ]
+            },
+        )
+
+    def test_cannot_get_wabas_without_project_authorization(self):
+        response = self.get_wabas({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_get_wabas(self, mock_wabas):
+        mock_wabas.return_value = [
+            {
+                "waba_id": "1234567890987654",
+                "phone_number": {
+                    "id": "000000000000000",
+                    "display_name": "Test",
+                    "display_phone_number": "+55 84 9988-7766",
+                },
+            },
+            {
+                "waba_id": "9876543210123456",
+                "phone_number": {
+                    "id": "111111111111111",
+                    "display_name": "Test 2",
+                    "display_phone_number": "+55 84 8877-6655",
+                },
+            },
+        ]
+
+        response = self.get_wabas({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {
+                "results": [
+                    {
+                        "id": "1234567890987654",
+                        "phone_number": "+55 84 9988-7766",
+                    },
+                    {
+                        "id": "9876543210123456",
+                        "phone_number": "+55 84 8877-6655",
+                    },
+                ],
             },
         )
