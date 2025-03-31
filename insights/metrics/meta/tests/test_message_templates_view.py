@@ -1,8 +1,11 @@
 from unittest.mock import patch
+import uuid
 
+from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 from django.utils.timezone import timedelta
+import responses
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
@@ -368,10 +371,10 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch(
         "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
     )
-    @patch("insights.metrics.meta.views.get_edit_template_url_from_template_data")
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview")
+    @patch("insights.internals.base.InternalAuthentication.headers")
     def test_get_preview_with_edit_template_url(
-        self, mock_preview, mock_edit_template_url, mock_wabas
+        self, mock_headers, mock_preview, mock_wabas
     ):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
@@ -379,24 +382,38 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
             {"waba_id": waba_id},
         ]
         mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
+        mock_headers.return_value = "Bearer 1234567890"
 
-        example_edit_template_url = (
-            "integrations:apps/my/wpp-cloud/123456/templates/edit/123456"
-        )
+        app_uuid = str(uuid.uuid4())
+        template_uuid = str(uuid.uuid4())
 
-        mock_edit_template_url.return_value = example_edit_template_url
+        example_edit_template_url = {
+            "app_uuid": app_uuid,
+            "templates_uuid": [template_uuid],
+        }
 
-        response = self.get_preview(
-            {
-                "waba_id": waba_id,
-                "project_uuid": self.project.uuid,
-                "template_id": template_id,
-            }
-        )
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                f"{settings.INTEGRATIONS_URL}/api/v1/project/templates/details/",
+                status=status.HTTP_200_OK,
+                json=example_edit_template_url,
+            )
+
+            response = self.get_preview(
+                {
+                    "waba_id": waba_id,
+                    "project_uuid": self.project.uuid,
+                    "template_id": template_id,
+                }
+            )
 
         expected_response = MOCK_SUCCESS_RESPONSE_BODY.copy()
         expected_response["is_favorite"] = False
-        expected_response["edit_template_url"] = example_edit_template_url
+        expected_response["edit_template_url"] = {
+            "url": f"integrations:apps/my/wpp-cloud/{app_uuid}/templates/edit/{template_uuid}",
+            "type": "internal",
+        }
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_response)

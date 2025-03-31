@@ -29,6 +29,7 @@ class WeniIntegrationsClient(InternalAuthentication):
     def get_template_data_by_id(self, project_uuid: str, template_id: str):
         # TODO: Change this URL with the correct one, when available
         url = f"{self.base_url}/api/v1/project/templates/details/"
+
         response = requests.get(
             url=url,
             headers=self.headers,
