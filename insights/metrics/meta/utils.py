@@ -100,7 +100,7 @@ def get_edit_template_url_from_template_data(
 
     The frontend application will use this URL to redirect the user to the template editor.
     """
-    weni_integrations_client = WeniIntegrationsClient(project_uuid=project_uuid)
+    weni_integrations_client = WeniIntegrationsClient()
 
     response = weni_integrations_client.get_template_data_by_id(
         project_uuid, template_id
