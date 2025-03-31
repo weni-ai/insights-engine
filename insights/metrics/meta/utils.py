@@ -24,4 +24,6 @@ def get_edit_template_url_from_template_data(
     app_uuid = template_data.get("app_uuid")
     template_uuid = template_data.get("template_uuid")
 
-    return f"integrations:apps/my/wpp-cloud/{app_uuid}/templates/edit/{template_uuid}"
+    url = f"integrations:apps/my/wpp-cloud/{app_uuid}/templates/edit/{template_uuid}"
+
+    return {"url": url, "type": "internal"}
