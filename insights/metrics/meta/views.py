@@ -237,6 +237,7 @@ class WhatsappIntegrationWebhookView(APIView):
             "is_whatsapp_integration": True,
             "waba_id": serializer.validated_data["waba_id"],
             "phone_number": serializer.validated_data["phone_number"],
+            "app_uuid": str(serializer.validated_data["app_uuid"]),
         }
 
         existing_dashboard = Dashboard.objects.filter(
