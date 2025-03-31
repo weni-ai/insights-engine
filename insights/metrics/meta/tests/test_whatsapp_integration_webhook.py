@@ -8,22 +8,22 @@ from insights.dashboards.models import Dashboard
 from insights.projects.models import Project
 
 
-class BaseTestWhatsappIntegrationWebhook(APITestCase):
+class BaseTestWhatsAppIntegrationWebhook(APITestCase):
     def receive_integration_data(self, data: dict) -> Response:
         url = "/v1/metrics/meta/internal/whatsapp-integration/"
 
         return self.client.post(url, data, format="json")
 
 
-class TestWhatsappIntegrationWebhookAsAnonymousUser(BaseTestWhatsappIntegrationWebhook):
+class TestWhatsAppIntegrationWebhookAsAnonymousUser(BaseTestWhatsAppIntegrationWebhook):
     def test_cannot_receive_integration_data_when_unauthenticated(self):
         response = self.receive_integration_data({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
-    BaseTestWhatsappIntegrationWebhook
+class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
+    BaseTestWhatsAppIntegrationWebhook
 ):
     def setUp(self):
         super().setUp()
@@ -48,6 +48,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
 
         payload = {
             "project_uuid": project.uuid,
+            "app_uuid": str(uuid.uuid4()),
             "waba_id": "1234567890",
             "phone_number": {
                 "id": "445303688657575",
@@ -80,6 +81,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
             config={
                 "is_whatsapp_integration": True,
                 "waba_id": waba_id,
+                "app_uuid": str(uuid.uuid4()),
                 "phone_number": {
                     "id": "556622598897977",
                     "display_phone_number": "+55 82 98877 6655",
@@ -89,6 +91,7 @@ class TestWhatsappIntegrationWebhookAsAuthenticatedUser(
 
         payload = {
             "project_uuid": project.uuid,
+            "app_uuid": dashboard.config["app_uuid"],
             "waba_id": waba_id,
             "phone_number": {
                 "id": "996622598897977",
