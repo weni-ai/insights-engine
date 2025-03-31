@@ -906,3 +906,20 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
                 ],
             },
         )
+
+    @with_project_auth
+    @patch(
+        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
+    )
+    def test_cannot_get_wabas_when_error_occurs_on_weni_integrations_client(
+        self, mock_wabas
+    ):
+        mock_wabas.return_value = (
+            {"error": "Generic error"},
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        response = self.get_wabas({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["error"], "Generic error")

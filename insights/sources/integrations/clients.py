@@ -34,6 +34,12 @@ class WeniIntegrationsClient(InternalAuthentication):
                 response.text,
             )
 
+            if status.is_server_error(response.status_code):
+                return (
+                    {"error": "Internal server error"},
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
             return {"error": response.text}, response.status_code
 
         wabas = response.json().get("data", [])
