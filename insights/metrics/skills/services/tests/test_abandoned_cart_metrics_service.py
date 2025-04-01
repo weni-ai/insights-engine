@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
+from rest_framework import status
 
 from insights.metrics.skills.exceptions import (
     InvalidDateRangeError,
