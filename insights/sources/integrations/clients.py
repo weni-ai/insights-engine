@@ -4,6 +4,7 @@ import json
 
 from django.conf import settings
 from rest_framework import status
+from sentry_sdk import capture_message
 from insights.internals.base import InternalAuthentication
 from insights.sources.cache import CacheClient
 
@@ -33,17 +34,12 @@ class WeniIntegrationsClient(InternalAuthentication):
                 response.status_code,
                 response.text,
             )
+            capture_message(response.text)
 
-            if status.is_server_error(response.status_code):
-                return (
-                    {"error": "Internal server error"},
-                    status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-
-            return {"error": response.text}, response.status_code
+            raise ValueError(response.text)
 
         wabas = response.json().get("data", [])
 
         self.cache.set(cache_key, json.dumps(wabas), cache_ttl)
 
-        return wabas, response.status_code
+        return wabas

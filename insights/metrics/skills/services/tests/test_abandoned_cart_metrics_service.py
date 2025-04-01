@@ -89,7 +89,7 @@ class TestAbandonedCartSkillService(TestCase):
             {
                 "waba_id": "123456789098765",
             },
-        ], status.HTTP_200_OK
+        ]
         mock_templates_list.return_value = {
             "data": [
                 {
@@ -121,7 +121,7 @@ class TestAbandonedCartSkillService(TestCase):
             {
                 "waba_id": "123456789098765",
             },
-        ], status.HTTP_200_OK
+        ]
         mock_templates_list.return_value = {
             "data": [
                 {

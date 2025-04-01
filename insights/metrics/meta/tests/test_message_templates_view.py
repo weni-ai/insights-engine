@@ -167,7 +167,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         self, mock_wabas
     ):
         waba_id = "0000000000000000"
-        mock_wabas.return_value = [], status.HTTP_200_OK
+        mock_wabas.return_value = []
         response = self.get_list_templates(
             {
                 "waba_id": waba_id,
@@ -186,7 +186,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         self, mock_list_templates, mock_wabas
     ):
         mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
-        mock_wabas.return_value = [{"waba_id": "0000000000000000"}], status.HTTP_200_OK
+        mock_wabas.return_value = [{"waba_id": "0000000000000000"}]
         response = self.get_list_templates(
             {
                 "waba_id": "0000000000000000",
@@ -207,7 +207,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         self, mock_list_templates, mock_wabas
     ):
         mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
-        mock_wabas.return_value = [{"waba_id": "0000000000000000"}], status.HTTP_200_OK
+        mock_wabas.return_value = [{"waba_id": "0000000000000000"}]
 
         response = self.get_list_templates(
             {
@@ -229,7 +229,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         self, mock_list_templates, mock_wabas
     ):
         mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
-        mock_wabas.return_value = [{"waba_id": "0000000000000000"}], status.HTTP_200_OK
+        mock_wabas.return_value = [{"waba_id": "0000000000000000"}]
 
         response = self.get_list_templates(
             {
@@ -249,7 +249,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
     def test_get_list_templates(self, mock_list_templates, mock_wabas):
         waba_id = "0000000000000000"
-        mock_wabas.return_value = [{"waba_id": waba_id}], status.HTTP_200_OK
+        mock_wabas.return_value = [{"waba_id": waba_id}]
         mock_list_templates.return_value = MOCK_TEMPLATES_LIST_BODY
         response = self.get_list_templates(
             {
@@ -275,7 +275,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     ):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
-        mock_wabas.return_value = [], status.HTTP_200_OK
+        mock_wabas.return_value = []
         response = self.get_preview(
             {
                 "waba_id": waba_id,
@@ -296,7 +296,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         template_id = "1234567890987654"
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
 
         response = self.get_preview(
             {
@@ -318,7 +318,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         template_id = "1234567890987654"
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
         mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
 
         response = self.get_preview(
@@ -351,7 +351,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         )
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
         mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
 
         response = self.get_preview(
@@ -377,7 +377,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
 
         response = self.get_preview(
             {"waba_id": waba_id, "project_uuid": self.project.uuid}
@@ -396,7 +396,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         template_id = "1234567890987654"
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
         expected_response = {
             "data": format_messages_metrics_data(
                 MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0]
@@ -431,7 +431,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     ):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
-        mock_wabas.return_value = [], status.HTTP_200_OK
+        mock_wabas.return_value = []
         response = self.get_messages_analytics(
             {
                 "waba_id": waba_id,
@@ -452,7 +452,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         template_id = "1234567890987654"
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
 
         response = self.get_messages_analytics(
             {
@@ -473,7 +473,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         waba_id = "0000000000000000"
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
 
         response = self.get_messages_analytics(
             {
@@ -503,7 +503,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     ):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
-        mock_wabas.return_value = [], status.HTTP_200_OK
+        mock_wabas.return_value = []
         response = self.get_buttons_analytics(
             {
                 "waba_id": waba_id,
@@ -524,7 +524,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         template_id = "1234567890987654"
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
 
         response = self.get_buttons_analytics(
             {
@@ -549,7 +549,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         template_id = "1234567890987654"
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
         mock_preview.return_value = MOCK_SUCCESS_RESPONSE_BODY
 
         for component in MOCK_SUCCESS_RESPONSE_BODY["components"]:
@@ -587,7 +587,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         waba_id = "0000000000000000"
         mock_wabas.return_value = [
             {"waba_id": waba_id},
-        ], status.HTTP_200_OK
+        ]
 
         response = self.get_buttons_analytics(
             {"waba_id": waba_id, "project_uuid": self.project.uuid}
@@ -886,7 +886,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
                     "display_phone_number": "+55 84 8877-6655",
                 },
             },
-        ], status.HTTP_200_OK
+        ]
 
         response = self.get_wabas({"project_uuid": self.project.uuid})
 
@@ -914,12 +914,9 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     def test_cannot_get_wabas_when_error_occurs_on_weni_integrations_client(
         self, mock_wabas
     ):
-        mock_wabas.return_value = (
-            {"error": "Generic error"},
-            status.HTTP_400_BAD_REQUEST,
-        )
+        mock_wabas.side_effect = ValueError
 
         response = self.get_wabas({"project_uuid": self.project.uuid})
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["error"], "Generic error")
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["error"], "Internal server error")

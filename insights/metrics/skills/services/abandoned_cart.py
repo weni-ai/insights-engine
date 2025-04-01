@@ -66,17 +66,16 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
     @cached_property
     def _project_wabas(self) -> list[dict]:
         client = WeniIntegrationsClient()
-        wabas, status_code = client.get_wabas_for_project(self.project.uuid)
-
-        if not status.is_success(status_code):
+        try:
+            wabas = client.get_wabas_for_project(self.project.uuid)
+        except ValueError as e:
             logger.error(
-                "Error fetching wabas in AbandonedCartSkillService for project %s: %s - %s",
+                "Error fetching wabas in AbandonedCartSkillService for project %s: %s",
                 self.project.uuid,
-                status_code,
-                wabas,
+                e,
             )
 
-            raise ValueError(wabas)
+            raise e
 
         return [waba for waba in wabas if waba["waba_id"]]
 

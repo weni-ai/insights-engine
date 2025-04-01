@@ -1,3 +1,5 @@
+import logging
+
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
@@ -30,6 +32,9 @@ from insights.metrics.meta.serializers import (
 )
 from insights.metrics.meta.services import MetaMessageTemplatesService
 from insights.sources.integrations.clients import WeniIntegrationsClient
+
+
+logger = logging.getLogger(__name__)
 
 
 class WhatsAppMessageTemplatesView(GenericViewSet):
@@ -225,12 +230,13 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
     def wabas(self, request: Request) -> Response:
         project_uuid = request.query_params.get("project_uuid")
 
-        wabas_data, status_code = WeniIntegrationsClient().get_wabas_for_project(
-            project_uuid
-        )
-
-        if not status.is_success(status_code):
-            return Response(wabas_data, status=status_code)
+        try:
+            wabas_data = WeniIntegrationsClient().get_wabas_for_project(project_uuid)
+        except ValueError as e:
+            return Response(
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response(
             {"results": WabaSerializer(wabas_data, many=True).data},
