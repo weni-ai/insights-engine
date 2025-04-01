@@ -1,8 +1,13 @@
 from unittest.mock import patch
+
 from django.test import TestCase
+from django.utils import timezone
+from django.utils.timezone import timedelta
 from rest_framework import serializers
+
 from insights.metrics.meta.tests.mock import MOCK_TEMPLATE_DAILY_ANALYTICS
 from insights.metrics.meta.utils import format_messages_metrics_data
+from insights.metrics.meta.validators import MAX_ANALYTICS_DAYS_PERIOD_FILTER
 from insights.projects.models import Project
 from insights.sources.vtex_conversions.services import VTEXOrdersConversionsService
 from rest_framework.exceptions import PermissionDenied
@@ -32,8 +37,8 @@ class VTEXConversionsServiceTestCase(TestCase):
         filters = {
             "waba_id": "123",
             "template_id": "456",
-            "date_start": "2021-01-01",
-            "date_end": "2021-01-01",
+            "date_start": (timezone.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
+            "date_end": (timezone.now()).strftime("%Y-%m-%d"),
         }
 
         with self.assertRaises(PermissionDenied):
@@ -59,8 +64,8 @@ class VTEXConversionsServiceTestCase(TestCase):
         filters = {
             "waba_id": waba_id,
             "template_id": "456",
-            "date_start": "2025-01-24",
-            "date_end": "2025-01-31",
+            "date_start": (timezone.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
+            "date_end": (timezone.now()).strftime("%Y-%m-%d"),
         }
 
         metrics = self.service.get_metrics(filters)
