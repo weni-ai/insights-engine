@@ -1,4 +1,7 @@
 from datetime import date
+
+from django.conf import settings
+
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.projects.models import Project
 from insights.sources.integrations.clients import WeniIntegrationsClient
@@ -28,6 +31,10 @@ class VTEXOrdersConversionsService:
         """
         Check if the project has permission to access the WABA.
         """
+
+        if test_waba_id := getattr(settings, "WHATSAPP_ABANDONED_CART_WABA_ID", None):
+            # TEMPORARY, this should be used only in the development and staging environments
+            return waba_id == test_waba_id
 
         try:
             project_wabas = self.integrations_client.get_wabas_for_project(
