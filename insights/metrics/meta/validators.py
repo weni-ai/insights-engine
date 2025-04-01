@@ -52,10 +52,13 @@ def validate_analytics_kwargs(filters: dict) -> dict:
     return analytics_kwargs
 
 
-def validate_analytics_selected_period(start_date: date):
+def validate_analytics_selected_period(
+    start_date: date,
+    field_name: str = "start_date",
+):
     if (timezone.now().date() - start_date).days > MAX_ANALYTICS_DAYS_PERIOD_FILTER:
         raise ValidationError(
-            {"start_date": "Start must be within the query period of the last 90 days."}
+            {field_name: "Start must be within the query period of the last 90 days."}
         )
 
 
