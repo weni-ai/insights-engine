@@ -115,9 +115,9 @@ MOCK_TEMPLATE_DAILY_ANALYTICS = {
                     "template_id": "123456789098765",
                     "start": 1733011200,
                     "end": 1733097600,
-                    "sent": 1,
-                    "delivered": 2,
-                    "read": 3,
+                    "sent": 10,
+                    "delivered": 8,
+                    "read": 6,
                     "clicked": [
                         {
                             "type": "quick_reply_button",
@@ -131,8 +131,8 @@ MOCK_TEMPLATE_DAILY_ANALYTICS = {
                     "start": 1733097600,
                     "end": 1733184000,
                     "sent": 5,
-                    "delivered": 6,
-                    "read": 7,
+                    "delivered": 4,
+                    "read": 3,
                     "clicked": [
                         {
                             "type": "quick_reply_button",
