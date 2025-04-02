@@ -28,7 +28,7 @@ class OrdersConversionsFiltersSerializer(serializers.Serializer):
                 code="end_date_before_start_date",
             )
 
-        validate_analytics_selected_period(start_date, field_name="start_date")
+        validate_analytics_selected_period(start_date, field_name="ended_at__gte")
 
         attrs["start_date"] = start_date
         attrs["end_date"] = end_date
