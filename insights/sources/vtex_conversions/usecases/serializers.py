@@ -6,20 +6,29 @@ from insights.metrics.meta.validators import validate_analytics_selected_period
 class OrdersConversionsFiltersSerializer(serializers.Serializer):
     waba_id = serializers.CharField(required=True)
     template_id = serializers.CharField(required=True)
-    date_start = serializers.DateField(required=True)
-    date_end = serializers.DateField(required=True)
+
+    # This is a workaround to maintain the same filter names as the dashboard,
+    # sent by default by the frontend application.
+    ended_at__gte = serializers.DateField(required=True, write_only=True)
+    ended_at__lte = serializers.DateField(required=True, write_only=True)
+
+    start_date = serializers.DateField(read_only=True)
+    end_date = serializers.DateField(read_only=True)
 
     def validate(self, attrs):
-        date_start = attrs.get("date_start")
-        date_end = attrs.get("date_end")
+        ended_at__gte = attrs.get("ended_at__gte")
+        ended_at__lte = attrs.get("ended_at__lte")
 
-        if date_start > date_end:
+        if ended_at__gte > ended_at__lte:
             raise serializers.ValidationError(
-                {"date_end": "End date must be after start date"},
+                {"ended_at__lte": "End date must be after start date"},
                 code="end_date_before_start_date",
             )
 
-        validate_analytics_selected_period(date_start, field_name="date_start")
+        validate_analytics_selected_period(ended_at__gte, field_name="ended_at__gte")
+
+        attrs["start_date"] = ended_at__gte
+        attrs["end_date"] = ended_at__lte
 
         return attrs
 

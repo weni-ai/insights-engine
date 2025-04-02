@@ -24,7 +24,7 @@ class VTEXConversionsServiceTestCase(TestCase):
         with self.assertRaises(serializers.ValidationError) as context:
             self.service.get_metrics(filters)
 
-        for field in ("waba_id", "template_id", "date_start", "date_end"):
+        for field in ("waba_id", "template_id", "ended_at__gte", "ended_at__lte"):
             self.assertIn(field, context.exception.detail)
             self.assertEqual(context.exception.detail[field][0].code, "required")
 
@@ -37,8 +37,8 @@ class VTEXConversionsServiceTestCase(TestCase):
         filters = {
             "waba_id": "123",
             "template_id": "456",
-            "date_start": (timezone.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
-            "date_end": (timezone.now()).strftime("%Y-%m-%d"),
+            "ended_at__gte": (timezone.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
+            "ended_at__lte": (timezone.now()).strftime("%Y-%m-%d"),
         }
 
         with self.assertRaises(PermissionDenied):
@@ -64,8 +64,8 @@ class VTEXConversionsServiceTestCase(TestCase):
         filters = {
             "waba_id": waba_id,
             "template_id": "456",
-            "date_start": (timezone.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
-            "date_end": (timezone.now()).strftime("%Y-%m-%d"),
+            "ended_at__gte": (timezone.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
+            "ended_at__lte": (timezone.now()).strftime("%Y-%m-%d"),
         }
 
         metrics = self.service.get_metrics(filters)
