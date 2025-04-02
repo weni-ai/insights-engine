@@ -3,6 +3,14 @@ from rest_framework import serializers
 from insights.metrics.meta.validators import validate_analytics_selected_period
 
 
+class OrdersConversionsUTMDataSerializer(serializers.Serializer):
+    error = serializers.BooleanField(required=True)
+    count_sell = serializers.IntegerField(required=True)
+    accumulated_total = serializers.FloatField(required=True)
+    medium_ticket = serializers.FloatField(required=True)
+    currency_code = serializers.CharField(required=True)
+
+
 class OrdersConversionsFiltersSerializer(serializers.Serializer):
     waba_id = serializers.CharField(required=True)
     template_id = serializers.CharField(required=True)
@@ -46,6 +54,7 @@ class OrdersConversionsGraphDataSerializer(serializers.Serializer):
     delivered = OrdersConversionsGraphDataFieldSerializer(required=True)
     read = OrdersConversionsGraphDataFieldSerializer(required=True)
     clicked = OrdersConversionsGraphDataFieldSerializer(required=True)
+    orders = OrdersConversionsGraphDataFieldSerializer(required=True)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -58,4 +67,5 @@ class OrdersConversionsGraphDataSerializer(serializers.Serializer):
 
 
 class OrdersConversionsMetricsSerializer(serializers.Serializer):
+    utm_data = OrdersConversionsUTMDataSerializer(required=True)
     graph_data = OrdersConversionsGraphDataSerializer(required=True)
