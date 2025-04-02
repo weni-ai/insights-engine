@@ -19,16 +19,19 @@ class OrdersConversionsFiltersSerializer(serializers.Serializer):
         ended_at__gte = attrs.get("ended_at__gte")
         ended_at__lte = attrs.get("ended_at__lte")
 
-        if ended_at__gte > ended_at__lte:
+        start_date = ended_at__gte.date()
+        end_date = ended_at__lte.date()
+
+        if start_date > end_date:
             raise serializers.ValidationError(
                 {"ended_at__lte": "End date must be after start date"},
                 code="end_date_before_start_date",
             )
 
-        validate_analytics_selected_period(ended_at__gte, field_name="ended_at__gte")
+        validate_analytics_selected_period(start_date, field_name="ended_at__gte")
 
-        attrs["start_date"] = ended_at__gte.date()
-        attrs["end_date"] = ended_at__lte.date()
+        attrs["start_date"] = start_date
+        attrs["end_date"] = end_date
 
         return attrs
 
