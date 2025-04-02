@@ -138,9 +138,8 @@ class VTEXOrdersConversionsService:
         orders_data = orders_client.list(
             query_filters={
                 "utm_source": utm_source,
-                "started_at__gte": start_date,
-                "started_at__lte": end_date,
-                "status": "invoiced",
+                "ended_at__gte": str(start_date),
+                "ended_at__lte": str(end_date),
             }
         )
 
