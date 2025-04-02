@@ -190,6 +190,15 @@ class VTEXOrdersConversionsService:
             currency_code=orders_data.get("currencyCode", ""),
         )
 
+        # The percentage is calculated based on the number of orders
+        # that were made based on the message with the UTM source
+        graph_data.orders.value = utm_data.count_sell
+        graph_data.orders.percentage = (
+            round((utm_data.count_sell / graph_data.sent.value) * 100, 2)
+            if graph_data.sent.value
+            else 0
+        )
+
         orders_conversions = OrdersConversions(graph_data=graph_data, utm_data=utm_data)
         orders_conversions_serializer = OrdersConversionsMetricsSerializer(
             instance=orders_conversions
