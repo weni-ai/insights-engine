@@ -1,4 +1,5 @@
 from datetime import date
+import json
 
 from django.conf import settings
 from logging import getLogger
@@ -76,6 +77,10 @@ class VTEXOrdersConversionsService:
                 detail=_("Project does not have permission to access WABA"),
                 code="project_without_waba_permission",
             )
+
+        if getattr(settings, "VTEX_ORDERS_CREDENTIALS", None):
+            # TEMPORARY, this should be used only in the development and staging environments
+            return {"vtex_credentials": json.loads(settings.VTEX_ORDERS_CREDENTIALS)}
 
         try:
             credentials = self.vtex_credentials_client.get_vtex_auth()
