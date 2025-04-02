@@ -4,9 +4,7 @@ from sentry_sdk import capture_message
 from insights.internals.base import VtexAuthentication
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
-from insights.sources.vtexcredentials.clients import AuthRestClient
 from insights.sources.cache import CacheClient
-from django.conf import settings
 import logging
 
 from datetime import datetime
