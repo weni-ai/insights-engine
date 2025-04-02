@@ -7,10 +7,10 @@ class OrdersConversionsFiltersSerializer(serializers.Serializer):
     waba_id = serializers.CharField(required=True)
     template_id = serializers.CharField(required=True)
 
-    # This is a workaround to maintain the same filter names as the dashboard,
-    # sent by default by the frontend application.
-    ended_at__gte = serializers.DateField(required=True, write_only=True)
-    ended_at__lte = serializers.DateField(required=True, write_only=True)
+    # This is a workaround to maintain the same filter names
+    # and format as the dashboard, sent by default by the frontend application.
+    ended_at__gte = serializers.DateTimeField(required=True, write_only=True)
+    ended_at__lte = serializers.DateTimeField(required=True, write_only=True)
 
     start_date = serializers.DateField(read_only=True)
     end_date = serializers.DateField(read_only=True)
@@ -27,8 +27,8 @@ class OrdersConversionsFiltersSerializer(serializers.Serializer):
 
         validate_analytics_selected_period(ended_at__gte, field_name="ended_at__gte")
 
-        attrs["start_date"] = ended_at__gte
-        attrs["end_date"] = ended_at__lte
+        attrs["start_date"] = ended_at__gte.date()
+        attrs["end_date"] = ended_at__lte.date()
 
         return attrs
 
