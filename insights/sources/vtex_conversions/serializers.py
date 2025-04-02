@@ -4,7 +4,6 @@ from insights.metrics.meta.validators import validate_analytics_selected_period
 
 
 class OrdersConversionsUTMDataSerializer(serializers.Serializer):
-    error = serializers.BooleanField(required=True)
     count_sell = serializers.IntegerField(required=True)
     accumulated_total = serializers.FloatField(required=True)
     medium_ticket = serializers.FloatField(required=True)
@@ -12,6 +11,7 @@ class OrdersConversionsUTMDataSerializer(serializers.Serializer):
 
 
 class OrdersConversionsFiltersSerializer(serializers.Serializer):
+    utm_source = serializers.CharField(required=True)
     waba_id = serializers.CharField(required=True)
     template_id = serializers.CharField(required=True)
 

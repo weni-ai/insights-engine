@@ -7,7 +7,6 @@ class OrdersConversionsUTMData:
     Dataclass to store orders conversions UTM data.
     """
 
-    error: bool = False
     count_sell: int = 0
     accumulated_total: float = 0
     medium_ticket: float = 0

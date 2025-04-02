@@ -14,6 +14,7 @@ class TestOrdersConversionsFiltersSerializer(TestCase):
         filters = {
             "waba_id": "123",
             "template_id": "456",
+            "utm_source": "example",
             "ended_at__gte": (
                 timezone.now() - timedelta(days=MAX_ANALYTICS_DAYS_PERIOD_FILTER + 1)
             ).strftime("%Y-%m-%d"),
@@ -31,6 +32,7 @@ class TestOrdersConversionsFiltersSerializer(TestCase):
         filters = {
             "waba_id": "123",
             "template_id": "456",
+            "utm_source": "example",
             "ended_at__gte": (timezone.now()).strftime("%Y-%m-%d"),
             "ended_at__lte": (timezone.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
         }

@@ -1,6 +1,7 @@
 from datetime import date
 from logging import getLogger
 
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
@@ -53,6 +54,43 @@ class VTEXOrdersConversionsService:
 
         return waba_id in project_wabas
 
+    def get_credentials(self, waba_id: str) -> dict:
+        """
+        Get VTEX credentials for project and check if the project has permission
+        to access Meta's Graph API for the selected WABA.
+        """
+
+        if not self.project_has_permission_to_access_waba(waba_id):
+            logger.error(
+                "Verified that project %s does not have permission to access WABA %s while checking permissions in the VTEX orders conversions service",
+                self.project.uuid,
+                waba_id,
+            )
+            raise PermissionDenied(
+                detail=_("Project does not have permission to access WABA"),
+                code="project_without_waba_permission",
+            )
+
+        try:
+            credentials = self.vtex_credentials_client.get_vtex_auth()
+        except VtexCredentialsNotFound as e:
+            logger.error(
+                "VTEX credentials not found for project %s while checking permissions in the VTEX orders conversions service",
+                self.project.uuid,
+            )
+            raise PermissionDenied(
+                detail=_("Project does not have the credentials to access VTEX's API"),
+                code="project_without_vtex_credentials",
+            ) from e
+        except Exception as e:
+            logger.error(
+                "Error while getting VTEX credentials for project %s while checking permissions in the VTEX orders conversions service",
+                self.project.uuid,
+            )
+            raise e
+
+        return {"vtex_credentials": credentials}
+
     def get_message_metrics(
         self,
         waba_id: str,
@@ -97,36 +135,6 @@ class VTEXOrdersConversionsService:
 
         return orders_data
 
-    def get_credentials(self, waba_id: str) -> dict:
-        """
-        Check if the project has permission to access the WABA and VTEX credentials.
-        """
-
-        if not self.project_has_permission_to_access_waba(waba_id):
-            logger.error(
-                "Verified that project %s does not have permission to access WABA %s while checking permissions in the VTEX orders conversions service",
-                self.project.uuid,
-                waba_id,
-            )
-            raise PermissionDenied
-
-        try:
-            credentials = self.vtex_credentials_client.get_vtex_auth()
-        except VtexCredentialsNotFound as e:
-            logger.error(
-                "VTEX credentials not found for project %s while checking permissions in the VTEX orders conversions service",
-                self.project.uuid,
-            )
-            raise PermissionDenied from e
-        except Exception as e:
-            logger.error(
-                "Error while getting VTEX credentials for project %s while checking permissions in the VTEX orders conversions service",
-                self.project.uuid,
-            )
-            raise PermissionDenied from e
-
-        return {"vtex_credentials": credentials}
-
     def get_metrics(self, filters: dict):
         """
         Get metrics from Meta Graph API and VTEX API.
@@ -160,9 +168,9 @@ class VTEXOrdersConversionsService:
 
         orders_data = self.get_orders_metrics(
             vtex_credentials,
-            filters["start_date"],
-            filters["end_date"],
-            filters["utm_source"],
+            serializer.validated_data["start_date"],
+            serializer.validated_data["end_date"],
+            serializer.validated_data["utm_source"],
         )
 
         utm_data = OrdersConversionsUTMData(
