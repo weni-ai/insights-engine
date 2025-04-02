@@ -159,3 +159,23 @@ class VTEXConversionsServiceTestCase(TestCase):
                     .get(status)
                     .get("percentage"),
                 )
+
+        self.assertIn("orders", metrics["graph_data"])
+        self.assertIn("value", metrics["graph_data"]["orders"])
+        self.assertIn("percentage", metrics["graph_data"]["orders"])
+        self.assertEqual(
+            metrics["graph_data"]["orders"]["value"], fake_utm_data.get("count_sell")
+        )
+        self.assertEqual(
+            metrics["graph_data"]["orders"]["percentage"],
+            round(
+                (
+                    fake_utm_data.get("count_sell")
+                    / formatted_analytics_mock_data.get("status_count")
+                    .get("sent")
+                    .get("value")
+                )
+                * 100,
+                2,
+            ),
+        )
