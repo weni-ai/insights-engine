@@ -8,7 +8,7 @@ from insights.sources.vtex_conversions.dataclass import (
     OrdersConversionsGraphData,
     OrdersConversionsGraphDataField,
 )
-from insights.sources.vtex_conversions.usecases.serializers import (
+from insights.sources.vtex_conversions.serializers import (
     OrdersConversionsFiltersSerializer,
     OrdersConversionsMetricsSerializer,
 )

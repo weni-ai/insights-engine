@@ -4,7 +4,7 @@ from django.utils.timezone import timedelta
 from rest_framework import serializers
 
 from insights.metrics.meta.validators import MAX_ANALYTICS_DAYS_PERIOD_FILTER
-from insights.sources.vtex_conversions.usecases.serializers import (
+from insights.sources.vtex_conversions.serializers import (
     OrdersConversionsFiltersSerializer,
 )
 
