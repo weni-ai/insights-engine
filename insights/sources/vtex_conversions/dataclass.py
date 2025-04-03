@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class OrdersConversionsUTMData:
     """
     Dataclass to store orders conversions UTM data.
@@ -13,7 +13,7 @@ class OrdersConversionsUTMData:
     currency_code: str = ""
 
 
-@dataclass
+@dataclass(frozen=True)
 class OrdersConversionsGraphDataField:
     """
     Dataclass to store orders conversions message status.
@@ -23,7 +23,7 @@ class OrdersConversionsGraphDataField:
     percentage: float = 0
 
 
-@dataclass
+@dataclass(frozen=True)
 class OrdersConversionsGraphData:
     """
     Dataclass to store orders conversions message metrics.
@@ -36,7 +36,7 @@ class OrdersConversionsGraphData:
     orders: OrdersConversionsGraphDataField = OrdersConversionsGraphDataField()
 
 
-@dataclass
+@dataclass(frozen=True)
 class OrdersConversions:
     """
     Dataclass to store orders conversions metrics.

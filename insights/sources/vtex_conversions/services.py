@@ -116,17 +116,13 @@ class VTEXOrdersConversionsService:
             serializer.validated_data["end_date"],
         )
 
-        graph_data = OrdersConversionsGraphData()
-
+        graph_data_fields = {}
         for status in ("sent", "delivered", "read", "clicked"):
             status_data = metrics_data.get(status, {})
-
-            field = OrdersConversionsGraphDataField(
+            graph_data_fields[status] = OrdersConversionsGraphDataField(
                 value=status_data.get("value", 0),
                 percentage=status_data.get("percentage", 0),
             )
-
-            setattr(graph_data, status, field)
 
         orders_data = self.get_orders_metrics(
             serializer.validated_data["start_date"],
@@ -141,16 +137,18 @@ class VTEXOrdersConversionsService:
             currency_code=orders_data.get("currencyCode", ""),
         )
 
-        # The percentage is calculated based on the number of orders
-        # that were made based on the message with the UTM source
-        graph_data.orders.value = utm_data.count_sell
-        graph_data.orders.percentage = (
-            round((utm_data.count_sell / graph_data.sent.value) * 100, 2)
-            if graph_data.sent.value
-            else 0
-        )
+        graph_data_fields["orders"] = {
+            "value": utm_data.count_sell,
+            "percentage": (
+                round((utm_data.count_sell / graph_data_fields["sent"].value) * 100, 2)
+                if graph_data_fields["sent"].value
+                else 0
+            ),
+        }
 
+        graph_data = OrdersConversionsGraphData(**graph_data_fields)
         orders_conversions = OrdersConversions(graph_data=graph_data, utm_data=utm_data)
+
         orders_conversions_serializer = OrdersConversionsMetricsSerializer(
             instance=orders_conversions
         )
