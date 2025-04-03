@@ -79,18 +79,15 @@ class VTEXOrdersConversionsService:
             serializer.validated_data["end_date"],
         )
 
-        graph_data = OrdersConversionsGraphData()
-
+        graph_data_fields = {}
         for status in ("sent", "delivered", "read", "clicked"):
             status_data = metrics_data.get(status, {})
-
-            field = OrdersConversionsGraphDataField(
+            graph_data_fields[status] = OrdersConversionsGraphDataField(
                 value=status_data.get("value", 0),
                 percentage=status_data.get("percentage", 0),
             )
 
-            setattr(graph_data, status, field)
-
+        graph_data = OrdersConversionsGraphData(**graph_data_fields)
         orders_conversions = OrdersConversions(graph_data=graph_data)
         orders_conversions_serializer = OrdersConversionsMetricsSerializer(
             instance=orders_conversions
