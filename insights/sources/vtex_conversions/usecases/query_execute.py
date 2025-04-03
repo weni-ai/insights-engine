@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 class QueryExecutor:
-    def get_vtex_credentials(self, project: Project):
+    @classmethod
+    def get_vtex_credentials(cls, project: Project):
         vtex_credentials_client = AuthRestClient(project=project.uuid)
 
         try:
