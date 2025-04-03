@@ -2,10 +2,7 @@ import requests
 from insights.internals.base import VtexAuthentication
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
-from insights.sources.vtexcredentials.clients import AuthRestClient
 from insights.sources.cache import CacheClient
-from insights.utils import format_to_iso_utc
-from django.conf import settings
 
 from datetime import datetime
 
