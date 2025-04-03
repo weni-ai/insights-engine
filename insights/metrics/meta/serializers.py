@@ -28,7 +28,7 @@ class MessageTemplatesQueryParamsSerializer(serializers.Serializer):
     fields = serializers.ListField(child=serializers.CharField(), required=False)
 
     def validate_limit(self, value):
-        max_limit = 20
+        max_limit = 50
 
         if value > max_limit:
             raise serializers.ValidationError(
