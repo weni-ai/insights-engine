@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class QueryExecutor:
-    def get_vtex_credentials(self, project: Project):
+    @classmethod
+    def get_vtex_credentials(cls, project: Project):
 
         if getattr(settings, "VTEX_ORDERS_CREDENTIALS", None):
             # TEMPORARY, this should be used only in the development and staging environments
