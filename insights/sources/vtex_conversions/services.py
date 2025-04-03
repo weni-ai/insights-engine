@@ -6,7 +6,6 @@ from rest_framework.exceptions import PermissionDenied
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.projects.models import Project
-from insights.sources.cache import CacheClient
 from insights.sources.integrations.clients import WeniIntegrationsClient
 from insights.sources.orders.clients import VtexOrdersRestClient
 from insights.sources.vtex_conversions.dataclass import (
@@ -19,8 +18,6 @@ from insights.sources.vtex_conversions.serializers import (
     OrdersConversionsFiltersSerializer,
     OrdersConversionsMetricsSerializer,
 )
-from insights.sources.vtexcredentials.clients import AuthRestClient
-from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
 
 
 logger = getLogger(__name__)
@@ -31,14 +28,17 @@ class VTEXOrdersConversionsService:
     Service to get orders conversions from Meta Graph API and VTEX API.
     """
 
-    def __init__(self, project: Project):
+    def __init__(
+        self,
+        project: Project,
+        meta_api_client: MetaGraphAPIClient,
+        integrations_client: WeniIntegrationsClient,
+        orders_client: VtexOrdersRestClient,
+    ):
         self.project = project
-
-        self.meta_api_client = MetaGraphAPIClient()
-        self.integrations_client = WeniIntegrationsClient()
-
-        self.vtex_credentials_client = AuthRestClient(project=self.project.uuid)
-        self.orders_client_class = VtexOrdersRestClient
+        self.meta_api_client = meta_api_client
+        self.integrations_client = integrations_client
+        self.orders_client = orders_client
 
     def project_has_permission_to_access_waba(self, waba_id: str) -> bool:
         """
@@ -54,10 +54,15 @@ class VTEXOrdersConversionsService:
 
         return waba_id in project_wabas
 
-    def get_credentials(self, waba_id: str) -> dict:
+    def get_message_metrics(
+        self,
+        waba_id: str,
+        template_id: str,
+        start_date: date,
+        end_date: date,
+    ) -> OrdersConversionsGraphData:
         """
-        Get VTEX credentials for project and check if the project has permission
-        to access Meta's Graph API for the selected WABA.
+        Get message metrics from Meta Graph API.
         """
 
         if not self.project_has_permission_to_access_waba(waba_id):
@@ -71,37 +76,6 @@ class VTEXOrdersConversionsService:
                 code="project_without_waba_permission",
             )
 
-        try:
-            credentials = self.vtex_credentials_client.get_vtex_auth()
-        except VtexCredentialsNotFound as e:
-            logger.error(
-                "VTEX credentials not found for project %s while checking permissions in the VTEX orders conversions service",
-                self.project.uuid,
-            )
-            raise PermissionDenied(
-                detail=_("Project does not have the credentials to access VTEX's API"),
-                code="project_without_vtex_credentials",
-            ) from e
-        except Exception as e:
-            logger.error(
-                "Error while getting VTEX credentials for project %s while checking permissions in the VTEX orders conversions service",
-                self.project.uuid,
-            )
-            raise e
-
-        return {"vtex_credentials": credentials}
-
-    def get_message_metrics(
-        self,
-        waba_id: str,
-        template_id: str,
-        start_date: date,
-        end_date: date,
-    ) -> OrdersConversionsGraphData:
-        """
-        Get message metrics from Meta Graph API.
-        """
-
         metrics_data = (
             self.meta_api_client.get_messages_analytics(
                 waba_id, template_id, start_date, end_date
@@ -112,19 +86,12 @@ class VTEXOrdersConversionsService:
 
         return metrics_data
 
-    def get_orders_metrics(
-        self, credentials, start_date: date, end_date: date, utm_source: str
-    ):
+    def get_orders_metrics(self, start_date: date, end_date: date, utm_source: str):
         """
         Get orders metrics from VTEX API.
         """
 
-        orders_client = self.orders_client_class(
-            auth_params=credentials,
-            cache_client=CacheClient(),
-        )
-
-        orders_data = orders_client.list(
+        orders_data = self.orders_client.list(
             query_filters={
                 "utm_source": (utm_source,),
                 "ended_at__gte": str(start_date),
@@ -141,10 +108,6 @@ class VTEXOrdersConversionsService:
 
         serializer = OrdersConversionsFiltersSerializer(data=filters)
         serializer.is_valid(raise_exception=True)
-
-        vtex_credentials = self.get_credentials(
-            serializer.validated_data["waba_id"]
-        ).get("vtex_credentials")
 
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
@@ -166,7 +129,6 @@ class VTEXOrdersConversionsService:
             setattr(graph_data, status, field)
 
         orders_data = self.get_orders_metrics(
-            vtex_credentials,
             serializer.validated_data["start_date"],
             serializer.validated_data["end_date"],
             serializer.validated_data["utm_source"],

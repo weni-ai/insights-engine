@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import Mock
 
 from django.test import TestCase
 from django.utils import timezone
@@ -7,18 +7,25 @@ from rest_framework import serializers
 
 from insights.metrics.meta.tests.mock import MOCK_TEMPLATE_DAILY_ANALYTICS
 from insights.metrics.meta.utils import format_messages_metrics_data
-from insights.metrics.meta.validators import MAX_ANALYTICS_DAYS_PERIOD_FILTER
 from insights.projects.models import Project
 from insights.sources.vtex_conversions.services import VTEXOrdersConversionsService
 from rest_framework.exceptions import PermissionDenied
-
-from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
 
 
 class VTEXConversionsServiceTestCase(TestCase):
     def setUp(self) -> None:
         self.project = Project.objects.create()
-        self.service = VTEXOrdersConversionsService(self.project)
+
+        self.meta_api_client = Mock()
+        self.integrations_client = Mock()
+        self.orders_client = Mock()
+
+        self.service = VTEXOrdersConversionsService(
+            self.project,
+            self.meta_api_client,
+            self.integrations_client,
+            self.orders_client,
+        )
 
     def test_cannot_get_metrics_without_required_filters(self):
         filters = {}
@@ -30,13 +37,8 @@ class VTEXConversionsServiceTestCase(TestCase):
             self.assertIn(field, context.exception.detail)
             self.assertEqual(context.exception.detail[field][0].code, "required")
 
-    @patch(
-        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
-    )
-    def test_cannot_get_metrics_without_waba_permission(
-        self, mock_get_wabas_for_project
-    ):
-        mock_get_wabas_for_project.return_value = []
+    def test_cannot_get_metrics_without_waba_permission(self):
+        self.integrations_client.get_wabas_for_project.return_value = []
 
         filters = {
             "waba_id": "123",
@@ -53,45 +55,7 @@ class VTEXConversionsServiceTestCase(TestCase):
             context.exception.detail.code, "project_without_waba_permission"
         )
 
-    @patch(
-        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
-    )
-    @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
-    def test_cannot_get_metrics_without_vtex_credentials(
-        self, mock_get_vtex_auth, mock_get_wabas_for_project
-    ):
-        waba_id = "123"
-        mock_get_vtex_auth.side_effect = VtexCredentialsNotFound()
-        mock_get_wabas_for_project.return_value = [waba_id]
-
-        filters = {
-            "waba_id": waba_id,
-            "template_id": "456",
-            "utm_source": "example",
-            "ended_at__gte": (timezone.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
-            "ended_at__lte": (timezone.now()).strftime("%Y-%m-%d"),
-        }
-
-        with self.assertRaises(PermissionDenied) as context:
-            self.service.get_metrics(filters)
-
-        self.assertEqual(
-            context.exception.detail.code, "project_without_vtex_credentials"
-        )
-
-    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
-    @patch(
-        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
-    )
-    @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
-    @patch("insights.sources.orders.clients.VtexOrdersRestClient.list")
-    def test_get_metrics(
-        self,
-        mock_get_vtex_orders,
-        mock_get_vtex_auth,
-        mock_get_wabas_for_project,
-        mock_get_messages_analytics,
-    ):
+    def test_get_metrics(self):
         waba_id = "123"
 
         analytics_mock_data = MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0]
@@ -99,11 +63,9 @@ class VTEXConversionsServiceTestCase(TestCase):
             analytics_mock_data
         )
 
-        mock_get_wabas_for_project.return_value = [waba_id]
-        mock_get_vtex_auth.return_value = {
-            "app_key": "123",
-            "app_token": "123",
-            "domain": "example.myvtex.com",
+        self.integrations_client.get_wabas_for_project.return_value = [waba_id]
+        self.meta_api_client.get_messages_analytics.return_value = {
+            "data": formatted_analytics_mock_data
         }
 
         fake_utm_data = {
@@ -113,7 +75,7 @@ class VTEXConversionsServiceTestCase(TestCase):
             "currency_code": "BRL",
         }
 
-        mock_get_vtex_orders.return_value = {
+        self.orders_client.list.return_value = {
             "countSell": fake_utm_data.get("count_sell"),
             "accumulatedTotal": fake_utm_data.get("accumulated_total"),
             "ticketMax": 1000,
@@ -121,7 +83,7 @@ class VTEXConversionsServiceTestCase(TestCase):
             "medium_ticket": fake_utm_data.get("medium_ticket"),
             "currencyCode": fake_utm_data.get("currency_code"),
         }
-        mock_get_messages_analytics.return_value = {
+        self.meta_api_client.get_messages_analytics.return_value = {
             "data": formatted_analytics_mock_data
         }
 
