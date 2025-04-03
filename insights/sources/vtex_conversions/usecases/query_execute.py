@@ -1,5 +1,7 @@
+import json
 import logging
 
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 
@@ -18,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 class QueryExecutor:
     def get_vtex_credentials(self, project: Project):
+
+        if getattr(settings, "VTEX_ORDERS_CREDENTIALS", None):
+            # TEMPORARY, this should be used only in the development and staging environments
+            return {"vtex_credentials": json.loads(settings.VTEX_ORDERS_CREDENTIALS)}
+
         vtex_credentials_client = AuthRestClient(project=project.uuid)
 
         try:

@@ -1,5 +1,4 @@
 from datetime import date
-import json
 
 from django.conf import settings
 from logging import getLogger
