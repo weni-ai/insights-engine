@@ -24,7 +24,7 @@ class QueryExecutor:
 
         if getattr(settings, "VTEX_ORDERS_CREDENTIALS", None):
             # TEMPORARY, this should be used only in the development and staging environments
-            return {"vtex_credentials": json.loads(settings.VTEX_ORDERS_CREDENTIALS)}
+            return json.loads(settings.VTEX_ORDERS_CREDENTIALS)
 
         vtex_credentials_client = AuthRestClient(project=project.uuid)
 
