@@ -1,7 +1,10 @@
 from datetime import datetime
+import logging
 from rest_framework import status as http_status
 
 from insights.sources.integrations.clients import WeniIntegrationsClient
+
+logger = logging.getLogger(__name__)
 
 
 def format_message_metrics_data(data: dict):
@@ -107,17 +110,35 @@ def get_edit_template_url_from_template_data(
     )
 
     if not response or not http_status.is_success(response.status_code):
+        logger.error(
+            "Failed to get template data for project_uuid=%s, template_id=%s: %s - %s",
+            project_uuid,
+            template_id,
+            response.status_code,
+            response.text,
+        )
         return None
 
     template_data = response.json()
 
     if not isinstance(template_data, list):
+        logger.error(
+            "Invalid template data for project_uuid=%s, template_id=%s: %s",
+            project_uuid,
+            template_id,
+            template_data,
+        )
         return None
 
     app_uuid = template_data[0].get("app_uuid")
     templates_uuid = template_data[0].get("templates_uuid", [])
 
     if len(templates_uuid) < 1:
+        logger.error(
+            "No templates_uuid found for project_uuid=%s, template_id=%s",
+            project_uuid,
+            template_id,
+        )
         return None
 
     template_uuid = templates_uuid[0]
