@@ -27,6 +27,11 @@ class DashboardIsDefaultSerializer(serializers.ModelSerializer):
         fields = ["is_default"]
 
     def validate_is_default(self, value: bool) -> bool:
+        """
+        Validates that a default dashboard cannot be set as non-default.
+
+        Raises a ValidationError if attempting to set a default dashboard to False.
+        """
         if value is False and self.instance.is_default is True:
             raise serializers.ValidationError(
                 _("Cannot set a default dashboard as non-default"),
