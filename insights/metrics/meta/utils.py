@@ -110,8 +110,17 @@ def get_edit_template_url_from_template_data(
         return None
 
     template_data = response.json()
-    app_uuid = template_data.get("app_uuid")
-    template_uuid = template_data.get("templates_uuid")[0]
+
+    if not isinstance(template_data, list):
+        return None
+
+    app_uuid = template_data[0].get("app_uuid")
+    templates_uuid = template_data[0].get("templates_uuid", [])
+
+    if len(templates_uuid) < 1:
+        return None
+
+    template_uuid = templates_uuid[0]
 
     url = f"integrations:apps/my/wpp-cloud/{app_uuid}/templates/edit/{template_uuid}"
 

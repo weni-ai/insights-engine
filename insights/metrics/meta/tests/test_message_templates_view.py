@@ -387,10 +387,9 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         app_uuid = str(uuid.uuid4())
         template_uuid = str(uuid.uuid4())
 
-        example_edit_template_url = {
-            "app_uuid": app_uuid,
-            "templates_uuid": [template_uuid],
-        }
+        example_edit_template_url = [
+            {"app_uuid": app_uuid, "templates_uuid": [template_uuid]}
+        ]
 
         with responses.RequestsMock() as rsps:
             rsps.add(
