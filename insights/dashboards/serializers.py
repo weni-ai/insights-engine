@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import transaction
 from rest_framework import serializers
 
 from insights.dashboards.models import Dashboard
@@ -23,6 +24,21 @@ class DashboardIsDefaultSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dashboard
         fields = ["is_default"]
+
+    @transaction.atomic
+    def save(self, **kwargs):
+        # If the dashboard is being set to default, we need to make sure that no other dashboard is default
+        # to avoid integrity errors, as there is a unique constraint on the project and is_default fields
+        if self.validated_data["is_default"] is True:
+            Dashboard.objects.filter(
+                project=self.instance.project, is_default=True
+            ).update(is_default=False)
+
+        instance: Dashboard = self.instance
+        instance.is_default = self.validated_data["is_default"]
+        instance.save()
+
+        return instance
 
 
 class DashboardReportSerializer(serializers.ModelSerializer):
