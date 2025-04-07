@@ -10,9 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import json
 import os
 from pathlib import Path
-import json
 
 import environ
 import sentry_sdk
@@ -285,7 +285,7 @@ GROQ_OPEN_AI_GPT_VERSION = env.str("GROQ_OPEN_AI_GPT_VERSION", default="")
 INTEGRATIONS_URL = env("INTEGRATIONS_URL")
 
 REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
-
+STATIC_API_TOKEN = env.str("STATIC_API_TOKEN", default="")
 # channels
 CHANNEL_LAYERS = {
     "default": {
