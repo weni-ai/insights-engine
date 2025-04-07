@@ -45,3 +45,12 @@ class ProjectAuthQueryParamPermission(permissions.BasePermission):
 class InternalAuthenticationPermission(permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
         return request.user.has_perm("users.can_communicate_internally")
+
+
+class IsServiceAuthentication(permissions.BasePermission):
+    """
+    Permissão que verifica se a requisição foi autenticada via token de serviço.
+    """
+
+    def has_permission(self, request, view):
+        return request.auth == "service"
