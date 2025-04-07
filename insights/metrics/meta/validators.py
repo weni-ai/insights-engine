@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from insights.utils import convert_date_str_to_datetime_date
@@ -12,6 +13,14 @@ ANALYTICS_REQUIRED_FIELDS = ["waba_id", "template_id", "start_date", "end_date"]
 def validate_analytics_kwargs(filters: dict) -> dict:
     analytics_kwargs = {k: None for k in ANALYTICS_REQUIRED_FIELDS}
     missing_fields = []
+
+    filters = filters.copy()
+
+    if "date_start" in filters:
+        filters["start_date"] = filters.pop("date_start")[0]
+
+    if "date_end" in filters:
+        filters["end_date"] = filters.pop("date_end")[0]
 
     for field in analytics_kwargs.keys():
         if field not in filters:
@@ -48,3 +57,32 @@ def validate_analytics_selected_period(start_date: date):
         raise ValidationError(
             {"start_date": "Start must be within the query period of the last 90 days."}
         )
+
+
+def validate_list_templates_filters(filters: dict):
+    if not filters.get("waba_id", None):
+        raise ValidationError(
+            {"error": _("WABA id is required")}, code="waba_id_missing"
+        )
+
+    allowed_filters = [
+        "waba_id",
+        "name",
+        "limit",
+        "before",
+        "after",
+        "language",
+        "category",
+        "search",
+        "fields",
+    ]
+    valid_filters = {}
+
+    for filter_name in allowed_filters:
+        if filter_name in filters:
+            valid_filters[filter_name] = filters[filter_name]
+
+    if "search" in filters:
+        valid_filters["name"] = filters["search"]
+
+    return valid_filters

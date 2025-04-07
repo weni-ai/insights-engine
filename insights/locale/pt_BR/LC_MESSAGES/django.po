@@ -1,0 +1,387 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-03-18 19:13+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: insights/internals/api/users/serializers.py:16
+msgid "User does not exist"
+msgstr "Usuário não existe"
+
+#: insights/metrics/meta/choices.py:7
+msgid "Account Update"
+msgstr "Atualização de Conta"
+
+#: insights/metrics/meta/choices.py:8
+msgid "Alert Update"
+msgstr "Atualização de Alerta"
+
+#: insights/metrics/meta/choices.py:9
+msgid "Appointment Update"
+msgstr "Atualização de Agendamento"
+
+#: insights/metrics/meta/choices.py:10
+msgid "Authentication"
+msgstr "Autenticação"
+
+#: insights/metrics/meta/choices.py:11
+msgid "Auto Reply"
+msgstr "Resposta Automática"
+
+#: insights/metrics/meta/choices.py:12
+msgid "Issue Resolution"
+msgstr "Resolução de Problema"
+
+#: insights/metrics/meta/choices.py:13
+msgid "Marketing"
+msgstr "Marketing"
+
+#: insights/metrics/meta/choices.py:14
+msgid "OTP"
+msgstr "OTP"
+
+#: insights/metrics/meta/choices.py:15
+msgid "Payment Update"
+msgstr "Atualização de Pagamento"
+
+#: insights/metrics/meta/choices.py:16
+msgid "Personal Finance Update"
+msgstr "Atualização de Finanças Pessoais"
+
+#: insights/metrics/meta/choices.py:17
+msgid "Reservation Update"
+msgstr "Atualização de Reserva"
+
+#: insights/metrics/meta/choices.py:18
+msgid "Shipping Update"
+msgstr "Atualização de Envio"
+
+#: insights/metrics/meta/choices.py:19
+msgid "Ticket Update"
+msgstr "Atualização de Bilhete"
+
+#: insights/metrics/meta/choices.py:20
+msgid "Transactional"
+msgstr "Transacional"
+
+#: insights/metrics/meta/choices.py:21
+msgid "Transportation Update"
+msgstr "Atualização de Transporte"
+
+#: insights/metrics/meta/choices.py:22
+msgid "Utility"
+msgstr "Utilitário"
+
+#: insights/metrics/meta/choices.py:27
+msgid "Afrikaans"
+msgstr "Africâner"
+
+#: insights/metrics/meta/choices.py:28
+msgid "Albanian"
+msgstr "Albanês"
+
+#: insights/metrics/meta/choices.py:29
+msgid "Arabic"
+msgstr "Árabe"
+
+#: insights/metrics/meta/choices.py:30
+msgid "Azerbaijani"
+msgstr "Azerbaijano"
+
+#: insights/metrics/meta/choices.py:31
+msgid "Bengali"
+msgstr "Bengalês"
+
+#: insights/metrics/meta/choices.py:32
+msgid "Bulgarian"
+msgstr "Búlgaro"
+
+#: insights/metrics/meta/choices.py:33
+msgid "Catalan"
+msgstr "Catalão"
+
+#: insights/metrics/meta/choices.py:34
+msgid "Chinese (China)"
+msgstr "Chinês (China)"
+
+#: insights/metrics/meta/choices.py:35
+msgid "Chinese (Hong Kong)"
+msgstr "Chinês (Hong Kong)"
+
+#: insights/metrics/meta/choices.py:36
+msgid "Chinese (Taiwan)"
+msgstr "Chinês (Taiwan)"
+
+#: insights/metrics/meta/choices.py:37
+msgid "Croatian"
+msgstr "Croata"
+
+#: insights/metrics/meta/choices.py:38
+msgid "Czech"
+msgstr "Tcheco"
+
+#: insights/metrics/meta/choices.py:39
+msgid "Danish"
+msgstr "Dinamarquês"
+
+#: insights/metrics/meta/choices.py:40
+msgid "Dutch"
+msgstr "Holandês"
+
+#: insights/metrics/meta/choices.py:41
+msgid "English"
+msgstr "Inglês"
+
+#: insights/metrics/meta/choices.py:42
+msgid "English (UK)"
+msgstr "Inglês (Reino Unido)"
+
+#: insights/metrics/meta/choices.py:43
+msgid "English (US)"
+msgstr "Inglês (Estados Unidos)"
+
+#: insights/metrics/meta/choices.py:44
+msgid "Estonian"
+msgstr "Estoniano"
+
+#: insights/metrics/meta/choices.py:45
+msgid "Filipino"
+msgstr "Filipino"
+
+#: insights/metrics/meta/choices.py:46
+msgid "Finnish"
+msgstr "Finlandês"
+
+#: insights/metrics/meta/choices.py:47
+msgid "French"
+msgstr "Francês"
+
+#: insights/metrics/meta/choices.py:48
+msgid "German"
+msgstr "Alemão"
+
+#: insights/metrics/meta/choices.py:49
+msgid "Greek"
+msgstr "Grego"
+
+#: insights/metrics/meta/choices.py:50
+msgid "Gujarati"
+msgstr "Gujarati"
+
+#: insights/metrics/meta/choices.py:51
+msgid "Hausa"
+msgstr "Hausa"
+
+#: insights/metrics/meta/choices.py:52
+msgid "Hebrew"
+msgstr "Hebraico"
+
+#: insights/metrics/meta/choices.py:53
+msgid "Hindi"
+msgstr "Hindi"
+
+#: insights/metrics/meta/choices.py:54
+msgid "Hungarian"
+msgstr "Húngaro"
+
+#: insights/metrics/meta/choices.py:55
+msgid "Indonesian"
+msgstr "Indonésio"
+
+#: insights/metrics/meta/choices.py:56
+msgid "Irish"
+msgstr "Irlandês"
+
+#: insights/metrics/meta/choices.py:57
+msgid "Italian"
+msgstr "Italiano"
+
+#: insights/metrics/meta/choices.py:58
+msgid "Japanese"
+msgstr "Japonês"
+
+#: insights/metrics/meta/choices.py:59
+msgid "Kannada"
+msgstr "Canarim"
+
+#: insights/metrics/meta/choices.py:60
+msgid "Kazakh"
+msgstr "Cazaquistão"
+
+#: insights/metrics/meta/choices.py:61
+msgid "Korean"
+msgstr "Coreano"
+
+#: insights/metrics/meta/choices.py:62
+msgid "Lao"
+msgstr "Lao"
+
+#: insights/metrics/meta/choices.py:63
+msgid "Latvian"
+msgstr "Letão"
+
+#: insights/metrics/meta/choices.py:64
+msgid "Lithuanian"
+msgstr "Lituano"
+
+#: insights/metrics/meta/choices.py:65
+msgid "Macedonian"
+msgstr "Macedônio"
+
+#: insights/metrics/meta/choices.py:66
+msgid "Malay"
+msgstr "Malaio"
+
+#: insights/metrics/meta/choices.py:67
+msgid "Malayalam"
+msgstr "Malaiala"
+
+#: insights/metrics/meta/choices.py:68
+msgid "Marathi"
+msgstr "Marati"
+
+#: insights/metrics/meta/choices.py:69
+msgid "Norwegian"
+msgstr "Norueguês"
+
+#: insights/metrics/meta/choices.py:70
+msgid "Persian"
+msgstr "Persa"
+
+#: insights/metrics/meta/choices.py:71
+msgid "Polish"
+msgstr "Polonês"
+
+#: insights/metrics/meta/choices.py:72
+msgid "Portuguese (Brazil)"
+msgstr "Português (Brasil)"
+
+#: insights/metrics/meta/choices.py:73
+msgid "Portuguese (Portugal)"
+msgstr "Português (Portugal)"
+
+#: insights/metrics/meta/choices.py:74
+msgid "Punjabi"
+msgstr "Punjabi"
+
+#: insights/metrics/meta/choices.py:75
+msgid "Romanian"
+msgstr "Romeno"
+
+#: insights/metrics/meta/choices.py:76
+msgid "Russian"
+msgstr "Russo"
+
+#: insights/metrics/meta/choices.py:77
+msgid "Serbian"
+msgstr "Sérvio"
+
+#: insights/metrics/meta/choices.py:78
+msgid "Slovak"
+msgstr "Eslovaco"
+
+#: insights/metrics/meta/choices.py:79
+msgid "Slovenian"
+msgstr "Esloveno"
+
+#: insights/metrics/meta/choices.py:80
+msgid "Spanish"
+msgstr "Espanhol"
+
+#: insights/metrics/meta/choices.py:81
+msgid "Spanish (Argentina)"
+msgstr "Espanhol (Argentina)"
+
+#: insights/metrics/meta/choices.py:82
+msgid "Spanish (Spain)"
+msgstr "Espanhol (Espanha)"
+
+#: insights/metrics/meta/choices.py:83
+msgid "Spanish (Mexico)"
+msgstr "Espanhol (México)"
+
+#: insights/metrics/meta/choices.py:84
+msgid "Swahili"
+msgstr "Suaíli"
+
+#: insights/metrics/meta/choices.py:85
+msgid "Swedish"
+msgstr "Sueco"
+
+#: insights/metrics/meta/choices.py:86
+msgid "Tamil"
+msgstr "Tâmil"
+
+#: insights/metrics/meta/choices.py:87
+msgid "Telugu"
+msgstr "Telugu"
+
+#: insights/metrics/meta/choices.py:88
+msgid "Thai"
+msgstr "Tailandês"
+
+#: insights/metrics/meta/choices.py:89
+msgid "Turkish"
+msgstr "Turco"
+
+#: insights/metrics/meta/choices.py:90
+msgid "Ukrainian"
+msgstr "Ucraniano"
+
+#: insights/metrics/meta/choices.py:91
+msgid "Urdu"
+msgstr "Urdu"
+
+#: insights/metrics/meta/choices.py:92
+msgid "Uzbek"
+msgstr "Uzbeque"
+
+#: insights/metrics/meta/choices.py:93
+msgid "Vietnamese"
+msgstr "Vietnamita"
+
+#: insights/metrics/meta/choices.py:94
+msgid "Zulu"
+msgstr "Zulu"
+
+#: insights/metrics/meta/serializers.py:74
+msgid "Template already in favorites"
+msgstr "Template já está nos favoritos"
+
+#: insights/metrics/meta/serializers.py:97
+msgid "Template not in favorites"
+msgstr "Template não está nos favoritos"
+
+#: insights/metrics/vtex/views.py:28
+msgid "Required"
+msgstr "Obrigatório"
+
+#: insights/metrics/vtex/views.py:45
+msgid "Invalid date format. Use YYYY-MM-DD."
+msgstr "Formato de data inválido. Use YYYY-MM-DD."
+
+#: insights/shared/models.py:16
+msgid "Created on"
+msgstr "Criado em"
+
+#: insights/shared/models.py:18
+msgid "Modified on"
+msgstr "Modificado em"
+
+#: insights/shared/models.py:32
+msgid "config"
+msgstr "configuração"

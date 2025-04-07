@@ -9,6 +9,9 @@ from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
+from mozilla_django_oidc.contrib.drf import OIDCAuthentication
+from django.utils import translation
+
 from insights.users.usecases import CreateUserUseCase
 
 LOGGER = logging.getLogger("weni_django_oidc")
@@ -102,3 +105,20 @@ class StaticTokenAuthentication(BaseAuthentication):
             raise AuthenticationFailed("Invalid Token")
 
         return (None, "service")
+
+class WeniOIDCAuthentication(OIDCAuthentication):
+    def authenticate(self, request):
+        auth = super(WeniOIDCAuthentication, self).authenticate(request)
+
+        if auth is None:
+            return None
+
+        user, token = auth
+
+        if not user.is_anonymous:
+            try:
+                translation.activate(user.language)
+            except Exception as e:
+                LOGGER.error("Error activating language %s: %s", user.language, e)
+
+        return user, token
