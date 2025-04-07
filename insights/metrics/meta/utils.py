@@ -1,4 +1,10 @@
 from datetime import datetime
+import logging
+from rest_framework import status as http_status
+
+from insights.sources.integrations.clients import WeniIntegrationsClient
+
+logger = logging.getLogger(__name__)
 
 
 def format_message_metrics_data(data: dict):
@@ -87,3 +93,62 @@ def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
         response.append(btn)
 
     return response
+
+
+def get_edit_template_url_from_template_data(
+    project_uuid: str, template_id: dict
+) -> str:
+    """
+    Get the redirect URL from the template data.
+
+    The frontend application will use this URL to redirect the user to the template editor.
+    """
+    # Temporary: only for testing purposes in the staging environment
+    return {
+        "url": "integrations:apps/my/wpp-cloud/1234567890/templates/edit/1234567890",
+        "type": "internal",
+    }
+
+    weni_integrations_client = WeniIntegrationsClient()
+
+    response = weni_integrations_client.get_template_data_by_id(
+        project_uuid, template_id
+    )
+
+    if not response or not http_status.is_success(response.status_code):
+        logger.error(
+            "Failed to get template data for project_uuid=%s, template_id=%s: %s - %s",
+            project_uuid,
+            template_id,
+            response.status_code,
+            response.text,
+        )
+        return None
+
+    template_data = response.json()
+
+    if not isinstance(template_data, list):
+        logger.error(
+            "Invalid template data for project_uuid=%s, template_id=%s: %s",
+            project_uuid,
+            template_id,
+            template_data,
+        )
+        return None
+
+    app_uuid = template_data[0].get("app_uuid")
+    templates_uuid = template_data[0].get("templates_uuid", [])
+
+    if not app_uuid or len(templates_uuid) < 1:
+        logger.error(
+            "No templates_uuid found for project_uuid=%s, template_id=%s",
+            project_uuid,
+            template_id,
+        )
+        return None
+
+    template_uuid = templates_uuid[0]
+
+    url = f"integrations:apps/my/wpp-cloud/{app_uuid}/templates/edit/{template_uuid}"
+
+    return {"url": url, "type": "internal"}
