@@ -49,7 +49,7 @@ class InternalAuthenticationPermission(permissions.BasePermission):
 
 class IsServiceAuthentication(permissions.BasePermission):
     """
-    Permissão que verifica se a requisição foi autenticada via token de serviço.
+    Permission that verifies if the request was authenticated via service token.
     """
 
     def has_permission(self, request, view):

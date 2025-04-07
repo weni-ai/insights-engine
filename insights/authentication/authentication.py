@@ -94,7 +94,7 @@ class FlowsInternalAuthentication:
 
 class StaticTokenAuthentication(BaseAuthentication):
     """
-    Autenticação baseada em token estático para serviços.
+    Static token-based authentication for services.
     """
 
     def authenticate(self, request):
