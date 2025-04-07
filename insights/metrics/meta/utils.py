@@ -133,7 +133,7 @@ def get_edit_template_url_from_template_data(
     app_uuid = template_data[0].get("app_uuid")
     templates_uuid = template_data[0].get("templates_uuid", [])
 
-    if len(templates_uuid) < 1:
+    if not app_uuid or len(templates_uuid) < 1:
         logger.error(
             "No templates_uuid found for project_uuid=%s, template_id=%s",
             project_uuid,
