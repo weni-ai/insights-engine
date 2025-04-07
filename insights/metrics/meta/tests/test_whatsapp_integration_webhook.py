@@ -71,6 +71,9 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
         self.assertIn("phone_number", dashboard.config)
         self.assertEqual(dashboard.config["phone_number"], payload["phone_number"])
 
+        self.assertIn("app_uuid", dashboard.config)
+        self.assertEqual(dashboard.config["app_uuid"], payload["app_uuid"])
+
     @with_internal_auth
     def test_receive_integration_data_when_integration_already_exists(self):
         project = Project.objects.create()
