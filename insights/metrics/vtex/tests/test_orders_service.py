@@ -3,11 +3,13 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 
 from insights.metrics.vtex.services.orders_service import OrdersService
+from insights.projects.models import Project
 
 
 class TestOrdersService(TestCase):
     def setUp(self):
-        self.service = OrdersService("project_uuid")
+        self.project = Project.objects.create()
+        self.service = OrdersService(self.project)
 
     def test_get_past_dates(self):
         start_date = timezone.now() - timedelta(days=10)
