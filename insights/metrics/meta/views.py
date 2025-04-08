@@ -24,6 +24,7 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
 from insights.metrics.meta.serializers import (
+    WhatsappIntegrationWebhookRemoveSerializer,
     FavoriteTemplatesQueryParamsSerializer,
     FavoriteTemplatesSerializer,
     MessageTemplatesQueryParamsSerializer,
@@ -265,5 +266,20 @@ class WhatsappIntegrationWebhookView(APIView):
                 config=config,
                 name=name,
             )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        request=WhatsappIntegrationWebhookRemoveSerializer,
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
+    def delete(self, request: Request) -> Response:
+        serializer = WhatsappIntegrationWebhookRemoveSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        Dashboard.objects.filter(
+            project__uuid=serializer.validated_data["project_uuid"],
+            config__waba_id=serializer.validated_data["waba_id"],
+        ).delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
