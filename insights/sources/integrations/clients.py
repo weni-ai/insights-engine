@@ -25,3 +25,15 @@ class WeniIntegrationsClient(InternalAuthentication):
         self.cache.set(cache_key, json.dumps(wabas), cache_ttl)
 
         return wabas
+
+    def get_template_data_by_id(self, project_uuid: str, template_id: str):
+        url = f"{self.base_url}/api/v1/project/templates/details/"
+
+        response = requests.get(
+            url=url,
+            headers=self.headers,
+            timeout=60,
+            params={"project_uuid": project_uuid, "template_id": template_id},
+        )
+
+        return response

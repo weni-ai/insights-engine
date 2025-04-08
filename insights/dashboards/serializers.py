@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from insights.dashboards.models import Dashboard
@@ -25,6 +26,20 @@ class DashboardIsDefaultSerializer(serializers.ModelSerializer):
         model = Dashboard
         fields = ["is_default"]
 
+    def validate_is_default(self, value: bool) -> bool:
+        """
+        Validates that a default dashboard cannot be set as non-default.
+
+        Raises a ValidationError if attempting to set a default dashboard to False.
+        """
+        if value is False and self.instance.is_default is True:
+            raise serializers.ValidationError(
+                _("Cannot set a default dashboard as non-default"),
+                code="cannot_set_default_dashboard_as_non_default",
+            )
+
+        return value
+
     @transaction.atomic
     def save(self, **kwargs):
         # If the dashboard is being set to default, we need to make sure that no other dashboard is default
@@ -34,9 +49,12 @@ class DashboardIsDefaultSerializer(serializers.ModelSerializer):
                 project=self.instance.project, is_default=True
             ).update(is_default=False)
 
+        if self.instance.is_default == self.validated_data["is_default"]:
+            return self.instance
+
         instance: Dashboard = self.instance
         instance.is_default = self.validated_data["is_default"]
-        instance.save()
+        instance.save(update_fields=["is_default"])
 
         return instance
 

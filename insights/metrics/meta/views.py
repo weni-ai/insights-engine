@@ -34,6 +34,7 @@ from insights.metrics.meta.serializers import (
     WhatsappIntegrationWebhookSerializer,
 )
 from insights.projects.models import Project
+from insights.metrics.meta.utils import get_edit_template_url_from_template_data
 from insights.metrics.meta.services import MetaMessageTemplatesService
 
 
@@ -68,8 +69,14 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
             dashboard__config__waba_id=waba_id, template_id=template_id
         ).exists()
 
+        project_uuid = request.query_params.get("project_uuid")
+        edit_template_url = get_edit_template_url_from_template_data(
+            project_uuid, template_id
+        )
+
         data = {
             "is_favorite": is_favorite,
+            "edit_template_url": edit_template_url,
             **data,
         }
 
