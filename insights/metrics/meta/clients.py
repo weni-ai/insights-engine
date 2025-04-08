@@ -1,15 +1,14 @@
 import json
+import logging
 import requests
 
-from datetime import date
-from django.conf import settings
-from rest_framework.exceptions import ValidationError
+from datetime import date, timedelta
 
-from insights.sources.meta_message_templates.enums import (
-    AnalyticsGranularity,
-    MetricsTypes,
-)
-from insights.sources.meta_message_templates.utils import (
+from django.conf import settings
+from rest_framework.exceptions import ValidationError, NotFound
+
+from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
+from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )
@@ -17,7 +16,10 @@ from insights.utils import convert_date_to_unix_timestamp
 from insights.sources.cache import CacheClient
 
 
-class MetaAPIClient:
+logger = logging.getLogger(__name__)
+
+
+class MetaGraphAPIClient:
     base_host_url = "https://graph.facebook.com/v21.0"
     access_token = settings.WHATSAPP_API_ACCESS_TOKEN
 
@@ -34,13 +36,24 @@ class MetaAPIClient:
         waba_id: str,
         name: str | None = None,
         limit: int = 9999,
+        fields: list[str] | None = None,
         before: str | None = None,
         after: str | None = None,
+        language: str | None = None,
+        category: str | None = None,
     ):
         url = f"{self.base_host_url}/{waba_id}/message_templates"
 
         params = {
-            "limit": limit,
+            filter_name: filter_value
+            for filter_name, filter_value in {
+                "name": name,
+                "limit": limit,
+                "fields": ",".join(fields) if fields else None,
+                "language": language,
+                "category": category,
+            }.items()
+            if filter_value is not None
         }
 
         if before:
@@ -49,16 +62,18 @@ class MetaAPIClient:
         elif after:
             params["after"] = after
 
-        if name:
-            params["name"] = name
-
         try:
             response = requests.get(
                 url, headers=self.headers, params=params, timeout=60
             )
             response.raise_for_status()
         except requests.HTTPError as err:
-            print(f"Error ({err.response.status_code}): {err.response.text}")
+            logger.error(
+                "Error getting templates list: %s. Original exception: %s",
+                err.response.text,
+                err,
+                exc_info=True,
+            )
 
             raise ValidationError(
                 {"error": "An error has occurred"}, code="meta_api_error"
@@ -81,7 +96,12 @@ class MetaAPIClient:
             response = requests.get(url, headers=self.headers, timeout=60)
             response.raise_for_status()
         except requests.HTTPError as err:
-            print(f"Error ({err.response.status_code}): {err.response.text}")
+            logger.error(
+                "Error getting template preview: %s. Original exception: %s",
+                err.response.text,
+                err,
+                exc_info=True,
+            )
 
             raise ValidationError(
                 {"error": "An error has occurred"}, code="meta_api_error"
@@ -119,7 +139,7 @@ class MetaAPIClient:
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
@@ -139,7 +159,12 @@ class MetaAPIClient:
             response.raise_for_status()
 
         except requests.HTTPError as err:
-            print(f"Error ({err.response.status_code}): {err.response.text}")
+            logger.error(
+                "Error getting messages analytics: %s. Original exception: %s",
+                err.response.text,
+                err,
+                exc_info=True,
+            )
 
             raise ValidationError(
                 {"error": "An error has occurred"}, code="meta_api_error"
@@ -172,7 +197,7 @@ class MetaAPIClient:
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
@@ -207,7 +232,17 @@ class MetaAPIClient:
             response.raise_for_status()
 
         except requests.HTTPError as err:
-            print(f"Error ({err.response.status_code}): {err.response.text}")
+            if err.response.status_code == 404:
+                raise NotFound(
+                    {"error": "Template not found"}, code="template_not_found"
+                ) from err
+
+            logger.error(
+                "Error getting buttons analytics: %s. Original exception: %s",
+                err.response.text,
+                err,
+                exc_info=True,
+            )
 
             raise ValidationError(
                 {"error": "An error has occurred"}, code="meta_api_error"

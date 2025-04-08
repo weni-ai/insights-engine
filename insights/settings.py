@@ -149,6 +149,7 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 
 DEFAULT_LANGUAGE = "en-us"
+LOCALE_PATHS = [os.path.join(BASE_DIR, "insights/locale")]
 
 USE_I18N = True
 
@@ -203,7 +204,7 @@ LOGGING["handlers"]["console"] = {
 OIDC_ENABLED = env.bool("OIDC_ENABLED", default=False)
 if OIDC_ENABLED:
     REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"].append(
-        "mozilla_django_oidc.contrib.drf.OIDCAuthentication"
+        "insights.authentication.authentication.WeniOIDCAuthentication"
     )
     INSTALLED_APPS = (*INSTALLED_APPS, "mozilla_django_oidc")
     LOGGING["loggers"]["mozilla_django_oidc"] = {
