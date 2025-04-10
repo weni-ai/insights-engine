@@ -1,5 +1,7 @@
+import json
 import logging
 
+from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
@@ -244,6 +246,14 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
     )
     def wabas(self, request: Request) -> Response:
         project_uuid = request.query_params.get("project_uuid")
+
+        if wabas_mock := getattr(settings, "PROJECT_WABAS_MOCK", None):
+            wabas_data = json.loads(wabas_mock)
+
+            return Response(
+                {"results": WabaSerializer(wabas_data, many=True).data},
+                status=status.HTTP_200_OK,
+            )
 
         try:
             wabas_data = WeniIntegrationsClient().get_wabas_for_project(project_uuid)
