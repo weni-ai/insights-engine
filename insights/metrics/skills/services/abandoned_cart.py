@@ -6,6 +6,7 @@ from babel import numbers
 from django.conf import settings
 from django.utils import timezone
 from django.utils.timezone import timedelta
+from rest_framework import status
 from sentry_sdk import capture_exception
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
@@ -68,7 +69,16 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
     @cached_property
     def _project_wabas(self) -> list[dict]:
         client = WeniIntegrationsClient()
-        wabas = client.get_wabas_for_project(self.project.uuid)
+        try:
+            wabas = client.get_wabas_for_project(self.project.uuid)
+        except ValueError as e:
+            logger.error(
+                "Error fetching wabas in AbandonedCartSkillService for project %s: %s",
+                self.project.uuid,
+                e,
+            )
+
+            raise e
 
         return [waba for waba in wabas if waba["waba_id"]]
 

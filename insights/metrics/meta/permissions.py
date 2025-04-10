@@ -24,7 +24,11 @@ class ProjectWABAPermission(BasePermission):
             return True
 
         integrations_client = WeniIntegrationsClient()
-        wabas_data = integrations_client.get_wabas_for_project(project_uuid)
+
+        try:
+            wabas_data = integrations_client.get_wabas_for_project(project_uuid)
+        except ValueError:
+            return False
 
         wabas_ids = {waba.get("waba_id") for waba in wabas_data}
 
