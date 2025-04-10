@@ -249,7 +249,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
 
         if wabas_mock := getattr(settings, "PROJECT_WABAS_MOCK", None):
             # Temporary: just for testing purposes in the development and staging environments
-            wabas_data = json.loads(wabas_mock.get("data", []))
+            wabas_data = json.loads(wabas_mock).get("data", [])
 
             return Response(
                 {"results": WabaSerializer(wabas_data, many=True).data},
