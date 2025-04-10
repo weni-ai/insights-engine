@@ -248,6 +248,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         project_uuid = request.query_params.get("project_uuid")
 
         if wabas_mock := getattr(settings, "PROJECT_WABAS_MOCK", None):
+            # Temporary: just for testing purposes in the development and staging environments
             wabas_data = json.loads(wabas_mock)
 
             return Response(
