@@ -2,6 +2,8 @@ from django.utils.timezone import timedelta
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
+from insights.internals.base import InternalAuthentication
+from insights.projects.models import Project
 from insights.sources.cache import CacheClient
 from insights.sources.orders.clients import VtexOrdersRestClient
 from insights.sources.vtexcredentials.clients import AuthRestClient as VtexAuthClient
@@ -9,13 +11,35 @@ from insights.sources.vtexcredentials.typing import VtexCredentialsDTO
 
 
 class OrdersService:
-    def __init__(self, project_uuid: str) -> None:
-        self.project_uuid = project_uuid
+    def __init__(self, project: Project) -> None:
+        self.project = project
 
     def _get_credentials(self) -> VtexCredentialsDTO:
-        return VtexAuthClient(self.project_uuid).get_vtex_auth()
+        """
+        Get the credentials for the project
+        """
+        return VtexAuthClient(self.project.uuid).get_vtex_auth()
+
+    def _get_internal_token(self):
+        """
+        Get the internal token for the project
+        """
+        return InternalAuthentication().get_module_token()
 
     def _get_client(self) -> VtexOrdersRestClient:
+        """
+        Get the client for the project
+        """
+        if self.project.vtex_account:
+            return VtexOrdersRestClient(
+                {
+                    "domain": self.project.vtex_account,
+                    "internal_token": self._get_internal_token(),
+                },
+                CacheClient(),
+                use_io_proxy=True,
+            )
+
         return VtexOrdersRestClient(self._get_credentials(), CacheClient())
 
     def _get_past_dates(self, start_date, end_date):
