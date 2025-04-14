@@ -17,11 +17,6 @@ class RoomRESTClient(InternalAuthentication):
     def list(self, query_filters: dict):
         query_filters["project"] = str(self.project.uuid)
         
-        # Converter setores separados por vírgula para lista
-        if 'sector' in query_filters and ',' in query_filters['sector']:
-            sectors = query_filters['sector'].split(',')
-            query_filters.pop('sector')
-            query_filters['sector'] = sectors
         
         print(query_filters)
         response = requests.get(
