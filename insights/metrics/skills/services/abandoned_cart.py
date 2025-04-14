@@ -56,7 +56,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         if valid_fields["start_date"] > valid_fields["end_date"]:
             raise InvalidDateRangeError("End date must be greater than start date")
 
-        if valid_fields["start_date"] < (
+        if valid_fields["start_date"] <= (
             timezone.now().date()
             - timedelta(days=ABANDONED_CART_METRICS_START_DATE_MAX_DAYS)
         ):
