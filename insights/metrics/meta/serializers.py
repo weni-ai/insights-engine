@@ -55,6 +55,7 @@ class WhatsappPhoneNumberSerializer(serializers.Serializer):
 
 
 class WhatsappIntegrationWebhookSerializer(serializers.Serializer):
+    app_uuid = serializers.UUIDField(required=True)
     project_uuid = serializers.UUIDField(required=True)
     waba_id = serializers.CharField(required=True)
     phone_number = WhatsappPhoneNumberSerializer(required=True)

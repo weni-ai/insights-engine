@@ -25,7 +25,7 @@ from insights.sources.integrations.clients import WeniIntegrationsClient
 logger = logging.getLogger(__name__)
 
 
-ABANDONED_CART_METRICS_START_DATE_MAX_DAYS = 45
+ABANDONED_CART_METRICS_START_DATE_MAX_DAYS = 90
 
 logger = logging.getLogger(__name__)
 
@@ -121,35 +121,23 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return round(((current - past) / past) * 100, 2)
 
     def _get_message_templates_metrics(self, start_date, end_date) -> dict:
-        # TEMPORARY, this should be used only in the development and staging environments
+        # Temporary, this should be used only in the development and staging environments
         template_ids = getattr(settings, "WHATSAPP_ABANDONED_CART_TEMPLATE_ID", None)
         waba_id = getattr(settings, "WHATSAPP_ABANDONED_CART_WABA_ID", None)
 
         if not template_ids or not waba_id:
             template_ids, waba_id = self._whatsapp_template_ids_and_waba
 
-        period = (end_date - start_date).days
-
-        raw_start_date = start_date - timedelta(days=(period))
-        raw_end_date = end_date
-
         metrics = self.meta_api_client.get_messages_analytics(
             waba_id=waba_id,
             template_id=template_ids,
-            start_date=raw_start_date,
-            end_date=raw_end_date,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         data_points = metrics.get("data", {}).get("data_points")
 
-        past_period_data = {
-            "sent": 0,
-            "delivered": 0,
-            "read": 0,
-            "clicked": 0,
-        }
-
-        current_period_data = {
+        period_data = {
             "sent": 0,
             "delivered": 0,
             "read": 0,
@@ -157,43 +145,16 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         }
 
         for day_data in data_points:
-            if day_data["date"] < str(start_date):
-                past_period_data["sent"] += day_data["sent"]
-                past_period_data["delivered"] += day_data["delivered"]
-                past_period_data["read"] += day_data["read"]
-                past_period_data["clicked"] += day_data["clicked"]
-
-            else:
-                current_period_data["sent"] += day_data["sent"]
-                current_period_data["delivered"] += day_data["delivered"]
-                current_period_data["read"] += day_data["read"]
-                current_period_data["clicked"] += day_data["clicked"]
+            period_data["sent"] += day_data["sent"]
+            period_data["delivered"] += day_data["delivered"]
+            period_data["read"] += day_data["read"]
+            period_data["clicked"] += day_data["clicked"]
 
         data = {
-            "sent-messages": {
-                "value": current_period_data["sent"],
-                "percentage": self._calculate_increase_percentage(
-                    current_period_data["sent"], past_period_data["sent"]
-                ),
-            },
-            "delivered-messages": {
-                "value": current_period_data["delivered"],
-                "percentage": self._calculate_increase_percentage(
-                    current_period_data["delivered"], past_period_data["delivered"]
-                ),
-            },
-            "read-messages": {
-                "value": current_period_data["read"],
-                "percentage": self._calculate_increase_percentage(
-                    current_period_data["read"], past_period_data["read"]
-                ),
-            },
-            "interactions": {
-                "value": current_period_data["clicked"],
-                "percentage": self._calculate_increase_percentage(
-                    current_period_data["clicked"], past_period_data["clicked"]
-                ),
-            },
+            "sent-messages": {"value": period_data["sent"]},
+            "delivered-messages": {"value": period_data["delivered"]},
+            "read-messages": {"value": period_data["read"]},
+            "interactions": {"value": period_data["clicked"]},
         }
 
         return data
@@ -251,22 +212,18 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
             {
                 "id": "sent-messages",
                 "value": messages_metrics["sent-messages"]["value"],
-                "percentage": messages_metrics["sent-messages"]["percentage"],
             },
             {
                 "id": "delivered-messages",
                 "value": messages_metrics["delivered-messages"]["value"],
-                "percentage": messages_metrics["delivered-messages"]["percentage"],
             },
             {
                 "id": "read-messages",
                 "value": messages_metrics["read-messages"]["value"],
-                "percentage": messages_metrics["read-messages"]["percentage"],
             },
             {
                 "id": "interactions",
                 "value": messages_metrics["interactions"]["value"],
-                "percentage": messages_metrics["interactions"]["percentage"],
             },
             {
                 "id": "utm-revenue",
