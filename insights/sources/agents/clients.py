@@ -21,7 +21,14 @@ class AgentsRESTClient(InternalAuthentication):
             query_filters["start_date"] = query_filters.pop("created_on__gte")
         if query_filters.get("created_on__lte", None):
             query_filters["end_date"] = query_filters.pop("created_on__lte")
-
+        
+        # Converter setores separados por vírgula para lista
+        if 'sector' in query_filters and isinstance(query_filters['sector'], str) and ',' in query_filters['sector']:
+            sectors = query_filters['sector'].split(',')
+            query_filters.pop('sector')
+            query_filters['sector'] = sectors
+        
+        print(query_filters)
         response = requests.get(
             url=self.url, headers=self.headers, params=query_filters
         )
