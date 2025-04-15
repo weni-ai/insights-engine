@@ -20,7 +20,7 @@ class WeniIntegrationsClient(InternalAuthentication):
     def get_wabas_for_project(self, project_uuid: str):
         url = f"{self.base_url}/api/v1/apptypes/wpp-cloud/list_wpp-cloud/{project_uuid}"
         cache_key = f"wabas:{project_uuid}"
-        cache_ttl = 300  # 5m
+        cache_ttl = 60  # 1m
 
         if cached_response := self.cache.get(cache_key):
             return json.loads(cached_response)
