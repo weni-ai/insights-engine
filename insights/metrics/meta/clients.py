@@ -5,6 +5,7 @@ import requests
 from datetime import date, timedelta
 
 from django.conf import settings
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError, NotFound
 
 from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
@@ -136,10 +137,12 @@ class MetaGraphAPIClient:
         if isinstance(template_id, list):
             template_id = ",".join(template_id)
 
+        end_date = min((end_date + timedelta(days=1)), timezone.now().date())
+
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
+            "end": convert_date_to_unix_timestamp(end_date),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
@@ -194,10 +197,12 @@ class MetaGraphAPIClient:
             MetricsTypes.CLICKED.value,
         ]
 
+        end_date = min((end_date + timedelta(days=1)), timezone.now().date())
+
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date + timedelta(days=1)),
+            "end": convert_date_to_unix_timestamp(end_date),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
