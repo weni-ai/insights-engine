@@ -196,3 +196,10 @@ class MessageTemplatesLanguagesSerializer(serializers.Serializer):
 
 class FavoriteTemplatesQueryParamsSerializer(BaseFavoriteTemplateSerializer):
     pass
+
+
+class WabaSerializer(serializers.Serializer):
+    id = serializers.CharField(source="waba_id", read_only=True)
+    phone_number = serializers.CharField(
+        source="phone_number.display_phone_number", read_only=True
+    )
