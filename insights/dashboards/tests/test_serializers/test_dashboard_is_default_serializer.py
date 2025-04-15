@@ -1,5 +1,5 @@
 from django.test import TestCase
-
+from rest_framework import serializers
 from insights.dashboards.models import Dashboard
 from insights.dashboards.serializers import DashboardIsDefaultSerializer
 from insights.projects.models import Project
@@ -74,8 +74,15 @@ class TestDashboardIsDefaultSerializer(TestCase):
         serializer = DashboardIsDefaultSerializer(
             self.dashboard, data={"is_default": False}, partial=True
         )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+
+        with self.assertRaises(serializers.ValidationError) as context:
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+        self.assertEqual(
+            context.exception.detail["is_default"][0].code,
+            "cannot_set_default_dashboard_as_non_default",
+        )
 
         self.dashboard.refresh_from_db(fields=["is_default"])
-        self.assertFalse(self.dashboard.is_default)
+        self.assertTrue(self.dashboard.is_default)

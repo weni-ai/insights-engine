@@ -191,7 +191,7 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
     def _get_orders_metrics(self, start_date, end_date) -> dict:
         utm_source = "weniabandonedcart"
-        service = OrdersService(project_uuid=self.project.uuid)
+        service = OrdersService(self.project)
 
         filters = {
             "start_date": start_date,
