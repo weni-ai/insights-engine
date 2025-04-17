@@ -84,22 +84,18 @@ class TestSkillsMetricsViewAsAuthenticatedUser(BaseTestSkillsMetrisView):
             {
                 "id": "sent-messages",
                 "value": 50,
-                "percentage": 100.0,
             },
             {
                 "id": "delivered-messages",
                 "value": 45,
-                "percentage": 125.0,
             },
             {
                 "id": "read-messages",
                 "value": 40,
-                "percentage": 166.67,
             },
             {
                 "id": "interactions",
                 "value": 35,
-                "percentage": 250,
             },
             {
                 "id": "utm-revenue",
