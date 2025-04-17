@@ -281,7 +281,7 @@ class WhatsappIntegrationWebhookView(APIView):
 
         existing_dashboard = Dashboard.objects.filter(
             project=project,
-            config__waba_id=serializer.validated_data["waba_id"],
+            config__phone_number__id=serializer.validated_data["phone_number"]["id"],
             config__is_whatsapp_integration=True,
         ).first()
 
