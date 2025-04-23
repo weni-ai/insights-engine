@@ -55,10 +55,10 @@ def validate_analytics_kwargs(filters: dict, timezone_name: str | None = None) -
             ) from err
 
         now = datetime.now(tz=tz_info)
-        diff = (now - tz.localize(datetime.combine(dt, datetime.min.time()))).days
+        diff = (now - tz.localize(datetime.combine(dt, now.time()))).days
+        dt = (now - timedelta(diff)).date()
 
-        dt = now - timedelta(diff)
-        analytics_kwargs[dt_field] = dt.date()
+        analytics_kwargs[dt_field] = dt
 
     validate_analytics_selected_period(analytics_kwargs.get("start_date"))
 
