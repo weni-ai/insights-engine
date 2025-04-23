@@ -31,7 +31,7 @@ class WidgetListUpdateViewSet(
 
         config = widget.config
         if "config" in update_data:
-            config.update(update_data["config"])
+            config = update_data["config"]
             update_data["config"] = config
 
         serializer = self._update(widget, update_data, partial)
