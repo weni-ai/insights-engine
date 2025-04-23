@@ -76,9 +76,12 @@ class VTEXOrdersConversionsService:
                 code="project_without_waba_permission",
             )
 
+        project = Project.objects.filter(uuid=self.project.uuid).first()
+        timezone = project.timezone if project else None
+
         metrics_data = (
             self.meta_api_client.get_messages_analytics(
-                waba_id, template_id, start_date, end_date
+                waba_id, template_id, start_date, end_date, timezone=timezone
             )
             .get("data", {})
             .get("status_count")
