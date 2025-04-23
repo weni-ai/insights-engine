@@ -13,12 +13,12 @@ MAX_ANALYTICS_DAYS_PERIOD_FILTER = 90
 ANALYTICS_REQUIRED_FIELDS = ["waba_id", "template_id", "start_date", "end_date"]
 
 
-def validate_analytics_kwargs(filters: dict, timezone: str | None = None) -> dict:
-    if not timezone:
-        timezone = get_current_timezone_name()
+def validate_analytics_kwargs(filters: dict, timezone_name: str | None = None) -> dict:
+    if not timezone_name:
+        timezone_name = get_current_timezone_name()
 
-    tz_info = ZoneInfo(timezone)
-    tz = pytz.timezone(timezone)
+    tz_info = ZoneInfo(timezone_name)
+    tz = pytz.timezone(timezone_name)
 
     analytics_kwargs = {k: None for k in ANALYTICS_REQUIRED_FIELDS}
     missing_fields = []
