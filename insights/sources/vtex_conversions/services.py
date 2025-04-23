@@ -3,6 +3,10 @@ from datetime import date
 from django.conf import settings
 from logging import getLogger
 
+from django.conf import settings
+from django.utils.timezone import get_current_timezone_name
+
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 
@@ -20,6 +24,7 @@ from insights.sources.vtex_conversions.serializers import (
     OrdersConversionsFiltersSerializer,
     OrdersConversionsMetricsSerializer,
 )
+from insights.utils import convert_dt_to_localized_dt
 
 
 logger = getLogger(__name__)
@@ -83,11 +88,14 @@ class VTEXOrdersConversionsService:
             )
 
         project = Project.objects.filter(uuid=self.project.uuid).first()
-        timezone = project.timezone if project else None
+        tz_name = project.timezone if project else get_current_timezone_name()
+
+        start_date = convert_dt_to_localized_dt(start_date, tz_name).date()
+        end_date = convert_dt_to_localized_dt(end_date, tz_name).date()
 
         metrics_data = (
             self.meta_api_client.get_messages_analytics(
-                waba_id, template_id, start_date, end_date, timezone_name=timezone
+                waba_id, template_id, start_date, end_date
             )
             .get("data", {})
             .get("status_count")
