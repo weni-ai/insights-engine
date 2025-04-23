@@ -36,8 +36,8 @@ from insights.metrics.meta.serializers import (
     RemoveTemplateFromFavoritesSerializer,
     MessageTemplatesCategoriesSerializer,
     MessageTemplatesLanguagesSerializer,
-    WhatsappIntegrationWebhookSerializer,
     WabaSerializer,
+    WhatsappIntegrationWebhookSerializer,
 )
 from insights.projects.models import Project
 from insights.metrics.meta.utils import get_edit_template_url_from_template_data
@@ -292,7 +292,7 @@ class WhatsappIntegrationWebhookView(APIView):
 
         existing_dashboard = Dashboard.objects.filter(
             project=project,
-            config__waba_id=serializer.validated_data["waba_id"],
+            config__phone_number__id=serializer.validated_data["phone_number"]["id"],
             config__is_whatsapp_integration=True,
         ).first()
 

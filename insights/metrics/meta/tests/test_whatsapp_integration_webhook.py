@@ -96,7 +96,7 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
                 "waba_id": waba_id,
                 "app_uuid": str(uuid.uuid4()),
                 "phone_number": {
-                    "id": "556622598897977",
+                    "id": "996622598897977",
                     "display_phone_number": "+55 82 98877 6655",
                 },
             },

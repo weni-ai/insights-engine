@@ -23,21 +23,21 @@ class VtexOrdersRestClient(VtexAuthentication):
         self.headers = {}
         self.internal_token = None
 
+        self.base_url = auth_params.get("domain")
+
         if self.use_io_proxy:
             self.internal_token = auth_params.get("internal_token")
+
+            if "https://" not in self.base_url:
+                self.base_url = f"https://{self.base_url}"
+
+            if "myvtex.com" not in self.base_url:
+                self.base_url = f"{self.base_url}.myvtex.com"
         else:
             self.headers = {
                 "X-VTEX-API-AppToken": auth_params.get("app_token"),
                 "X-VTEX-API-AppKey": auth_params.get("app_key"),
             }
-
-        self.base_url = auth_params.get("domain")
-
-        if "https://" not in self.base_url:
-            self.base_url = f"https://{self.base_url}"
-
-        if "myvtex.com" not in self.base_url:
-            self.base_url = f"{self.base_url}.myvtex.com"
 
         self.cache = cache_client
 
