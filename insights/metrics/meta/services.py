@@ -37,20 +37,20 @@ class MetaMessageTemplatesService:
 
         return self.client.get_template_preview(template_id=template_id)
 
-    def get_messages_analytics(self, filters: dict, timezone: str | None = None):
+    def get_messages_analytics(self, filters: dict, timezone_name: str | None = None):
         """
         Get analytics data for messages sent using a message template.
         """
 
-        valid_filters = validate_analytics_kwargs(filters, timezone=timezone)
+        valid_filters = validate_analytics_kwargs(filters, timezone_name=timezone_name)
 
         return self.client.get_messages_analytics(**valid_filters)
 
-    def get_buttons_analytics(self, filters: dict, timezone: str | None = None):
+    def get_buttons_analytics(self, filters: dict, timezone_name: str | None = None):
         """
         Get analytics data for buttons in a message template.
         """
 
-        valid_filters = validate_analytics_kwargs(filters, timezone=timezone)
+        valid_filters = validate_analytics_kwargs(filters, timezone_name=timezone_name)
 
         return self.client.get_buttons_analytics(**valid_filters)

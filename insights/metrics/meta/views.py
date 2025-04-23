@@ -104,7 +104,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         timezone = project.timezone if project else None
 
         data = self.service.get_messages_analytics(
-            filters=request.query_params, timezone=timezone
+            filters=request.query_params, timezone_name=timezone
         )
 
         return Response(data, status=status.HTTP_200_OK)
@@ -123,7 +123,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         timezone = project.timezone if project else None
 
         data = self.service.get_buttons_analytics(
-            filters=request.query_params, timezone=timezone
+            filters=request.query_params, timezone_name=timezone
         )
 
         return Response(data, status=status.HTTP_200_OK)

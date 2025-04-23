@@ -81,7 +81,7 @@ class VTEXOrdersConversionsService:
 
         metrics_data = (
             self.meta_api_client.get_messages_analytics(
-                waba_id, template_id, start_date, end_date, timezone=timezone
+                waba_id, template_id, start_date, end_date, timezone_name=timezone
             )
             .get("data", {})
             .get("status_count")
