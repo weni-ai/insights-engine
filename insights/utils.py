@@ -37,3 +37,22 @@ def get_token_flows_authentication(project_uuid, user_email):
     api_token = token_data.get("api_token")
 
     return api_token
+
+
+def convert_dt_to_localized_dt(dt: datetime, timezone_name: str) -> datetime:
+    tz = pytz.timezone(timezone_name)
+
+    # Get the current time in that timezone
+    now = datetime.now(tz=tz)
+    local_time = now.time()
+
+    # Combine the given date with the current local time
+    combined_local_dt = datetime.combine(dt, local_time)
+
+    # Localize the combined datetime to the given timezone
+    localized_dt = tz.localize(combined_local_dt)
+
+    # Convert to UTC
+    dt_utc = localized_dt.astimezone(pytz.utc)
+
+    return dt_utc

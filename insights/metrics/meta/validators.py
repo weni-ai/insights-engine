@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 import pytz
 from rest_framework.exceptions import ValidationError
 
-from insights.utils import convert_date_str_to_datetime_date
+from insights.utils import convert_date_str_to_datetime_date, convert_dt_to_localized_dt
 
 MAX_ANALYTICS_DAYS_PERIOD_FILTER = 90
 ANALYTICS_REQUIRED_FIELDS = ["waba_id", "template_id", "start_date", "end_date"]
@@ -54,11 +54,9 @@ def validate_analytics_kwargs(filters: dict, timezone_name: str | None = None) -
                 code="invalid_date_format",
             ) from err
 
-        now = datetime.now(tz=tz_info)
-        diff = (now - tz.localize(datetime.combine(dt, now.time()))).days
-        dt = (now - timedelta(diff)).date()
-
-        analytics_kwargs[dt_field] = dt
+        analytics_kwargs[dt_field] = convert_dt_to_localized_dt(
+            dt, timezone_name
+        ).date()
 
     validate_analytics_selected_period(analytics_kwargs.get("start_date"))
 
