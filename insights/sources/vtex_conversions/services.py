@@ -52,7 +52,9 @@ class VTEXOrdersConversionsService:
         except Exception as e:
             raise e
 
-        return waba_id in project_wabas
+        wabas = [waba["waba_id"] for waba in project_wabas]
+
+        return waba_id in wabas
 
     def get_message_metrics(
         self,
