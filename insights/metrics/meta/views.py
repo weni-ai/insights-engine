@@ -99,7 +99,14 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         url_path="messages-analytics",
     )
     def messages_analytics(self, request: Request) -> Response:
-        data = self.service.get_messages_analytics(filters=request.query_params)
+        project_uuid = self.request.query_params.get("project_uuid")
+
+        project = Project.objects.filter(uuid=project_uuid).first()
+        timezone = project.timezone if project else None
+
+        data = self.service.get_messages_analytics(
+            filters=request.query_params, timezone_name=timezone
+        )
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -111,7 +118,14 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         url_path="buttons-analytics",
     )
     def buttons_analytics(self, request: Request) -> Response:
-        data = self.service.get_buttons_analytics(filters=request.query_params)
+        project_uuid = self.request.query_params.get("project_uuid")
+
+        project = Project.objects.filter(uuid=project_uuid).first()
+        timezone = project.timezone if project else None
+
+        data = self.service.get_buttons_analytics(
+            filters=request.query_params, timezone_name=timezone
+        )
 
         return Response(data, status=status.HTTP_200_OK)
 

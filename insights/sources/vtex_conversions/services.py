@@ -1,6 +1,10 @@
 from datetime import date
 from logging import getLogger
 
+from django.conf import settings
+from django.utils.timezone import get_current_timezone_name
+
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 
@@ -18,6 +22,7 @@ from insights.sources.vtex_conversions.serializers import (
     OrdersConversionsFiltersSerializer,
     OrdersConversionsMetricsSerializer,
 )
+from insights.utils import convert_dt_to_localized_dt
 
 
 logger = getLogger(__name__)
@@ -44,6 +49,10 @@ class VTEXOrdersConversionsService:
         """
         Check if the project has permission to access the WABA.
         """
+
+        if test_waba_id := getattr(settings, "WHATSAPP_ABANDONED_CART_WABA_ID", None):
+            # TEMPORARY, this should be used only in the development and staging environments
+            return waba_id == test_waba_id
 
         try:
             project_wabas = self.integrations_client.get_wabas_for_project(
@@ -77,6 +86,12 @@ class VTEXOrdersConversionsService:
                 detail=_("Project does not have permission to access WABA"),
                 code="project_without_waba_permission",
             )
+
+        project = Project.objects.filter(uuid=self.project.uuid).first()
+        tz_name = project.timezone if project else get_current_timezone_name()
+
+        start_date = convert_dt_to_localized_dt(start_date, tz_name).date()
+        end_date = convert_dt_to_localized_dt(end_date, tz_name).date()
 
         metrics_data = (
             self.meta_api_client.get_messages_analytics(

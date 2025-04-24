@@ -1,16 +1,20 @@
 from datetime import date
 
 from django.utils import timezone
+from django.utils.timezone import get_current_timezone_name
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
-from insights.utils import convert_date_str_to_datetime_date
+from insights.utils import convert_date_str_to_datetime_date, convert_dt_to_localized_dt
 
 MAX_ANALYTICS_DAYS_PERIOD_FILTER = 90
 ANALYTICS_REQUIRED_FIELDS = ["waba_id", "template_id", "start_date", "end_date"]
 
 
-def validate_analytics_kwargs(filters: dict) -> dict:
+def validate_analytics_kwargs(filters: dict, timezone_name: str | None = None) -> dict:
+    if not timezone_name:
+        timezone_name = get_current_timezone_name()
+
     analytics_kwargs = {k: None for k in ANALYTICS_REQUIRED_FIELDS}
     missing_fields = []
 
@@ -36,9 +40,7 @@ def validate_analytics_kwargs(filters: dict) -> dict:
 
     for dt_field in ["start_date", "end_date"]:
         try:
-            analytics_kwargs[dt_field] = convert_date_str_to_datetime_date(
-                analytics_kwargs[dt_field]
-            )
+            dt = convert_date_str_to_datetime_date(analytics_kwargs[dt_field])
         except ValueError as err:
             raise ValidationError(
                 {
@@ -46,6 +48,10 @@ def validate_analytics_kwargs(filters: dict) -> dict:
                 },
                 code="invalid_date_format",
             ) from err
+
+        analytics_kwargs[dt_field] = convert_dt_to_localized_dt(
+            dt, timezone_name
+        ).date()
 
     validate_analytics_selected_period(analytics_kwargs.get("start_date"))
 
