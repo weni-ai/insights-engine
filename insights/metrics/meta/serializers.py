@@ -200,4 +200,4 @@ class FavoriteTemplatesQueryParamsSerializer(BaseFavoriteTemplateSerializer):
 
 class WabaSerializer(serializers.Serializer):
     id = serializers.CharField(source="waba_id", read_only=True)
-    phone_number = serializers.CharField(source="phone_number", read_only=True)
+    phone_number = serializers.CharField(read_only=True)
