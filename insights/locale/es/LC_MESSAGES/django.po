@@ -1,0 +1,407 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-24 20:22+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
+"1 : 2;\n"
+#: insights/dashboards/serializers.py:37
+msgid "Cannot set a default dashboard as non-default"
+msgstr "No se puede establecer un panel predeterminado como no predeterminado"
+
+#: insights/internals/api/users/serializers.py:16
+msgid "User does not exist"
+msgstr "El usuario no existe"
+
+#: insights/metrics/meta/choices.py:7
+msgid "Account Update"
+msgstr "Actualización de cuenta"
+
+#: insights/metrics/meta/choices.py:8
+msgid "Alert Update"
+msgstr "Actualización de alerta"
+
+#: insights/metrics/meta/choices.py:9
+msgid "Appointment Update"
+msgstr "Actualización de cita"
+
+#: insights/metrics/meta/choices.py:10
+msgid "Authentication"
+msgstr "Autenticación"
+
+#: insights/metrics/meta/choices.py:11
+msgid "Auto Reply"
+msgstr "Respuesta automática"
+
+#: insights/metrics/meta/choices.py:12
+msgid "Issue Resolution"
+msgstr "Resolución de problema"
+
+#: insights/metrics/meta/choices.py:13
+msgid "Marketing"
+msgstr "Marketing"
+
+#: insights/metrics/meta/choices.py:14
+msgid "OTP"
+msgstr "OTP"
+
+#: insights/metrics/meta/choices.py:15
+msgid "Payment Update"
+msgstr "Actualización de pago"
+
+#: insights/metrics/meta/choices.py:16
+msgid "Personal Finance Update"
+msgstr "Actualización de finanzas personales"
+
+#: insights/metrics/meta/choices.py:17
+msgid "Reservation Update"
+msgstr "Actualización de reserva"
+
+#: insights/metrics/meta/choices.py:18
+msgid "Shipping Update"
+msgstr "Actualización de envío"
+
+#: insights/metrics/meta/choices.py:19
+msgid "Ticket Update"
+msgstr "Actualización de ticket"
+
+#: insights/metrics/meta/choices.py:20
+msgid "Transactional"
+msgstr "Transaccional"
+
+#: insights/metrics/meta/choices.py:21
+msgid "Transportation Update"
+msgstr "Actualización de transporte"
+
+#: insights/metrics/meta/choices.py:22
+msgid "Utility"
+msgstr "Utilidad"
+
+#: insights/metrics/meta/choices.py:27
+msgid "Afrikaans"
+msgstr "Afrikáans"
+
+#: insights/metrics/meta/choices.py:28
+msgid "Albanian"
+msgstr "Albanés"
+
+#: insights/metrics/meta/choices.py:29
+msgid "Arabic"
+msgstr "Árabe"
+
+#: insights/metrics/meta/choices.py:30
+msgid "Azerbaijani"
+msgstr "Azerbaiyano"
+
+#: insights/metrics/meta/choices.py:31
+msgid "Bengali"
+msgstr "Bengalí"
+
+#: insights/metrics/meta/choices.py:32
+msgid "Bulgarian"
+msgstr "Búlgaro"
+
+#: insights/metrics/meta/choices.py:33
+msgid "Catalan"
+msgstr "Catalán"
+
+#: insights/metrics/meta/choices.py:34
+msgid "Chinese (China)"
+msgstr "Chino (China)"
+
+#: insights/metrics/meta/choices.py:35
+msgid "Chinese (Hong Kong)"
+msgstr "Chino (Hong Kong)"
+
+#: insights/metrics/meta/choices.py:36
+msgid "Chinese (Taiwan)"
+msgstr "Chino (Taiwán)"
+
+#: insights/metrics/meta/choices.py:37
+msgid "Croatian"
+msgstr "Croata"
+
+#: insights/metrics/meta/choices.py:38
+msgid "Czech"
+msgstr "Checo"
+
+#: insights/metrics/meta/choices.py:39
+msgid "Danish"
+msgstr "Danés"
+
+#: insights/metrics/meta/choices.py:40
+msgid "Dutch"
+msgstr "Neerlandés"
+
+#: insights/metrics/meta/choices.py:41
+msgid "English"
+msgstr "Inglés"
+
+#: insights/metrics/meta/choices.py:42
+msgid "English (UK)"
+msgstr "Inglés (Reino Unido)"
+
+#: insights/metrics/meta/choices.py:43
+msgid "English (US)"
+msgstr "Inglés (Estados Unidos)"
+
+#: insights/metrics/meta/choices.py:44
+msgid "Estonian"
+msgstr "Estonio"
+
+#: insights/metrics/meta/choices.py:45
+msgid "Filipino"
+msgstr "Filipino"
+
+#: insights/metrics/meta/choices.py:46
+msgid "Finnish"
+msgstr "Finlandés"
+
+#: insights/metrics/meta/choices.py:47
+msgid "French"
+msgstr "Francés"
+
+#: insights/metrics/meta/choices.py:48
+msgid "German"
+msgstr "Alemán"
+
+#: insights/metrics/meta/choices.py:49
+msgid "Greek"
+msgstr "Griego"
+
+#: insights/metrics/meta/choices.py:50
+msgid "Gujarati"
+msgstr "Gujarati"
+
+#: insights/metrics/meta/choices.py:51
+msgid "Hausa"
+msgstr "Hausa"
+
+#: insights/metrics/meta/choices.py:52
+msgid "Hebrew"
+msgstr "Hebreo"
+
+#: insights/metrics/meta/choices.py:53
+msgid "Hindi"
+msgstr "Hindi"
+
+#: insights/metrics/meta/choices.py:54
+msgid "Hungarian"
+msgstr "Húngaro"
+
+#: insights/metrics/meta/choices.py:55
+msgid "Indonesian"
+msgstr "Indonesio"
+
+#: insights/metrics/meta/choices.py:56
+msgid "Irish"
+msgstr "Irlandés"
+
+#: insights/metrics/meta/choices.py:57
+msgid "Italian"
+msgstr "Italiano"
+
+#: insights/metrics/meta/choices.py:58
+msgid "Japanese"
+msgstr "Japonés"
+
+#: insights/metrics/meta/choices.py:59
+msgid "Kannada"
+msgstr "Canarés"
+
+#: insights/metrics/meta/choices.py:60
+msgid "Kazakh"
+msgstr "Kazajo"
+
+#: insights/metrics/meta/choices.py:61
+msgid "Korean"
+msgstr "Coreano"
+
+#: insights/metrics/meta/choices.py:62
+msgid "Lao"
+msgstr "Lao"
+
+#: insights/metrics/meta/choices.py:63
+msgid "Latvian"
+msgstr "Letón"
+
+#: insights/metrics/meta/choices.py:64
+msgid "Lithuanian"
+msgstr "Lituano"
+
+#: insights/metrics/meta/choices.py:65
+msgid "Macedonian"
+msgstr "Macedonio"
+
+#: insights/metrics/meta/choices.py:66
+msgid "Malay"
+msgstr "Malayo"
+
+#: insights/metrics/meta/choices.py:67
+msgid "Malayalam"
+msgstr "Malayalam"
+
+#: insights/metrics/meta/choices.py:68
+msgid "Marathi"
+msgstr "Maratí"
+
+#: insights/metrics/meta/choices.py:69
+msgid "Norwegian"
+msgstr "Noruego"
+
+#: insights/metrics/meta/choices.py:70
+msgid "Persian"
+msgstr "Persa"
+
+#: insights/metrics/meta/choices.py:71
+msgid "Polish"
+msgstr "Polaco"
+
+#: insights/metrics/meta/choices.py:72
+msgid "Portuguese (Brazil)"
+msgstr "Portugués (Brasil)"
+
+#: insights/metrics/meta/choices.py:73
+msgid "Portuguese (Portugal)"
+msgstr "Portugués (Portugal)"
+
+#: insights/metrics/meta/choices.py:74
+msgid "Punjabi"
+msgstr "Punjabi"
+
+#: insights/metrics/meta/choices.py:75
+msgid "Romanian"
+msgstr "Rumano"
+
+#: insights/metrics/meta/choices.py:76
+msgid "Russian"
+msgstr "Ruso"
+
+#: insights/metrics/meta/choices.py:77
+msgid "Serbian"
+msgstr "Serbio"
+
+#: insights/metrics/meta/choices.py:78
+msgid "Slovak"
+msgstr "Eslovaco"
+
+#: insights/metrics/meta/choices.py:79
+msgid "Slovenian"
+msgstr "Eslovenio"
+
+#: insights/metrics/meta/choices.py:80
+msgid "Spanish"
+msgstr "Español"
+
+#: insights/metrics/meta/choices.py:81
+msgid "Spanish (Argentina)"
+msgstr "Español (Argentina)"
+
+#: insights/metrics/meta/choices.py:82
+msgid "Spanish (Spain)"
+msgstr "Español (España)"
+
+#: insights/metrics/meta/choices.py:83
+msgid "Spanish (Mexico)"
+msgstr "Español (México)"
+
+#: insights/metrics/meta/choices.py:84
+msgid "Swahili"
+msgstr "Swahili"
+
+#: insights/metrics/meta/choices.py:85
+msgid "Swedish"
+msgstr "Sueco"
+
+#: insights/metrics/meta/choices.py:86
+msgid "Tamil"
+msgstr "Tamil"
+
+#: insights/metrics/meta/choices.py:87
+msgid "Telugu"
+msgstr "Telugu"
+
+#: insights/metrics/meta/choices.py:88
+msgid "Thai"
+msgstr "Tailandés"
+
+#: insights/metrics/meta/choices.py:89
+msgid "Turkish"
+msgstr "Turco"
+
+#: insights/metrics/meta/choices.py:90
+msgid "Ukrainian"
+msgstr "Ucraniano"
+
+#: insights/metrics/meta/choices.py:91
+msgid "Urdu"
+msgstr "Urdu"
+
+#: insights/metrics/meta/choices.py:92
+msgid "Uzbek"
+msgstr "Uzbeko"
+
+#: insights/metrics/meta/choices.py:93
+msgid "Vietnamese"
+msgstr "Vietnamita"
+
+#: insights/metrics/meta/choices.py:94
+msgid "Zulu"
+msgstr "Zulu"
+
+#: insights/metrics/meta/serializers.py:116
+msgid "Favorite template limit reached"
+msgstr "Límite de plantillas favoritas alcanzado"
+
+#: insights/metrics/meta/serializers.py:128
+msgid "Template already in favorites"
+msgstr "Plantilla ya en favoritos"
+
+#: insights/metrics/meta/serializers.py:151
+msgid "Template not in favorites"
+msgstr "Plantilla no en favoritos"
+
+#: insights/metrics/meta/validators.py:68
+msgid "WABA id is required"
+msgstr "El ID de WABA es requerido"
+
+#: insights/metrics/vtex/views.py:30
+msgid "Required"
+msgstr "Requerido"
+
+#: insights/metrics/vtex/views.py:47
+msgid "Invalid date format. Use YYYY-MM-DD."
+msgstr "Formato de fecha inválido. Use YYYY-MM-DD."
+
+#: insights/shared/models.py:16
+msgid "Created on"
+msgstr "Creado el"
+
+#: insights/shared/models.py:18
+msgid "Modified on"
+msgstr "Modificado el"
+
+#: insights/shared/models.py:32
+msgid "config"
+msgstr "configuración"
+
+#: insights/sources/vtex_conversions/services.py:77
+msgid "Project does not have permission to access WABA"
+msgstr "El proyecto no tiene permisos para acceder a WABA"
+
+#: insights/sources/vtex_conversions/usecases/query_execute.py:32
+msgid "Project does not have the credentials to access VTEX's API"
+msgstr "El proyecto no tiene las credenciales para acceder a la API de VTEX"

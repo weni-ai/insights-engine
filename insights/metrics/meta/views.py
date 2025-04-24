@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from sentry_sdk import capture_exception
 
 from insights.authentication.permissions import (
     InternalAuthenticationPermission,
@@ -273,8 +274,14 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         try:
             wabas_data = WeniIntegrationsClient().get_wabas_for_project(project_uuid)
         except ValueError as e:
+            capture_exception(e)
+            logger.error(
+                "Error fetching wabas for project %s: %s",
+                project_uuid,
+                e,
+            )
             return Response(
-                {"error": "Internal server error"},
+                {"error": "Error fetching wabas"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
