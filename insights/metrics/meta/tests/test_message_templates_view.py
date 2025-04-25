@@ -931,19 +931,11 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         mock_wabas.return_value = [
             {
                 "waba_id": "1234567890987654",
-                "phone_number": {
-                    "id": "000000000000000",
-                    "display_name": "Test",
-                    "display_phone_number": "+55 84 9988-7766",
-                },
+                "phone_number": "+55 84 9988-7766",
             },
             {
                 "waba_id": "9876543210123456",
-                "phone_number": {
-                    "id": "111111111111111",
-                    "display_name": "Test 2",
-                    "display_phone_number": "+55 84 8877-6655",
-                },
+                "phone_number": "+55 84 8877-6655",
             },
         ]
 
@@ -978,4 +970,4 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         response = self.get_wabas({"project_uuid": self.project.uuid})
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.data["error"], "Internal server error")
+        self.assertEqual(response.data["error"], "Error fetching wabas")
