@@ -14,7 +14,7 @@ from rest_framework.exceptions import PermissionDenied
 
 class VTEXConversionsServiceTestCase(TestCase):
     def setUp(self) -> None:
-        self.project = Project.objects.create()
+        self.project = Project.objects.create(timezone="America/Sao_Paulo")
 
         self.meta_api_client = Mock()
         self.integrations_client = Mock()
@@ -63,7 +63,9 @@ class VTEXConversionsServiceTestCase(TestCase):
             analytics_mock_data
         )
 
-        self.integrations_client.get_wabas_for_project.return_value = [waba_id]
+        self.integrations_client.get_wabas_for_project.return_value = [
+            {"waba_id": waba_id}
+        ]
         self.meta_api_client.get_messages_analytics.return_value = {
             "data": formatted_analytics_mock_data
         }
