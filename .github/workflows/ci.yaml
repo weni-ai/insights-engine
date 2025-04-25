@@ -14,7 +14,7 @@ env:
   USE_EDA: true
   INSIGHTS_DOMAIN: ""
   CHATS_URL: ""
-  INTEGRATIONS_URL: ""
+  INTEGRATIONS_URL: "https://integrations.weni.local"
 
 jobs:
   build:
