@@ -1,0 +1,74 @@
+name: Python application.
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+env:
+  SECRET_KEY: "SK"
+  DEBUG: true
+  DATABASE_URL: "postgres://insights:insights@localhost:5432/insights"
+  USE_EDA: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16.2
+        env:
+          POSTGRES_USER: insights
+          POSTGRES_PASSWORD: insights
+          POSTGRES_DB: insights
+        ports:
+          - 5432:5432
+        # needed because the postgres container does not provide a healthcheck
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      redis:
+        image: redis:6.2
+        ports:
+          - 6379:6379
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.10
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip poetry
+          poetry config virtualenvs.create false --local
+          poetry install
+
+      - name: Run migrations
+        run: python manage.py migrate
+
+      - name: run flake8
+        run: flake8
+
+      - name: run black
+        run: black .
+
+      - name: run isort
+        run: isort .
+
+      - name: Run tests
+        run: coverage run manage.py test --verbosity=2 --noinput
+
+      - name: Coverage report
+        run: coverage report -m
