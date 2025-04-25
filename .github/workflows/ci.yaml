@@ -13,6 +13,7 @@ env:
   DATABASE_URL: "postgres://insights:insights@localhost:5432/insights"
   USE_EDA: true
   INSIGHTS_DOMAIN: ""
+  CHATS_URL: ""
 
 jobs:
   build:
