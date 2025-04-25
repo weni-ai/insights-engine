@@ -14,6 +14,7 @@ env:
   USE_EDA: true
   INSIGHTS_DOMAIN: ""
   CHATS_URL: ""
+  INTEGRATIONS_URL: ""
 
 jobs:
   build:
