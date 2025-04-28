@@ -1,4 +1,3 @@
-from rest_framework import status
 from rest_framework.permissions import BasePermission
 
 from insights.sources.integrations.clients import WeniIntegrationsClient

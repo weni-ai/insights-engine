@@ -1,6 +1,4 @@
 from django.utils.timezone import timedelta
-from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import ValidationError
 
 from insights.internals.base import InternalAuthentication
 from insights.projects.models import Project

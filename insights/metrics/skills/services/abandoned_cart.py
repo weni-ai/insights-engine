@@ -5,7 +5,6 @@ import logging
 from babel import numbers
 from django.utils import timezone
 from django.utils.timezone import timedelta
-from rest_framework import status
 from sentry_sdk import capture_exception
 
 from insights.metrics.meta.clients import MetaGraphAPIClient

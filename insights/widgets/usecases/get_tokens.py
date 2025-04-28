@@ -1,6 +1,5 @@
 from insights.projects.models import Project
 from django.conf import settings
-import json
 
 
 def get_tokens(project_uuid):
