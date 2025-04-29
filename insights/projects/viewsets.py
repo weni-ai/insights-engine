@@ -1,12 +1,20 @@
+import logging
+
 from django.conf import settings
 from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, authentication_classes
 from rest_framework.response import Response
 
-from insights.authentication.permissions import ProjectAuthPermission
+from insights.authentication.authentication import StaticTokenAuthentication
+from insights.authentication.permissions import (
+    IsServiceAuthentication,
+    ProjectAuthPermission,
+)
 from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -55,3 +63,42 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             return Response(True)
 
         return Response(False)
+
+    @action(detail=False, methods=["get"], url_path="release_flows_dashboard")
+    def release_flows_dashboard(self, request, *args, **kwargs):
+        try:
+            project_uuid = request.query_params.get("project_uuid")
+            if not project_uuid:
+                return Response(
+                    {"detail": "project_uuid is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            project = Project.objects.get(uuid=project_uuid)
+            
+            project.is_allowed = True
+            project.save()
+
+            return Response({"success": True}, status=status.HTTP_200_OK)
+
+        except Project.DoesNotExist:
+                return Response(
+                    {"detail": "Project not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+        except Exception as exception:
+            logger.error(f"Error updating project: {str(exception)}", exc_info=True)
+            return Response(
+                {"detail": "An internal error occurred while processing your request."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(
+        detail=False, 
+        methods=["get"], 
+        url_path="get_allowed_projects",
+        authentication_classes=[StaticTokenAuthentication],
+        permission_classes=[IsServiceAuthentication]
+    )
+    def get_allowed_projects(self, request, *args, **kwargs):
+        projects = Project.objects.filter(is_allowed=True).values("uuid")
+        return Response(list(projects), status=status.HTTP_200_OK)
