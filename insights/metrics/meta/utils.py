@@ -130,10 +130,18 @@ def get_edit_template_url_from_template_data(
         )
         return None
 
+    if len(template_data) == 0:
+        logger.info(
+            "No template data found for project_uuid=%s, template_id=%s",
+            project_uuid,
+            template_id,
+        )
+        return None
+
     app_uuid = template_data[0].get("app_uuid")
     templates_uuid = template_data[0].get("templates_uuid", [])
 
-    if not app_uuid or len(templates_uuid) < 1:
+    if not app_uuid or not templates_uuid:
         logger.error(
             "No templates_uuid found for project_uuid=%s, template_id=%s",
             project_uuid,
