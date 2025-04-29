@@ -2,7 +2,7 @@ import json
 import logging
 import requests
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 from django.conf import settings
 from django.utils import timezone
@@ -137,12 +137,18 @@ class MetaGraphAPIClient:
         if isinstance(template_id, list):
             template_id = ",".join(template_id)
 
-        end_date = min((end_date + timedelta(days=1)), timezone.now().date())
+        start = convert_date_to_unix_timestamp(start_date)
+        end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
+
+        now = datetime.now()
+
+        if end > datetime.now().timestamp():
+            end = now.timestamp()
 
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
-            "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "start": start,
+            "end": end,
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
