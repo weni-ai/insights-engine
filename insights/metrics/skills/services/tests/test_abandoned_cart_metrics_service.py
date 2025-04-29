@@ -5,7 +5,6 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
-from rest_framework import status
 
 from insights.metrics.skills.exceptions import (
     InvalidDateRangeError,
@@ -90,17 +89,10 @@ class TestAbandonedCartSkillService(TestCase):
                 "waba_id": "123456789098765",
             },
         ]
-        mock_templates_list.return_value = {
-            "data": [
-                {
-                    "name": "not_the_one_you_are_looking_for",
-                    "id": "123456789098765",
-                },
-            ]
-        }
+        mock_templates_list.return_value = {"data": []}
 
         with self.assertRaises(TemplateNotFound):
-            self.service_class(self.project, {})._whatsapp_template_id_and_waba
+            self.service_class(self.project, {})._whatsapp_template_ids_and_waba
 
     @patch("insights.sources.orders.clients.VtexOrdersRestClient.list")
     @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
@@ -149,26 +141,8 @@ class TestAbandonedCartSkillService(TestCase):
             }
             for _ in range(5)
         ]
-        data_points_for_past_period = [
-            {
-                "template_id": "123456789098765",
-                "start": 1733011200,
-                "end": 1733097600,
-                "sent": 5,
-                "delivered": 4,
-                "read": 3,
-                "clicked": [
-                    {
-                        "type": "quick_reply_button",
-                        "button_content": "Access service",
-                        "count": 2,
-                    },
-                ],
-            }
-            for _ in range(5)
-        ]
 
-        data_points = data_points_for_past_period + data_points_for_period
+        data_points = data_points_for_period
         mock_messages_analytics.return_value = {
             "data": format_messages_metrics_data({"data_points": data_points}),
         }
@@ -206,22 +180,18 @@ class TestAbandonedCartSkillService(TestCase):
             {
                 "id": "sent-messages",
                 "value": 50,
-                "percentage": 100.0,
             },
             {
                 "id": "delivered-messages",
                 "value": 45,
-                "percentage": 125.0,
             },
             {
                 "id": "read-messages",
                 "value": 40,
-                "percentage": 166.67,
             },
             {
                 "id": "interactions",
                 "value": 35,
-                "percentage": 250,
             },
             {
                 "id": "utm-revenue",

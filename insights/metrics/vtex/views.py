@@ -1,8 +1,6 @@
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema, OpenApiParameter
 from django.utils.translation import gettext_lazy as _
 from datetime import datetime
-from django.utils import timezone
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action

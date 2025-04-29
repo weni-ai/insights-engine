@@ -3,10 +3,6 @@ from pytest import fixture
 from insights.dashboards.models import Dashboard, DashboardTemplate
 from insights.projects.models import Project, ProjectAuth
 from insights.users.models import User
-from insights.dashboards.models import (
-    Dashboard,
-    DashboardTemplate,
-)
 from insights.widgets.models import Widget
 
 

@@ -1,7 +1,5 @@
 import pytest
-from django.db.utils import IntegrityError
 
-from insights.dashboards.models import Dashboard
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.dashboards.usecases.flows_dashboard_creation import CreateFlowsDashboard
 from rest_framework.test import APIClient
