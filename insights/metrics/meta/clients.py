@@ -203,12 +203,18 @@ class MetaGraphAPIClient:
             MetricsTypes.CLICKED.value,
         ]
 
-        end_date = min((end_date + timedelta(days=1)), timezone.now().date())
+        start = convert_date_to_unix_timestamp(start_date)
+        end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
+
+        now = datetime.now()
+
+        if end > datetime.now().timestamp():
+            end = now.timestamp()
 
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
-            "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date),
+            "start": start,
+            "end": end,
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
