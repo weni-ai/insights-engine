@@ -2,10 +2,9 @@ import json
 import logging
 import requests
 
-from datetime import date, timedelta, datetime
+from datetime import date, datetime
 
 from django.conf import settings
-from django.utils import timezone
 from rest_framework.exceptions import ValidationError, NotFound
 
 from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
@@ -138,7 +137,7 @@ class MetaGraphAPIClient:
             template_id = ",".join(template_id)
 
         start = convert_date_to_unix_timestamp(start_date)
-        end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
+        end = convert_date_to_unix_timestamp(end_date, use_max_time=True)
 
         now = int(datetime.now().timestamp())
 
@@ -204,7 +203,7 @@ class MetaGraphAPIClient:
         ]
 
         start = convert_date_to_unix_timestamp(start_date)
-        end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
+        end = convert_date_to_unix_timestamp(end_date, use_max_time=True)
 
         now = int(datetime.now().timestamp())
 
