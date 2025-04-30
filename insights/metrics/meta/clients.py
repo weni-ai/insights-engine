@@ -2,10 +2,9 @@ import json
 import logging
 import requests
 
-from datetime import date, timedelta, datetime
+from datetime import date, datetime
 
 from django.conf import settings
-from django.utils import timezone
 from rest_framework.exceptions import ValidationError, NotFound
 
 from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
