@@ -121,7 +121,7 @@ class TestMetaGraphAPIClient(TestCase):
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date, use_max_date=True),
+            "end": convert_date_to_unix_timestamp(end_date, use_max_time=True),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,
@@ -215,7 +215,7 @@ class TestMetaGraphAPIClient(TestCase):
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
             "start": convert_date_to_unix_timestamp(start_date),
-            "end": convert_date_to_unix_timestamp(end_date, use_max_date=True),
+            "end": convert_date_to_unix_timestamp(end_date, use_max_time=True),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
             "limit": 9999,

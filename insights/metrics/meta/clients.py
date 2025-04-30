@@ -137,7 +137,7 @@ class MetaGraphAPIClient:
             template_id = ",".join(template_id)
 
         start = convert_date_to_unix_timestamp(start_date)
-        end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
+        end = convert_date_to_unix_timestamp(end_date, use_max_time=True)
 
         now = int(datetime.now().timestamp())
 
@@ -203,7 +203,7 @@ class MetaGraphAPIClient:
         ]
 
         start = convert_date_to_unix_timestamp(start_date)
-        end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
+        end = convert_date_to_unix_timestamp(end_date, use_max_time=True)
 
         now = int(datetime.now().timestamp())
 
