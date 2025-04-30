@@ -140,10 +140,10 @@ class MetaGraphAPIClient:
         start = convert_date_to_unix_timestamp(start_date)
         end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
 
-        now = datetime.now()
+        now = int(datetime.now().timestamp())
 
-        if end > datetime.now().timestamp():
-            end = now.timestamp()
+        if end > now:
+            end = now
 
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
@@ -206,10 +206,10 @@ class MetaGraphAPIClient:
         start = convert_date_to_unix_timestamp(start_date)
         end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
 
-        now = datetime.now()
+        now = int(datetime.now().timestamp())
 
-        if end > datetime.now().timestamp():
-            end = now.timestamp()
+        if end > now:
+            end = now
 
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
