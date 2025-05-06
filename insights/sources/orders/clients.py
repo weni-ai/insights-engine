@@ -26,13 +26,15 @@ class VtexOrdersRestClient(VtexAuthentication):
         self.base_url = auth_params.get("domain")
 
         if self.use_io_proxy:
-            self.internal_token = auth_params.get("internal_token")
-
             if "https://" not in self.base_url:
                 self.base_url = f"https://{self.base_url}"
 
             if "myvtex.com" not in self.base_url:
                 self.base_url = f"{self.base_url}.myvtex.com"
+
+            self.headers = {
+                "X-Weni-Auth": auth_params.get("internal_token"),
+            }
         else:
             self.headers = {
                 "X-VTEX-API-AppToken": auth_params.get("app_token"),
@@ -45,9 +47,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         """Gere uma chave única para o cache baseada nos filtros de consulta."""
         return f"vtex_data:{json.dumps(query_filters, sort_keys=True)}"
 
-    def get_vtex_endpoint(
-        self, query_filters: dict, page_number: int = 1, redact_token: bool = False
-    ):
+    def get_query_params(self, query_filters: dict, page_number: int):
         start_date = query_filters.get("ended_at__gte")
         end_date = query_filters.get("ended_at__lte")
         utm_source = query_filters.get("utm_source")
@@ -59,34 +59,58 @@ class VtexOrdersRestClient(VtexAuthentication):
             "f_status": "invoiced",
         }
 
+        if start_date:
+            query_params["f_authorizedDate"] = (
+                f"authorizedDate:[{start_date} TO {end_date}]"
+            )
+
+        return query_params
+
+    def get_vtex_endpoint(
+        self,
+        query_filters: dict,
+        page_number: int = 1,
+    ):
         if self.use_io_proxy:
             # Using IO as a proxy to get the orders list
             # because, when the app is integrated with VTEX IO, we can't make requests directly to the VTEX API
             # as we don't have the app key and app token
             path = "/_v/orders/"
-            query_params["token"] = (
-                self.internal_token if not redact_token else "REDACTED"
-            )
+            return f"{self.base_url}{path}"
 
+        path = "/api/oms/pvt/orders/"
+        query_params = self.get_query_params(query_filters, page_number)
+        return f"{self.base_url}{path}?{urlencode(query_params)}"
+
+    def get_request_body(self, query_filters: dict, page_number: int):
+        """
+        This method is used to get the request body for the VTEX IO proxy.
+        """
+        if self.use_io_proxy:
+            query_params = self.get_query_params(query_filters, page_number)
+            return {
+                "raw_query": query_params,
+            }
         else:
-            path = "/api/oms/pvt/orders/"
+            return {}
 
-        if start_date is not None:
-            query_params["f_authorizedDate"] = (
-                f"authorizedDate:[{start_date} TO {end_date}]"
+    def get_orders_list(self, query_filters: dict, page_number: int, timeout=60):
+        """
+        This method is used to get the orders list from the VTEX API.
+        """
+        endpoint = self.get_vtex_endpoint(query_filters, page_number)
+
+        if self.use_io_proxy:
+            response = requests.post(
+                endpoint,
+                headers=self.headers,
+                json=self.get_request_body(query_filters, page_number),
+                timeout=timeout,
             )
-
-        url = f"{self.base_url}{path}?{urlencode(query_params)}"
-
-        return url
-
-    def get_orders_list(self, query_filters: dict):
-        endpoint = self.get_vtex_endpoint(query_filters)
-        response = requests.get(endpoint, headers=self.headers, timeout=60)
+        else:
+            response = requests.get(endpoint, headers=self.headers, timeout=timeout)
 
         if not response.ok:
-            if "token=" in endpoint:
-                endpoint = self.get_vtex_endpoint(query_filters, redact_token=True)
             capture_message(
                 f"Error fetching orders. URL: {endpoint}. Status code: {response.status_code}. Response: {response.text}",
                 level="error",
@@ -141,7 +165,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         max_value = float("-inf")
         min_value = float("inf")
 
-        response = self.get_orders_list(query_filters)
+        response = self.get_orders_list(query_filters, 1)
         data = response.json()
 
         if "list" not in data:
@@ -155,9 +179,9 @@ class VtexOrdersRestClient(VtexAuthentication):
         with ThreadPoolExecutor(max_workers=10) as executor:
             page_futures = {
                 executor.submit(
-                    lambda page=page: requests.get(
-                        self.get_vtex_endpoint({**query_filters, "page": page}),
-                        headers=self.headers,
+                    lambda page=page: self.get_orders_list(
+                        {**query_filters, "page": page},
+                        page,
                     )
                 ): page
                 for page in range(1, pages + 1)
