@@ -64,10 +64,10 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
         return Response(False)
 
-    @action(detail=False, methods=["get"], url_path="release_flows_dashboard")
+    @action(detail=False, methods=["post"], url_path="release_flows_dashboard")
     def release_flows_dashboard(self, request, *args, **kwargs):
         try:
-            project_uuid = request.query_params.get("project_uuid")
+            project_uuid = request.data.get("project_uuid")
             if not project_uuid:
                 return Response(
                     {"detail": "project_uuid is required"},
