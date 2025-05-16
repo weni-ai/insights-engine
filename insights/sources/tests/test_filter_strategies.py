@@ -61,7 +61,7 @@ class PostgreSQLFilterStrategyTests(TestCase):
         field = {"name": "users", "email": "users"}
         value = "john"
         query, params = self.strategy.apply(field, "or", value, self.table_alias)
-        expected_query = f"(users.name ILIKE (%s) OR users.email ILIKE (%s))"
+        expected_query = "(users.name ILIKE (%s) OR users.email ILIKE (%s))"
         self.assertEqual(query, expected_query)
         self.assertEqual(params, [f"%{value}%", f"%{value}%"])
 
