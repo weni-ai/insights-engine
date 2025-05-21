@@ -38,6 +38,9 @@ class QueryExecutor:
             }
             return paginated_results  # parser(paginated_results)
 
+        print("filters")
+        print(filters)
+
         query_generator = RoomSQLQueryGenerator(
             filter_strategy=PostgreSQLFilterStrategy,
             query_builder=RoomSQLQueryBuilder,
