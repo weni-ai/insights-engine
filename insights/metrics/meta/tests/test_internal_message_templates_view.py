@@ -1,12 +1,6 @@
-from unittest.mock import patch
-import uuid
 from urllib.parse import urlencode
 
-from django.conf import settings
 from django.core.cache import cache
-from django.utils import timezone
-from django.utils.timezone import timedelta
-import responses
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
@@ -14,28 +8,8 @@ from rest_framework.response import Response
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import (
     with_internal_auth,
-    with_project_auth,
 )
-from insights.dashboards.models import Dashboard
 from insights.metrics.meta.clients import MetaGraphAPIClient
-from insights.metrics.meta.models import (
-    FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD,
-    FavoriteTemplate,
-)
-from insights.metrics.meta.choices import (
-    WhatsAppMessageTemplatesCategories,
-    WhatsAppMessageTemplatesLanguages,
-)
-from insights.projects.models import Project
-from insights.metrics.meta.utils import (
-    format_button_metrics_data,
-    format_messages_metrics_data,
-)
-from insights.metrics.meta.tests.mock import (
-    MOCK_SUCCESS_RESPONSE_BODY,
-    MOCK_TEMPLATE_DAILY_ANALYTICS,
-    MOCK_TEMPLATES_LIST_BODY,
-)
 
 
 class BaseTestInternalMetaMessageTemplatesView(APITestCase):
