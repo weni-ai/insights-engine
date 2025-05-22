@@ -1,5 +1,6 @@
 from unittest.mock import patch
 import uuid
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.cache import cache
@@ -84,6 +85,19 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
         url = "/v1/metrics/meta/whatsapp-message-templates/wabas/"
 
         return self.client.get(url, query_params)
+
+    def get_templates_metrics_analytics(
+        self, data: dict, query_params: dict
+    ) -> Response:
+        base_url = (
+            "/v1/metrics/meta/whatsapp-message-templates/templates-metrics-analytics/"
+        )
+
+        url_to_call = base_url
+        if query_params:
+            url_to_call = f"{base_url}?{urlencode(query_params)}"
+
+        return self.client.post(url_to_call, data, format="json")
 
 
 class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesView):
@@ -971,3 +985,21 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data["error"], "Error fetching wabas")
+
+    def test_cannot_get_templates_metrics_analytics_without_required_fields(self):
+        response = self.get_templates_metrics_analytics({}, {})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(
+            response.data["errors"]["query_params"]["waba_id"][0].code, "required"
+        )
+        self.assertEqual(
+            response.data["errors"]["query_params"]["start_date"][0].code, "required"
+        )
+        self.assertEqual(
+            response.data["errors"]["query_params"]["end_date"][0].code, "required"
+        )
+        self.assertEqual(
+            response.data["errors"]["body"]["template_ids"][0].code, "required"
+        )

@@ -136,8 +136,16 @@ class MetaGraphAPIClient:
         if isinstance(template_id, list):
             template_id = ",".join(template_id)
 
-        start = convert_date_to_unix_timestamp(start_date)
-        end = convert_date_to_unix_timestamp(end_date, use_max_time=True)
+        start = (
+            start_date.timestamp()
+            if isinstance(start_date, datetime)
+            else convert_date_to_unix_timestamp(start_date)
+        )
+        end = (
+            end_date.timestamp()
+            if isinstance(end_date, datetime)
+            else convert_date_to_unix_timestamp(end_date, use_max_time=True)
+        )
 
         now = int(datetime.now().timestamp())
 

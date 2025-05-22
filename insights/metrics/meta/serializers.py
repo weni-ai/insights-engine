@@ -201,3 +201,13 @@ class FavoriteTemplatesQueryParamsSerializer(BaseFavoriteTemplateSerializer):
 class WabaSerializer(serializers.Serializer):
     id = serializers.CharField(source="waba_id", read_only=True)
     phone_number = serializers.CharField(read_only=True)
+
+
+class TemplatesMetricsAnalyticsQueryParamsSerializer(serializers.Serializer):
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
+    waba_id = serializers.CharField()
+
+
+class TemplatesMetricsAnalyticsBodySerializer(serializers.Serializer):
+    template_ids = serializers.ListField(child=serializers.CharField())
