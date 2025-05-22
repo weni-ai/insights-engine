@@ -6,11 +6,12 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
 from sentry_sdk import capture_exception
 
+from insights.authentication.authentication import WeniOIDCAuthentication
 from insights.authentication.permissions import (
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
@@ -282,46 +283,6 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @action(
-        detail=False,
-        methods=["post"],
-        url_name="templates-metrics-analytics",
-        url_path="templates-metrics-analytics",
-        permission_classes=[AllowAny],  # temp
-    )
-    def templates_metrics_analytics(self, request: Request) -> Response:
-        errors = {}
-
-        try:
-            serializer = TemplatesMetricsAnalyticsQueryParamsSerializer(
-                data=request.query_params
-            )
-            serializer.is_valid(raise_exception=True)
-        except ValidationError as e:
-            errors["query_params"] = e.detail
-
-        try:
-            serializer = TemplatesMetricsAnalyticsBodySerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-        except ValidationError as e:
-            errors["body"] = e.detail
-
-        if errors:
-            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
-
-        filters = {
-            "waba_id": serializer.validated_data["waba_id"],
-            "start_date": serializer.validated_data["start_date"],
-            "end_date": serializer.validated_data["end_date"],
-            "template_id": serializer.validated_data["template_ids"],
-        }
-
-        data = self.service.get_messages_analytics(
-            filters=filters, skip_kwargs_validation=True
-        )
-
-        return Response(data, status=status.HTTP_200_OK)
-
 
 class WhatsappIntegrationWebhookView(APIView):
     permission_classes = [InternalAuthenticationPermission]
@@ -378,3 +339,47 @@ class WhatsappIntegrationWebhookView(APIView):
         ).delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class InternalWhatsAppMessageTemplatesView(GenericViewSet):
+    permission_classes = [InternalAuthenticationPermission]
+    service = MetaMessageTemplatesService()
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_name="metrics-analytics",
+        url_path="metrics-analytics",
+    )
+    def messages_analytics(self, request: Request) -> Response:
+        errors = {}
+
+        try:
+            serializer = TemplatesMetricsAnalyticsQueryParamsSerializer(
+                data=request.query_params
+            )
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as e:
+            errors["query_params"] = e.detail
+
+        try:
+            serializer = TemplatesMetricsAnalyticsBodySerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as e:
+            errors["body"] = e.detail
+
+        if errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        filters = {
+            "waba_id": serializer.validated_data["waba_id"],
+            "start_date": serializer.validated_data["start_date"],
+            "end_date": serializer.validated_data["end_date"],
+            "template_id": serializer.validated_data["template_ids"],
+        }
+
+        data = self.service.get_messages_analytics(
+            filters=filters, skip_kwargs_validation=True
+        )
+
+        return Response(data, status=status.HTTP_200_OK)

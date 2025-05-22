@@ -12,7 +12,10 @@ from rest_framework.test import APITestCase
 from rest_framework.response import Response
 
 from insights.authentication.authentication import User
-from insights.authentication.tests.decorators import with_project_auth
+from insights.authentication.tests.decorators import (
+    with_internal_auth,
+    with_project_auth,
+)
 from insights.dashboards.models import Dashboard
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.meta.models import (
@@ -986,6 +989,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data["error"], "Error fetching wabas")
 
+    @with_internal_auth
     def test_cannot_get_templates_metrics_analytics_without_required_fields(self):
         response = self.get_templates_metrics_analytics({}, {})
 
