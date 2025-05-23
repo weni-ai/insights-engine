@@ -13,7 +13,6 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
 from sentry_sdk import capture_exception
 
-from insights.authentication.authentication import WeniOIDCAuthentication
 from insights.authentication.permissions import (
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
