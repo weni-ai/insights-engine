@@ -42,6 +42,7 @@ class MetaMessageTemplatesService:
         filters: dict,
         timezone_name: str | None = None,
         skip_kwargs_validation: bool = False,
+        include_data_points: bool = True,
     ):
         """
         Get analytics data for messages sent using a message template.
@@ -54,7 +55,9 @@ class MetaMessageTemplatesService:
         else:
             valid_filters = filters
 
-        return self.client.get_messages_analytics(**valid_filters)
+        return self.client.get_messages_analytics(
+            **valid_filters, include_data_points=include_data_points
+        )
 
     def get_buttons_analytics(self, filters: dict, timezone_name: str | None = None):
         """

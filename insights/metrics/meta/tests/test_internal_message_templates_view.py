@@ -76,7 +76,7 @@ class TestInternalMetaMessageTemplatesViewAsAuthenticatedUser(
         template_id = "123"
         expected_response = {
             "data": format_messages_metrics_data(
-                MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0]
+                MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0], include_data_points=False
             )
         }
         mock_get_templates_metrics_analytics.return_value = expected_response

@@ -123,6 +123,7 @@ class MetaGraphAPIClient:
         template_id: str | list[str],
         start_date: date,
         end_date: date,
+        include_data_points: bool = True,
     ):
         url = f"{self.base_host_url}/{waba_id}/template_analytics?"
 
@@ -187,7 +188,11 @@ class MetaGraphAPIClient:
             ) from err
 
         meta_response = response.json()
-        response = {"data": format_messages_metrics_data(meta_response.get("data")[0])}
+        response = {
+            "data": format_messages_metrics_data(
+                meta_response.get("data")[0], include_data_points=include_data_points
+            )
+        }
 
         self.cache.set(cache_key, json.dumps(response, default=str), self.cache_ttl)
 

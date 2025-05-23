@@ -379,7 +379,9 @@ class InternalWhatsAppMessageTemplatesView(GenericViewSet):
         }
 
         data = self.service.get_messages_analytics(
-            filters=filters, skip_kwargs_validation=True
+            filters=filters,
+            skip_kwargs_validation=True,
+            include_data_points=False,
         )
 
         return Response(data, status=status.HTTP_200_OK)
