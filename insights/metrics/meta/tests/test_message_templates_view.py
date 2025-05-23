@@ -1,5 +1,6 @@
 from unittest.mock import patch
 import uuid
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.cache import cache
@@ -11,7 +12,9 @@ from rest_framework.test import APITestCase
 from rest_framework.response import Response
 
 from insights.authentication.authentication import User
-from insights.authentication.tests.decorators import with_project_auth
+from insights.authentication.tests.decorators import (
+    with_project_auth,
+)
 from insights.dashboards.models import Dashboard
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.meta.models import (
@@ -84,6 +87,19 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
         url = "/v1/metrics/meta/whatsapp-message-templates/wabas/"
 
         return self.client.get(url, query_params)
+
+    def get_templates_metrics_analytics(
+        self, data: dict, query_params: dict
+    ) -> Response:
+        base_url = (
+            "/v1/metrics/meta/whatsapp-message-templates/templates-metrics-analytics/"
+        )
+
+        url_to_call = base_url
+        if query_params:
+            url_to_call = f"{base_url}?{urlencode(query_params)}"
+
+        return self.client.post(url_to_call, data, format="json")
 
 
 class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesView):
