@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework import routers
 
 from insights.metrics.meta.views import (
+    InternalWhatsAppMessageTemplatesView,
     WhatsAppMessageTemplatesView,
     WhatsappIntegrationWebhookView,
 )
@@ -14,6 +15,11 @@ router.register(
     r"whatsapp-message-templates",
     WhatsAppMessageTemplatesView,
     basename="whatsapp-message-templates",
+)
+router.register(
+    "internal/whatsapp-message-templates",
+    InternalWhatsAppMessageTemplatesView,
+    basename="internal-whatsapp-message-templates",
 )
 
 urlpatterns = [

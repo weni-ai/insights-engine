@@ -19,7 +19,7 @@ def format_message_metrics_data(data: dict):
     }
 
 
-def format_messages_metrics_data(data: dict) -> dict:
+def format_messages_metrics_data(data: dict, include_data_points: bool = True) -> dict:
     data_points: dict = data.get("data_points", [])
 
     status_count = {
@@ -41,7 +41,8 @@ def format_messages_metrics_data(data: dict) -> dict:
     for data in data_points:
         result = format_message_metrics_data(data)
 
-        formatted_data_points.append(result)
+        if include_data_points:
+            formatted_data_points.append(result)
 
         for status in ("sent", "delivered", "read", "clicked"):
             status_count[status]["value"] += result.get(status)
@@ -55,7 +56,12 @@ def format_messages_metrics_data(data: dict) -> dict:
             else 0
         )
 
-    return {"status_count": status_count, "data_points": formatted_data_points}
+    response = {"status_count": status_count}
+
+    if include_data_points:
+        response["data_points"] = formatted_data_points
+
+    return response
 
 
 def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
