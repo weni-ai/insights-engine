@@ -1,6 +1,7 @@
 import uuid
 from rest_framework import serializers
 
+from insights.metrics.meta.validators import validate_analytics_selected_period
 from insights.projects.models import Project
 from django.utils.translation import gettext as _
 
@@ -207,6 +208,16 @@ class TemplatesMetricsAnalyticsQueryParamsSerializer(serializers.Serializer):
     start_date = serializers.DateTimeField()
     end_date = serializers.DateTimeField()
     waba_id = serializers.CharField()
+
+    def validate(self, attrs):
+        if attrs.get("start_date") > attrs.get("end_date"):
+            raise serializers.ValidationError(
+                {"start_date": "Start date must be before end date"}
+            )
+
+        validate_analytics_selected_period(attrs.get("start_date").date())
+
+        return attrs
 
 
 class TemplatesMetricsAnalyticsBodySerializer(serializers.Serializer):
