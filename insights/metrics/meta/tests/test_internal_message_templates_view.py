@@ -49,6 +49,11 @@ class TestInternalMetaMessageTemplatesViewAsAuthenticatedUser(
         self.client.force_authenticate(self.user)
         cache.clear()
 
+    def test_cannot_get_templates_metrics_without_internal_auth(self):
+        response = self.get_templates_metrics_analytics({}, {})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     @with_internal_auth
     def test_cannot_get_templates_metrics_analytics_without_required_fields(self):
         response = self.get_templates_metrics_analytics({}, {})
