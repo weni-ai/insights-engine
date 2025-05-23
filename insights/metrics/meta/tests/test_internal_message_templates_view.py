@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from urllib.parse import urlencode
 
 from django.core.cache import cache
@@ -10,6 +11,8 @@ from insights.authentication.tests.decorators import (
     with_internal_auth,
 )
 from insights.metrics.meta.clients import MetaGraphAPIClient
+from insights.metrics.meta.tests.mock import MOCK_TEMPLATE_DAILY_ANALYTICS
+from insights.metrics.meta.utils import format_messages_metrics_data
 
 
 class BaseTestInternalMetaMessageTemplatesView(APITestCase):
@@ -64,3 +67,30 @@ class TestInternalMetaMessageTemplatesViewAsAuthenticatedUser(
         self.assertEqual(
             response.data["errors"]["body"]["template_ids"][0].code, "required"
         )
+
+    @with_internal_auth
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
+    def test_get_templates_metrics_analytics(
+        self, mock_get_templates_metrics_analytics
+    ):
+        template_id = "123"
+        expected_response = {
+            "data": format_messages_metrics_data(
+                MOCK_TEMPLATE_DAILY_ANALYTICS.get("data")[0]
+            )
+        }
+        mock_get_templates_metrics_analytics.return_value = expected_response
+
+        response = self.get_templates_metrics_analytics(
+            {
+                "template_ids": [template_id],
+            },
+            {
+                "waba_id": "123",
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-01",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_response)

@@ -355,16 +355,16 @@ class InternalWhatsAppMessageTemplatesView(GenericViewSet):
         errors = {}
 
         try:
-            serializer = TemplatesMetricsAnalyticsQueryParamsSerializer(
+            query_params_serializer = TemplatesMetricsAnalyticsQueryParamsSerializer(
                 data=request.query_params
             )
-            serializer.is_valid(raise_exception=True)
+            query_params_serializer.is_valid(raise_exception=True)
         except ValidationError as e:
             errors["query_params"] = e.detail
 
         try:
-            serializer = TemplatesMetricsAnalyticsBodySerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
+            body_serializer = TemplatesMetricsAnalyticsBodySerializer(data=request.data)
+            body_serializer.is_valid(raise_exception=True)
         except ValidationError as e:
             errors["body"] = e.detail
 
@@ -372,10 +372,10 @@ class InternalWhatsAppMessageTemplatesView(GenericViewSet):
             return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
         filters = {
-            "waba_id": serializer.validated_data["waba_id"],
-            "start_date": serializer.validated_data["start_date"],
-            "end_date": serializer.validated_data["end_date"],
-            "template_id": serializer.validated_data["template_ids"],
+            "waba_id": query_params_serializer.validated_data["waba_id"],
+            "start_date": query_params_serializer.validated_data["start_date"],
+            "end_date": query_params_serializer.validated_data["end_date"],
+            "template_id": body_serializer.validated_data["template_ids"],
         }
 
         data = self.service.get_messages_analytics(
