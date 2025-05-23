@@ -348,8 +348,8 @@ class InternalWhatsAppMessageTemplatesView(GenericViewSet):
     @action(
         detail=False,
         methods=["post"],
-        url_name="metrics-analytics",
-        url_path="metrics-analytics",
+        url_name="messages-analytics",
+        url_path="messages-analytics",
     )
     def messages_analytics(self, request: Request) -> Response:
         errors = {}
