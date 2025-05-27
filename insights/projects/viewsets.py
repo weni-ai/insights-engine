@@ -82,8 +82,9 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
             webhook_url = settings.WEBHOOK_URL
             payload = {"project_uuid": project_uuid}
+            headers = {"Authorization": f"Bearer {settings.STATIC_TOKEN}"}
             try:
-                response = requests.post(webhook_url, json=payload)
+                response = requests.post(webhook_url, json=payload, headers=headers)
                 response.raise_for_status()
             except requests.exceptions.RequestException as error:
                 logger.error(f"Failed to call webhook: {error}")
