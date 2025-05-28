@@ -312,3 +312,4 @@ WHATSAPP_API_ACCESS_TOKEN = env.str("WHATSAPP_API_ACCESS_TOKEN", default="")
 WEBHOOK_URL = env.str(
     "WEBHOOK_URL", default="https://webhook.weni.ai/webhook/project/update"
 )
+STATIC_TOKEN = env.str("STATIC_TOKEN", default="")
