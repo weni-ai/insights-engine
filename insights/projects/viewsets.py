@@ -2,8 +2,7 @@ import logging
 
 import requests
 from django.conf import settings
-from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action, authentication_classes
+from rest_framework import mixins, status, viewsets, action
 from rest_framework.response import Response
 
 from insights.authentication.authentication import StaticTokenAuthentication

@@ -98,15 +98,16 @@ class StaticTokenAuthentication(BaseAuthentication):
     """
 
     def authenticate(self, request):
-        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        if not auth_header.startswith('Token '):
+        auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+        if not auth_header.startswith("Token "):
             return None
-            
-        token = auth_header.split(' ')[1]
+
+        token = auth_header.split(" ")[1]
         if not secrets.compare_digest(token, settings.STATIC_API_TOKEN):
-            raise AuthenticationFailed('Invalid Token')
-            
-        return (None, 'service')
+            raise AuthenticationFailed("Invalid Token")
+
+        return (None, "service")
+
 
 class WeniOIDCAuthentication(OIDCAuthentication):
     def authenticate(self, request):
