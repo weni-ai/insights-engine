@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pytz
 from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist
 
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
@@ -229,7 +230,7 @@ def get_source_data_from_widget(
             extra_query_kwargs=extra_query_kwargs,
         )
 
-    except Widget.DoesNotExist:
+    except ObjectDoesNotExist:
         raise Exception("Widget not found.")
 
     except KeyError:
