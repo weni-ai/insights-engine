@@ -60,7 +60,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
         project = Project.objects.get(pk=self.kwargs["pk"])
 
-        if str(project.pk) in settings.PROJECT_ALLOW_LIST:
+        if str(project.pk) in settings.PROJECT_ALLOW_LIST or project.is_allowed:
             return Response(True)
 
         return Response(False)
