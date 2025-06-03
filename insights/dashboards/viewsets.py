@@ -1,10 +1,13 @@
 from django.conf import settings
 from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthPermission
+from insights.dashboards.filters import DashboardFilter
 from insights.projects.models import Project
 from insights.dashboards.models import Dashboard
 from insights.dashboards.utils import DefaultPagination
@@ -32,23 +35,24 @@ from insights.sources.custom_status.client import CustomStatusRESTClient
 class DashboardViewSet(
     mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
-    permission_classes = [ProjectAuthPermission]
+    permission_classes = [IsAuthenticated, ProjectAuthPermission]
     serializer_class = DashboardSerializer
     pagination_class = DefaultPagination
 
-    def get_queryset(self):
-        project_id = self.request.query_params.get("project", None)  # do we need this?
-        if project_id is not None:
-            return (
-                Dashboard.objects.filter(project_id=project_id)
-                .exclude(
-                    Q(name="Resultados de fluxos")
-                    & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
-                )
-                .order_by("created_on")
-            )
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DashboardFilter
 
-        return Dashboard.objects.none()
+    def get_queryset(self):
+        queryset = (
+            Dashboard.objects.filter(project__authorizations__user=self.request.user)
+            .exclude(
+                Q(name="Resultados de fluxos")
+                & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
+            )
+            .order_by("created_on")
+        )
+
+        return queryset
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
