@@ -248,7 +248,13 @@ class DashboardViewSet(
         methods=["get"],
     )
     def get_custom_status(self, request, project=None):
-        project = Project.objects.get(pk=request.query_params.get("project"))
+        project = Project.objects.filter(pk=request.query_params.get("project")).first()
+
+        if not project:
+            return Response(
+                {"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
         custom_status_client = CustomStatusRESTClient(project)
 
         query_filters = dict(request.data or request.query_params or {})

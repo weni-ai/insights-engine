@@ -17,11 +17,120 @@ class BaseTestDashboardViewSet(APITestCase):
 
         return self.client.get(url, filters)
 
+    def update(self, dashboard_uuid: str, data: dict) -> Response:
+        url = reverse("dashboard-detail", kwargs={"pk": dashboard_uuid})
+        return self.client.patch(url, data, format="json")
+
+    def destroy(self, dashboard_uuid: str) -> Response:
+        url = reverse("dashboard-detail", kwargs={"pk": dashboard_uuid})
+        return self.client.delete(url)
+
+    def set_as_default(self, dashboard_uuid: str, data: dict) -> Response:
+        url = reverse("dashboard-is-default", kwargs={"pk": dashboard_uuid})
+
+        return self.client.patch(url, data, format="json")
+
+    def list_widgets(self, dashboard_uuid: str) -> Response:
+        url = reverse("dashboard-list-widgets", kwargs={"pk": dashboard_uuid})
+        return self.client.get(url)
+
+    def dashboard_filters(self, dashboard_uuid: str) -> Response:
+        url = reverse("dashboard-filters", kwargs={"pk": dashboard_uuid})
+        return self.client.get(url)
+
+    def get_widget_data(self, dashboard_uuid: str, widget_uuid: str) -> Response:
+        url = reverse(
+            "dashboard-get-widget-data",
+            kwargs={"pk": dashboard_uuid, "widget_uuid": widget_uuid},
+        )
+        return self.client.get(url)
+
+    def get_widget_report(self, dashboard_uuid: str, widget_uuid: str) -> Response:
+        url = reverse(
+            "dashboard-get-widget-report",
+            kwargs={"pk": dashboard_uuid, "widget_uuid": widget_uuid},
+        )
+        return self.client.get(url)
+
+    def get_report_data(self, dashboard_uuid: str, widget_uuid: str) -> Response:
+        url = reverse(
+            "dashboard-get-report-data",
+            kwargs={"pk": dashboard_uuid, "widget_uuid": widget_uuid},
+        )
+        return self.client.get(url)
+
+    def list_sources(self, dashboard_uuid: str) -> Response:
+        url = reverse("dashboard-list-sources", kwargs={"pk": dashboard_uuid})
+        return self.client.get(url)
+
+    def create_flows_dashboard(self, data: dict, project_uuid: str) -> Response:
+        url = reverse("dashboard-create-flows-dashboard") + f"?project={project_uuid}"
+
+        return self.client.post(url, data, format="json")
+
+    def get_contacts_results(self, data: dict) -> Response:
+        url = reverse("dashboard-get-contacts-results")
+        return self.client.get(url, data)
+
+    def get_custom_status(self, data: dict) -> Response:
+        url = reverse("dashboard-get-custom-status")
+        return self.client.get(url, data)
+
 
 class TestDashboardViewSetAsAnonymousUser(BaseTestDashboardViewSet):
     def test_cannot_list_dashboards_when_unauthenticated(self):
         response = self.list()
 
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_update_dashboard_when_unauthenticated(self):
+        response = self.update("123", {"name": "Updated Dashboard Name"})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_destroy_dashboard_when_unauthenticated(self):
+        response = self.destroy("123")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_set_dashboard_as_default_when_unauthenticated(self):
+        response = self.set_as_default("123", {"is_default": True})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_list_widgets_when_unauthenticated(self):
+        response = self.list_widgets("123")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_dashboard_filters_when_unauthenticated(self):
+        response = self.dashboard_filters("123")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_widget_data_when_unauthenticated(self):
+        response = self.get_widget_data("123", "123")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_widget_report_when_unauthenticated(self):
+        response = self.get_widget_report("123", "123")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_report_data_when_unauthenticated(self):
+        response = self.get_report_data("123", "123")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_list_sources_when_unauthenticated(self):
+        response = self.list_sources("123")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_create_flows_dashboard_when_unauthenticated(self):
+        response = self.create_flows_dashboard({"name": "Test Flows Dashboard"}, "123")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_contacts_results_when_unauthenticated(self):
+        response = self.get_contacts_results(
+            {"flow_uuid": "123", "project_uuid": "123"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_custom_status_when_unauthenticated(self):
+        response = self.get_custom_status({"project": "123"})
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
@@ -111,9 +220,8 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             project=self.project,
             is_editable=True,
         )
-        url = reverse("dashboard-detail", kwargs={"pk": str(dashboard.uuid)})
-        data = {"name": "Updated Dashboard Name"}
-        response = self.client.patch(url, data)
+        response = self.update(str(dashboard.uuid), {"name": "Updated Dashboard Name"})
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         dashboard.refresh_from_db()
         self.assertEqual(dashboard.name, "Updated Dashboard Name")
@@ -125,9 +233,8 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             project=self.project,
             is_editable=False,
         )
-        url = reverse("dashboard-detail", kwargs={"pk": str(dashboard.uuid)})
-        data = {"name": "Updated Dashboard Name"}
-        response = self.client.patch(url, data)
+        response = self.update(str(dashboard.uuid), {"name": "Updated Dashboard Name"})
+
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @with_project_auth
@@ -137,8 +244,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             project=self.project,
             is_deletable=True,
         )
-        url = reverse("dashboard-detail", kwargs={"pk": str(dashboard.uuid)})
-        response = self.client.delete(url)
+        response = self.destroy(str(dashboard.uuid))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Dashboard.objects.filter(uuid=dashboard.uuid).exists())
 
@@ -149,8 +255,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             project=self.project,
             is_deletable=False,
         )
-        url = reverse("dashboard-detail", kwargs={"pk": str(dashboard.uuid)})
-        response = self.client.delete(url)
+        response = self.destroy(str(dashboard.uuid))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @with_project_auth
@@ -160,9 +265,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             project=self.project,
             is_default=False,
         )
-        url = reverse("dashboard-is-default", kwargs={"pk": str(dashboard.uuid)})
-        data = {"is_default": True}
-        response = self.client.patch(url, data)
+        response = self.set_as_default(str(dashboard.uuid), {"is_default": True})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         dashboard.refresh_from_db()
         self.assertTrue(dashboard.is_default)
@@ -174,9 +277,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             project=self.project,
             is_default=True,
         )
-        url = reverse("dashboard-is-default", kwargs={"pk": str(dashboard.uuid)})
-        data = {"is_default": False}
-        response = self.client.patch(url, data)
+        response = self.set_as_default(str(dashboard.uuid), {"is_default": False})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         dashboard.refresh_from_db()
         self.assertTrue(dashboard.is_default)
@@ -203,8 +304,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             position={},
         )
 
-        url = reverse("dashboard-list-widgets", kwargs={"pk": str(dashboard.uuid)})
-        response = self.client.get(url)
+        response = self.list_widgets(str(dashboard.uuid))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_widgets = {w["uuid"] for w in response.data["results"]}
@@ -216,8 +316,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         dashboard = Dashboard.objects.create(
             name="Test Dashboard", project=self.project
         )
-        url = reverse("dashboard-filters", kwargs={"pk": str(dashboard.uuid)})
-        response = self.client.get(url)
+        response = self.dashboard_filters(str(dashboard.uuid))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data, dict)
@@ -238,11 +337,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
         mock_get_source_data.return_value = {"data": "mocked_widget_data"}
 
-        url = reverse(
-            "dashboard-get-widget-data",
-            kwargs={"pk": str(dashboard.uuid), "widget_uuid": str(widget.uuid)},
-        )
-        response = self.client.get(url)
+        response = self.get_widget_data(str(dashboard.uuid), str(widget.uuid))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"data": "mocked_widget_data"})
@@ -275,11 +370,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             config={},
         )
 
-        url = reverse(
-            "dashboard-get-widget-report",
-            kwargs={"pk": str(dashboard.uuid), "widget_uuid": str(widget.uuid)},
-        )
-        response = self.client.get(url)
+        response = self.get_widget_report(str(dashboard.uuid), str(widget.uuid))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["uuid"], str(report.uuid))
@@ -290,11 +381,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             name="Test Dashboard", project=self.project
         )
         non_existent_widget_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
-        url = reverse(
-            "dashboard-get-widget-report",
-            kwargs={"pk": str(dashboard.uuid), "widget_uuid": non_existent_widget_uuid},
-        )
-        response = self.client.get(url)
+        response = self.get_widget_report(str(dashboard.uuid), non_existent_widget_uuid)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @with_project_auth
@@ -311,11 +398,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             position={},
         )
 
-        url = reverse(
-            "dashboard-get-widget-report",
-            kwargs={"pk": str(dashboard.uuid), "widget_uuid": str(widget.uuid)},
-        )
-        response = self.client.get(url)
+        response = self.get_widget_report(str(dashboard.uuid), str(widget.uuid))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @with_project_auth
@@ -341,11 +424,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
         mock_get_source_data.return_value = {"data": "mocked_report_data"}
 
-        url = reverse(
-            "dashboard-get-report-data",
-            kwargs={"pk": str(dashboard.uuid), "widget_uuid": str(widget.uuid)},
-        )
-        response = self.client.get(url)
+        response = self.get_report_data(str(dashboard.uuid), str(widget.uuid))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"data": "mocked_report_data"})
@@ -379,8 +458,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             position={},
         )
 
-        url = reverse("dashboard-list-sources", kwargs={"pk": str(dashboard.uuid)})
-        response = self.client.get(url)
+        response = self.list_sources(str(dashboard.uuid))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response_sources = [s["source"] for s in response.data["results"]]
@@ -396,16 +474,12 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         mock_create_dashboard = MockCreateFlowsDashboard.return_value
         mock_create_dashboard.create_dashboard.return_value = mock_dashboard_instance
 
-        url = (
-            reverse("dashboard-create-flows-dashboard")
-            + f"?project={self.project.uuid}"
-        )
         data = {
             "name": "New Flows Dashboard",
             "funnel_amount": 1000,
             "currency_type": "USD",
         }
-        response = self.client.post(url, data, format="json")
+        response = self.create_flows_dashboard(data, str(self.project.uuid))
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["dashboard"]["name"], "Flows Dashboard")
@@ -414,15 +488,10 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
     @with_project_auth
     @patch("insights.dashboards.viewsets.CreateFlowsDashboard")
     def test_create_flows_dashboard_project_not_found(self, MockCreateFlowsDashboard):
-        non_existent_project_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
-        url = (
-            reverse("dashboard-create-flows-dashboard")
-            + f"?project={non_existent_project_uuid}"
-        )
         data = {
             "name": "New Flows Dashboard",
         }
-        response = self.client.post(url, data, format="json")
+        response = self.create_flows_dashboard(data, "123")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         MockCreateFlowsDashboard.assert_not_called()
@@ -433,13 +502,12 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         mock_client_instance = MockFlowsContactsRestClient.return_value
         mock_client_instance.get_flows_contacts.return_value = {"contacts": []}
 
-        url = reverse("dashboard-get-contacts-results")
         params = {
             "flow_uuid": "some-flow-uuid",
             "project_uuid": str(self.project.uuid),
             "user_email": self.user.email,
         }
-        response = self.client.get(url, params)
+        response = self.get_contacts_results(params)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"contacts": []})
@@ -461,8 +529,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         mock_client_instance = MockCustomStatusRESTClient.return_value
         mock_client_instance.list.return_value = {"status": "ok"}
 
-        url = reverse("dashboard-get-custom-status") + f"?project={self.project.uuid}"
-        response = self.client.get(url)
+        response = self.get_custom_status({"project": str(self.project.uuid)})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"status": "ok"})
@@ -475,11 +542,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
     @patch("insights.dashboards.viewsets.CustomStatusRESTClient")
     def test_get_custom_status_project_not_found(self, MockCustomStatusRESTClient):
         non_existent_project_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
-        url = (
-            reverse("dashboard-get-custom-status")
-            + f"?project={non_existent_project_uuid}"
-        )
-        with self.assertRaises(Project.DoesNotExist):
-            self.client.get(url)
+        response = self.get_custom_status({"project": non_existent_project_uuid})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
         MockCustomStatusRESTClient.assert_not_called()
