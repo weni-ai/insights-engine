@@ -45,14 +45,21 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         if op_field:
             query_kwargs["op_field"] = op_field
         filters["project"] = str(self.get_object().uuid)
-        serialized_source = SourceQuery.execute(
-            filters=filters,
-            operation=operation,
-            parser=parse_dict_to_json,
-            user_email=self.request.user.email,
-            return_format="select_input",
-            query_kwargs=query_kwargs,
-        )
+        try:
+            serialized_source = SourceQuery.execute(
+                filters=filters,
+                operation=operation,
+                parser=parse_dict_to_json,
+                user_email=self.request.user.email,
+                return_format="select_input",
+                query_kwargs=query_kwargs,
+            )
+        except Exception as error:
+            logger.exception(f"Error executing source query: {error}")
+            return Response(
+                {"detail": "Failed to retrieve source data"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(serialized_source, status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")

@@ -1,13 +1,14 @@
+import json
+import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from urllib.parse import urlencode
+
 import requests
 from sentry_sdk import capture_message
-from insights.internals.base import VtexAuthentication
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
-from insights.sources.cache import CacheClient
-import logging
 
-from datetime import datetime
+from insights.internals.base import VtexAuthentication
+from insights.sources.cache import CacheClient
 
 logger = logging.getLogger(__name__)
 
@@ -202,11 +203,12 @@ class VtexOrdersRestClient(VtexAuthentication):
                                 if currency_code is None:
                                     currency_code = result["currencyCode"]
                     else:
-                        print(
-                            f"Request failed with status code: {response.status_code}"
+                        logger.error(
+                            f"VTEX API error processing page: status={response.status_code}, response={response.text}"
                         )
                 except Exception as exc:
-                    print(f"Generated an exception: {exc}")
+                    logger.error(f"VTEX API error processing page: {exc}")
+                    # Continue processing other pages instead of just printing
 
         total_value /= 100
         max_value /= 100

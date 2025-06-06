@@ -1,11 +1,17 @@
+import logging
+
 from django.utils.timezone import timedelta
 
 from insights.internals.base import InternalAuthentication
 from insights.projects.models import Project
 from insights.sources.cache import CacheClient
 from insights.sources.orders.clients import VtexOrdersRestClient
-from insights.sources.vtexcredentials.clients import AuthRestClient as VtexAuthClient
+from insights.sources.vtexcredentials.clients import (
+    AuthRestClient as VtexAuthClient,
+)
 from insights.sources.vtexcredentials.typing import VtexCredentialsDTO
+
+logger = logging.getLogger(__name__)
 
 
 class OrdersService:
@@ -63,37 +69,41 @@ class OrdersService:
         filters["ended_at__gte"] = str(start_date)
         filters["ended_at__lte"] = str(end_date)
 
-        # for the current period:
-        data = self._get_client().list(filters)
-        current_value = data.get("accumulatedTotal")
-        current_orders_placed = data.get("countSell")
-        currency_code = data.get("currencyCode")
+        try:
+            # for the current period:
+            data = self._get_client().list(filters)
+            current_value = data.get("accumulatedTotal")
+            current_orders_placed = data.get("countSell")
+            currency_code = data.get("currencyCode")
 
-        # for the past period:
-        past_start_date, past_end_date = self._get_past_dates(start_date, end_date)
+            # for the past period:
+            past_start_date, past_end_date = self._get_past_dates(start_date, end_date)
 
-        filters["utm_source"] = (utm_source,)
-        filters["ended_at__gte"] = str(past_start_date)
-        filters["ended_at__lte"] = str(past_end_date)
+            filters["utm_source"] = (utm_source,)
+            filters["ended_at__gte"] = str(past_start_date)
+            filters["ended_at__lte"] = str(past_end_date)
 
-        past_data = self._get_client().list(filters)
-        past_value = past_data.get("accumulatedTotal")
-        past_orders_placed = past_data.get("countSell")
+            past_data = self._get_client().list(filters)
+            past_value = past_data.get("accumulatedTotal")
+            past_orders_placed = past_data.get("countSell")
 
-        response = {
-            "revenue": {
-                "value": current_value,
-                "currency_code": currency_code,
-                "increase_percentage": self._calculate_increase_percentage(
-                    past_value, current_value
-                ),
-            },
-            "orders_placed": {
-                "value": data.get("countSell"),
-                "increase_percentage": self._calculate_increase_percentage(
-                    past_orders_placed, current_orders_placed
-                ),
-            },
-        }
+            response = {
+                "revenue": {
+                    "value": current_value,
+                    "currency_code": currency_code,
+                    "increase_percentage": self._calculate_increase_percentage(
+                        past_value, current_value
+                    ),
+                },
+                "orders_placed": {
+                    "value": data.get("countSell"),
+                    "increase_percentage": self._calculate_increase_percentage(
+                        past_orders_placed, current_orders_placed
+                    ),
+                },
+            }
 
-        return response
+            return response
+        except Exception as error:
+            logger.exception(f"Error retrieving VTEX metrics: {error}")
+            raise ValueError("Failed to retrieve VTEX metrics")
