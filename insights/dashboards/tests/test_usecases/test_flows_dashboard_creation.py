@@ -1,4 +1,5 @@
 from django.test import TestCase
+from unittest.mock import patch
 
 from insights.dashboards.models import Dashboard
 from insights.dashboards.usecases.flows_dashboard_creation import (
@@ -7,6 +8,10 @@ from insights.dashboards.usecases.flows_dashboard_creation import (
 from insights.projects.models import Project
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.widgets.models import Widget
+from insights.dashboards.usecases.exceptions import (
+    InvalidDashboardObject,
+    InvalidWidgetsObject,
+)
 
 
 class TestCreateFlowsDashboard(TestCase):
@@ -94,3 +99,31 @@ class TestCreateFlowsDashboard(TestCase):
             9,
         )
         self.assertEqual(created_dashboard.config["currency_type"], "BRL")
+
+    def test_create_dashboard_raises_exception(self):
+        params = FlowsDashboardCreationDTO(
+            project=self.project,
+            dashboard_name="Test Dashboard",
+            funnel_amount=3,
+            currency_type="BRL",
+        )
+        with patch(
+            "insights.dashboards.usecases.flows_dashboard_creation.Dashboard.objects.create"
+        ) as mock_create:
+            mock_create.side_effect = Exception("test exception")
+            with self.assertRaises(InvalidDashboardObject):
+                CreateFlowsDashboard(params).create_dashboard()
+
+    def test_create_widgets_raises_exception(self):
+        params = FlowsDashboardCreationDTO(
+            project=self.project,
+            dashboard_name="Test Dashboard",
+            funnel_amount=3,
+            currency_type="BRL",
+        )
+        with patch(
+            "insights.dashboards.usecases.flows_dashboard_creation.Widget.objects.create"
+        ) as mock_create:
+            mock_create.side_effect = Exception("test exception")
+            with self.assertRaises(InvalidWidgetsObject):
+                CreateFlowsDashboard(params).create_dashboard()
