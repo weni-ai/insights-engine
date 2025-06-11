@@ -2,15 +2,12 @@ from typing import TYPE_CHECKING
 from datetime import datetime
 
 from insights.metrics.conversations.dataclass import ConversationTotalsMetrics
+from insights.metrics.conversations.tests.mock import (
+    CONVERSATIONS_METRICS_TOTALS_MOCK_DATA,
+)
 
 if TYPE_CHECKING:
     from insights.projects.models import Project
-
-
-CONVERSATIONS_METRICS_TOTALS_MOCK_DATA = {
-    "by_ai": 150,
-    "by_human": 50,
-}
 
 
 class ConversationsMetricsService:

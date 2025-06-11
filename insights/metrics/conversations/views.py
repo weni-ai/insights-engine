@@ -37,7 +37,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         query_params_serializer.is_valid(raise_exception=True)
 
         totals = self.service.get_totals(
-            project=self.get_object(),
+            project=query_params_serializer.validated_data["project"],
             start_date=request.query_params.get("start_date"),
             end_date=request.query_params.get("end_date"),
         )

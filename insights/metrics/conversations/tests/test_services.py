@@ -2,9 +2,9 @@ from datetime import datetime, timedelta
 from django.test import TestCase
 
 from insights.metrics.conversations.dataclass import ConversationTotalsMetrics
-from insights.metrics.conversations.services import (
+from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_METRICS_TOTALS_MOCK_DATA,
-    ConversationsMetricsService,
 )
 from insights.projects.models import Project
 
