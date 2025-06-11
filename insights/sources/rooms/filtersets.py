@@ -62,6 +62,10 @@ class RoomFilterSet:
         source_field="is_active",
         table_alias="r",
     )
+    imported_room = GenericSQLFilter(
+        source_field="config->>'imported_room'",
+        table_alias="r",
+    )
 
     def get_field(self, field_name):
         try:

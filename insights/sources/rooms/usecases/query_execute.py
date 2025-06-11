@@ -22,6 +22,10 @@ class QueryExecutor:
         *args,
         **kwargs
     ):
+        # Adiciona filtro para excluir rooms importadas em todas as consultas
+        filters = filters.copy()  # Não modifica o original
+        filters["imported_room__ne"] = True
+        
         if operation == "list":
             client = RoomRESTClient(project=project)
             query_results = client.list(filters)
@@ -36,7 +40,7 @@ class QueryExecutor:
                 "count": count,
                 "results": query_results.get("results", []),
             }
-            return paginated_results  # parser(paginated_results)
+            return paginated_results
 
         query_generator = RoomSQLQueryGenerator(
             filter_strategy=PostgreSQLFilterStrategy,
