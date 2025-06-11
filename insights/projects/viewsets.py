@@ -60,7 +60,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
         project = Project.objects.get(pk=self.kwargs["pk"])
 
-        if str(project.pk) in settings.PROJECT_ALLOW_LIST:
+        if str(project.pk) in settings.PROJECT_ALLOW_LIST or project.is_allowed:
             return Response(True)
 
         return Response(False)
@@ -81,6 +81,8 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
             rollback_needed = False
             webhook_error = False
+            project.is_allowed = True
+            project.save()
 
             try:
                 project.is_allowed = True
@@ -117,6 +119,8 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                         )
 
             if webhook_error:
+                project.is_allowed = original_is_allowed
+                project.save()
                 return Response(
                     {"detail": "Failed to process webhook request"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
