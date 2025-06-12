@@ -67,15 +67,15 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
         project = Project.objects.get(pk=self.kwargs["pk"])
 
-        if str(project.pk) in settings.PROJECT_ALLOW_LIST:
+        if str(project.pk) in settings.PROJECT_ALLOW_LIST or project.is_allowed:
             return Response(True)
 
         return Response(False)
 
-    @action(detail=False, methods=["get"], url_path="release_flows_dashboard")
+    @action(detail=False, methods=["post"], url_path="release_flows_dashboard")
     def release_flows_dashboard(self, request, *args, **kwargs):
         try:
-            project_uuid = request.query_params.get("project_uuid")
+            project_uuid = request.data.get("project_uuid")
             if not project_uuid:
                 return Response(
                     {"detail": "project_uuid is required"},
@@ -83,6 +83,8 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 )
 
             project = Project.objects.get(uuid=project_uuid)
+
+            original_is_allowed = project.is_allowed
 
             project.is_allowed = True
             project.save()
@@ -95,6 +97,12 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 response.raise_for_status()
             except requests.exceptions.RequestException as error:
                 logger.error(f"Failed to call webhook: {error}")
+                project.is_allowed = original_is_allowed
+                project.save()
+                return Response(
+                    {"detail": "Failed to process webhook request"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
             return Response({"success": True}, status=status.HTTP_200_OK)
 

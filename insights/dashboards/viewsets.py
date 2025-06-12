@@ -2,11 +2,15 @@ import logging
 
 from django.conf import settings
 from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthPermission
+from insights.dashboards.filters import DashboardFilter
+from insights.projects.models import Project
 from insights.dashboards.models import Dashboard
 from insights.dashboards.usecases.flows_dashboard_creation import (
     CreateFlowsDashboard,
@@ -36,23 +40,24 @@ logger = logging.getLogger(__name__)
 class DashboardViewSet(
     mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
-    permission_classes = [ProjectAuthPermission]
+    permission_classes = [IsAuthenticated, ProjectAuthPermission]
     serializer_class = DashboardSerializer
     pagination_class = DefaultPagination
 
-    def get_queryset(self):
-        project_id = self.request.query_params.get("project", None)  # do we need this?
-        if project_id is not None:
-            return (
-                Dashboard.objects.filter(project_id=project_id)
-                .exclude(
-                    Q(name="Resultados de fluxos")
-                    & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
-                )
-                .order_by("created_on")
-            )
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DashboardFilter
 
-        return Dashboard.objects.none()
+    def get_queryset(self):
+        queryset = (
+            Dashboard.objects.filter(project__authorizations__user=self.request.user)
+            .exclude(
+                Q(name="Resultados de fluxos")
+                & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
+            )
+            .order_by("created_on")
+        )
+
+        return queryset
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
@@ -259,7 +264,13 @@ class DashboardViewSet(
         methods=["get"],
     )
     def get_custom_status(self, request, project=None):
-        project = Project.objects.get(pk=request.query_params.get("project"))
+        project = Project.objects.filter(pk=request.query_params.get("project")).first()
+
+        if not project:
+            return Response(
+                {"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
         custom_status_client = CustomStatusRESTClient(project)
 
         query_filters = dict(request.data or request.query_params or {})
