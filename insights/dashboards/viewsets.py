@@ -5,12 +5,11 @@ from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.filters import DashboardFilter
-from insights.projects.models import Project
 from insights.dashboards.models import Dashboard
 from insights.dashboards.usecases.flows_dashboard_creation import (
     CreateFlowsDashboard,
