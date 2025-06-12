@@ -53,3 +53,13 @@ class ConversationsTimeseriesMetricsSerializer(serializers.Serializer):
     unit = serializers.ChoiceField(choices=ConversationsTimeseriesUnit.choices)
     total = ConversationsTimeseriesDataSerializer(many=True)
     by_human = ConversationsTimeseriesDataSerializer(many=True)
+
+
+class ConversationsTimeseriesMetricsQueryParamsSerializer(
+    ConversationBaseQueryParamsSerializer
+):
+    """
+    Serializer for the conversations timeseries metrics query params.
+    """
+
+    unit = serializers.ChoiceField(choices=ConversationsTimeseriesUnit.choices)
