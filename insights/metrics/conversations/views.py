@@ -1,5 +1,11 @@
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.request import Request
+from rest_framework.decorators import action
 from rest_framework.viewsets import GenericViewSet
+from rest_framework.permissions import IsAuthenticated
 
+from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.services import ConversationsMetricsService
 
 
@@ -9,3 +15,11 @@ class ConversationsMetricsViewSet(GenericViewSet):
     """
 
     service = ConversationsMetricsService()
+    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+
+    @action(detail=False, methods=["get"])
+    def timeseries(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Get conversations timeseries metrics
+        """
+        pass
