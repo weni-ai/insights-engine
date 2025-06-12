@@ -155,7 +155,7 @@ class VTEXOrdersConversionsService:
             "value": utm_data.count_sell,
             "percentage": (
                 round((utm_data.count_sell / graph_data_fields["sent"].value) * 100, 2)
-                if graph_data_fields["sent"].value > 0
+                if graph_data_fields["sent"].value
                 else 0
             ),
         }
