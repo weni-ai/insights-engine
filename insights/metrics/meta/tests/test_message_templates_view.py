@@ -150,7 +150,8 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     def test_cannot_get_list_templates_without_project_uuid_and_waba_id(self):
         response = self.get_list_templates({})
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
 
     def test_cannot_get_list_templates_when_user_does_not_have_project_permission(self):
         response = self.get_list_templates(
@@ -267,7 +268,8 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     def test_cannot_get_preview_without_project_uuid_and_waba_id(self):
         response = self.get_preview({})
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
 
     @with_project_auth
     @patch(
@@ -479,7 +481,8 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     def test_cannot_get_messages_analytics_without_project_uuid_and_waba_id(self):
         response = self.get_messages_analytics({})
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
 
     @with_project_auth
     @patch(
@@ -551,7 +554,8 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
     def test_cannot_get_buttons_analytics_without_project_uuid_and_waba_id(self):
         response = self.get_buttons_analytics({})
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
 
     @with_project_auth
     @patch(
