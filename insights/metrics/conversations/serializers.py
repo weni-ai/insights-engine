@@ -32,3 +32,21 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         attrs["project"] = project
 
         return attrs
+
+
+class SubjectMetricDataSerializer(serializers.Serializer):
+    """
+    Serializer for subject metric data
+    """
+
+    name = serializers.CharField()
+    percentage = serializers.FloatField()
+
+
+class SubjectsMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for subjects metrics
+    """
+
+    has_more = serializers.BooleanField()
+    subjects = SubjectMetricDataSerializer(many=True)

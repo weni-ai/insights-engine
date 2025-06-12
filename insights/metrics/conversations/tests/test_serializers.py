@@ -1,8 +1,10 @@
 from django.test import TestCase
 
+from insights.metrics.conversations.dataclass import SubjectMetricData, SubjectsMetrics
 from insights.projects.models import Project
 from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
+    SubjectsMetricsSerializer,
 )
 
 
@@ -54,3 +56,45 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("project_uuid", serializer.errors)
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+
+class TestSubjectMetricDataSerializer(TestCase):
+    def test_serializer(self):
+        subject_1 = SubjectMetricData(
+            name="Test Subject 1",
+            percentage=0.5,
+        )
+        subject_2 = SubjectMetricData(
+            name="Test Subject 2",
+            percentage=0.5,
+        )
+
+        metrics = SubjectsMetrics(
+            has_more=False,
+            subjects=[subject_1, subject_2],
+        )
+
+        serializer = SubjectsMetricsSerializer(metrics)
+        data = serializer.data
+
+        self.assertEqual(data["has_more"], metrics.has_more)
+        self.assertEqual(
+            data["subjects"][0],
+            {"name": subject_1.name, "percentage": subject_1.percentage},
+        )
+        self.assertEqual(
+            data["subjects"][1],
+            {"name": subject_2.name, "percentage": subject_2.percentage},
+        )
+
+    def test_serializer_without_subjects(self):
+        metrics = SubjectsMetrics(
+            has_more=True,
+            subjects=[],
+        )
+
+        serializer = SubjectsMetricsSerializer(metrics)
+        data = serializer.data
+
+        self.assertEqual(data["has_more"], metrics.has_more)
+        self.assertEqual(data["subjects"], [])
