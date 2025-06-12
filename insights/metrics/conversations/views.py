@@ -6,6 +6,10 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.metrics.conversations.serializers import (
+    ConversationsTimeseriesMetricsQueryParamsSerializer,
+    ConversationsTimeseriesMetricsSerializer,
+)
 from insights.metrics.conversations.services import ConversationsMetricsService
 
 
@@ -17,9 +21,19 @@ class ConversationsMetricsViewSet(GenericViewSet):
     service = ConversationsMetricsService()
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
 
-    @action(detail=False, methods=["get"])
+    @action(
+        detail=False,
+        methods=["get"],
+        serializer_class=ConversationsTimeseriesMetricsSerializer,
+    )
     def timeseries(self, request: Request, *args, **kwargs) -> Response:
         """
         Get conversations timeseries metrics
         """
-        pass
+        query_params = ConversationsTimeseriesMetricsQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+        data = self.service.get_timeseries(**query_params.validated_data)
+
+        return Response(data, status=status.HTTP_200_OK)
