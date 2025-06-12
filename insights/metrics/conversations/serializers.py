@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+
+from insights.metrics.conversations.enums import ConversationsTimeseriesUnit
 from insights.projects.models import Project
 
 
@@ -59,3 +61,32 @@ class ConversationTotalsMetricsQueryParamsSerializer(
     """
     Serializer for conversation totals metrics query params
     """
+
+
+class ConversationsTimeseriesDataSerializer(serializers.Serializer):
+    """
+    Serializer for the conversations timeseries data.
+    """
+
+    label = serializers.CharField()
+    value = serializers.IntegerField()
+
+
+class ConversationsTimeseriesMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for the conversations timeseries metrics.
+    """
+
+    unit = serializers.ChoiceField(choices=ConversationsTimeseriesUnit.choices)
+    total = ConversationsTimeseriesDataSerializer(many=True)
+    by_human = ConversationsTimeseriesDataSerializer(many=True)
+
+
+class ConversationsTimeseriesMetricsQueryParamsSerializer(
+    ConversationBaseQueryParamsSerializer
+):
+    """
+    Serializer for the conversations timeseries metrics query params.
+    """
+
+    unit = serializers.ChoiceField(choices=ConversationsTimeseriesUnit.choices)
