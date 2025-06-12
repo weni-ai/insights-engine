@@ -209,10 +209,10 @@ class VtexOrdersRestClient(VtexAuthentication):
                 except Exception as exc:
                     print(f"Generated an exception: {exc}")
 
-        total_value /= 100
-        max_value = max_value / 100 if max_value != float("-inf") else 0
-        min_value = min_value / 100 if min_value != float("inf") else 0
-        medium_ticket = total_value / total_sell if total_sell > 0 else 0
+        total_value = total_value / 100
+        max_value = (max_value / 100) if max_value != float("-inf") else 0
+        min_value = (min_value / 100) if min_value != float("inf") else 0
+        medium_ticket = (total_value / total_sell) if total_sell > 0 else 0
 
         result_data = {
             "countSell": total_sell,

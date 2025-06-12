@@ -3,8 +3,6 @@ from logging import getLogger
 
 from django.conf import settings
 from django.utils.timezone import get_current_timezone_name
-
-
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 
@@ -23,7 +21,6 @@ from insights.sources.vtex_conversions.serializers import (
     OrdersConversionsMetricsSerializer,
 )
 from insights.utils import convert_dt_to_localized_dt
-
 
 logger = getLogger(__name__)
 
@@ -158,7 +155,7 @@ class VTEXOrdersConversionsService:
             "value": utm_data.count_sell,
             "percentage": (
                 round((utm_data.count_sell / graph_data_fields["sent"].value) * 100, 2)
-                if graph_data_fields["sent"].value
+                if graph_data_fields["sent"].value > 0
                 else 0
             ),
         }

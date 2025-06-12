@@ -1,10 +1,12 @@
 import json
-from unittest.mock import MagicMock, patch
-from django.test import TestCase
-from insights.sources.orders.clients import VtexOrdersRestClient
-from insights.sources.cache import CacheClient
-from datetime import datetime, timezone, timedelta
 from concurrent.futures import Future
+from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, patch
+
+from django.test import TestCase
+
+from insights.sources.cache import CacheClient
+from insights.sources.orders.clients import VtexOrdersRestClient
 
 
 class TestVtexOrdersRestClient(TestCase):
@@ -479,8 +481,8 @@ class TestVtexOrdersRestClient(TestCase):
         expected_result = {
             "countSell": 0,
             "accumulatedTotal": 0.0,
-            "ticketMax": float("-inf"),
-            "ticketMin": float("inf"),
+            "ticketMax": 0,
+            "ticketMin": 0,
             "medium_ticket": 0,
             "currencyCode": None,
         }

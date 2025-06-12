@@ -1,8 +1,8 @@
 from datetime import datetime
 
 import pytz
-from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
 
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
@@ -71,6 +71,8 @@ class Calculator:
         return self.operand_1 * self.operand_2
 
     def percentage(self):
+        if self.operand_2 == 0:
+            return 0
         return 100 * (self.operand_1 / self.operand_2)
 
     def evaluate(self):
