@@ -1,10 +1,19 @@
 from django.test import TestCase
 
-from insights.metrics.conversations.dataclass import ConversationTotalsMetrics, ConversationsTimeseriesData, ConversationsTimeseriesMetrics
+from insights.metrics.conversations.dataclass import (
+    ConversationTotalsMetrics,
+    ConversationsTimeseriesData,
+    ConversationsTimeseriesMetrics,
+)
 from insights.metrics.conversations.enums import ConversationsTimeseriesUnit
-from insights.metrics.conversations.serializers import ConversationBaseQueryParamsSerializer, ConversationTotalsMetricsQueryParamsSerializer, ConversationTotalsMetricsSerializer, ConversationsTimeseriesMetricsQueryParamsSerializer, ConversationsTimeseriesMetricsSerializer
+from insights.metrics.conversations.serializers import (
+    ConversationBaseQueryParamsSerializer,
+    ConversationTotalsMetricsQueryParamsSerializer,
+    ConversationTotalsMetricsSerializer,
+    ConversationsTimeseriesMetricsQueryParamsSerializer,
+    ConversationsTimeseriesMetricsSerializer,
+)
 from insights.projects.models import Project
-
 
 
 class TestConversationBaseQueryParamsSerializer(TestCase):
@@ -122,7 +131,8 @@ class TestConversationTotalsMetricsQueryParamsSerializer(TestCase):
         self.assertIn("project_uuid", serializer.errors)
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
 
-    class TestConversationsTimeseriesDataSerializer(TestCase):
+
+class TestConversationsTimeseriesDataSerializer(TestCase):
     def test_validate_data_for_day_unit(self):
         timeseries_metrics = ConversationsTimeseriesMetrics(
             unit=ConversationsTimeseriesUnit.DAY,
@@ -236,19 +246,19 @@ class TestConversationsTimeseriesMetricsQueryParamsSerializer(TestCase):
         self.assertTrue(serializer.is_valid())
         self.assertEqual(
             serializer.validated_data["unit"], ConversationsTimeseriesUnit.DAY
-)
+        )
         self.assertEqual(serializer.validated_data["project"], self.project)
         self.assertEqual(str(serializer.validated_data["start_date"]), "2021-01-01")
         self.assertEqual(str(serializer.validated_data["end_date"]), "2021-01-02")
 
     def test_serializer_invalid_start_date(self):
         serializer = ConversationsTimeseriesMetricsQueryParamsSerializer(
-        data={
-            "start_date": "2021-01-02",
-            "end_date": "2021-01-01",
-            "project_uuid": self.project.uuid,
-            "unit": ConversationsTimeseriesUnit.DAY,
-        }
+            data={
+                "start_date": "2021-01-02",
+                "end_date": "2021-01-01",
+                "project_uuid": self.project.uuid,
+                "unit": ConversationsTimeseriesUnit.DAY,
+            }
         )
         self.assertFalse(serializer.is_valid())
         self.assertIn("start_date", serializer.errors)
@@ -258,11 +268,11 @@ class TestConversationsTimeseriesMetricsQueryParamsSerializer(TestCase):
 
     def test_serializer_invalid_project_uuid(self):
         serializer = ConversationsTimeseriesMetricsQueryParamsSerializer(
-        data={
-            "start_date": "2021-01-01",
-            "end_date": "2021-01-02",
-            "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
-            "unit": ConversationsTimeseriesUnit.DAY,
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
+                "unit": ConversationsTimeseriesUnit.DAY,
             }
         )
         self.assertFalse(serializer.is_valid())
