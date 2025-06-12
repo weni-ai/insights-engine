@@ -203,11 +203,12 @@ class VtexOrdersRestClient(VtexAuthentication):
                                 if currency_code is None:
                                     currency_code = result["currencyCode"]
                     else:
-                        print(
-                            f"Request failed with status code: {response.status_code}"
+                        logger.error(
+                            f"VTEX API error processing page: status={response.status_code}, response={response.text}"
                         )
                 except Exception as exc:
-                    print(f"Generated an exception: {exc}")
+                    logger.error(f"VTEX API error processing page: {exc}")
+                    # Continue processing other pages instead of just printing
 
         total_value = total_value / 100
         max_value = (max_value / 100) if max_value != float("-inf") else 0
