@@ -216,7 +216,7 @@ class TestConversationsTimeseriesMetricsQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
                 "project_uuid": self.project.uuid,
-                "unit": "invalid_unit",
+                "unit": "CENTURY",
             }
         )
 

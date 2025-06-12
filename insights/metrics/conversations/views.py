@@ -34,6 +34,11 @@ class ConversationsMetricsViewSet(GenericViewSet):
             data=request.query_params
         )
         query_params.is_valid(raise_exception=True)
-        data = self.service.get_timeseries(**query_params.validated_data)
+        data = self.service.get_timeseries(
+            project=query_params.validated_data["project"],
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+            unit=query_params.validated_data["unit"],
+        )
 
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(self.serializer_class(data).data, status=status.HTTP_200_OK)
