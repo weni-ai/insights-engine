@@ -94,3 +94,26 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         for i, subject in enumerate(response.data["subjects"]):
             self.assertEqual(subject["name"], mock_subjects_data[i]["name"])
             self.assertEqual(subject["percentage"], mock_subjects_data[i]["percentage"])
+
+    @with_project_auth
+    def test_get_subjects_metrics_with_limit(self):
+        mock_subjects_data = CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA.get(
+            "subjects", []
+        )
+        response = self.get_subjects_metrics(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "type": ConversationsSubjectsType.GENERAL,
+                "limit": len(mock_subjects_data) - 1,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["has_more"], True)
+        self.assertEqual(len(response.data["subjects"]), len(mock_subjects_data) - 1)
+
+        for i, subject in enumerate(response.data["subjects"]):
+            self.assertEqual(subject["name"], mock_subjects_data[i]["name"])
+            self.assertEqual(subject["percentage"], mock_subjects_data[i]["percentage"])
