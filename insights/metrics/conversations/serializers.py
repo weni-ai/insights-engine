@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from insights.metrics.conversations.enums import ConversationsSubjectsType
 from insights.projects.models import Project
 
 
@@ -50,3 +51,16 @@ class SubjectsMetricsSerializer(serializers.Serializer):
 
     has_more = serializers.BooleanField()
     subjects = SubjectMetricDataSerializer(many=True)
+
+
+class ConversationsSubjectsMetricsQueryParamsSerializer(
+    ConversationBaseQueryParamsSerializer
+):
+    """
+    Serializer for conversations subjects metrics query params
+    """
+
+    type = serializers.ChoiceField(
+        choices=ConversationsSubjectsType.choices,
+    )
+    limit = serializers.IntegerField(required=False)
