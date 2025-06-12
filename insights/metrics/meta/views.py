@@ -54,7 +54,11 @@ logger = logging.getLogger(__name__)
 
 class WhatsAppMessageTemplatesView(GenericViewSet):
     service = MetaMessageTemplatesService()
-    permission_classes = [ProjectAuthQueryParamPermission, ProjectWABAPermission]
+    permission_classes = [
+        IsAuthenticated,
+        ProjectAuthQueryParamPermission,
+        ProjectWABAPermission,
+    ]
 
     @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS)
     @action(
