@@ -1,10 +1,12 @@
 import json
-from unittest.mock import MagicMock, patch
-from django.test import TestCase
-from insights.sources.orders.clients import VtexOrdersRestClient
-from insights.sources.cache import CacheClient
-from datetime import datetime, timezone, timedelta
 from concurrent.futures import Future
+from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, patch
+
+from django.test import TestCase
+
+from insights.sources.cache import CacheClient
+from insights.sources.orders.clients import VtexOrdersRestClient
 
 
 class TestVtexOrdersRestClient(TestCase):
@@ -488,7 +490,7 @@ class TestVtexOrdersRestClient(TestCase):
         actual_result = self.client_direct.list(query_filters.copy())
 
         self.assertEqual(actual_result, expected_result)
-        mock_logger_error.assert_called_once()
+        self.assertEqual(mock_logger_error.call_count, 2)
         self.assertEqual(mock_requests_get.call_count, 2)
 
         # The cache key for set should be based on the initial query_filters passed to list()

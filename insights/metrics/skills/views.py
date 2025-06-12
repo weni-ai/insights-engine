@@ -60,7 +60,7 @@ class SkillsMetricsView(APIView):
         except ValueError as error:
             logger.exception(f"Invalid skill name provided: {error}")
             return Response(
-                {"error": "Invalid skill name provided"},
+                {"error": str(error)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -71,7 +71,7 @@ class SkillsMetricsView(APIView):
                 "Error getting metrics for skill: %s", str(error), exc_info=True
             )
             return Response(
-                {"error": "Required filters missing or invalid date range"},
+                {"error": str(error)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as error:
