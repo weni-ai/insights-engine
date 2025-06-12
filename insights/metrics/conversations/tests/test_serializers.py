@@ -391,6 +391,7 @@ class TestConversationsSubjectsMetricsQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
                 "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
+                "type": ConversationsSubjectsType.GENERAL,
             }
         )
         self.assertFalse(serializer.is_valid())
