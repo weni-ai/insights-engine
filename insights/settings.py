@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "insights.metrics.vtex",
     "insights.metrics.skills",
     "insights.metrics.meta",
+    "insights.metrics.conversations",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -324,3 +325,7 @@ TEMP_TEST_TEMPLATES_DASH_PROJECT_UUID = env.str(
     "TEMP_TEST_TEMPLATES_DASH_PROJECT_UUID", default=""
 )
 PROJECT_WABAS_MOCK = env.str("PROJECT_WABAS_MOCK", default="")
+WEBHOOK_URL = env.str(
+    "WEBHOOK_URL", default="https://webhook.weni.ai/webhook/project/update"
+)
+STATIC_TOKEN = env.str("STATIC_TOKEN", default="")

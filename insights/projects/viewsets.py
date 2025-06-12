@@ -1,8 +1,9 @@
 import logging
 
+import requests
 from django.conf import settings
 from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action, authentication_classes
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from insights.authentication.authentication import StaticTokenAuthentication
@@ -75,29 +76,38 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 )
 
             project = Project.objects.get(uuid=project_uuid)
-            
+
             project.is_allowed = True
             project.save()
+
+            webhook_url = settings.WEBHOOK_URL
+            payload = {"project_uuid": project_uuid}
+            headers = {"Authorization": f"Bearer {settings.STATIC_TOKEN}"}
+            try:
+                response = requests.post(webhook_url, json=payload, headers=headers)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as error:
+                logger.error(f"Failed to call webhook: {error}")
 
             return Response({"success": True}, status=status.HTTP_200_OK)
 
         except Project.DoesNotExist:
-                return Response(
-                    {"detail": "Project not found"}, status=status.HTTP_404_NOT_FOUND
-                )
+            return Response(
+                {"detail": "Project not found"}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as exception:
             logger.error(f"Error updating project: {str(exception)}", exc_info=True)
             return Response(
                 {"detail": "An internal error occurred while processing your request."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(
-        detail=False, 
-        methods=["get"], 
+        detail=False,
+        methods=["get"],
         url_path="get_allowed_projects",
         authentication_classes=[StaticTokenAuthentication],
-        permission_classes=[IsServiceAuthentication]
+        permission_classes=[IsServiceAuthentication],
     )
     def get_allowed_projects(self, request, *args, **kwargs):
         projects = Project.objects.filter(is_allowed=True).values("uuid")
