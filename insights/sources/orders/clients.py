@@ -1,13 +1,14 @@
+import json
+import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from urllib.parse import urlencode
+
 import requests
 from sentry_sdk import capture_message
-from insights.internals.base import VtexAuthentication
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
-from insights.sources.cache import CacheClient
-import logging
 
-from datetime import datetime
+from insights.internals.base import VtexAuthentication
+from insights.sources.cache import CacheClient
 
 logger = logging.getLogger(__name__)
 
@@ -209,8 +210,8 @@ class VtexOrdersRestClient(VtexAuthentication):
                     print(f"Generated an exception: {exc}")
 
         total_value /= 100
-        max_value /= 100
-        min_value /= 100
+        max_value = max_value / 100 if max_value != float("-inf") else 0
+        min_value = min_value / 100 if min_value != float("inf") else 0
         medium_ticket = total_value / total_sell if total_sell > 0 else 0
 
         result_data = {
