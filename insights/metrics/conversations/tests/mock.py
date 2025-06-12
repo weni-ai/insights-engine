@@ -1,5 +1,4 @@
 CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA = {
-    "has_more": False,
     "subjects": [
         {
             "name": "Test Subject 1",
