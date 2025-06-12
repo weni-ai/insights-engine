@@ -1,7 +1,10 @@
 from rest_framework import serializers
 
 
-from insights.metrics.conversations.enums import ConversationsTimeseriesUnit
+from insights.metrics.conversations.enums import (
+    ConversationsSubjectsType,
+    ConversationsTimeseriesUnit,
+)
 from insights.projects.models import Project
 
 
@@ -90,3 +93,34 @@ class ConversationsTimeseriesMetricsQueryParamsSerializer(
     """
 
     unit = serializers.ChoiceField(choices=ConversationsTimeseriesUnit.choices)
+
+
+class SubjectMetricDataSerializer(serializers.Serializer):
+    """
+    Serializer for subject metric data
+    """
+
+    name = serializers.CharField()
+    percentage = serializers.FloatField()
+
+
+class SubjectsMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for subjects metrics
+    """
+
+    has_more = serializers.BooleanField()
+    subjects = SubjectMetricDataSerializer(many=True)
+
+
+class ConversationsSubjectsMetricsQueryParamsSerializer(
+    ConversationBaseQueryParamsSerializer
+):
+    """
+    Serializer for conversations subjects metrics query params
+    """
+
+    type = serializers.ChoiceField(
+        choices=ConversationsSubjectsType.choices,
+    )
+    limit = serializers.IntegerField(required=False)
