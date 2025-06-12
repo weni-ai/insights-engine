@@ -3,28 +3,9 @@ from rest_framework import serializers
 from insights.projects.models import Project
 
 
-class ConversationTotalsMetricsByTypeSerializer(serializers.Serializer):
+class ConversationBaseQueryParamsSerializer(serializers.Serializer):
     """
-    Serializer for conversation totals metrics by type
-    """
-
-    value = serializers.IntegerField()
-    percentage = serializers.FloatField()
-
-
-class ConversationTotalsMetricsSerializer(serializers.Serializer):
-    """
-    Serializer for conversation totals metrics
-    """
-
-    total = serializers.IntegerField()
-    by_ai = ConversationTotalsMetricsByTypeSerializer()
-    by_human = ConversationTotalsMetricsByTypeSerializer()
-
-
-class ConversationTotalsMetricsQueryParamsSerializer(serializers.Serializer):
-    """
-    Serializer for conversation totals metrics query params
+    Serializer for conversation base query params
     """
 
     start_date = serializers.DateField()
@@ -51,3 +32,30 @@ class ConversationTotalsMetricsQueryParamsSerializer(serializers.Serializer):
         attrs["project"] = project
 
         return attrs
+
+
+class ConversationTotalsMetricsByTypeSerializer(serializers.Serializer):
+    """
+    Serializer for conversation totals metrics by type
+    """
+
+    value = serializers.IntegerField()
+    percentage = serializers.FloatField()
+
+
+class ConversationTotalsMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for conversation totals metrics
+    """
+
+    total = serializers.IntegerField()
+    by_ai = ConversationTotalsMetricsByTypeSerializer()
+    by_human = ConversationTotalsMetricsByTypeSerializer()
+
+
+class ConversationTotalsMetricsQueryParamsSerializer(
+    ConversationBaseQueryParamsSerializer
+):
+    """
+    Serializer for conversation totals metrics query params
+    """
