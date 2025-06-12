@@ -25,12 +25,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
     BaseTestConversationsMetricsViewSet
 ):
     def setUp(self) -> None:
-        self.user = User.objects.create_user(
-            email="test@test.com",
-            password="test",
-        )
-        self.project = Project.objects.create(
-            name="Test Project",
-        )
+        self.user = User.objects.create(email="test@test.com")
+        self.project = Project.objects.create(name="Test Project")
 
         self.client.force_authenticate(self.user)
