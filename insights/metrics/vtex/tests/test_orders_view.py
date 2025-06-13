@@ -34,7 +34,8 @@ class TestVtexOrdersViewAsAuthenticatedUser(BaseTestVtexOrdersView):
     def test_cannot_get_metrics_from_utm_source_without_project_uuid(self):
         response = self.get_metrics_from_utm_source()
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
 
     @with_project_auth
     def test_cannot_get_metrics_from_utm_source_without_required_fields(self):
