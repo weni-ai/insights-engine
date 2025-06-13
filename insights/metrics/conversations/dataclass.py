@@ -36,7 +36,7 @@ class RoomsByQueueMetric:
             queues_metrics.append(
                 QueueMetric(
                     name=queue.queue_name,
-                    percentage=queue.rooms_number / total_rooms * 100,
+                    percentage=round(queue.rooms_number / total_rooms * 100, 2),
                 )
             )
 
