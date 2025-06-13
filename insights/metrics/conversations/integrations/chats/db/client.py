@@ -41,7 +41,6 @@ class ChatsClient:
             AND rr.created_on BETWEEN %s AND %s
             AND qq.is_deleted IS FALSE
             AND ss.is_deleted IS FALSE
-            AND rr.is_deleted IS FALSE
         GROUP BY
             qq.uuid, qq.name;
         """
