@@ -26,6 +26,7 @@ from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
 )
+from insights.projects.models import Project
 
 
 class TestConversationsMetricsService(TestCase):
@@ -186,6 +187,11 @@ class TestConversationsMetricsService(TestCase):
                 subject_data.get("percentage"),
             )
 
+        self.project = Project.objects.create(
+            name="Test Project",
+            timezone="America/Sao_Paulo",
+        )
+
     @patch(
         "insights.metrics.conversations.services.ChatsClient.get_rooms_numbers_by_queue"
     )
@@ -205,9 +211,9 @@ class TestConversationsMetricsService(TestCase):
         get_rooms_numbers_by_queue.return_value = rooms_by_queue
 
         result = self.service.get_rooms_numbers_by_queue(
-            project_uuid=uuid.uuid4(),
-            start_date=timezone.now() - timedelta(days=1),
-            end_date=timezone.now(),
+            project=self.project,
+            start_date=timezone.now().date() - timedelta(days=1),
+            end_date=timezone.now().date(),
         )
 
         self.assertEqual(
@@ -240,9 +246,9 @@ class TestConversationsMetricsService(TestCase):
         get_rooms_numbers_by_queue.return_value = rooms_by_queue
 
         result = self.service.get_rooms_numbers_by_queue(
-            project_uuid=uuid.uuid4(),
-            start_date=timezone.now() - timedelta(days=1),
-            end_date=timezone.now(),
+            project=self.project,
+            start_date=timezone.now().date() - timedelta(days=1),
+            end_date=timezone.now().date(),
             limit=1,
         )
 

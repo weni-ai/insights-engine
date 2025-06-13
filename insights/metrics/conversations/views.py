@@ -102,7 +102,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         )
         query_params.is_valid(raise_exception=True)
         rooms_by_queue = self.service.get_rooms_numbers_by_queue(
-            project_uuid=query_params.validated_data["project_uuid"],
+            project=query_params.validated_data["project"],
             start_date=query_params.validated_data["start_date"],
             end_date=query_params.validated_data["end_date"],
             limit=query_params.validated_data.get("limit", None),
