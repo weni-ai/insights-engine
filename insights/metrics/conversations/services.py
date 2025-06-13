@@ -1,11 +1,15 @@
 from typing import TYPE_CHECKING
+from datetime import datetime
+
+import pytz
 from insights.metrics.conversations.dataclass import QueueMetric, RoomsByQueueMetric
 from insights.metrics.conversations.integrations.chats.db.client import ChatsClient
 
 
 if TYPE_CHECKING:
     from uuid import UUID
-    from datetime import datetime
+    from datetime import date
+    from insights.projects.models import Project
 
 
 class ConversationsMetricsService:
@@ -16,16 +20,34 @@ class ConversationsMetricsService:
     @classmethod
     def get_rooms_numbers_by_queue(
         cls,
-        project_uuid: "UUID",
-        start_date: "datetime",
-        end_date: "datetime",
+        project: "Project",
+        start_date: "date",
+        end_date: "date",
         limit: int | None = None,
     ):
         """
         Get the rooms numbers by queue.
         """
+
+        if project.timezone is None:
+            tz = pytz.utc
+        else:
+            tz = pytz.timezone(project.timezone)
+
+        # Create naive datetime at midnight in the project's timezone
+        local_start = datetime.combine(start_date, datetime.min.time())
+        local_end = datetime.combine(end_date, datetime.max.time())
+
+        # Convert to UTC while preserving the intended local time
+        start_datetime = tz.localize(local_start).astimezone(pytz.UTC)
+        end_datetime = tz.localize(local_end).astimezone(pytz.UTC)
+
         queues = list(
-            ChatsClient().get_rooms_numbers_by_queue(project_uuid, start_date, end_date)
+            ChatsClient().get_rooms_numbers_by_queue(
+                project.uuid,
+                start_datetime,
+                end_datetime,
+            )
         )
         qty = len(queues)
         has_more = False

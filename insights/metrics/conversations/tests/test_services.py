@@ -7,10 +7,17 @@ from django.utils.timezone import timedelta
 from insights.metrics.conversations.dataclass import RoomsByQueueMetric, QueueMetric
 from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
 from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.projects.models import Project
 
 
 class TestConversationsMetricsService(TestCase):
     service = ConversationsMetricsService()
+
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+            timezone="America/Sao_Paulo",
+        )
 
     @patch(
         "insights.metrics.conversations.services.ChatsClient.get_rooms_numbers_by_queue"
@@ -31,9 +38,9 @@ class TestConversationsMetricsService(TestCase):
         get_rooms_numbers_by_queue.return_value = rooms_by_queue
 
         result = self.service.get_rooms_numbers_by_queue(
-            project_uuid=uuid.uuid4(),
-            start_date=timezone.now() - timedelta(days=1),
-            end_date=timezone.now(),
+            project=self.project,
+            start_date=timezone.now().date() - timedelta(days=1),
+            end_date=timezone.now().date(),
         )
 
         self.assertEqual(
@@ -66,9 +73,9 @@ class TestConversationsMetricsService(TestCase):
         get_rooms_numbers_by_queue.return_value = rooms_by_queue
 
         result = self.service.get_rooms_numbers_by_queue(
-            project_uuid=uuid.uuid4(),
-            start_date=timezone.now() - timedelta(days=1),
-            end_date=timezone.now(),
+            project=self.project,
+            start_date=timezone.now().date() - timedelta(days=1),
+            end_date=timezone.now().date(),
             limit=1,
         )
 
