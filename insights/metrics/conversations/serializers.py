@@ -124,3 +124,29 @@ class ConversationsSubjectsMetricsQueryParamsSerializer(
         choices=ConversationsSubjectsType.choices,
     )
     limit = serializers.IntegerField(required=False)
+
+
+class RoomsByQueueMetricQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for rooms by queue metric query params
+    """
+
+    limit = serializers.IntegerField(required=False)
+
+
+class QueueMetricSerializer(serializers.Serializer):
+    """
+    Serializer for queue metric
+    """
+
+    name = serializers.CharField()
+    percentage = serializers.FloatField()
+
+
+class RoomsByQueueMetricSerializer(serializers.Serializer):
+    """
+    Serializer for rooms by queue metric
+    """
+
+    queues = QueueMetricSerializer(many=True)
+    has_more = serializers.BooleanField()

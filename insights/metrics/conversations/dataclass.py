@@ -108,26 +108,3 @@ class RoomsByQueueMetric:
 
     queues: list[QueueMetric]
     has_more: bool
-
-    @classmethod
-    def from_values(
-        cls, queues: list[RoomsByQueue], has_more: bool
-    ) -> "RoomsByQueueMetric":
-        """
-        Create a RoomsByQueueMetric instance from values
-        """
-        total_rooms = sum(queue.rooms_number for queue in queues)
-        queues_metrics = []
-
-        for queue in queues:
-            queues_metrics.append(
-                QueueMetric(
-                    name=queue.queue_name,
-                    percentage=round(queue.rooms_number / total_rooms * 100, 2),
-                )
-            )
-
-        return cls(
-            queues=queues_metrics,
-            has_more=has_more,
-        )
