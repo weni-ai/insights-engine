@@ -46,7 +46,7 @@ class ChatsClient:
         """
 
         with get_cursor(db_name="chats") as cur:
-            cur.execute(sql, (project_uuid, start_date, end_date))
+            cur.execute(sql, (start_date, end_date, project_uuid))
             rows = cur.fetchall()
 
             for row in rows:
