@@ -42,7 +42,9 @@ class ChatsClient:
             AND qq.is_deleted IS FALSE
             AND ss.is_deleted IS FALSE
         GROUP BY
-            qq.uuid, qq.name;
+            qq.uuid, qq.name
+        ORDER BY
+            rooms_number DESC;
         """
 
         with get_cursor(db_name="chats") as cur:
