@@ -7,7 +7,6 @@ from insights.metrics.conversations.integrations.chats.db.client import ChatsCli
 
 
 if TYPE_CHECKING:
-    from uuid import UUID
     from datetime import date
     from insights.projects.models import Project
 
