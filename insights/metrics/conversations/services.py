@@ -21,7 +21,6 @@ from insights.metrics.conversations.tests.mock import (
 
 if TYPE_CHECKING:
     from uuid import UUID
-    from datetime import datetime
     from insights.projects.models import Project
 
 
@@ -92,6 +91,7 @@ class ConversationsMetricsService:
             subjects=subjects_to_show,
         )
 
+    @classmethod
     def get_rooms_numbers_by_queue(
         cls,
         project_uuid: "UUID",
