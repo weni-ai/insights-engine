@@ -1,8 +1,12 @@
-from datetime import datetime
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from insights.db.postgres.django.connection import get_cursor
 from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
+
+
+if TYPE_CHECKING:
+    from uuid import UUID
+    from datetime import datetime
 
 
 class ChatsClient:
@@ -11,7 +15,7 @@ class ChatsClient:
     """
 
     def get_rooms_numbers_by_queue(
-        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+        self, project_uuid: "UUID", start_date: "datetime", end_date: "datetime"
     ):
         """
         Get the number of rooms by queue.
