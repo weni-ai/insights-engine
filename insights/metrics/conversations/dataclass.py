@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
-
 
 @dataclass(frozen=True)
 class QueueMetric:
