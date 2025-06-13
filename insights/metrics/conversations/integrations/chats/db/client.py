@@ -34,11 +34,11 @@ class ChatsClient:
             queues_queue qq
         JOIN
             sectors_sector ss ON qq.sector_id = ss.uuid
-        JOIN
+        LEFT JOIN
             rooms_room rr ON qq.uuid = rr.queue_id
+            AND rr.created_on BETWEEN %s AND %s
         WHERE
             ss.project_id = %s
-            AND rr.created_on BETWEEN %s AND %s
             AND qq.is_deleted IS FALSE
             AND ss.is_deleted IS FALSE
         GROUP BY
