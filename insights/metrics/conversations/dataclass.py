@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 from insights.metrics.conversations.enums import ConversationsTimeseriesUnit
-from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
 
 
 @dataclass(frozen=True)
