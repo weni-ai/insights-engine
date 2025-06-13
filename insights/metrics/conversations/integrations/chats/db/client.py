@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from insights.db.postgres.django.connection import get_cursor
+from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
 
 
 class ChatsClient:
@@ -40,4 +41,11 @@ class ChatsClient:
 
         with get_cursor(db_name="chats") as cur:
             cur.execute(sql, (project_uuid, start_date, end_date))
-            return cur.fetchall()
+            rows = cur.fetchall()
+
+            for row in rows:
+                yield RoomsByQueue(
+                    queue_uuid=row[0],
+                    queue_name=row[1],
+                    rooms_number=row[2],
+                )
