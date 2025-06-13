@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
 
-from insights.metrics.conversations.dataclass import RoomsByQueueMetric
+from insights.metrics.conversations.dataclass import RoomsByQueueMetric, QueueMetric
 from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
 from insights.metrics.conversations.services import ConversationsMetricsService
 
@@ -38,7 +38,13 @@ class TestConversationsMetricsService(TestCase):
 
         self.assertEqual(
             result,
-            RoomsByQueueMetric.from_values(rooms_by_queue, has_more=False),
+            RoomsByQueueMetric(
+                queues=[
+                    QueueMetric(name="Test Queue", percentage=33.33),
+                    QueueMetric(name="Test Queue 2", percentage=66.67),
+                ],
+                has_more=False,
+            ),
         )
 
     @patch(
@@ -68,5 +74,10 @@ class TestConversationsMetricsService(TestCase):
 
         self.assertEqual(
             result,
-            RoomsByQueueMetric.from_values(rooms_by_queue[:1], has_more=True),
+            RoomsByQueueMetric(
+                queues=[
+                    QueueMetric(name="Test Queue", percentage=33.33),
+                ],
+                has_more=True,
+            ),
         )

@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-from insights.metrics.conversations.dataclass import RoomsByQueueMetric
+from insights.metrics.conversations.dataclass import QueueMetric, RoomsByQueueMetric
 from insights.metrics.conversations.integrations.chats.db.client import ChatsClient
 
 
@@ -30,8 +30,20 @@ class ConversationsMetricsService:
         qty = len(queues)
         has_more = False
 
+        queues_metrics = []
+        total_rooms = sum(queue.rooms_number for queue in queues)
+
+        queues_range = min(qty, limit) if limit else qty
+
+        for queue in queues[:queues_range]:
+            queues_metrics.append(
+                QueueMetric(
+                    name=queue.queue_name,
+                    percentage=round(queue.rooms_number / total_rooms * 100, 2),
+                )
+            )
+
         if limit and qty > limit:
-            queues = queues[:limit]
             has_more = True
 
-        return RoomsByQueueMetric.from_values(queues, has_more=has_more)
+        return RoomsByQueueMetric(queues=queues_metrics, has_more=has_more)
