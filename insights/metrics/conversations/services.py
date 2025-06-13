@@ -135,10 +135,16 @@ class ConversationsMetricsService:
         queues_range = min(qty, limit) if limit else qty
 
         for queue in queues[:queues_range]:
+            # Handle case where total_rooms is 0 to avoid ZeroDivisionError
+            percentage = (
+                0
+                if total_rooms == 0
+                else round(queue.rooms_number / total_rooms * 100, 2)
+            )
             queues_metrics.append(
                 QueueMetric(
                     name=queue.queue_name,
-                    percentage=round(queue.rooms_number / total_rooms * 100, 2),
+                    percentage=percentage,
                 )
             )
 
