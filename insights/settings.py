@@ -10,9 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import json
 import os
 from pathlib import Path
-import json
 
 import environ
 import sentry_sdk
@@ -285,7 +285,7 @@ GROQ_OPEN_AI_GPT_VERSION = env.str("GROQ_OPEN_AI_GPT_VERSION", default="")
 INTEGRATIONS_URL = env("INTEGRATIONS_URL")
 
 REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
-
+STATIC_API_TOKEN = env.str("STATIC_API_TOKEN", default="")
 # channels
 CHANNEL_LAYERS = {
     "default": {
@@ -308,3 +308,8 @@ PROJECTS_VTEX = json.loads(os.getenv("PROJECTS_VTEX", "[]"))
 PROJECT_TOKENS_VTEX = json.loads(os.getenv("PROJECT_TOKENS_VTEX", "{}"))
 
 WHATSAPP_API_ACCESS_TOKEN = env.str("WHATSAPP_API_ACCESS_TOKEN", default="")
+
+WEBHOOK_URL = env.str(
+    "WEBHOOK_URL", default="https://webhook.weni.ai/webhook/project/update"
+)
+STATIC_TOKEN = env.str("STATIC_TOKEN", default="")
