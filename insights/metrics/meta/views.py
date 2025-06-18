@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import GenericViewSet
 from sentry_sdk import capture_exception
 
@@ -27,6 +28,9 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
 from insights.metrics.meta.serializers import (
+    TemplatesMetricsAnalyticsBodySerializer,
+    TemplatesMetricsAnalyticsQueryParamsSerializer,
+    WhatsappIntegrationWebhookRemoveSerializer,
     AddTemplateToFavoritesSerializer,
     FavoriteTemplatesQueryParamsSerializer,
     FavoriteTemplatesSerializer,
@@ -35,7 +39,6 @@ from insights.metrics.meta.serializers import (
     MessageTemplatesQueryParamsSerializer,
     RemoveTemplateFromFavoritesSerializer,
     WabaSerializer,
-    WhatsappIntegrationWebhookRemoveSerializer,
     WhatsappIntegrationWebhookSerializer,
 )
 from insights.metrics.meta.services import MetaMessageTemplatesService
@@ -354,3 +357,49 @@ class WhatsappIntegrationWebhookView(APIView):
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class InternalWhatsAppMessageTemplatesView(GenericViewSet):
+    permission_classes = [InternalAuthenticationPermission]
+    service = MetaMessageTemplatesService()
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_name="messages-analytics",
+        url_path="messages-analytics",
+    )
+    def messages_analytics(self, request: Request) -> Response:
+        errors = {}
+
+        try:
+            query_params_serializer = TemplatesMetricsAnalyticsQueryParamsSerializer(
+                data=request.query_params
+            )
+            query_params_serializer.is_valid(raise_exception=True)
+        except ValidationError as e:
+            errors["query_params"] = e.detail
+
+        try:
+            body_serializer = TemplatesMetricsAnalyticsBodySerializer(data=request.data)
+            body_serializer.is_valid(raise_exception=True)
+        except ValidationError as e:
+            errors["body"] = e.detail
+
+        if errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        filters = {
+            "waba_id": query_params_serializer.validated_data["waba_id"],
+            "start_date": query_params_serializer.validated_data["start_date"],
+            "end_date": query_params_serializer.validated_data["end_date"],
+            "template_id": body_serializer.validated_data["template_ids"],
+        }
+
+        data = self.service.get_messages_analytics(
+            filters=filters,
+            skip_kwargs_validation=True,
+            include_data_points=False,
+        )
+
+        return Response(data, status=status.HTTP_200_OK)
