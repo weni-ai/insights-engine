@@ -8,7 +8,10 @@ from insights.metrics.conversations.dataclass import (
     RoomsByQueueMetric,
     ConversationTotalsMetrics,
     ConversationsTimeseriesMetrics,
+    SubjectGroup,
+    SubjectItem,
     SubjectMetricData,
+    SubjectsDistributionMetrics,
     SubjectsMetrics,
 )
 from insights.metrics.conversations.enums import (
@@ -18,6 +21,7 @@ from insights.metrics.conversations.enums import (
 from insights.metrics.conversations.integrations.chats.db.client import ChatsClient
 from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_METRICS_TOTALS_MOCK_DATA,
+    CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA,
     CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
     CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
 )
@@ -152,3 +156,24 @@ class ConversationsMetricsService:
             has_more = True
 
         return RoomsByQueueMetric(queues=queues_metrics, has_more=has_more)
+
+    @classmethod
+    def get_subjects_distribution(
+        cls, project: "Project", start_date: datetime, end_date: datetime
+    ) -> SubjectsDistributionMetrics:
+        # Mock data for now
+        groups = []
+        for group in CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA["groups"]:
+            subjects = []
+            for subject in group["subjects"]:
+                subjects.append(
+                    SubjectItem(name=subject["name"], percentage=subject["percentage"])
+                )
+            groups.append(
+                SubjectGroup(
+                    name=group["name"],
+                    percentage=group["percentage"],
+                    subjects=subjects,
+                )
+            )
+        return SubjectsDistributionMetrics(groups=groups)

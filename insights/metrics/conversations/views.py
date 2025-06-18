@@ -14,6 +14,8 @@ from insights.metrics.conversations.serializers import (
     ConversationsTimeseriesMetricsSerializer,
     RoomsByQueueMetricQueryParamsSerializer,
     RoomsByQueueMetricSerializer,
+    SubjectsDistributionMetricsQueryParamsSerializer,
+    SubjectsDistributionMetricsSerializer,
     SubjectsMetricsSerializer,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
@@ -110,3 +112,32 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
         serializer = RoomsByQueueMetricSerializer(rooms_by_queue)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="subjects-distribution",
+        url_name="subjects-distribution",
+        serializer_class=SubjectsDistributionMetricsSerializer,
+    )
+    def subjects_distribution(self, request: Request) -> Response:
+        """
+        Get subjects distribution
+        """
+        serializer = SubjectsDistributionMetricsQueryParamsSerializer(
+            data=request.query_params
+        )
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        metrics = self.service.get_subjects_distribution(
+            serializer.validated_data["project"],
+            serializer.validated_data["start_date"],
+            serializer.validated_data["end_date"],
+        )
+        return Response(
+            SubjectsDistributionMetricsSerializer(metrics).data,
+            status=status.HTTP_200_OK,
+        )

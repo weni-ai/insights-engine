@@ -4,7 +4,10 @@ from insights.metrics.conversations.dataclass import (
     ConversationTotalsMetrics,
     ConversationsTimeseriesData,
     ConversationsTimeseriesMetrics,
+    SubjectGroup,
+    SubjectItem,
     SubjectMetricData,
+    SubjectsDistributionMetrics,
     SubjectsMetrics,
 )
 from insights.metrics.conversations.enums import (
@@ -19,6 +22,9 @@ from insights.metrics.conversations.serializers import (
     ConversationsTimeseriesMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsSerializer,
     RoomsByQueueMetricQueryParamsSerializer,
+    SubjectGroupSerializer,
+    SubjectItemSerializer,
+    SubjectsDistributionMetricsSerializer,
     SubjectsMetricsSerializer,
 )
 from insights.projects.models import Project
@@ -474,3 +480,48 @@ class TestRoomsByQueueMetricQueryParamsSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("project_uuid", serializer.errors)
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+
+class TestSubjectItemSerializer(TestCase):
+    def test_serializer(self):
+        subject = SubjectItem(name="Test Subject", percentage=0.5)
+        serializer = SubjectItemSerializer(subject)
+        self.assertEqual(serializer.data["name"], "Test Subject")
+        self.assertEqual(serializer.data["percentage"], 0.5)
+
+
+class TestSubjectGroupSerializer(TestCase):
+    def test_serializer(self):
+        group = SubjectGroup(
+            name="Test Group",
+            percentage=0.5,
+            subjects=[SubjectItem(name="Test Subject", percentage=0.5)],
+        )
+        serializer = SubjectGroupSerializer(group)
+        self.assertEqual(serializer.data["name"], "Test Group")
+        self.assertEqual(serializer.data["percentage"], 0.5)
+        self.assertEqual(
+            serializer.data["subjects"],
+            [{"name": "Test Subject", "percentage": 0.5}],
+        )
+
+
+class TestSubjectsDistributionMetricsSerializer(TestCase):
+    def test_serializer(self):
+        groups = [
+            SubjectGroup(
+                name="Test Group",
+                percentage=0.5,
+                subjects=[SubjectItem(name="Test Subject", percentage=0.5)],
+            )
+        ]
+        subjects_distribution_metrics = SubjectsDistributionMetrics(groups=groups)
+        serializer = SubjectsDistributionMetricsSerializer(
+            subjects_distribution_metrics
+        )
+        for group_data, group in zip(serializer.data["groups"], groups):
+            self.assertEqual(group_data["name"], group.name)
+            self.assertEqual(group_data["percentage"], group.percentage)
+            for subject_data, subject in zip(group_data["subjects"], group.subjects):
+                self.assertEqual(subject_data["name"], subject.name)
+                self.assertEqual(subject_data["percentage"], subject.percentage)
