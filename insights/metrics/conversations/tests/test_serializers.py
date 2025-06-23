@@ -3,6 +3,7 @@ from django.test import TestCase
 from insights.projects.models import Project
 from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
+    NPSQueryParamsSerializer,
     NPSSerializer,
 )
 
@@ -55,6 +56,56 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("project_uuid", serializer.errors)
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+
+class TestNPSQueryParamsSerializer(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+        )
+
+    def test_serializer(self):
+        serializer = NPSQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertIn("project", serializer.validated_data)
+        self.assertEqual(
+            str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
+        )
+        self.assertEqual(serializer.validated_data["project"], self.project)
+
+    def test_serializer_invalid_project_uuid(self):
+        serializer = NPSQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("project_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+    def test_serializer_invalid_start_date(self):
+        serializer = NPSQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-02",
+                "end_date": "2021-01-01",
+                "project_uuid": self.project.uuid,
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+        self.assertEqual(
+            serializer.errors["start_date"][0].code, "start_date_after_end_date"
+        )
 
 
 class TestNPSSerializer(TestCase):

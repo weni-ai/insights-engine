@@ -34,6 +34,14 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         return attrs
 
 
+class NPSQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for NPS query params
+    """
+
+    pass
+
+
 class NPSSerializer(serializers.Serializer):
     """
     Serializer for NPS
