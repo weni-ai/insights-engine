@@ -33,6 +33,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
             project=query_params.validated_data["project"],
             start_date=query_params.validated_data["start_date"],
             end_date=query_params.validated_data["end_date"],
+            type=query_params.validated_data["type"],
         )
         serializer = NPSSerializer(nps)
 

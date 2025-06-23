@@ -1,5 +1,6 @@
 from django.test import TestCase
 
+from insights.metrics.conversations.enums import NPSType
 from insights.projects.models import Project
 from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
@@ -70,6 +71,7 @@ class TestNPSQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
                 "project_uuid": self.project.uuid,
+                "type": NPSType.AI,
             }
         )
         self.assertTrue(serializer.is_valid())
@@ -78,6 +80,7 @@ class TestNPSQueryParamsSerializer(TestCase):
             str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
         )
         self.assertEqual(serializer.validated_data["project"], self.project)
+        self.assertEqual(serializer.validated_data["type"], NPSType.AI)
 
     def test_serializer_invalid_project_uuid(self):
         serializer = NPSQueryParamsSerializer(
@@ -85,6 +88,7 @@ class TestNPSQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
                 "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
+                "type": NPSType.HUMAN,
             }
         )
 
@@ -98,6 +102,7 @@ class TestNPSQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-02",
                 "end_date": "2021-01-01",
                 "project_uuid": self.project.uuid,
+                "type": NPSType.HUMAN,
             }
         )
 

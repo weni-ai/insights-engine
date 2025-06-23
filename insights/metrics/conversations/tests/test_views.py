@@ -4,6 +4,7 @@ from rest_framework import status
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
+from insights.metrics.conversations.enums import NPSType
 from insights.metrics.conversations.tests.mock import NPS_METRICS_MOCK_DATA
 from insights.projects.models import Project
 
@@ -51,6 +52,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["start_date"][0].code, "required")
         self.assertEqual(response.data["end_date"][0].code, "required")
+        self.assertEqual(response.data["type"][0].code, "required")
 
     @with_project_auth
     def test_get_nps(self):
@@ -59,6 +61,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                 "project_uuid": self.project.uuid,
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
+                "type": NPSType.HUMAN,
             }
         )
 

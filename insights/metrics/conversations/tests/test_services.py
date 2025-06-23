@@ -1,6 +1,7 @@
 import datetime
 from django.test import TestCase
 
+from insights.metrics.conversations.enums import NPSType
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.tests.mock import NPS_METRICS_MOCK_DATA
 from insights.projects.models import Project
@@ -17,7 +18,10 @@ class TestConversationsMetricsService(TestCase):
         Test the NPS method
         """
         nps = self.service.get_nps(
-            self.project, datetime.date(2025, 1, 1), datetime.date(2025, 1, 31)
+            self.project,
+            datetime.date(2025, 1, 1),
+            datetime.date(2025, 1, 31),
+            NPSType.AI,
         )
 
         self.assertEqual(nps.score, NPS_METRICS_MOCK_DATA["score"])

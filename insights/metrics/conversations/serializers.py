@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from insights.metrics.conversations.enums import NPSType
 from insights.projects.models import Project
 
 
@@ -39,7 +40,7 @@ class NPSQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
     Serializer for NPS query params
     """
 
-    pass
+    type = serializers.ChoiceField(choices=NPSType.choices, required=True)
 
 
 class NPSSerializer(serializers.Serializer):
