@@ -32,3 +32,15 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         attrs["project"] = project
 
         return attrs
+
+
+class NPSSerializer(serializers.Serializer):
+    """
+    Serializer for NPS
+    """
+
+    score = serializers.FloatField()
+    total_responses = serializers.IntegerField()
+    promoters = serializers.IntegerField()
+    detractors = serializers.IntegerField()
+    passives = serializers.IntegerField()

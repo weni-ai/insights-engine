@@ -3,6 +3,7 @@ from django.test import TestCase
 from insights.projects.models import Project
 from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
+    NPSSerializer,
 )
 
 
@@ -54,3 +55,22 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("project_uuid", serializer.errors)
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+
+class TestNPSSerializer(TestCase):
+    def test_serializer(self):
+        serializer = NPSSerializer(
+            data={
+                "score": 5,
+                "total_responses": 10,
+                "promoters": 5,
+                "detractors": 3,
+                "passives": 2,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["score"], 5)
+        self.assertEqual(serializer.validated_data["total_responses"], 10)
+        self.assertEqual(serializer.validated_data["promoters"], 5)
+        self.assertEqual(serializer.validated_data["detractors"], 3)
+        self.assertEqual(serializer.validated_data["passives"], 2)
