@@ -13,6 +13,7 @@ from insights.metrics.conversations.dataclass import (
 from insights.metrics.conversations.enums import (
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
+    NPSType,
 )
 from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
@@ -21,6 +22,8 @@ from insights.metrics.conversations.serializers import (
     ConversationsSubjectsMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsSerializer,
+    NPSQueryParamsSerializer,
+    NPSSerializer,
     RoomsByQueueMetricQueryParamsSerializer,
     SubjectGroupSerializer,
     SubjectItemSerializer,
@@ -525,3 +528,76 @@ class TestSubjectsDistributionMetricsSerializer(TestCase):
             for subject_data, subject in zip(group_data["subjects"], group.subjects):
                 self.assertEqual(subject_data["name"], subject.name)
                 self.assertEqual(subject_data["percentage"], subject.percentage)
+
+
+class TestNPSQueryParamsSerializer(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+        )
+
+    def test_serializer(self):
+        serializer = NPSQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+                "type": NPSType.AI,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertIn("project", serializer.validated_data)
+        self.assertEqual(
+            str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
+        )
+        self.assertEqual(serializer.validated_data["project"], self.project)
+        self.assertEqual(serializer.validated_data["type"], NPSType.AI)
+
+    def test_serializer_invalid_project_uuid(self):
+        serializer = NPSQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
+                "type": NPSType.HUMAN,
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("project_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+    def test_serializer_invalid_start_date(self):
+        serializer = NPSQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-02",
+                "end_date": "2021-01-01",
+                "project_uuid": self.project.uuid,
+                "type": NPSType.HUMAN,
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+        self.assertEqual(
+            serializer.errors["start_date"][0].code, "start_date_after_end_date"
+        )
+
+
+class TestNPSSerializer(TestCase):
+    def test_serializer(self):
+        serializer = NPSSerializer(
+            data={
+                "score": 5,
+                "total_responses": 10,
+                "promoters": 5,
+                "detractors": 3,
+                "passives": 2,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["score"], 5)
+        self.assertEqual(serializer.validated_data["total_responses"], 10)
+        self.assertEqual(serializer.validated_data["promoters"], 5)
+        self.assertEqual(serializer.validated_data["detractors"], 3)
+        self.assertEqual(serializer.validated_data["passives"], 2)

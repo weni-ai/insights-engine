@@ -4,6 +4,7 @@ from datetime import datetime
 import pytz
 
 from insights.metrics.conversations.dataclass import (
+    NPS,
     QueueMetric,
     RoomsByQueueMetric,
     ConversationTotalsMetrics,
@@ -17,6 +18,7 @@ from insights.metrics.conversations.dataclass import (
 from insights.metrics.conversations.enums import (
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
+    NPSType,
 )
 from insights.metrics.conversations.integrations.chats.db.client import ChatsClient
 from insights.metrics.conversations.tests.mock import (
@@ -24,6 +26,7 @@ from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA,
     CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
     CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
+    NPS_METRICS_MOCK_DATA,
 )
 
 if TYPE_CHECKING:
@@ -177,3 +180,17 @@ class ConversationsMetricsService:
                 )
             )
         return SubjectsDistributionMetrics(groups=groups)
+
+    @classmethod
+    def get_nps(
+        cls,
+        project: "Project",
+        start_date: datetime.date,
+        end_date: datetime.date,
+        type: NPSType,
+    ) -> NPS:
+        """
+        Get the NPS for a project
+        """
+        # Mock data for now
+        return NPS(**NPS_METRICS_MOCK_DATA)

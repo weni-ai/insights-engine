@@ -14,3 +14,12 @@ class ConversationsSubjectsType(TextChoices):
 
     GENERAL = "GENERAL"
     HUMAN = "HUMAN"
+
+
+class NPSType(TextChoices):
+    """
+    NPS type
+    """
+
+    AI = "AI"
+    HUMAN = "HUMAN"

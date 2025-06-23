@@ -4,6 +4,7 @@ from rest_framework import serializers
 from insights.metrics.conversations.enums import (
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
+    NPSType,
 )
 from insights.projects.models import Project
 
@@ -185,3 +186,23 @@ class SubjectsDistributionMetricsSerializer(serializers.Serializer):
     """
 
     groups = SubjectGroupSerializer(many=True)
+
+
+class NPSQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for NPS query params
+    """
+
+    type = serializers.ChoiceField(choices=NPSType.choices, required=True)
+
+
+class NPSSerializer(serializers.Serializer):
+    """
+    Serializer for NPS
+    """
+
+    score = serializers.FloatField()
+    total_responses = serializers.IntegerField()
+    promoters = serializers.IntegerField()
+    detractors = serializers.IntegerField()
+    passives = serializers.IntegerField()

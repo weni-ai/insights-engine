@@ -3,7 +3,6 @@ from unittest.mock import patch
 import uuid
 from django.test import TestCase
 from django.utils import timezone
-from django.utils.timezone import timedelta
 
 from insights.metrics.conversations.dataclass import (
     ConversationTotalsMetrics,
@@ -17,11 +16,12 @@ from insights.metrics.conversations.integrations.chats.db.dataclass import Rooms
 from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_METRICS_TOTALS_MOCK_DATA,
     CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
+    NPS_METRICS_MOCK_DATA,
 )
-from insights.projects.models import Project
 from insights.metrics.conversations.enums import (
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
+    NPSType,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.tests.mock import (
@@ -289,3 +289,20 @@ class TestConversationsMetricsService(TestCase):
             subjects_distribution.groups[0].subjects[2].name, "Status do pedido"
         )
         self.assertEqual(subjects_distribution.groups[0].subjects[2].percentage, 13)
+
+    def test_get_nps(self):
+        """
+        Test the NPS method
+        """
+        nps = self.service.get_nps(
+            self.project,
+            self.start_date,
+            self.end_date,
+            NPSType.AI,
+        )
+
+        self.assertEqual(nps.score, NPS_METRICS_MOCK_DATA["score"])
+        self.assertEqual(nps.total_responses, NPS_METRICS_MOCK_DATA["total_responses"])
+        self.assertEqual(nps.promoters, NPS_METRICS_MOCK_DATA["promoters"])
+        self.assertEqual(nps.detractors, NPS_METRICS_MOCK_DATA["detractors"])
+        self.assertEqual(nps.passives, NPS_METRICS_MOCK_DATA["passives"])
