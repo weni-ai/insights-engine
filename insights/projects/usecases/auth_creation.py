@@ -44,7 +44,7 @@ class ProjectAuthCreationUseCase:
         auth_instances = []
         project = self.get_project(project)
         for auth in authorizations:
-            user = self.get_or_create_user_by_email(auth.get("user_email"))[0]
+            user = self.get_or_create_user_by_email(auth.get("user"))[0]
             role_value = self.role_mapping(int(auth.get("role")))
             instance = ProjectAuth(project=project, user=user, role=role_value)
             auth_instances.append(instance)

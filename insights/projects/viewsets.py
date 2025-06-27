@@ -3,6 +3,7 @@ import logging
 import requests
 from django.conf import settings
 from rest_framework import mixins, status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -13,14 +14,16 @@ from insights.authentication.permissions import (
 )
 from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
+from insights.projects.serializers import ProjectSerializer
 from insights.shared.viewsets import get_source
 
 logger = logging.getLogger(__name__)
 
 
 class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    permission_classes = [ProjectAuthPermission]
+    permission_classes = [IsAuthenticated, ProjectAuthPermission]
     queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
 
     @action(
         detail=True,
