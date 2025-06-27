@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 from unittest.mock import patch, MagicMock
 import uuid
+import requests
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
@@ -250,14 +251,11 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
                 headers={"Authorization": "Bearer test-token"},
             )
 
-    def test_release_flows_dashboard_general_exception(self):
+    def test_release_flows_dashboard_generic_exception(self):
         url = reverse("project-release-flows-dashboard")
-
         with patch("insights.projects.viewsets.Project.objects.get") as mock_get:
-            mock_get.side_effect = Exception("Database error")
-
+            mock_get.side_effect = Exception("Unexpected error")
             response = self.client.post(url, {"project_uuid": str(uuid.uuid4())})
-
             self.assertEqual(
                 response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -265,6 +263,14 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
                 response.data["detail"],
                 "An internal error occurred while processing your request.",
             )
+
+    def test_release_flows_dashboard_project_does_not_exist(self):
+        url = reverse("project-release-flows-dashboard")
+        with patch("insights.projects.viewsets.Project.objects.get") as mock_get:
+            mock_get.side_effect = Project.DoesNotExist()
+            response = self.client.post(url, {"project_uuid": str(uuid.uuid4())})
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+            self.assertEqual(response.data["detail"], "Project not found")
 
     def test_get_allowed_projects_unauthorized(self):
         url = reverse("project-get-allowed-projects")
@@ -301,3 +307,30 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             self.assertIn(str(allowed_project1.uuid), project_uuids)
             self.assertIn(str(allowed_project2.uuid), project_uuids)
             self.assertNotIn(str(not_allowed_project.uuid), project_uuids)
+
+    @patch("insights.projects.viewsets.requests.post")
+    def test_release_flows_dashboard_webhook_failure(self, mock_post):
+        url = reverse("project-release-flows-dashboard")
+
+        # Create a project that's not allowed initially
+        project = Project.objects.create(name="Test Project", is_allowed=False)
+
+        # Mock the webhook to fail with a RequestException
+        mock_post.side_effect = requests.exceptions.RequestException("Webhook error")
+
+        with patch("insights.projects.viewsets.settings") as mock_settings:
+            mock_settings.WEBHOOK_URL = "http://test-webhook.com"
+            mock_settings.STATIC_TOKEN = "test-token"
+
+            response = self.client.post(url, {"project_uuid": str(project.uuid)})
+
+            self.assertEqual(
+                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            self.assertEqual(
+                response.data["detail"], "Failed to process webhook request"
+            )
+
+            # Verify project was reverted to original state
+            project.refresh_from_db()
+            self.assertFalse(project.is_allowed)
