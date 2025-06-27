@@ -131,8 +131,6 @@ class TestProjectAuthCreationUseCase(TestCase):
                 )
             )
 
-    # Additional tests to achieve 100% coverage
-
     def test_role_mapping_with_role_3(self):
         """Test role_mapping method when role is 3 (should return 1)"""
         usecase = ProjectAuthCreationUseCase()
