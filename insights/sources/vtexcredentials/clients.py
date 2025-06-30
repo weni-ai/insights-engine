@@ -10,6 +10,7 @@ from insights.sources.vtexcredentials.typing import VtexCredentialsDTO
 
 class AuthRestClient(InternalAuthentication):
     def __init__(self, project: str) -> None:
+        self.project = project
         self.url = f"{settings.INTEGRATIONS_URL}/api/v1/apptypes/vtex/integration-details/{project}"
 
     def get_vtex_auth(self) -> VtexCredentialsDTO:
