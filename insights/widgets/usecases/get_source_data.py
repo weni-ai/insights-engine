@@ -143,6 +143,13 @@ def simple_source_data_operation(
     return serialized_source
 
 
+def get_subwidget_data(data):
+    if "results" in data:
+        data = data["results"]
+
+    return data.get("value")
+
+
 def cross_source_data_operation(
     source_query,
     widget: Widget,
@@ -160,17 +167,18 @@ def cross_source_data_operation(
     """
     # The subwidget needs to have a operation that returns a value(count, sum, avg...), cannot be a list of values
     filters["slug"] = "subwidget_1"
-    subwidget_1_data = simple_source_data_operation(
+
+    subwidget_1_result = simple_source_data_operation(
         source_query, widget, is_live, filters, user_email, auth_params
-    )[
-        "value"
-    ]  # TODO: Treat other ways(test to see if there are) to get the value(other names for the value field)
+    )
+    subwidget_1_data = get_subwidget_data(subwidget_1_result)
+
     filters["slug"] = "subwidget_2"
-    subwidget_2_data = simple_source_data_operation(
+    subwidget_2_result = simple_source_data_operation(
         source_query, widget, is_live, filters, user_email, auth_params
-    )[
-        "value"
-    ]  # TODO: Treat other ways(test to see if there are) to get the value(other names for the value field)
+    )
+    subwidget_2_data = get_subwidget_data(subwidget_2_result)
+
     operator = widget.config.get("operator")
 
     result = calculator(subwidget_1_data, subwidget_2_data, operator).evaluate()
