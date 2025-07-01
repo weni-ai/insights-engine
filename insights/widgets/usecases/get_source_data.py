@@ -146,11 +146,11 @@ def simple_source_data_operation(
 def get_subwidget_data(data):
     if "results" in data:
         if len(data["results"]) == 0:
-            data = {"value": 0}
-        else:
-            data = data["results"][0]
+            return {}
 
-    return data.get("value")
+        return data["results"][0]
+
+    return data
 
 
 def cross_source_data_operation(
@@ -174,13 +174,13 @@ def cross_source_data_operation(
     subwidget_1_result = simple_source_data_operation(
         source_query, widget, is_live, filters, user_email, auth_params
     )
-    subwidget_1_data = get_subwidget_data(subwidget_1_result)
+    subwidget_1_data = get_subwidget_data(subwidget_1_result).get("value")
 
     filters["slug"] = "subwidget_2"
     subwidget_2_result = simple_source_data_operation(
         source_query, widget, is_live, filters, user_email, auth_params
     )
-    subwidget_2_data = get_subwidget_data(subwidget_2_result)
+    subwidget_2_data = get_subwidget_data(subwidget_2_result).get("value")
 
     operator = widget.config.get("operator")
 
