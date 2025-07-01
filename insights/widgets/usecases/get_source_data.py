@@ -145,7 +145,10 @@ def simple_source_data_operation(
 
 def get_subwidget_data(data):
     if "results" in data:
-        data = data["results"]
+        if len(data["results"]) == 0:
+            data = {"value": 0}
+        else:
+            data = data["results"][0]
 
     return data.get("value")
 
