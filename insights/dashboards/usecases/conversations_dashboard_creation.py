@@ -1,10 +1,7 @@
 from django.db.models import Q
 
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import CONVERSATION_DASHBOARD_NAME, Dashboard
 from insights.projects.models import Project
-
-
-CONVERSATION_DASHBOARD_NAME = "weni_conversations_dashboard"
 
 
 class ConversationsDashboardCreation:

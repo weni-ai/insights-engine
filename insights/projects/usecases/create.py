@@ -1,3 +1,6 @@
+from insights.dashboards.usecases.conversations_dashboard_creation import (
+    ConversationsDashboardCreation,
+)
 from insights.projects.models import Project
 
 from .project_dto import ProjectCreationDTO
@@ -29,4 +32,5 @@ class ProjectsUseCase:
             vtex_account=project_dto.vtex_account,
         )
         CreateHumanService().create_dashboard(project)
+        ConversationsDashboardCreation().create_for_project(project)
         return project
