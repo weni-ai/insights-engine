@@ -2,6 +2,8 @@ from unittest.mock import patch
 from urllib.parse import urlencode
 
 from django.core.cache import cache
+from django.utils import timezone
+from django.utils.timezone import timedelta
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
@@ -92,8 +94,8 @@ class TestInternalMetaMessageTemplatesViewAsAuthenticatedUser(
             },
             {
                 "waba_id": "123",
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-01",
+                "start_date": timezone.now() - timedelta(days=1),
+                "end_date": timezone.now(),
             },
         )
 
