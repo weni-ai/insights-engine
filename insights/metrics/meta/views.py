@@ -3,11 +3,12 @@ import logging
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError
+from rest_framework.viewsets import GenericViewSet
 from sentry_sdk import capture_exception
 
 from insights.authentication.permissions import (
@@ -15,11 +16,11 @@ from insights.authentication.permissions import (
     ProjectAuthQueryParamPermission,
 )
 from insights.dashboards.models import Dashboard
-from insights.metrics.meta.models import FavoriteTemplate
 from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesCategories,
     WhatsAppMessageTemplatesLanguages,
 )
+from insights.metrics.meta.models import FavoriteTemplate
 from insights.metrics.meta.permissions import ProjectWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
@@ -27,22 +28,25 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
 from insights.metrics.meta.serializers import (
+    TemplatesMetricsAnalyticsBodySerializer,
+    TemplatesMetricsAnalyticsQueryParamsSerializer,
     WhatsappIntegrationWebhookRemoveSerializer,
+    AddTemplateToFavoritesSerializer,
     FavoriteTemplatesQueryParamsSerializer,
     FavoriteTemplatesSerializer,
-    MessageTemplatesQueryParamsSerializer,
-    AddTemplateToFavoritesSerializer,
-    RemoveTemplateFromFavoritesSerializer,
     MessageTemplatesCategoriesSerializer,
     MessageTemplatesLanguagesSerializer,
+    MessageTemplatesQueryParamsSerializer,
+    RemoveTemplateFromFavoritesSerializer,
     WabaSerializer,
     WhatsappIntegrationWebhookSerializer,
 )
-from insights.projects.models import Project
-from insights.metrics.meta.utils import get_edit_template_url_from_template_data
 from insights.metrics.meta.services import MetaMessageTemplatesService
+from insights.metrics.meta.utils import (
+    get_edit_template_url_from_template_data,
+)
+from insights.projects.models import Project
 from insights.sources.integrations.clients import WeniIntegrationsClient
-
 
 logger = logging.getLogger(__name__)
 
@@ -295,32 +299,43 @@ class WhatsappIntegrationWebhookView(APIView):
         serializer = WhatsappIntegrationWebhookSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        project = Project.objects.get(uuid=serializer.validated_data["project_uuid"])
+        try:
+            project = Project.objects.get(
+                uuid=serializer.validated_data["project_uuid"]
+            )
 
-        config = {
-            "is_whatsapp_integration": True,
-            "app_uuid": str(serializer.validated_data["app_uuid"]),
-            "waba_id": serializer.validated_data["waba_id"],
-            "phone_number": serializer.validated_data["phone_number"],
-        }
+            config = {
+                "is_whatsapp_integration": True,
+                "app_uuid": str(serializer.validated_data["app_uuid"]),
+                "waba_id": serializer.validated_data["waba_id"],
+                "phone_number": serializer.validated_data["phone_number"],
+            }
 
-        existing_dashboard = Dashboard.objects.filter(
-            project=project,
-            config__phone_number__id=serializer.validated_data["phone_number"]["id"],
-            config__is_whatsapp_integration=True,
-        ).first()
-
-        if existing_dashboard:
-            existing_dashboard.config = config
-            existing_dashboard.save(update_fields=["config"])
-
-        else:
-            name = f"Meta {serializer.validated_data['phone_number']['display_phone_number']}"
-
-            Dashboard.objects.create(
+            existing_dashboard = Dashboard.objects.filter(
                 project=project,
-                config=config,
-                name=name,
+                config__phone_number__id=serializer.validated_data["phone_number"][
+                    "id"
+                ],
+                config__is_whatsapp_integration=True,
+            ).first()
+
+            if existing_dashboard:
+                existing_dashboard.config = config
+                existing_dashboard.save(update_fields=["config"])
+
+            else:
+                name = f"Meta {serializer.validated_data['phone_number']['display_phone_number']}"
+
+                Dashboard.objects.create(
+                    project=project,
+                    config=config,
+                    name=name,
+                )
+        except Exception as e:
+            logger.exception(f"Database error in WhatsApp integration: {e}")
+            return Response(
+                {"error": "Failed to save integration"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -333,9 +348,62 @@ class WhatsappIntegrationWebhookView(APIView):
         serializer = WhatsappIntegrationWebhookRemoveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        Dashboard.objects.filter(
-            project__uuid=serializer.validated_data["project_uuid"],
-            config__waba_id=serializer.validated_data["waba_id"],
-        ).delete()
+        try:
+            Dashboard.objects.filter(
+                project__uuid=serializer.validated_data["project_uuid"],
+                config__waba_id=serializer.validated_data["waba_id"],
+            ).delete()
+        except Exception as e:
+            logger.exception(f"Database error removing WhatsApp integration: {e}")
+            return Response(
+                {"error": "Failed to remove integration"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class InternalWhatsAppMessageTemplatesView(GenericViewSet):
+    permission_classes = [InternalAuthenticationPermission]
+    service = MetaMessageTemplatesService()
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_name="messages-analytics",
+        url_path="messages-analytics",
+    )
+    def messages_analytics(self, request: Request) -> Response:
+        errors = {}
+
+        try:
+            query_params_serializer = TemplatesMetricsAnalyticsQueryParamsSerializer(
+                data=request.query_params
+            )
+            query_params_serializer.is_valid(raise_exception=True)
+        except ValidationError as e:
+            errors["query_params"] = e.detail
+
+        try:
+            body_serializer = TemplatesMetricsAnalyticsBodySerializer(data=request.data)
+            body_serializer.is_valid(raise_exception=True)
+        except ValidationError as e:
+            errors["body"] = e.detail
+
+        if errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        filters = {
+            "waba_id": query_params_serializer.validated_data["waba_id"],
+            "start_date": query_params_serializer.validated_data["start_date"],
+            "end_date": query_params_serializer.validated_data["end_date"],
+            "template_id": body_serializer.validated_data["template_ids"],
+        }
+
+        data = self.service.get_messages_analytics(
+            filters=filters,
+            skip_kwargs_validation=True,
+            include_data_points=False,
+        )
+
+        return Response(data, status=status.HTTP_200_OK)

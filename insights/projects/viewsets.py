@@ -3,6 +3,7 @@ import logging
 import requests
 from django.conf import settings
 from rest_framework import mixins, status, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -13,14 +14,16 @@ from insights.authentication.permissions import (
 )
 from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
+from insights.projects.serializers import ProjectSerializer
 from insights.shared.viewsets import get_source
 
 logger = logging.getLogger(__name__)
 
 
 class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    permission_classes = [ProjectAuthPermission]
+    permission_classes = [IsAuthenticated, ProjectAuthPermission]
     queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
 
     @action(
         detail=True,
@@ -45,14 +48,21 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         if op_field:
             query_kwargs["op_field"] = op_field
         filters["project"] = str(self.get_object().uuid)
-        serialized_source = SourceQuery.execute(
-            filters=filters,
-            operation=operation,
-            parser=parse_dict_to_json,
-            user_email=self.request.user.email,
-            return_format="select_input",
-            query_kwargs=query_kwargs,
-        )
+        try:
+            serialized_source = SourceQuery.execute(
+                filters=filters,
+                operation=operation,
+                parser=parse_dict_to_json,
+                user_email=self.request.user.email,
+                return_format="select_input",
+                query_kwargs=query_kwargs,
+            )
+        except Exception as error:
+            logger.exception(f"Error executing source query: {error}")
+            return Response(
+                {"detail": "Failed to retrieve source data"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(serialized_source, status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")
@@ -60,15 +70,15 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
         project = Project.objects.get(pk=self.kwargs["pk"])
 
-        if str(project.pk) in settings.PROJECT_ALLOW_LIST:
+        if str(project.pk) in settings.PROJECT_ALLOW_LIST or project.is_allowed:
             return Response(True)
 
         return Response(False)
 
-    @action(detail=False, methods=["get"], url_path="release_flows_dashboard")
+    @action(detail=False, methods=["post"], url_path="release_flows_dashboard")
     def release_flows_dashboard(self, request, *args, **kwargs):
         try:
-            project_uuid = request.query_params.get("project_uuid")
+            project_uuid = request.data.get("project_uuid")
             if not project_uuid:
                 return Response(
                     {"detail": "project_uuid is required"},
@@ -76,6 +86,8 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 )
 
             project = Project.objects.get(uuid=project_uuid)
+
+            original_is_allowed = project.is_allowed
 
             project.is_allowed = True
             project.save()
@@ -88,6 +100,12 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 response.raise_for_status()
             except requests.exceptions.RequestException as error:
                 logger.error(f"Failed to call webhook: {error}")
+                project.is_allowed = original_is_allowed
+                project.save()
+                return Response(
+                    {"detail": "Failed to process webhook request"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
             return Response({"success": True}, status=status.HTTP_200_OK)
 

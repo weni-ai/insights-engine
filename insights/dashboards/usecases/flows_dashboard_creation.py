@@ -31,6 +31,8 @@ class CreateFlowsDashboard:
                 )
                 self.create_widgets(dashboard_resultado_de_fluxo)
             return dashboard_resultado_de_fluxo
+        except InvalidWidgetsObject:
+            raise
         except Exception as exception:
             raise InvalidDashboardObject(f"Error creating dashboard: {exception}")
 
