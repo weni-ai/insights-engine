@@ -123,6 +123,7 @@ class MetaGraphAPIClient:
         template_id: str | list[str],
         start_date: date,
         end_date: date,
+        include_data_points: bool = True,
     ):
         url = f"{self.base_host_url}/{waba_id}/template_analytics?"
 
@@ -136,8 +137,16 @@ class MetaGraphAPIClient:
         if isinstance(template_id, list):
             template_id = ",".join(template_id)
 
-        start = convert_date_to_unix_timestamp(start_date)
-        end = convert_date_to_unix_timestamp(end_date, use_max_time=True)
+        start = (
+            start_date.timestamp()
+            if isinstance(start_date, datetime)
+            else convert_date_to_unix_timestamp(start_date)
+        )
+        end = (
+            end_date.timestamp()
+            if isinstance(end_date, datetime)
+            else convert_date_to_unix_timestamp(end_date, use_max_time=True)
+        )
 
         now = int(datetime.now().timestamp())
 
@@ -179,7 +188,11 @@ class MetaGraphAPIClient:
             ) from err
 
         meta_response = response.json()
-        response = {"data": format_messages_metrics_data(meta_response.get("data")[0])}
+        response = {
+            "data": format_messages_metrics_data(
+                meta_response.get("data")[0], include_data_points=include_data_points
+            )
+        }
 
         self.cache.set(cache_key, json.dumps(response, default=str), self.cache_ttl)
 
