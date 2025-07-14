@@ -27,11 +27,11 @@ class DatalakeConversationsMetricsService:
 
     def __init__(self, events_client: DataLakeEventsClient):
         self.events_client = events_client
+        self.event_name = "weni_nexus_data"
 
     def get_conversations_totals(
         self,
-        project_uuid: UUID,
-        classification: DatalakeConversationsClassification,
+        project: UUID,
         start_date: datetime,
         end_date: datetime,
     ) -> DatalakeConversationsTotalsMetrics:
@@ -41,11 +41,10 @@ class DatalakeConversationsMetricsService:
 
         try:
             events = self.events_client.get_events(
-                project_uuid=project_uuid,
-                classification=classification,
+                project=project,
                 start_date=start_date,
                 end_date=end_date,
-                event_name="weni_nexus_data",
+                event_name=self.event_name,
             )
         except Exception as e:
             capture_exception(e)
