@@ -314,3 +314,8 @@ WEBHOOK_URL = env.str(
     "WEBHOOK_URL", default="https://webhook.weni.ai/webhook/project/update"
 )
 STATIC_TOKEN = env.str("STATIC_TOKEN", default="")
+
+CACHE_DATALAKE_EVENTS_RESULTS = env.bool("CACHE_DATALAKE_EVENTS_RESULTS", default=True)
+CACHE_DATALAKE_EVENTS_RESULTS_TTL = env.int(
+    "CACHE_DATALAKE_EVENTS_RESULTS_TTL", default=60 * 60 * 1
+)
