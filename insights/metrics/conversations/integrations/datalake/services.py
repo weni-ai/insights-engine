@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import json
 import logging
 from datetime import datetime
 from uuid import UUID
@@ -57,22 +58,58 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
     def _get_cache_key(self, **params) -> str:
         """
-        Get cache key for conversations totals.
+        Get cache key for conversations totals with consistent datetime formatting.
         """
-        params_str = "_".join([f"{key}={value}" for key, value in params.items()])
-        return f"conversations_totals_{params_str}"
+        formatted_params = {}
+        for key, value in params.items():
+            if isinstance(value, datetime):
+                formatted_params[key] = value.isoformat()
+            else:
+                formatted_params[key] = str(value)
+        return f"conversations_totals_{json.dumps(formatted_params, sort_keys=True)}"
 
     def _save_results_to_cache(self, key: str, value) -> None:
         """
-        Cache results.
+        Cache results with JSON serialization.
         """
-        self.cache_client.set(key, value, ex=self.cache_ttl)
+        try:
+            serialized_value = json.dumps(value, default=str)
+            self.cache_client.set(key, serialized_value, ex=self.cache_ttl)
+        except Exception as e:
+            logger.warning(f"Failed to save results to cache: {e}")
 
     def _get_results_from_cache(self, key: str) -> ConversationsTotalsMetrics:
         """
-        Get results from cache.
+        Get results from cache with JSON deserialization.
         """
-        return self.cache_client.get(key)
+        try:
+            cached_data = self.cache_client.get(key)
+            if cached_data:
+                # Handle both string and bytes from Redis
+                if isinstance(cached_data, bytes):
+                    cached_data = cached_data.decode("utf-8")
+
+                # Parse the JSON data and reconstruct the objects
+                data = json.loads(cached_data)
+
+                # Reconstruct ConversationsTotalsMetrics from cached data
+                return ConversationsTotalsMetrics(
+                    total_conversations=ConversationsTotalsMetric(
+                        value=data["total_conversations"]["value"],
+                        percentage=data["total_conversations"]["percentage"],
+                    ),
+                    resolved=ConversationsTotalsMetric(
+                        value=data["resolved"]["value"],
+                        percentage=data["resolved"]["percentage"],
+                    ),
+                    unresolved=ConversationsTotalsMetric(
+                        value=data["unresolved"]["value"],
+                        percentage=data["unresolved"]["percentage"],
+                    ),
+                )
+        except (json.JSONDecodeError, AttributeError, KeyError, TypeError) as e:
+            logger.warning(f"Failed to deserialize cached data: {e}")
+        return None
 
     def get_conversations_totals(
         self,
@@ -84,16 +121,19 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         Get conversations totals from Datalake.
         """
 
-        if self.cache_results and (
-            cached_results := self._get_results_from_cache(
-                key=self._get_cache_key(
-                    project_uuid=project_uuid,
-                    start_date=start_date,
-                    end_date=end_date,
+        if self.cache_results:
+            try:
+                cached_results = self._get_results_from_cache(
+                    key=self._get_cache_key(
+                        project_uuid=project_uuid,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
                 )
-            )
-        ):
-            return cached_results
+                if cached_results:
+                    return cached_results
+            except Exception as e:
+                logger.warning(f"Cache retrieval failed: {e}")
 
         try:
             events = self.events_client.get_events(
