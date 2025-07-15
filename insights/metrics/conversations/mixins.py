@@ -35,7 +35,7 @@ class ConversationsServiceCachingMixin:
         self.cache_client.set(
             self._get_cache_key_for_project_resource(project_uuid, resource),
             json.dumps(data),
-            self.cache_ttl,
+            self.nexus_cache_ttl,
         )
 
     def _get_cache_for_project_resource(

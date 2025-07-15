@@ -35,3 +35,24 @@ class MockNexusClient(BaseNexusClient):
         ]
 
         return MockResponse(status_code=200, content=json.dumps(topics))
+
+    def get_subtopics(self, project_uuid: UUID, topic_id: UUID) -> MockResponse:
+        return MockResponse(status_code=200, content=json.dumps([]))
+
+    def create_topic(
+        self, project_uuid: UUID, name: str, description: str
+    ) -> MockResponse:
+        return MockResponse(status_code=201, content=json.dumps({}))
+
+    def create_subtopic(
+        self, project_uuid: UUID, topic_id: UUID, name: str, description: str
+    ) -> MockResponse:
+        return MockResponse(status_code=201, content=json.dumps({}))
+
+    def delete_topic(self, project_uuid: UUID, topic_id: UUID) -> MockResponse:
+        return MockResponse(status_code=204, content=json.dumps({}))
+
+    def delete_subtopic(
+        self, project_uuid: UUID, topic_id: UUID, subtopic_id: UUID
+    ) -> MockResponse:
+        return MockResponse(status_code=204, content=json.dumps({}))
