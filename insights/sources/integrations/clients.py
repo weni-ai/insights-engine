@@ -64,135 +64,29 @@ class NexusClient:
     Client for Nexus API.
     """
 
-    def __init__(self, cache_client: CacheClient = CacheClient):
+    def __init__(self):
         self.base_url = settings.NEXUS_BASE_URL
         self.headers = {
             "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
         }
         self.timeout = 60
-        self.cache = cache_client()
-        self.cache_ttl = 60
-
-    def _get_cache_key_for_project_resource(
-        self, project_uuid: UUID, resource: NexusResource
-    ) -> str:
-        """
-        Get cache key for a project resource.
-        """
-        return f"nexus:{resource}:{project_uuid}"
-
-    def _clear_cache_for_project_resource(
-        self, project_uuid: UUID, resource: NexusResource
-    ):
-        """
-        Clear cache for a project resource.
-        """
-        self.cache.delete(
-            self._get_cache_key_for_project_resource(project_uuid, resource)
-        )
-
-    def _save_cache_for_project_resource(
-        self, project_uuid: UUID, resource: NexusResource, data: dict
-    ):
-        """
-        Save cache for a project resource.
-        """
-        self.cache.set(
-            self._get_cache_key_for_project_resource(project_uuid, resource),
-            json.dumps(data),
-            self.cache_ttl,
-        )
-
-    def _get_cache_for_project_resource(
-        self, project_uuid: UUID, resource: NexusResource
-    ) -> dict:
-        """
-        Get cache for a project resource.
-        """
-        return self.cache.get(
-            self._get_cache_key_for_project_resource(project_uuid, resource)
-        )
 
     def get_topics(self, project_uuid: UUID) -> tuple[dict, int]:
         """
         Get conversation topics for a project.
         """
-
-        if cached_response := self._get_cache_for_project_resource(
-            project_uuid, NexusResource.TOPICS
-        ):
-            return json.loads(cached_response), status.HTTP_200_OK
-
         url = f"{self.base_url}/{project_uuid}/topics/"
 
-        try:
-            response = requests.get(url=url, headers=self.headers, timeout=self.timeout)
-        except Exception as e:
-            logger.error("Error fetching topics for project %s: %s", project_uuid, e)
-            capture_message("Error fetching topics for project %s: %s", project_uuid, e)
-            raise e
-
-        if not status.is_success(response.status_code):
-            logger.error(
-                "Error fetching topics for project %s: %s", project_uuid, response.text
-            )
-            capture_message(
-                "Error fetching topics for project %s: %s", project_uuid, response.text
-            )
-
-            return (
-                {"error": f"Error fetching topics for project {project_uuid}"},
-                response.status_code,
-            )
-
-        response_content = response.json()
-
-        self._save_cache_for_project_resource(
-            project_uuid, NexusResource.TOPICS, response_content
-        )
-
-        return response_content, status.HTTP_200_OK
+        return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
     def get_subtopics(self, project_uuid: UUID, topic_id: UUID) -> tuple[dict, int]:
         """
         Get subtopics for a topic.
         """
 
-        if cached_response := self._get_cache_for_project_resource(
-            project_uuid, NexusResource.SUBTOPICS
-        ):
-            return json.loads(cached_response), status.HTTP_200_OK
-
         url = f"{self.base_url}/{project_uuid}/topics/{topic_id}/subtopics/"
 
-        try:
-            response = requests.get(url=url, headers=self.headers, timeout=self.timeout)
-        except Exception as e:
-            logger.error("Error fetching subtopics for project %s: %s", project_uuid, e)
-            capture_message(
-                "Error fetching subtopics for project %s: %s", project_uuid, e
-            )
-            raise e
-
-        if not status.is_success(response.status_code):
-            logger.error(
-                "Error fetching subtopics for project %s: %s",
-                project_uuid,
-                response.text,
-            )
-            capture_message(
-                "Error fetching subtopics for project %s: %s",
-                project_uuid,
-                response.text,
-            )
-
-        response_content = response.json()
-
-        self._save_cache_for_project_resource(
-            project_uuid, NexusResource.SUBTOPICS, response_content
-        )
-
-        return response_content, status.HTTP_200_OK
+        return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
     def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
         """
@@ -206,33 +100,9 @@ class NexusClient:
             "description": description,
         }
 
-        try:
-            response = requests.post(
-                url=url, headers=self.headers, timeout=self.timeout, json=body
-            )
-        except Exception as e:
-            logger.error("Error creating topic for project %s: %s", project_uuid, e)
-            capture_message("Error creating topic for project %s: %s", project_uuid, e)
-            raise e
-
-        if not status.is_success(response.status_code):
-            logger.error(
-                "Error creating topic for project %s: %s", project_uuid, response.text
-            )
-            capture_message(
-                "Error creating topic for project %s: %s", project_uuid, response.text
-            )
-
-            return (
-                {"error": f"Error creating topic for project {project_uuid}"},
-                response.status_code,
-            )
-
-        response_content = response.json()
-
-        self._clear_cache_for_project_resource(project_uuid, NexusResource.TOPICS)
-
-        return response_content, status.HTTP_200_OK
+        return requests.post(
+            url=url, headers=self.headers, timeout=self.timeout, json=body
+        )
 
     def create_subtopic(
         self, project_uuid: UUID, topic_id: UUID, name: str, description: str
@@ -248,35 +118,28 @@ class NexusClient:
             "description": description,
         }
 
-        try:
-            response = requests.post(
-                url=url, headers=self.headers, timeout=self.timeout, json=body
-            )
-        except Exception as e:
-            logger.error("Error creating subtopic for project %s: %s", project_uuid, e)
-            capture_message(
-                "Error creating subtopic for project %s: %s", project_uuid, e
-            )
+        return requests.post(
+            url=url, headers=self.headers, timeout=self.timeout, json=body
+        )
 
-        if not status.is_success(response.status_code):
-            logger.error(
-                "Error creating subtopic for project %s: %s",
-                project_uuid,
-                response.text,
-            )
-            capture_message(
-                "Error creating subtopic for project %s: %s",
-                project_uuid,
-                response.text,
-            )
+    def delete_topic(self, project_uuid: UUID, topic_id: UUID) -> dict:
+        """
+        Delete a topic for a project.
+        """
 
-            return (
-                {"error": f"Error creating subtopic for project {project_uuid}"},
-                response.status_code,
-            )
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_id}/"
 
-        response_content = response.json()
+        return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
 
-        self._clear_cache_for_project_resource(project_uuid, NexusResource.SUBTOPICS)
+    def delete_subtopic(
+        self, project_uuid: UUID, topic_id: UUID, subtopic_id: UUID
+    ) -> dict:
+        """
+        Delete a subtopic for a project.
+        """
 
-        return response_content, status.HTTP_200_OK
+        url = (
+            f"{self.base_url}/{project_uuid}/topics/{topic_id}/subtopics/{subtopic_id}/"
+        )
+
+        return requests.delete(url=url, headers=self.headers, timeout=self.timeout)

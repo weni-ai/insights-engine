@@ -1,6 +1,6 @@
 from django.db import models
 
 
-class NexusResource(models.TextChoices):
+class ConversationsMetricsResource(models.TextChoices):
     TOPICS = "topics"
     SUBTOPICS = "subtopics"
