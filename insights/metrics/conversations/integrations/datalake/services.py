@@ -9,9 +9,6 @@ from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
 )
-from insights.metrics.conversations.integrations.datalake.exceptions import (
-    DatalakeConversationsMetricsException,
-)
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
     DataLakeEventsClient,
@@ -68,12 +65,12 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             capture_exception(e)
             logger.error(e)
 
-            raise DatalakeConversationsMetricsException(e) from e
+            raise e
 
         if not events:
-            metric = DatalakeConversationsTotalsMetric(value=0, percentage=0)
+            metric = ConversationsTotalsMetric(value=0, percentage=0)
 
-            return DatalakeConversationsTotalsMetrics(
+            return ConversationsTotalsMetrics(
                 total_conversations=metric, resolved=metric, unresolved=metric
             )
 
