@@ -20,3 +20,4 @@ class ConversationsTotalsMetrics:
     total_conversations: ConversationsTotalsMetric
     resolved: ConversationsTotalsMetric
     unresolved: ConversationsTotalsMetric
+    transferred_to_humans: ConversationsTotalsMetric

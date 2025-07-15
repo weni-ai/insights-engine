@@ -152,12 +152,16 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             metric = ConversationsTotalsMetric(value=0, percentage=0)
 
             return ConversationsTotalsMetrics(
-                total_conversations=metric, resolved=metric, unresolved=metric
+                total_conversations=metric,
+                resolved=metric,
+                unresolved=metric,
+                transferred_to_humans=metric,
             )
 
         total_conversations = 0
         resolved = 0
         unresolved = 0
+        transferred_to_humans = 0
 
         for event in events:
             value = event.get("value")
@@ -166,6 +170,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 resolved += 1
             elif value in ("unresolved", '"unresolved"'):
                 unresolved += 1
+            elif value in ("transferred_to_humans", '"transferred_to_humans"'):
+                transferred_to_humans += 1
 
         percentage_resolved = (
             100 * resolved / total_conversations if total_conversations > 0 else 0
@@ -179,6 +185,16 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         percentage_unresolved = (
             round(percentage_unresolved, 2) if percentage_unresolved > 0 else 0
         )
+        percentage_transferred_to_humans = (
+            100 * transferred_to_humans / total_conversations
+            if total_conversations > 0
+            else 0
+        )
+        percentage_transferred_to_humans = (
+            round(percentage_transferred_to_humans, 2)
+            if percentage_transferred_to_humans > 0
+            else 0
+        )
 
         results = ConversationsTotalsMetrics(
             total_conversations=ConversationsTotalsMetric(
@@ -189,6 +205,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             ),
             unresolved=ConversationsTotalsMetric(
                 value=unresolved, percentage=percentage_unresolved
+            ),
+            transferred_to_humans=ConversationsTotalsMetric(
+                value=transferred_to_humans, percentage=percentage_transferred_to_humans
             ),
         )
 
