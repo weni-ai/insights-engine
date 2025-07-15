@@ -1,14 +1,16 @@
+from abc import ABC, abstractmethod
 import logging
 from uuid import UUID
 import requests
+from requests.models import Response
 import json
+
 
 from django.conf import settings
 from rest_framework import status
 from sentry_sdk import capture_message
 from insights.internals.base import InternalAuthentication
 from insights.sources.cache import CacheClient
-from insights.sources.integrations.enums import NexusResource
 
 
 logger = logging.getLogger(__name__)
@@ -59,6 +61,52 @@ class WeniIntegrationsClient(InternalAuthentication):
         return response
 
 
+class BaseNexusClient(ABC):
+    """
+    Base client for Nexus API.
+    """
+
+    @abstractmethod
+    def get_topics(self, project_uuid: UUID) -> Response:
+        """
+        Get conversation topics for a project.
+        """
+
+    @abstractmethod
+    def get_subtopics(self, project_uuid: UUID, topic_id: UUID) -> Response:
+        """
+        Get conversation subtopics for a topic.
+        """
+
+    @abstractmethod
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> Response:
+        """
+        Create a conversation topic for a project.
+        """
+
+    @abstractmethod
+    def create_subtopic(
+        self, project_uuid: UUID, topic_id: UUID, name: str, description: str
+    ) -> Response:
+        """
+        Create a conversation subtopic for a project.
+        """
+
+    @abstractmethod
+    def delete_topic(self, project_uuid: UUID, topic_id: UUID) -> Response:
+        """
+        Delete a conversation topic for a project.
+        """
+
+    @abstractmethod
+    def delete_subtopic(
+        self, project_uuid: UUID, topic_id: UUID, subtopic_id: UUID
+    ) -> Response:
+        """
+        Delete a conversation subtopic for a project.
+        """
+
+
 class NexusClient:
     """
     Client for Nexus API.
@@ -71,7 +119,7 @@ class NexusClient:
         }
         self.timeout = 60
 
-    def get_topics(self, project_uuid: UUID) -> tuple[dict, int]:
+    def get_topics(self, project_uuid: UUID) -> Response:
         """
         Get conversation topics for a project.
         """
@@ -79,7 +127,7 @@ class NexusClient:
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
-    def get_subtopics(self, project_uuid: UUID, topic_id: UUID) -> tuple[dict, int]:
+    def get_subtopics(self, project_uuid: UUID, topic_id: UUID) -> Response:
         """
         Get subtopics for a topic.
         """
@@ -88,7 +136,7 @@ class NexusClient:
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
-    def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> Response:
         """
         Create a topic for a project.
         """
@@ -106,7 +154,7 @@ class NexusClient:
 
     def create_subtopic(
         self, project_uuid: UUID, topic_id: UUID, name: str, description: str
-    ) -> dict:
+    ) -> Response:
         """
         Create a subtopic for a project.
         """
@@ -122,7 +170,7 @@ class NexusClient:
             url=url, headers=self.headers, timeout=self.timeout, json=body
         )
 
-    def delete_topic(self, project_uuid: UUID, topic_id: UUID) -> dict:
+    def delete_topic(self, project_uuid: UUID, topic_id: UUID) -> Response:
         """
         Delete a topic for a project.
         """
@@ -133,7 +181,7 @@ class NexusClient:
 
     def delete_subtopic(
         self, project_uuid: UUID, topic_id: UUID, subtopic_id: UUID
-    ) -> dict:
+    ) -> Response:
         """
         Delete a subtopic for a project.
         """
