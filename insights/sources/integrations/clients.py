@@ -58,13 +58,16 @@ class WeniIntegrationsClient(InternalAuthentication):
         return response
 
 
-class NexusClient(InternalAuthentication):
+class NexusClient:
     """
     Client for Nexus API.
     """
 
     def __init__(self):
         self.base_url = settings.NEXUS_BASE_URL
+        self.headers = {
+            "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
+        }
 
     def get_topics(self, project_uuid: UUID) -> dict:
         """

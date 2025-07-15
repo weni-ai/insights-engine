@@ -316,3 +316,4 @@ WEBHOOK_URL = env.str(
 STATIC_TOKEN = env.str("STATIC_TOKEN", default="")
 
 NEXUS_BASE_URL = env.str("NEXUS_BASE_URL", default="")
+NEXUS_API_TOKEN = env.str("NEXUS_API_TOKEN", default="")
