@@ -1,9 +1,15 @@
+from unittest.mock import patch
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
+from insights.metrics.conversations.dataclass import (
+    ConversationsTotalsMetric,
+    ConversationsTotalsMetrics,
+)
 from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_METRICS_TOTALS_MOCK_DATA,
 )
@@ -59,7 +65,16 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["end_date"][0].code, "required")
 
     @with_project_auth
-    def test_get_totals(self):
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_totals"
+    )
+    def test_get_totals(self, mock_get_totals):
+        mock_get_totals.return_value = ConversationsTotalsMetrics(
+            total_conversations=ConversationsTotalsMetric(value=100, percentage=100),
+            resolved=ConversationsTotalsMetric(value=60, percentage=60),
+            unresolved=ConversationsTotalsMetric(value=40, percentage=40),
+        )
+
         response = self.get_totals(
             {
                 "project_uuid": self.project.uuid,
@@ -69,28 +84,9 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data["total"],
-            CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_ai"]
-            + CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_human"],
-        )
-        self.assertEqual(
-            response.data["by_ai"]["value"],
-            CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_ai"],
-        )
-        self.assertEqual(
-            response.data["by_ai"]["percentage"],
-            CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_ai"]
-            / response.data["total"]
-            * 100,
-        )
-        self.assertEqual(
-            response.data["by_human"]["value"],
-            CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_human"],
-        )
-        self.assertEqual(
-            response.data["by_human"]["percentage"],
-            CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_human"]
-            / response.data["total"]
-            * 100,
-        )
+        self.assertEqual(response.data["total_conversations"]["value"], 100)
+        self.assertEqual(response.data["total_conversations"]["percentage"], 100)
+        self.assertEqual(response.data["resolved"]["value"], 60)
+        self.assertEqual(response.data["resolved"]["percentage"], 60)
+        self.assertEqual(response.data["unresolved"]["value"], 40)
+        self.assertEqual(response.data["unresolved"]["percentage"], 40)
