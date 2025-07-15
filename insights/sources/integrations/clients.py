@@ -153,6 +153,47 @@ class NexusClient:
 
         return response_content, status.HTTP_200_OK
 
+    def get_subtopics(self, project_uuid: UUID, topic_id: UUID) -> tuple[dict, int]:
+        """
+        Get subtopics for a topic.
+        """
+
+        if cached_response := self._get_cache_for_project_resource(
+            project_uuid, NexusResource.SUBTOPICS
+        ):
+            return json.loads(cached_response), status.HTTP_200_OK
+
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_id}/subtopics/"
+
+        try:
+            response = requests.get(url=url, headers=self.headers, timeout=self.timeout)
+        except Exception as e:
+            logger.error("Error fetching subtopics for project %s: %s", project_uuid, e)
+            capture_message(
+                "Error fetching subtopics for project %s: %s", project_uuid, e
+            )
+            raise e
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error fetching subtopics for project %s: %s",
+                project_uuid,
+                response.text,
+            )
+            capture_message(
+                "Error fetching subtopics for project %s: %s",
+                project_uuid,
+                response.text,
+            )
+
+        response_content = response.json()
+
+        self._save_cache_for_project_resource(
+            project_uuid, NexusResource.SUBTOPICS, response_content
+        )
+
+        return response_content, status.HTTP_200_OK
+
     def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
         """
         Create a topic for a project.
@@ -190,5 +231,52 @@ class NexusClient:
         response_content = response.json()
 
         self._clear_cache_for_project_resource(project_uuid, NexusResource.TOPICS)
+
+        return response_content, status.HTTP_200_OK
+
+    def create_subtopic(
+        self, project_uuid: UUID, topic_id: UUID, name: str, description: str
+    ) -> dict:
+        """
+        Create a subtopic for a project.
+        """
+
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_id}/subtopics/"
+
+        body = {
+            "name": name,
+            "description": description,
+        }
+
+        try:
+            response = requests.post(
+                url=url, headers=self.headers, timeout=self.timeout, json=body
+            )
+        except Exception as e:
+            logger.error("Error creating subtopic for project %s: %s", project_uuid, e)
+            capture_message(
+                "Error creating subtopic for project %s: %s", project_uuid, e
+            )
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error creating subtopic for project %s: %s",
+                project_uuid,
+                response.text,
+            )
+            capture_message(
+                "Error creating subtopic for project %s: %s",
+                project_uuid,
+                response.text,
+            )
+
+            return (
+                {"error": f"Error creating subtopic for project {project_uuid}"},
+                response.status_code,
+            )
+
+        response_content = response.json()
+
+        self._clear_cache_for_project_resource(project_uuid, NexusResource.SUBTOPICS)
 
         return response_content, status.HTTP_200_OK
