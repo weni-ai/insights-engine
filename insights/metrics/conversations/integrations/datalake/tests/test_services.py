@@ -3,7 +3,9 @@ import uuid
 from django.test import TestCase
 
 from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
-from insights.sources.dl_events.tests.mock_client import MockDataLakeEventsClient
+from insights.sources.dl_events.tests.mock_client import (
+    ClassificationMockDataLakeEventsClient,
+)
 from insights.metrics.conversations.integrations.datalake.services import (
     DatalakeConversationsMetricsService,
 )
@@ -12,7 +14,7 @@ from insights.metrics.conversations.integrations.datalake.services import (
 class DatalakeConversationsMetricsServiceTestCase(TestCase):
     def setUp(self):
         self.service = DatalakeConversationsMetricsService(
-            events_client=MockDataLakeEventsClient()
+            events_client=ClassificationMockDataLakeEventsClient()
         )
 
     def test_get_conversations_totals(self):

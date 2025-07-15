@@ -2,7 +2,7 @@ from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 from insights.sources.dl_events.tests.factories import ClassificationEventFactory
 
 
-class MockDataLakeEventsClient(BaseDataLakeEventsClient):
+class ClassificationMockDataLakeEventsClient(BaseDataLakeEventsClient):
     """
     Mock client for the DataLakeEvents source.
     """
