@@ -314,3 +314,5 @@ WEBHOOK_URL = env.str(
     "WEBHOOK_URL", default="https://webhook.weni.ai/webhook/project/update"
 )
 STATIC_TOKEN = env.str("STATIC_TOKEN", default="")
+
+NEXUS_BASE_URL = env.str("NEXUS_BASE_URL", default="")

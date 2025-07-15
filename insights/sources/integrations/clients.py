@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 import requests
 import json
 
@@ -55,3 +56,41 @@ class WeniIntegrationsClient(InternalAuthentication):
         )
 
         return response
+
+
+class NexusClient(InternalAuthentication):
+    """
+    Client for Nexus API.
+    """
+
+    def __init__(self):
+        self.base_url = settings.NEXUS_BASE_URL
+
+    def get_topics(self, project_uuid: UUID) -> dict:
+        """
+        Get conversation topics for a project.
+        """
+
+        url = f"{self.base_url}/{project_uuid}/topics/"
+
+        try:
+            response = requests.get(url=url, headers=self.headers, timeout=60)
+        except Exception as e:
+            logger.error("Error fetching topics for project %s: %s", project_uuid, e)
+            capture_message("Error fetching topics for project %s: %s", project_uuid, e)
+            raise e
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error fetching topics for project %s: %s", project_uuid, response.text
+            )
+            capture_message(
+                "Error fetching topics for project %s: %s", project_uuid, response.text
+            )
+
+            return (
+                {"error": f"Error fetching topics for project {project_uuid}"},
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return response.json(), status.HTTP_200_OK
