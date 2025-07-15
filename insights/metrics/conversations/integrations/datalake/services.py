@@ -64,18 +64,23 @@ class DatalakeConversationsMetricsService:
         unresolved = 0
 
         for event in events:
+            value = event.get("value")
             total_conversations += 1
-            if event.get("status") == "resolved":
+            if value in ("resolved", '"resolved"'):
                 resolved += 1
-            elif event.get("status") == "unresolved":
+            elif value in ("unresolved", '"unresolved"'):
                 unresolved += 1
 
-        percentage_resolved = resolved / total_conversations
-        percentage_unresolved = unresolved / total_conversations
+        percentage_resolved = (
+            100 * resolved / total_conversations if total_conversations > 0 else 0
+        )
+        percentage_unresolved = (
+            100 * unresolved / total_conversations if total_conversations > 0 else 0
+        )
 
         return DatalakeConversationsTotalsMetrics(
             total_conversations=DatalakeConversationsTotalsMetric(
-                value=total_conversations, percentage=percentage_resolved
+                value=total_conversations, percentage=100
             ),
             resolved=DatalakeConversationsTotalsMetric(
                 value=resolved, percentage=percentage_resolved

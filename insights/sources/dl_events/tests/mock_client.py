@@ -12,6 +12,4 @@ class MockDataLakeEventsClient(BaseDataLakeEventsClient):
         Get events from the DataLakeEvents source.
         """
 
-        factory = ClassificationEventFactory()
-
-        return [factory.build() for _ in range(10)]
+        return [ClassificationEventFactory() for _ in range(10)]
