@@ -92,6 +92,12 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         percentage_unresolved = (
             100 * unresolved / total_conversations if total_conversations > 0 else 0
         )
+        percentage_resolved = (
+            round(percentage_resolved, 2) if percentage_resolved > 0 else 0
+        )
+        percentage_unresolved = (
+            round(percentage_unresolved, 2) if percentage_unresolved > 0 else 0
+        )
 
         return ConversationsTotalsMetrics(
             total_conversations=ConversationsTotalsMetric(
