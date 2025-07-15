@@ -3,12 +3,14 @@ import logging
 from datetime import datetime
 from uuid import UUID
 
+from django.conf import settings
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
 )
+from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
     DataLakeEventsClient,
@@ -16,6 +18,9 @@ from insights.sources.dl_events.clients import (
 
 
 logger = logging.getLogger(__name__)
+
+CACHE_RESULTS = settings.CACHE_DATALAKE_EVENTS_RESULTS
+CACHE_TTL = settings.CACHE_DATALAKE_EVENTS_RESULTS_TTL
 
 
 class BaseConversationsMetricsService(ABC):
@@ -40,9 +45,34 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
     def __init__(
         self,
         events_client: BaseDataLakeEventsClient = DataLakeEventsClient(),
+        cache_results: bool = CACHE_RESULTS,
+        cache_client: CacheClient = CacheClient(),
+        cache_ttl: int = CACHE_TTL,
     ):
         self.events_client = events_client
         self.event_name = "weni_nexus_data"
+        self.cache_results = cache_results
+        self.cache_client = cache_client
+        self.cache_ttl = cache_ttl
+
+    def _get_cache_key(self, **params) -> str:
+        """
+        Get cache key for conversations totals.
+        """
+        params_str = "_".join([f"{key}={value}" for key, value in params.items()])
+        return f"conversations_totals_{params_str}"
+
+    def _save_results_to_cache(self, key: str, value) -> None:
+        """
+        Cache results.
+        """
+        self.cache_client.set(key, value, ex=self.cache_ttl)
+
+    def _get_results_from_cache(self, key: str) -> ConversationsTotalsMetrics:
+        """
+        Get results from cache.
+        """
+        return self.cache_client.get(key)
 
     def get_conversations_totals(
         self,
@@ -53,6 +83,17 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         """
         Get conversations totals from Datalake.
         """
+
+        if self.cache_results and (
+            cached_results := self._get_results_from_cache(
+                key=self._get_cache_key(
+                    project_uuid=project_uuid,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            )
+        ):
+            return cached_results
 
         try:
             events = self.events_client.get_events(
@@ -92,8 +133,14 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         percentage_unresolved = (
             100 * unresolved / total_conversations if total_conversations > 0 else 0
         )
+        percentage_resolved = (
+            round(percentage_resolved, 2) if percentage_resolved > 0 else 0
+        )
+        percentage_unresolved = (
+            round(percentage_unresolved, 2) if percentage_unresolved > 0 else 0
+        )
 
-        return ConversationsTotalsMetrics(
+        results = ConversationsTotalsMetrics(
             total_conversations=ConversationsTotalsMetric(
                 value=total_conversations, percentage=100
             ),
@@ -104,3 +151,15 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 value=unresolved, percentage=percentage_unresolved
             ),
         )
+
+        if self.cache_results:
+            params = {
+                "project_uuid": project_uuid,
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+            self._save_results_to_cache(
+                key=self._get_cache_key(**params), value=results
+            )
+
+        return results
