@@ -79,7 +79,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
             raise ConversationsMetricsError(
                 f"Error fetching subtopics for project {project_uuid}"
-            )
+            ) from e
 
         response_content = response.json()
 
@@ -102,7 +102,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             logger.error("Error creating topic for project %s: %s", project_uuid, e)
             raise ConversationsMetricsError(
                 f"Error creating topic for project {project_uuid}"
-            )
+            ) from e
 
         response_content = response.json()
 
@@ -126,7 +126,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             logger.error("Error deleting topic for project %s: %s", project_uuid, e)
             raise ConversationsMetricsError(
                 f"Error creating subtopic for project {project_uuid}"
-            )
+            ) from e
 
         response_content = response.json()
 
