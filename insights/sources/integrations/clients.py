@@ -8,6 +8,7 @@ from rest_framework import status
 from sentry_sdk import capture_message
 from insights.internals.base import InternalAuthentication
 from insights.sources.cache import CacheClient
+from insights.sources.integrations.enums import NexusResource
 
 
 logger = logging.getLogger(__name__)
@@ -63,21 +64,69 @@ class NexusClient:
     Client for Nexus API.
     """
 
-    def __init__(self):
+    def __init__(self, cache_client: CacheClient = CacheClient):
         self.base_url = settings.NEXUS_BASE_URL
         self.headers = {
             "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
         }
+        self.timeout = 60
+        self.cache = cache_client()
+        self.cache_ttl = 60
 
-    def get_topics(self, project_uuid: UUID) -> dict:
+    def _get_cache_key_for_project_resource(
+        self, project_uuid: UUID, resource: NexusResource
+    ) -> str:
+        """
+        Get cache key for a project resource.
+        """
+        return f"nexus:{resource}:{project_uuid}"
+
+    def _clear_cache_for_project_resource(
+        self, project_uuid: UUID, resource: NexusResource
+    ):
+        """
+        Clear cache for a project resource.
+        """
+        self.cache.delete(
+            self._get_cache_key_for_project_resource(project_uuid, resource)
+        )
+
+    def _save_cache_for_project_resource(
+        self, project_uuid: UUID, resource: NexusResource, data: dict
+    ):
+        """
+        Save cache for a project resource.
+        """
+        self.cache.set(
+            self._get_cache_key_for_project_resource(project_uuid, resource),
+            json.dumps(data),
+            self.cache_ttl,
+        )
+
+    def _get_cache_for_project_resource(
+        self, project_uuid: UUID, resource: NexusResource
+    ) -> dict:
+        """
+        Get cache for a project resource.
+        """
+        return self.cache.get(
+            self._get_cache_key_for_project_resource(project_uuid, resource)
+        )
+
+    def get_topics(self, project_uuid: UUID) -> tuple[dict, int]:
         """
         Get conversation topics for a project.
         """
 
+        if cached_response := self._get_cache_for_project_resource(
+            project_uuid, NexusResource.TOPICS
+        ):
+            return json.loads(cached_response), status.HTTP_200_OK
+
         url = f"{self.base_url}/{project_uuid}/topics/"
 
         try:
-            response = requests.get(url=url, headers=self.headers, timeout=60)
+            response = requests.get(url=url, headers=self.headers, timeout=self.timeout)
         except Exception as e:
             logger.error("Error fetching topics for project %s: %s", project_uuid, e)
             capture_message("Error fetching topics for project %s: %s", project_uuid, e)
@@ -93,7 +142,53 @@ class NexusClient:
 
             return (
                 {"error": f"Error fetching topics for project {project_uuid}"},
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                response.status_code,
             )
 
-        return response.json(), status.HTTP_200_OK
+        response_content = response.json()
+
+        self._save_cache_for_project_resource(
+            project_uuid, NexusResource.TOPICS, response_content
+        )
+
+        return response_content, status.HTTP_200_OK
+
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
+        """
+        Create a topic for a project.
+        """
+
+        url = f"{self.base_url}/{project_uuid}/topics/"
+
+        body = {
+            "name": name,
+            "description": description,
+        }
+
+        try:
+            response = requests.post(
+                url=url, headers=self.headers, timeout=self.timeout, json=body
+            )
+        except Exception as e:
+            logger.error("Error creating topic for project %s: %s", project_uuid, e)
+            capture_message("Error creating topic for project %s: %s", project_uuid, e)
+            raise e
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error creating topic for project %s: %s", project_uuid, response.text
+            )
+            capture_message(
+                "Error creating topic for project %s: %s", project_uuid, response.text
+            )
+
+            return (
+                {"error": f"Error creating topic for project {project_uuid}"},
+                response.status_code,
+            )
+
+        response_content = response.json()
+
+        self._clear_cache_for_project_resource(project_uuid, NexusResource.TOPICS)
+
+        return response_content, status.HTTP_200_OK
