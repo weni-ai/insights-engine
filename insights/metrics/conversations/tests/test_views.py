@@ -10,9 +10,6 @@ from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
 )
-from insights.metrics.conversations.tests.mock import (
-    CONVERSATIONS_METRICS_TOTALS_MOCK_DATA,
-)
 from insights.projects.models import Project
 
 
