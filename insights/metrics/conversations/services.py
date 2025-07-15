@@ -1,9 +1,11 @@
 from typing import TYPE_CHECKING
 from datetime import datetime
 
-from insights.metrics.conversations.dataclass import ConversationTotalsMetrics
-from insights.metrics.conversations.tests.mock import (
-    CONVERSATIONS_METRICS_TOTALS_MOCK_DATA,
+
+from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseConversationsMetricsService,
+    DatalakeConversationsMetricsService,
 )
 
 if TYPE_CHECKING:
@@ -15,16 +17,21 @@ class ConversationsMetricsService:
     Service to get conversations metrics
     """
 
-    @classmethod
+    def __init__(
+        self,
+        datalake_client: BaseConversationsMetricsService = DatalakeConversationsMetricsService(),
+    ):
+        self.datalake_client = datalake_client
+
     def get_totals(
-        cls, project: "Project", start_date: datetime, end_date: datetime
-    ) -> ConversationTotalsMetrics:
+        self, project: "Project", start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
         """
         Get conversations metrics totals
         """
-        # Mock data for now
 
-        return ConversationTotalsMetrics.from_values(
-            by_ai=CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_ai"],
-            by_human=CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_human"],
+        return self.datalake_client.get_conversations_totals(
+            project=project,
+            start_date=start_date,
+            end_date=end_date,
         )

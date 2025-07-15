@@ -1,31 +1,53 @@
+from abc import ABC, abstractmethod
 import logging
 from datetime import datetime
 from uuid import UUID
 
 from sentry_sdk import capture_exception
 
+from insights.metrics.conversations.dataclass import (
+    ConversationsTotalsMetric,
+    ConversationsTotalsMetrics,
+)
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     DatalakeConversationsTotalsMetric,
     DatalakeConversationsTotalsMetrics,
 )
-from insights.metrics.conversations.integrations.datalake.enums import (
-    DatalakeConversationsClassification,
-)
 from insights.metrics.conversations.integrations.datalake.exceptions import (
     DatalakeConversationsMetricsException,
 )
-from insights.sources.dl_events.clients import DataLakeEventsClient
+from insights.sources.dl_events.clients import (
+    BaseDataLakeEventsClient,
+    DataLakeEventsClient,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-class DatalakeConversationsMetricsService:
+class BaseConversationsMetricsService(ABC):
+    """
+    Base class for conversations metrics services.
+    """
+
+    @abstractmethod
+    def get_conversations_totals(
+        self, project: UUID, start_date: datetime, end_date: datetime
+    ) -> DatalakeConversationsTotalsMetrics:
+        """
+        Get conversations totals from Datalake.
+        """
+
+
+class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
     """
     Service for getting conversations metrics from Datalake.
     """
 
-    def __init__(self, events_client: DataLakeEventsClient):
+    def __init__(
+        self,
+        events_client: BaseDataLakeEventsClient = DataLakeEventsClient(),
+    ):
         self.events_client = events_client
         self.event_name = "weni_nexus_data"
 
@@ -34,7 +56,7 @@ class DatalakeConversationsMetricsService:
         project: UUID,
         start_date: datetime,
         end_date: datetime,
-    ) -> DatalakeConversationsTotalsMetrics:
+    ) -> ConversationsTotalsMetrics:
         """
         Get conversations totals from Datalake.
         """
@@ -42,8 +64,8 @@ class DatalakeConversationsMetricsService:
         try:
             events = self.events_client.get_events(
                 project=project,
-                start_date=start_date,
-                end_date=end_date,
+                date_start=start_date,
+                date_end=end_date,
                 event_name=self.event_name,
             )
         except Exception as e:
@@ -78,14 +100,14 @@ class DatalakeConversationsMetricsService:
             100 * unresolved / total_conversations if total_conversations > 0 else 0
         )
 
-        return DatalakeConversationsTotalsMetrics(
-            total_conversations=DatalakeConversationsTotalsMetric(
+        return ConversationsTotalsMetrics(
+            total_conversations=ConversationsTotalsMetric(
                 value=total_conversations, percentage=100
             ),
-            resolved=DatalakeConversationsTotalsMetric(
+            resolved=ConversationsTotalsMetric(
                 value=resolved, percentage=percentage_resolved
             ),
-            unresolved=DatalakeConversationsTotalsMetric(
+            unresolved=ConversationsTotalsMetric(
                 value=unresolved, percentage=percentage_unresolved
             ),
         )

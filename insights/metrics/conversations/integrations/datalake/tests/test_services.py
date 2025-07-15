@@ -2,9 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 from django.test import TestCase
 
-from insights.metrics.conversations.integrations.datalake.dataclass import (
-    DatalakeConversationsTotalsMetrics,
-)
+from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
 from insights.sources.dl_events.tests.mock_client import MockDataLakeEventsClient
 from insights.metrics.conversations.integrations.datalake.services import (
     DatalakeConversationsMetricsService,
@@ -24,4 +22,4 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             end_date=datetime.now(),
         )
 
-        self.assertIsInstance(results, DatalakeConversationsTotalsMetrics)
+        self.assertIsInstance(results, ConversationsTotalsMetrics)
