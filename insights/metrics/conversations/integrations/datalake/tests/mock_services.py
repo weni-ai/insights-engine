@@ -1,8 +1,9 @@
 from datetime import datetime
 from uuid import UUID
-from insights.metrics.conversations.integrations.datalake.dataclass import (
-    DatalakeConversationsTotalsMetric,
-    DatalakeConversationsTotalsMetrics,
+
+from insights.metrics.conversations.dataclass import (
+    ConversationsTotalsMetric,
+    ConversationsTotalsMetrics,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
@@ -16,11 +17,9 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
 
     def get_conversations_totals(
         self, project: UUID, start_date: datetime, end_date: datetime
-    ) -> DatalakeConversationsTotalsMetrics:
-        return DatalakeConversationsTotalsMetrics(
-            total_conversations=DatalakeConversationsTotalsMetric(
-                value=100, percentage=100
-            ),
-            resolved=DatalakeConversationsTotalsMetric(value=60, percentage=60),
-            unresolved=DatalakeConversationsTotalsMetric(value=40, percentage=40),
+    ) -> ConversationsTotalsMetrics:
+        return ConversationsTotalsMetrics(
+            total_conversations=ConversationsTotalsMetric(value=100, percentage=100),
+            resolved=ConversationsTotalsMetric(value=60, percentage=60),
+            unresolved=ConversationsTotalsMetric(value=40, percentage=40),
         )

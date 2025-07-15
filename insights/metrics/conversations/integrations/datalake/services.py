@@ -9,10 +9,6 @@ from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
 )
-from insights.metrics.conversations.integrations.datalake.dataclass import (
-    DatalakeConversationsTotalsMetric,
-    DatalakeConversationsTotalsMetrics,
-)
 from insights.metrics.conversations.integrations.datalake.exceptions import (
     DatalakeConversationsMetricsException,
 )
@@ -33,7 +29,7 @@ class BaseConversationsMetricsService(ABC):
     @abstractmethod
     def get_conversations_totals(
         self, project: UUID, start_date: datetime, end_date: datetime
-    ) -> DatalakeConversationsTotalsMetrics:
+    ) -> ConversationsTotalsMetrics:
         """
         Get conversations totals from Datalake.
         """
