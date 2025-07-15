@@ -31,7 +31,7 @@ class ConversationsMetricsService:
         """
 
         return self.datalake_client.get_conversations_totals(
-            project=project,
+            project_uuid=project.uuid,
             start_date=start_date,
             end_date=end_date,
         )
