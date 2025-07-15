@@ -46,11 +46,17 @@ class ConversationsMetricsViewSet(GenericViewSet):
         )
         query_params_serializer.is_valid(raise_exception=True)
 
-        totals = self.service.get_totals(
-            project=query_params_serializer.validated_data["project"],
-            start_date=request.query_params.get("start_date"),
-            end_date=request.query_params.get("end_date"),
-        )
+        try:
+            totals = self.service.get_totals(
+                project=query_params_serializer.validated_data["project"],
+                start_date=request.query_params.get("start_date"),
+                end_date=request.query_params.get("end_date"),
+            )
+        except Exception:
+            return Response(
+                {"error": "Error getting conversations metrics totals"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response(
             ConversationTotalsMetricsSerializer(totals).data,

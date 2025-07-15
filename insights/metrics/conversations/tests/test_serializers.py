@@ -1,7 +1,8 @@
 from django.test import TestCase
 
 from insights.metrics.conversations.dataclass import (
-    ConversationTotalsMetrics,
+    ConversationsTotalsMetric,
+    ConversationsTotalsMetrics,
     ConversationsTimeseriesData,
     ConversationsTimeseriesMetrics,
     SubjectGroup,
@@ -85,18 +86,25 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
 
 class TestConversationTotalsMetricsSerializer(TestCase):
     def test_serializer(self):
-        totals = ConversationTotalsMetrics.from_values(
-            by_ai=150,
-            by_human=50,
+        totals = ConversationsTotalsMetrics(
+            total_conversations=ConversationsTotalsMetric(value=150, percentage=150),
+            resolved=ConversationsTotalsMetric(value=100, percentage=100),
+            unresolved=ConversationsTotalsMetric(value=50, percentage=50),
         )
         serializer = ConversationTotalsMetricsSerializer(totals)
         data = serializer.data
 
-        self.assertEqual(data["total"], totals.total)
-        self.assertEqual(data["by_ai"]["value"], totals.by_ai.value)
-        self.assertEqual(data["by_ai"]["percentage"], totals.by_ai.percentage)
-        self.assertEqual(data["by_human"]["value"], totals.by_human.value)
-        self.assertEqual(data["by_human"]["percentage"], totals.by_human.percentage)
+        self.assertEqual(
+            data["total_conversations"]["value"], totals.total_conversations.value
+        )
+        self.assertEqual(
+            data["total_conversations"]["percentage"],
+            totals.total_conversations.percentage,
+        )
+        self.assertEqual(data["resolved"]["value"], totals.resolved.value)
+        self.assertEqual(data["resolved"]["percentage"], totals.resolved.percentage)
+        self.assertEqual(data["unresolved"]["value"], totals.unresolved.value)
+        self.assertEqual(data["unresolved"]["percentage"], totals.unresolved.percentage)
 
 
 class TestConversationTotalsMetricsQueryParamsSerializer(TestCase):

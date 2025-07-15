@@ -40,7 +40,7 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         return attrs
 
 
-class ConversationTotalsMetricsByTypeSerializer(serializers.Serializer):
+class ConversationsTotalsMetricSerializer(serializers.Serializer):
     """
     Serializer for conversation totals metrics by type
     """
@@ -54,9 +54,9 @@ class ConversationTotalsMetricsSerializer(serializers.Serializer):
     Serializer for conversation totals metrics
     """
 
-    total = serializers.IntegerField()
-    by_ai = ConversationTotalsMetricsByTypeSerializer()
-    by_human = ConversationTotalsMetricsByTypeSerializer()
+    total_conversations = ConversationsTotalsMetricSerializer()
+    resolved = ConversationsTotalsMetricSerializer()
+    unresolved = ConversationsTotalsMetricSerializer()
 
 
 class ConversationTotalsMetricsQueryParamsSerializer(

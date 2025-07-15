@@ -1,12 +1,6 @@
 from insights.metrics.conversations.enums import ConversationsTimeseriesUnit
 
 
-CONVERSATIONS_METRICS_TOTALS_MOCK_DATA = {
-    "by_ai": 150,
-    "by_human": 50,
-}
-
-
 CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA = {
     ConversationsTimeseriesUnit.DAY: {
         "total": [

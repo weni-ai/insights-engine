@@ -4,9 +4,9 @@ from insights.metrics.conversations.enums import ConversationsTimeseriesUnit
 
 
 @dataclass(frozen=True)
-class ConversationTotalsMetricsByType:
+class ConversationsTotalsMetric:
     """
-    Dataclass to store conversation totals metrics by type
+    Dataclass for conversations totals
     """
 
     value: int
@@ -14,38 +14,14 @@ class ConversationTotalsMetricsByType:
 
 
 @dataclass(frozen=True)
-class ConversationTotalsMetrics:
+class ConversationsTotalsMetrics:
     """
-    Dataclass to store conversation totals metrics
+    Dataclass for conversations totals metrics
     """
 
-    total: int
-    by_ai: ConversationTotalsMetricsByType
-    by_human: ConversationTotalsMetricsByType
-
-    @classmethod
-    def from_values(cls, by_ai: int, by_human: int) -> "ConversationTotalsMetrics":
-        """
-        Create a ConversationTotalsMetrics instance from values
-        """
-        total = by_ai + by_human
-
-        if total > 0:
-            ai_percentage = (by_ai / total) * 100
-            human_percentage = (by_human / total) * 100
-        else:
-            ai_percentage = 0.0
-            human_percentage = 0.0
-
-        return cls(
-            total=total,
-            by_ai=ConversationTotalsMetricsByType(
-                value=by_ai, percentage=ai_percentage
-            ),
-            by_human=ConversationTotalsMetricsByType(
-                value=by_human, percentage=human_percentage
-            ),
-        )
+    total_conversations: ConversationsTotalsMetric
+    resolved: ConversationsTotalsMetric
+    unresolved: ConversationsTotalsMetric
 
 
 @dataclass(frozen=True)

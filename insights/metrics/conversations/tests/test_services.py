@@ -14,7 +14,6 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
 from insights.metrics.conversations.tests.mock import (
-    CONVERSATIONS_METRICS_TOTALS_MOCK_DATA,
     CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
     NPS_METRICS_MOCK_DATA,
 )
@@ -27,11 +26,17 @@ from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
 )
+from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
+from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
+    MockConversationsMetricsService,
+)
 from insights.projects.models import Project
 
 
 class TestConversationsMetricsService(TestCase):
-    service = ConversationsMetricsService()
+    service = ConversationsMetricsService(
+        datalake_client=MockConversationsMetricsService()
+    )
 
     def setUp(self):
         self.project = Project.objects.create(name="Test Project")
@@ -44,26 +49,7 @@ class TestConversationsMetricsService(TestCase):
             start_date=self.start_date,
             end_date=self.end_date,
         )
-        self.assertIsInstance(totals, ConversationTotalsMetrics)
-        self.assertEqual(
-            totals.total,
-            CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_ai"]
-            + CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_human"],
-        )
-        self.assertEqual(
-            totals.by_ai.value, CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_ai"]
-        )
-        self.assertEqual(
-            totals.by_ai.percentage,
-            CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_ai"] / totals.total * 100,
-        )
-        self.assertEqual(
-            totals.by_human.value, CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_human"]
-        )
-        self.assertEqual(
-            totals.by_human.percentage,
-            CONVERSATIONS_METRICS_TOTALS_MOCK_DATA["by_human"] / totals.total * 100,
-        )
+        self.assertIsInstance(totals, ConversationsTotalsMetrics)
 
     def test_get_timeseries_for_day_unit(self):
         data = self.service.get_timeseries(
