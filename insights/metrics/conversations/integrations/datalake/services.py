@@ -25,7 +25,7 @@ class BaseConversationsMetricsService(ABC):
 
     @abstractmethod
     def get_conversations_totals(
-        self, project: UUID, start_date: datetime, end_date: datetime
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> ConversationsTotalsMetrics:
         """
         Get conversations totals from Datalake.
@@ -46,7 +46,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
     def get_conversations_totals(
         self,
-        project: UUID,
+        project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
     ) -> ConversationsTotalsMetrics:
@@ -56,7 +56,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         try:
             events = self.events_client.get_events(
-                project=project,
+                project=project_uuid,
                 date_start=start_date,
                 date_end=end_date,
                 event_name=self.event_name,

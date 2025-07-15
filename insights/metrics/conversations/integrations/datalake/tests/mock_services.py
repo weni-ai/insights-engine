@@ -16,7 +16,7 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
     """
 
     def get_conversations_totals(
-        self, project: UUID, start_date: datetime, end_date: datetime
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> ConversationsTotalsMetrics:
         return ConversationsTotalsMetrics(
             total_conversations=ConversationsTotalsMetric(value=100, percentage=100),

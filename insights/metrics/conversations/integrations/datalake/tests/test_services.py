@@ -19,7 +19,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
     def test_get_conversations_totals(self):
         results = self.service.get_conversations_totals(
-            project=uuid.uuid4(),
+            project_uuid=uuid.uuid4(),
             start_date=datetime.now() - timedelta(days=1),
             end_date=datetime.now(),
         )
