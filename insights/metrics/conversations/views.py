@@ -10,6 +10,7 @@ from rest_framework.exceptions import PermissionDenied
 from insights.metrics.conversations.serializers import (
     CreateSubtopicSerializer,
     CreateTopicSerializer,
+    DeleteTopicSerializer,
     GetSubtopicsQueryParamsSerializer,
     GetTopicsQueryParamsSerializer,
 )
@@ -124,3 +125,32 @@ class ConversationsMetricsViewSet(GenericViewSet):
             )
 
             return Response(subtopic, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=False,
+        methods=["delete"],
+        url_path="topics/(?P<topic_uuid>[^/.]+)",
+        url_name="delete-topic",
+        permission_classes=[IsAuthenticated],
+    )
+    def delete_topic(self, request: "Request", *args, **kwargs):
+        """
+        Delete a conversation topic
+        """
+
+        topic_uuid = kwargs.get("topic_uuid")
+
+        serializer = DeleteTopicSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if not self._check_project_permission_for_user(
+            serializer.validated_data["project_uuid"], request.user
+        ):
+            raise PermissionDenied("User does not have permission for this project")
+
+        topic = self.service.delete_topic(
+            serializer.validated_data["project_uuid"],
+            topic_uuid,
+        )
+
+        return Response(topic, status=status.HTTP_204_NO_CONTENT)

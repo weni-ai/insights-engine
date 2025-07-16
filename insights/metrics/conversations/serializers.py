@@ -74,3 +74,11 @@ class CreateSubtopicSerializer(BaseTopicSerializer):
 
     project_uuid = serializers.UUIDField(required=True)
     topic_uuid = serializers.UUIDField(required=True)
+
+
+class DeleteTopicSerializer(serializers.Serializer):
+    """
+    Serializer for deleting a conversation topic
+    """
+
+    project_uuid = serializers.UUIDField(required=True)

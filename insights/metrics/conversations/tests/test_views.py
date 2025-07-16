@@ -1,14 +1,41 @@
 import uuid
-from django.urls import reverse
+from django.urls import path, include, reverse
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
+from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.views import ConversationsMetricsViewSet
 from insights.projects.models import Project
+from insights.sources.integrations.tests.mock_clients import MockNexusClient
 
 
+class ConversationsMetricsViewSetWithMockService(ConversationsMetricsViewSet):
+    service = ConversationsMetricsService(
+        nexus_client=MockNexusClient(),
+    )
+
+
+def get_test_urlpatterns():
+    from rest_framework.routers import DefaultRouter
+
+    router = DefaultRouter()
+    router.register(
+        r"", ConversationsMetricsViewSetWithMockService, basename="conversations"
+    )
+
+    return [
+        path("", include(router.urls)),
+    ]
+
+
+urlpatterns = get_test_urlpatterns()
+
+
+@override_settings(ROOT_URLCONF="insights.metrics.conversations.tests.test_views")
 class BaseTestConversationsMetricsViewSet(APITestCase):
     def get_topics(self, query_params: dict) -> Response:
         url = reverse("conversations-topics")
@@ -29,6 +56,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         url = reverse("conversations-subtopics")
 
         return self.client.post(url, data, format="json")
+
+    def delete_topic(self, topic_uuid: uuid.UUID, data: dict) -> Response:
+        url = reverse("conversations-delete-topic", kwargs={"topic_uuid": topic_uuid})
+
+        return self.client.delete(url, data, format="json")
 
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
@@ -54,13 +86,18 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_cannot_delete_topic_when_unauthenticated(self):
+        response = self.delete_topic(uuid.uuid4(), {})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class TestConversationsMetricsViewSetAsAuthenticatedUser(
     BaseTestConversationsMetricsViewSet
 ):
     def setUp(self) -> None:
         self.user = User.objects.create(email="test@test.com")
-        self.project = Project.objects.create(name="Test Project")
+        self.project = Project.objects.create(name="Test Project")  # type: ignore
 
         self.client.force_authenticate(self.user)
 
@@ -129,3 +166,20 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_cannot_delete_topic_without_project_uuid(self):
+        response = self.delete_topic(uuid.uuid4(), {})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_cannot_delete_topic_without_project_permission(self):
+        response = self.delete_topic(uuid.uuid4(), {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_delete_topic(self):
+        response = self.delete_topic(uuid.uuid4(), {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
