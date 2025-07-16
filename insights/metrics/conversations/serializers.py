@@ -42,14 +42,6 @@ class GetTopicsQueryParamsSerializer(serializers.Serializer):
     project_uuid = serializers.UUIDField(required=True)
 
 
-class GetSubtopicsQueryParamsSerializer(GetTopicsQueryParamsSerializer):
-    """
-    Serializer for getting conversation subtopics
-    """
-
-    topic_uuid = serializers.UUIDField(required=True)
-
-
 class BaseTopicSerializer(serializers.Serializer):
     """
     Serializer for conversation topic
@@ -65,15 +57,6 @@ class CreateTopicSerializer(BaseTopicSerializer):
     """
 
     project_uuid = serializers.UUIDField(required=True)
-
-
-class CreateSubtopicSerializer(BaseTopicSerializer):
-    """
-    Serializer for creating a conversation subtopic
-    """
-
-    project_uuid = serializers.UUIDField(required=True)
-    topic_uuid = serializers.UUIDField(required=True)
 
 
 class DeleteTopicSerializer(serializers.Serializer):

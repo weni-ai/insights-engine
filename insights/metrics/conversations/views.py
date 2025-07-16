@@ -9,10 +9,8 @@ from rest_framework.exceptions import PermissionDenied
 
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
-    CreateSubtopicSerializer,
     CreateTopicSerializer,
     DeleteTopicSerializer,
-    GetSubtopicsQueryParamsSerializer,
     GetTopicsQueryParamsSerializer,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
@@ -97,8 +95,8 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
     @action(
         detail=False,
-        methods=["get"],
-        url_path="subtopics",
+        methods=["get", "post"],
+        url_path="topics/(?P<topic_uuid>[^/.]+)/subtopics",
         url_name="subtopics",
         permission_classes=[IsAuthenticated],
     )
@@ -107,7 +105,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         Get or create conversation subtopics
         """
         if request.method == "GET":
-            query_params = GetSubtopicsQueryParamsSerializer(data=request.query_params)
+            query_params = GetTopicsQueryParamsSerializer(data=request.query_params)
             query_params.is_valid(raise_exception=True)
 
             if not self._check_project_permission_for_user(
@@ -115,10 +113,12 @@ class ConversationsMetricsViewSet(GenericViewSet):
             ):
                 raise PermissionDenied("User does not have permission for this project")
 
+            topic_uuid = kwargs.get("topic_uuid")
+
             try:
                 subtopics = self.service.get_subtopics(
                     query_params.validated_data["project_uuid"],
-                    query_params.validated_data["topic_uuid"],
+                    topic_uuid,
                 )
             except ConversationsMetricsError:
                 return Response(
@@ -128,7 +128,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
             return Response(subtopics, status=status.HTTP_200_OK)
         else:
-            serializer = CreateSubtopicSerializer(data=request.data)
+            serializer = CreateTopicSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
 
             if not self._check_project_permission_for_user(
@@ -137,9 +137,11 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 raise PermissionDenied("User does not have permission for this project")
 
             try:
+                topic_uuid = kwargs.get("topic_uuid")
+
                 subtopic = self.service.create_subtopic(
                     serializer.validated_data["project_uuid"],
-                    serializer.validated_data["topic_uuid"],
+                    topic_uuid,
                     serializer.validated_data["name"],
                     serializer.validated_data["description"],
                 )

@@ -153,8 +153,8 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error creating topic for project {project_uuid}"
             )
 
-        self._save_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.TOPICS, response_content
+        self._clear_cache_for_project_resource(
+            project_uuid, ConversationsMetricsResource.TOPICS
         )
 
         return response_content
@@ -198,8 +198,8 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error creating subtopic for project {project_uuid}. Event_id: {event_id}"
             )
 
-        self._save_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.SUBTOPICS, response_content
+        self._clear_cache_for_project_resource(
+            project_uuid, ConversationsMetricsResource.SUBTOPICS
         )
 
         return response_content
@@ -236,10 +236,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             raise ConversationsMetricsError(
                 f"Error deleting topic for project {project_uuid}. Event_id: {event_id}"
             )
-
-        self._save_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.TOPICS, response_content
-        )
 
         return response_content
 
@@ -283,9 +279,5 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             raise ConversationsMetricsError(
                 f"Error deleting subtopic for project {project_uuid}. Event_id: {event_id}"
             )
-
-        self._save_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.SUBTOPICS, response_content
-        )
 
         return response_content
