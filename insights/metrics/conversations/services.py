@@ -254,7 +254,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 "Error fetching topics for project %s: %s", project_uuid, response.text
             )
             event_id = capture_message(
-                "Error fetching topics for project %s: %s", project_uuid, response.text
+                f"Error fetching topics for project {project_uuid}: {response.text}"
             )
 
             raise ConversationsMetricsError(
@@ -299,7 +299,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 "Error fetching topics for project %s: %s", project_uuid, response.text
             )
             event_id = capture_message(
-                "Error fetching topics for project %s: %s", project_uuid, response.text
+                f"Error fetching topics for project {project_uuid}: {response.text}"
             )
 
             raise ConversationsMetricsError(
@@ -337,8 +337,8 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             logger.error(
                 "Error creating topic for project %s: %s", project_uuid, response.text
             )
-            capture_message(
-                "Error creating topic for project %s: %s", project_uuid, response.text
+            event_id = capture_message(
+                f"Error creating topic for project {project_uuid}: {response.text}"
             )
 
             raise ConversationsMetricsError(
@@ -359,10 +359,12 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
 
         try:
-            response = self.nexus_client.delete_topic(project_uuid, topic_uuid)
+            response = self.nexus_client.create_subtopic(
+                project_uuid, topic_uuid, name, description
+            )
 
         except Exception as e:
-            logger.error("Error deleting topic for project %s: %s", project_uuid, e)
+            logger.error("Error creating subtopic for project %s: %s", project_uuid, e)
             event_id = capture_exception(e)
             raise ConversationsMetricsError(
                 f"Error creating subtopic for project {project_uuid}. Event_id: {event_id}"
@@ -381,9 +383,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 response.text,
             )
             event_id = capture_message(
-                "Error creating subtopic for project %s: %s",
-                project_uuid,
-                response.text,
+                f"Error creating subtopic for project {project_uuid}: {response.text}"
             )
 
             raise ConversationsMetricsError(
@@ -422,7 +422,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 "Error deleting topic for project %s: %s", project_uuid, response.text
             )
             event_id = capture_message(
-                "Error deleting topic for project %s: %s", project_uuid, response.text
+                f"Error deleting topic for project {project_uuid}: {response.text}"
             )
 
             raise ConversationsMetricsError(
@@ -463,9 +463,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 response.text,
             )
             event_id = capture_message(
-                "Error deleting subtopic for project %s: %s",
-                project_uuid,
-                response.text,
+                f"Error deleting subtopic for project {project_uuid}: {response.text}"
             )
 
             raise ConversationsMetricsError(
