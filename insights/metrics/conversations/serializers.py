@@ -34,6 +34,15 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         return attrs
 
 
+class GetSubtopicsQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for getting conversation subtopics
+    """
+
+    project_uuid = serializers.UUIDField(required=True)
+    topic_uuid = serializers.UUIDField(required=True)
+
+
 class BaseTopicSerializer(serializers.Serializer):
     """
     Serializer for conversation topic

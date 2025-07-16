@@ -73,7 +73,7 @@ class BaseNexusClient(ABC):
         """
 
     @abstractmethod
-    def get_subtopics(self, project_uuid: UUID, topic_id: UUID) -> Response:
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
         """
         Get conversation subtopics for a topic.
         """
@@ -86,21 +86,21 @@ class BaseNexusClient(ABC):
 
     @abstractmethod
     def create_subtopic(
-        self, project_uuid: UUID, topic_id: UUID, name: str, description: str
+        self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
     ) -> Response:
         """
         Create a conversation subtopic for a project.
         """
 
     @abstractmethod
-    def delete_topic(self, project_uuid: UUID, topic_id: UUID) -> Response:
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
         """
         Delete a conversation topic for a project.
         """
 
     @abstractmethod
     def delete_subtopic(
-        self, project_uuid: UUID, topic_id: UUID, subtopic_id: UUID
+        self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
     ) -> Response:
         """
         Delete a conversation subtopic for a project.
@@ -127,12 +127,12 @@ class NexusClient:
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
-    def get_subtopics(self, project_uuid: UUID, topic_id: UUID) -> Response:
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
         """
         Get subtopics for a topic.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_id}/subtopics/"
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -153,13 +153,13 @@ class NexusClient:
         )
 
     def create_subtopic(
-        self, project_uuid: UUID, topic_id: UUID, name: str, description: str
+        self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
     ) -> Response:
         """
         Create a subtopic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_id}/subtopics/"
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         body = {
             "name": name,
@@ -170,24 +170,22 @@ class NexusClient:
             url=url, headers=self.headers, timeout=self.timeout, json=body
         )
 
-    def delete_topic(self, project_uuid: UUID, topic_id: UUID) -> Response:
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
         """
         Delete a topic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_id}/"
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
 
     def delete_subtopic(
-        self, project_uuid: UUID, topic_id: UUID, subtopic_id: UUID
+        self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
     ) -> Response:
         """
         Delete a subtopic for a project.
         """
 
-        url = (
-            f"{self.base_url}/{project_uuid}/topics/{topic_id}/subtopics/{subtopic_id}/"
-        )
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)

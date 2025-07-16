@@ -15,12 +15,22 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
+    def get_subtopics(self, query_params: dict) -> Response:
+        url = reverse("conversations-subtopics")
+
+        return self.client.get(url, query_params, format="json")
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
 ):
     def test_cannot_get_topics_when_unauthenticated(self):
         response = self.get_topics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_subtopics_when_unauthenticated(self):
+        response = self.get_subtopics({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -48,5 +58,31 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
     @with_project_auth
     def test_get_topics(self):
         response = self.get_topics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_cannot_get_subtopics_without_project_uuid(self):
+        response = self.get_subtopics({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_cannot_get_subtopics_without_project_permission(self):
+        response = self.get_subtopics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_cannot_get_subtopics_without_topic_uuid(self):
+        response = self.get_subtopics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["topic_uuid"][0].code, "required")
+
+    @with_project_auth
+    def test_get_subtopics(self):
+        response = self.get_subtopics(
+            {"project_uuid": self.project.uuid, "topic_uuid": uuid.uuid4()}
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -58,7 +58,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return response_content
 
-    def get_subtopics(self, project_uuid: UUID, topic_id: UUID) -> tuple[dict, int]:
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> tuple[dict, int]:
         """
         Get conversation subtopics
         """
@@ -69,7 +69,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             return json.loads(cached_results)
 
         try:
-            response = self.nexus_client.get_subtopics(project_uuid, topic_id)
+            response = self.nexus_client.get_subtopics(project_uuid, topic_uuid)
 
         except Exception as e:
             logger.error("Error fetching subtopics for project %s: %s", project_uuid, e)
@@ -113,14 +113,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         return response_content
 
     def create_subtopic(
-        self, project_uuid: UUID, topic_id: UUID, name: str, description: str
+        self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
     ) -> tuple[dict, int]:
         """
         Create a conversation subtopic
         """
 
         try:
-            response = self.nexus_client.delete_topic(project_uuid, topic_id)
+            response = self.nexus_client.delete_topic(project_uuid, topic_uuid)
 
         except Exception as e:
             logger.error("Error deleting topic for project %s: %s", project_uuid, e)
@@ -136,19 +136,19 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return response_content
 
-    def delete_topic(self, project_uuid: UUID, topic_id: UUID) -> tuple[dict, int]:
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> tuple[dict, int]:
         """
         Delete a conversation topic
         """
 
         try:
-            response = self.nexus_client.delete_topic(project_uuid, topic_id)
+            response = self.nexus_client.delete_topic(project_uuid, topic_uuid)
 
         except Exception as e:
             logger.error("Error deleting topic for project %s: %s", project_uuid, e)
             raise ConversationsMetricsError(
                 f"Error deleting topic for project {project_uuid}"
-            )
+            ) from e
 
         response_content = response.json()
 
@@ -159,7 +159,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         return response_content
 
     def delete_subtopic(
-        self, project_uuid: UUID, topic_id: UUID, subtopic_id: UUID
+        self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
     ) -> tuple[dict, int]:
         """
         Delete a conversation subtopic
@@ -167,14 +167,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         try:
             response = self.nexus_client.delete_subtopic(
-                project_uuid, topic_id, subtopic_id
+                project_uuid, topic_uuid, subtopic_uuid
             )
 
         except Exception as e:
             logger.error("Error deleting subtopic for project %s: %s", project_uuid, e)
             raise ConversationsMetricsError(
                 f"Error deleting subtopic for project {project_uuid}"
-            )
+            ) from e
 
         response_content = response.json()
 
