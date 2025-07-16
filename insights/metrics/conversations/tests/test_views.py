@@ -35,18 +35,15 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Store the original service
         cls.original_service = ConversationsMetricsViewSet.service
-        # Replace with mock service for all tests
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
             nexus_client=MockNexusClient(),
         )
 
     @classmethod
     def tearDownClass(cls):
-        # Restore the original service
-        ConversationsMetricsViewSet.service = cls.original_service
         super().tearDownClass()
+        ConversationsMetricsViewSet.service = cls.original_service
 
     def get_totals(self, query_params: dict) -> Response:
         url = "/v1/metrics/conversations/totals/"
