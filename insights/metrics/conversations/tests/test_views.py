@@ -1,6 +1,5 @@
 import uuid
-from django.urls import path, include, reverse
-from django.test import override_settings
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
