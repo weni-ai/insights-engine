@@ -206,3 +206,53 @@ class NPSSerializer(serializers.Serializer):
     promoters = serializers.IntegerField()
     detractors = serializers.IntegerField()
     passives = serializers.IntegerField()
+
+
+class GetTopicsQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for getting conversation topics
+    """
+
+    project_uuid = serializers.UUIDField(required=True)
+
+
+class GetSubtopicsQueryParamsSerializer(GetTopicsQueryParamsSerializer):
+    """
+    Serializer for getting conversation subtopics
+    """
+
+    topic_uuid = serializers.UUIDField(required=True)
+
+
+class BaseTopicSerializer(serializers.Serializer):
+    """
+    Serializer for conversation topic
+    """
+
+    name = serializers.CharField(required=True)
+    description = serializers.CharField(required=True)
+
+
+class CreateTopicSerializer(BaseTopicSerializer):
+    """
+    Serializer for creating a conversation topic
+    """
+
+    project_uuid = serializers.UUIDField(required=True)
+
+
+class CreateSubtopicSerializer(BaseTopicSerializer):
+    """
+    Serializer for creating a conversation subtopic
+    """
+
+    project_uuid = serializers.UUIDField(required=True)
+    topic_uuid = serializers.UUIDField(required=True)
+
+
+class DeleteTopicSerializer(serializers.Serializer):
+    """
+    Serializer for deleting a conversation topic
+    """
+
+    project_uuid = serializers.UUIDField(required=True)

@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta
 from unittest.mock import patch
 import uuid
+from uuid import UUID
+
+from insights.sources.integrations.tests.mock_clients import MockNexusClient
+
 from django.test import TestCase
 from django.utils import timezone
 
 from insights.metrics.conversations.dataclass import (
-    ConversationTotalsMetrics,
     QueueMetric,
     RoomsByQueueMetric,
     SubjectMetricData,
@@ -35,7 +38,8 @@ from insights.projects.models import Project
 
 class TestConversationsMetricsService(TestCase):
     service = ConversationsMetricsService(
-        datalake_client=MockConversationsMetricsService()
+        datalake_client=MockConversationsMetricsService(),
+        nexus_client=MockNexusClient(),
     )
 
     def setUp(self):
@@ -292,3 +296,46 @@ class TestConversationsMetricsService(TestCase):
         self.assertEqual(nps.promoters, NPS_METRICS_MOCK_DATA["promoters"])
         self.assertEqual(nps.detractors, NPS_METRICS_MOCK_DATA["detractors"])
         self.assertEqual(nps.passives, NPS_METRICS_MOCK_DATA["passives"])
+
+    def test_get_topics(self):
+        topics = self.service.get_topics(
+            project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        )
+
+        self.assertEqual(len(topics), 1)
+
+    def test_get_subtopics(self):
+        subtopics = self.service.get_subtopics(
+            project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            topic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+        )
+
+        self.assertEqual(len(subtopics), 1)
+
+    def test_create_topic(self):
+        self.service.create_topic(
+            project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            name="Cancelamento",
+            description="Quando cliente pede para cancelar um pedido",
+        )
+
+    def test_create_subtopic(self):
+        self.service.create_subtopic(
+            project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            topic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            name="Cancelamento",
+            description="Quando cliente pede para cancelar um pedido",
+        )
+
+    def test_delete_topic(self):
+        self.service.delete_topic(
+            project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            topic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+        )
+
+    def test_delete_subtopic(self):
+        self.service.delete_subtopic(
+            project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            topic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            subtopic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+        )

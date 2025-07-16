@@ -23,3 +23,8 @@ class NPSType(TextChoices):
 
     AI = "AI"
     HUMAN = "HUMAN"
+
+
+class ConversationsMetricsResource(TextChoices):
+    TOPICS = "topics"
+    SUBTOPICS = "subtopics"
