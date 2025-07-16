@@ -2,11 +2,12 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 import uuid
 from uuid import UUID
+from django.test import TestCase
+from django.core.cache import cache
+from django.utils import timezone
 
 from insights.sources.integrations.tests.mock_clients import MockNexusClient
 
-from django.test import TestCase
-from django.utils import timezone
 
 from insights.metrics.conversations.dataclass import (
     QueueMetric,
@@ -43,6 +44,7 @@ class TestConversationsMetricsService(TestCase):
     )
 
     def setUp(self):
+        cache.clear()
         self.project = Project.objects.create(name="Test Project")
         self.start_date = datetime.now() - timedelta(days=30)
         self.end_date = datetime.now()
@@ -297,6 +299,9 @@ class TestConversationsMetricsService(TestCase):
         self.assertEqual(nps.detractors, NPS_METRICS_MOCK_DATA["detractors"])
         self.assertEqual(nps.passives, NPS_METRICS_MOCK_DATA["passives"])
 
+    def tearDown(self) -> None:
+        cache.clear()
+
     def test_get_topics(self):
         topics = self.service.get_topics(
             project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
@@ -307,7 +312,7 @@ class TestConversationsMetricsService(TestCase):
     def test_get_subtopics(self):
         subtopics = self.service.get_subtopics(
             project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
-            topic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            topic_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
         )
 
         self.assertEqual(len(subtopics), 1)
@@ -322,7 +327,7 @@ class TestConversationsMetricsService(TestCase):
     def test_create_subtopic(self):
         self.service.create_subtopic(
             project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
-            topic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            topic_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
             name="Cancelamento",
             description="Quando cliente pede para cancelar um pedido",
         )
@@ -330,12 +335,12 @@ class TestConversationsMetricsService(TestCase):
     def test_delete_topic(self):
         self.service.delete_topic(
             project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
-            topic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            topic_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
         )
 
     def test_delete_subtopic(self):
         self.service.delete_subtopic(
             project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
-            topic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
-            subtopic_id=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            topic_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
+            subtopic_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
         )

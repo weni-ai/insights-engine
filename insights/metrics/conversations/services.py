@@ -220,7 +220,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         # Mock data for now
         return NPS(**NPS_METRICS_MOCK_DATA)
 
-    def get_topics(self, project_uuid: UUID) -> tuple[dict, int]:
+    def get_topics(self, project_uuid: UUID) -> dict:
         """
         Get conversation topics
         """
@@ -249,7 +249,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return response_content
 
-    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> tuple[dict, int]:
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
         """
         Get conversation subtopics
         """
@@ -280,9 +280,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return response_content
 
-    def create_topic(
-        self, project_uuid: UUID, name: str, description: str
-    ) -> tuple[dict, int]:
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
         """
         Create a conversation topic
         """
@@ -305,7 +303,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
     def create_subtopic(
         self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
-    ) -> tuple[dict, int]:
+    ) -> dict:
         """
         Create a conversation subtopic
         """
@@ -327,7 +325,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return response_content
 
-    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> tuple[dict, int]:
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
         """
         Delete a conversation topic
         """
@@ -351,7 +349,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
     def delete_subtopic(
         self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
-    ) -> tuple[dict, int]:
+    ) -> dict:
         """
         Delete a conversation subtopic
         """
