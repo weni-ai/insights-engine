@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
+from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
     CreateSubtopicSerializer,
     CreateTopicSerializer,
@@ -60,9 +61,15 @@ class ConversationsMetricsViewSet(GenericViewSet):
             ):
                 raise PermissionDenied("User does not have permission for this project")
 
-            topics = self.service.get_topics(
-                query_params.validated_data["project_uuid"]
-            )
+            try:
+                topics = self.service.get_topics(
+                    query_params.validated_data["project_uuid"]
+                )
+            except ConversationsMetricsError:
+                return Response(
+                    {"error": "Internal server error"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
             return Response(topics, status=status.HTTP_200_OK)
         elif request.method == "POST":
@@ -74,11 +81,17 @@ class ConversationsMetricsViewSet(GenericViewSet):
             ):
                 raise PermissionDenied("User does not have permission for this project")
 
-            topic = self.service.create_topic(
-                serializer.validated_data["project_uuid"],
-                serializer.validated_data["name"],
-                serializer.validated_data["description"],
-            )
+            try:
+                topic = self.service.create_topic(
+                    serializer.validated_data["project_uuid"],
+                    serializer.validated_data["name"],
+                    serializer.validated_data["description"],
+                )
+            except ConversationsMetricsError:
+                return Response(
+                    {"error": "Internal server error"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
             return Response(topic, status=status.HTTP_201_CREATED)
 
@@ -102,10 +115,16 @@ class ConversationsMetricsViewSet(GenericViewSet):
             ):
                 raise PermissionDenied("User does not have permission for this project")
 
-            subtopics = self.service.get_subtopics(
-                query_params.validated_data["project_uuid"],
-                query_params.validated_data["topic_uuid"],
-            )
+            try:
+                subtopics = self.service.get_subtopics(
+                    query_params.validated_data["project_uuid"],
+                    query_params.validated_data["topic_uuid"],
+                )
+            except ConversationsMetricsError:
+                return Response(
+                    {"error": "Internal server error"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
             return Response(subtopics, status=status.HTTP_200_OK)
         else:
@@ -117,12 +136,18 @@ class ConversationsMetricsViewSet(GenericViewSet):
             ):
                 raise PermissionDenied("User does not have permission for this project")
 
-            subtopic = self.service.create_subtopic(
-                serializer.validated_data["project_uuid"],
-                serializer.validated_data["topic_uuid"],
-                serializer.validated_data["name"],
-                serializer.validated_data["description"],
-            )
+            try:
+                subtopic = self.service.create_subtopic(
+                    serializer.validated_data["project_uuid"],
+                    serializer.validated_data["topic_uuid"],
+                    serializer.validated_data["name"],
+                    serializer.validated_data["description"],
+                )
+            except ConversationsMetricsError:
+                return Response(
+                    {"error": "Internal server error"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
             return Response(subtopic, status=status.HTTP_201_CREATED)
 
@@ -130,10 +155,10 @@ class ConversationsMetricsViewSet(GenericViewSet):
         detail=False,
         methods=["delete"],
         url_path="topics/(?P<topic_uuid>[^/.]+)",
-        url_name="delete-topic",
+        url_name="topic",
         permission_classes=[IsAuthenticated],
     )
-    def delete_topic(self, request: "Request", *args, **kwargs):
+    def topic(self, request: "Request", *args, **kwargs):
         """
         Delete a conversation topic
         """
@@ -148,9 +173,48 @@ class ConversationsMetricsViewSet(GenericViewSet):
         ):
             raise PermissionDenied("User does not have permission for this project")
 
-        topic = self.service.delete_topic(
-            serializer.validated_data["project_uuid"],
-            topic_uuid,
-        )
+        try:
+            topic = self.service.delete_topic(
+                serializer.validated_data["project_uuid"],
+                topic_uuid,
+            )
+        except ConversationsMetricsError:
+            return Response(
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response(topic, status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=["delete"],
+        url_path="topics/(?P<topic_uuid>[^/.]+)/subtopics/(?P<subtopic_uuid>[^/.]+)",
+        url_name="subtopic",
+        permission_classes=[IsAuthenticated],
+    )
+    def subtopic(self, request: "Request", *args, **kwargs):
+        topic_uuid = kwargs.get("topic_uuid")
+        subtopic_uuid = kwargs.get("subtopic_uuid")
+
+        serializer = DeleteTopicSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if not self._check_project_permission_for_user(
+            serializer.validated_data["project_uuid"], request.user
+        ):
+            raise PermissionDenied("User does not have permission for this project")
+
+        try:
+            subtopic = self.service.delete_subtopic(
+                serializer.validated_data["project_uuid"],
+                topic_uuid,
+                subtopic_uuid,
+            )
+        except ConversationsMetricsError:
+            return Response(
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(subtopic, status=status.HTTP_204_NO_CONTENT)
