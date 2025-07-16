@@ -65,9 +65,9 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 topics = self.service.get_topics(
                     query_params.validated_data["project_uuid"]
                 )
-            except ConversationsMetricsError:
+            except ConversationsMetricsError as e:
                 return Response(
-                    {"error": "Internal server error"},
+                    {"error": str(e)},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
