@@ -32,3 +32,20 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         attrs["project"] = project
 
         return attrs
+
+
+class BaseTopicSerializer(serializers.Serializer):
+    """
+    Serializer for conversation topic
+    """
+
+    name = serializers.CharField()
+    description = serializers.CharField()
+
+
+class CreateTopicSerializer(BaseTopicSerializer):
+    """
+    Serializer for creating a conversation topic
+    """
+
+    project_uuid = serializers.UUIDField()
