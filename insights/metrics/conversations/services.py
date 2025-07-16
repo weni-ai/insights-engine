@@ -2,7 +2,7 @@ import json
 from uuid import UUID
 import logging
 
-from sentry_sdk import capture_message
+from sentry_sdk import capture_message, capture_exception
 from rest_framework import status
 
 from insights.metrics.conversations.enums import ConversationsMetricsResource
@@ -45,10 +45,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         except Exception as e:
             logger.error("Error fetching topics for project %s: %s", project_uuid, e)
-            capture_message("Error fetching topics for project %s: %s", project_uuid, e)
+            event_id = capture_exception(e)
 
             raise ConversationsMetricsError(
-                f"Error fetching topics for project {project_uuid}"
+                f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             ) from e
 
         try:
@@ -61,12 +61,12 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             logger.error(
                 "Error fetching topics for project %s: %s", project_uuid, response.text
             )
-            capture_message(
+            event_id = capture_message(
                 "Error fetching topics for project %s: %s", project_uuid, response.text
             )
 
             raise ConversationsMetricsError(
-                f"Error fetching topics for project {project_uuid}"
+                f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
 
         self._save_cache_for_project_resource(
@@ -90,12 +90,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         except Exception as e:
             logger.error("Error fetching subtopics for project %s: %s", project_uuid, e)
-            capture_message(
-                "Error fetching subtopics for project %s: %s", project_uuid, e
-            )
+            event_id = capture_exception(e)
 
             raise ConversationsMetricsError(
-                f"Error fetching subtopics for project {project_uuid}"
+                f"Error fetching subtopics for project {project_uuid}. Event_id: {event_id}"
             ) from e
 
         try:
@@ -108,12 +106,12 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             logger.error(
                 "Error fetching topics for project %s: %s", project_uuid, response.text
             )
-            capture_message(
+            event_id = capture_message(
                 "Error fetching topics for project %s: %s", project_uuid, response.text
             )
 
             raise ConversationsMetricsError(
-                f"Error fetching topics for project {project_uuid}"
+                f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
 
         self._save_cache_for_project_resource(
@@ -131,8 +129,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         except Exception as e:
             logger.error("Error creating topic for project %s: %s", project_uuid, e)
+            event_id = capture_exception(e)
+
             raise ConversationsMetricsError(
-                f"Error creating topic for project {project_uuid}"
+                f"Error creating topic for project {project_uuid}. Event_id: {event_id}"
             ) from e
 
         try:
@@ -171,8 +171,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         except Exception as e:
             logger.error("Error deleting topic for project %s: %s", project_uuid, e)
+            event_id = capture_exception(e)
             raise ConversationsMetricsError(
-                f"Error creating subtopic for project {project_uuid}"
+                f"Error creating subtopic for project {project_uuid}. Event_id: {event_id}"
             ) from e
 
         try:
@@ -187,14 +188,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 project_uuid,
                 response.text,
             )
-            capture_message(
+            event_id = capture_message(
                 "Error creating subtopic for project %s: %s",
                 project_uuid,
                 response.text,
             )
 
             raise ConversationsMetricsError(
-                f"Error creating subtopic for project {project_uuid}"
+                f"Error creating subtopic for project {project_uuid}. Event_id: {event_id}"
             )
 
         self._save_cache_for_project_resource(
@@ -213,8 +214,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         except Exception as e:
             logger.error("Error deleting topic for project %s: %s", project_uuid, e)
+            event_id = capture_exception(e)
             raise ConversationsMetricsError(
-                f"Error deleting topic for project {project_uuid}"
+                f"Error deleting topic for project {project_uuid}. Event_id: {event_id}"
             ) from e
 
         try:
@@ -227,12 +229,12 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             logger.error(
                 "Error deleting topic for project %s: %s", project_uuid, response.text
             )
-            capture_message(
+            event_id = capture_message(
                 "Error deleting topic for project %s: %s", project_uuid, response.text
             )
 
             raise ConversationsMetricsError(
-                f"Error deleting topic for project {project_uuid}"
+                f"Error deleting topic for project {project_uuid}. Event_id: {event_id}"
             )
 
         self._save_cache_for_project_resource(
@@ -255,8 +257,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         except Exception as e:
             logger.error("Error deleting subtopic for project %s: %s", project_uuid, e)
+            event_id = capture_exception(e)
             raise ConversationsMetricsError(
-                f"Error deleting subtopic for project {project_uuid}"
+                f"Error deleting subtopic for project {project_uuid}. Event_id: {event_id}"
             ) from e
 
         try:
@@ -271,14 +274,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 project_uuid,
                 response.text,
             )
-            capture_message(
+            event_id = capture_message(
                 "Error deleting subtopic for project %s: %s",
                 project_uuid,
                 response.text,
             )
 
             raise ConversationsMetricsError(
-                f"Error deleting subtopic for project {project_uuid}"
+                f"Error deleting subtopic for project {project_uuid}. Event_id: {event_id}"
             )
 
         self._save_cache_for_project_resource(
