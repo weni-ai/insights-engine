@@ -13,30 +13,20 @@ from insights.projects.models import Project
 from insights.sources.integrations.tests.mock_clients import MockNexusClient
 
 
-class ConversationsMetricsViewSetWithMockService(ConversationsMetricsViewSet):
-    service = ConversationsMetricsService(
-        nexus_client=MockNexusClient(),
-    )
-
-
-def get_test_urlpatterns():
-    from rest_framework.routers import DefaultRouter
-
-    router = DefaultRouter()
-    router.register(
-        r"", ConversationsMetricsViewSetWithMockService, basename="conversations"
-    )
-
-    return [
-        path("", include(router.urls)),
-    ]
-
-
-urlpatterns = get_test_urlpatterns()
-
-
-@override_settings(ROOT_URLCONF="insights.metrics.conversations.tests.test_views")
 class BaseTestConversationsMetricsViewSet(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.original_service = ConversationsMetricsViewSet.service
+        ConversationsMetricsViewSet.service = ConversationsMetricsService(
+            nexus_client=MockNexusClient(),
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        ConversationsMetricsViewSet.service = cls.original_service
+
     def get_topics(self, query_params: dict) -> Response:
         url = reverse("conversations-topics")
 
