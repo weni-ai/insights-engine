@@ -167,10 +167,12 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
 
         try:
-            response = self.nexus_client.delete_topic(project_uuid, topic_uuid)
+            response = self.nexus_client.create_subtopic(
+                project_uuid, topic_uuid, name, description
+            )
 
         except Exception as e:
-            logger.error("Error deleting topic for project %s: %s", project_uuid, e)
+            logger.error("Error creating subtopic for project %s: %s", project_uuid, e)
             event_id = capture_exception(e)
             raise ConversationsMetricsError(
                 f"Error creating subtopic for project {project_uuid}. Event_id: {event_id}"
