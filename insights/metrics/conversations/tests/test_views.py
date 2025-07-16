@@ -4,7 +4,7 @@ import uuid
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
-from django.urls import path, include, reverse
+from django.urls import reverse
 from django.test import override_settings
 
 from insights.authentication.authentication import User
@@ -31,30 +31,23 @@ from insights.projects.models import Project
 from insights.sources.integrations.tests.mock_clients import MockNexusClient
 
 
-class ConversationsMetricsViewSetWithMockService(ConversationsMetricsViewSet):
-    service = ConversationsMetricsService(
-        nexus_client=MockNexusClient(),
-    )
-
-
-def get_test_urlpatterns():
-    from rest_framework.routers import DefaultRouter
-
-    router = DefaultRouter()
-    router.register(
-        r"", ConversationsMetricsViewSetWithMockService, basename="conversations"
-    )
-
-    return [
-        path("", include(router.urls)),
-    ]
-
-
-urlpatterns = get_test_urlpatterns()
-
-
-@override_settings(ROOT_URLCONF="insights.metrics.conversations.tests.test_views")
 class BaseTestConversationsMetricsViewSet(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Store the original service
+        cls.original_service = ConversationsMetricsViewSet.service
+        # Replace with mock service for all tests
+        ConversationsMetricsViewSet.service = ConversationsMetricsService(
+            nexus_client=MockNexusClient(),
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        # Restore the original service
+        ConversationsMetricsViewSet.service = cls.original_service
+        super().tearDownClass()
+
     def get_totals(self, query_params: dict) -> Response:
         url = "/v1/metrics/conversations/totals/"
 
