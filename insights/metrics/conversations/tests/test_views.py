@@ -96,7 +96,17 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         return self.client.post(url, data, format="json")
 
     def delete_topic(self, topic_uuid: uuid.UUID, data: dict) -> Response:
-        url = reverse("conversations-delete-topic", kwargs={"topic_uuid": topic_uuid})
+        url = reverse("conversations-topic", kwargs={"topic_uuid": topic_uuid})
+
+        return self.client.delete(url, data, format="json")
+
+    def delete_subtopic(
+        self, topic_uuid: uuid.UUID, subtopic_uuid: uuid.UUID, data: dict
+    ) -> Response:
+        url = reverse(
+            "conversations-subtopic",
+            kwargs={"topic_uuid": topic_uuid, "subtopic_uuid": subtopic_uuid},
+        )
 
         return self.client.delete(url, data, format="json")
 
@@ -156,6 +166,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_delete_topic_when_unauthenticated(self):
         response = self.delete_topic(uuid.uuid4(), {})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_delete_subtopic_when_unauthenticated(self):
+        response = self.delete_subtopic(uuid.uuid4(), uuid.uuid4(), {})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -724,5 +739,26 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
     @with_project_auth
     def test_delete_topic(self):
         response = self.delete_topic(uuid.uuid4(), {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_cannot_delete_subtopic_without_project_uuid(self):
+        response = self.delete_subtopic(uuid.uuid4(), uuid.uuid4(), {})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_cannot_delete_subtopic_without_project_permission(self):
+        response = self.delete_subtopic(
+            uuid.uuid4(), uuid.uuid4(), {"project_uuid": self.project.uuid}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_delete_subtopic(self):
+        response = self.delete_subtopic(
+            uuid.uuid4(), uuid.uuid4(), {"project_uuid": self.project.uuid}
+        )
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

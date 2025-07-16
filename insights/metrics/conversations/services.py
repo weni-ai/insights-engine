@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID
 import logging
 from sentry_sdk import capture_message
+from rest_framework import status
 
 import pytz
 
@@ -241,7 +242,23 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error fetching topics for project {project_uuid}"
             ) from e
 
-        response_content = response.json()
+        try:
+            response_content = response.json()
+        except Exception as e:
+            logger.error("Error parsing topics for project %s: %s", project_uuid, e)
+            response_content = response.text
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error fetching topics for project %s: %s", project_uuid, response.text
+            )
+            capture_message(
+                "Error fetching topics for project %s: %s", project_uuid, response.text
+            )
+
+            raise ConversationsMetricsError(
+                f"Error fetching topics for project {project_uuid}"
+            )
 
         self._save_cache_for_project_resource(
             project_uuid, ConversationsMetricsResource.TOPICS, response_content
@@ -272,7 +289,23 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error fetching subtopics for project {project_uuid}"
             ) from e
 
-        response_content = response.json()
+        try:
+            response_content = response.json()
+        except Exception as e:
+            logger.error("Error parsing topics for project %s: %s", project_uuid, e)
+            response_content = response.text
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error fetching topics for project %s: %s", project_uuid, response.text
+            )
+            capture_message(
+                "Error fetching topics for project %s: %s", project_uuid, response.text
+            )
+
+            raise ConversationsMetricsError(
+                f"Error fetching topics for project {project_uuid}"
+            )
 
         self._save_cache_for_project_resource(
             project_uuid, ConversationsMetricsResource.SUBTOPICS, response_content
@@ -293,7 +326,23 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error creating topic for project {project_uuid}"
             ) from e
 
-        response_content = response.json()
+        try:
+            response_content = response.json()
+        except Exception as e:
+            logger.error("Error parsing topics for project %s: %s", project_uuid, e)
+            response_content = response.text
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error creating topic for project %s: %s", project_uuid, response.text
+            )
+            capture_message(
+                "Error creating topic for project %s: %s", project_uuid, response.text
+            )
+
+            raise ConversationsMetricsError(
+                f"Error creating topic for project {project_uuid}"
+            )
 
         self._save_cache_for_project_resource(
             project_uuid, ConversationsMetricsResource.TOPICS, response_content
@@ -317,7 +366,27 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error creating subtopic for project {project_uuid}"
             ) from e
 
-        response_content = response.json()
+        try:
+            response_content = response.json()
+        except Exception as e:
+            logger.error("Error parsing topics for project %s: %s", project_uuid, e)
+            response_content = response.text
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error creating subtopic for project %s: %s",
+                project_uuid,
+                response.text,
+            )
+            capture_message(
+                "Error creating subtopic for project %s: %s",
+                project_uuid,
+                response.text,
+            )
+
+            raise ConversationsMetricsError(
+                f"Error creating subtopic for project {project_uuid}"
+            )
 
         self._save_cache_for_project_resource(
             project_uuid, ConversationsMetricsResource.SUBTOPICS, response_content
@@ -339,7 +408,23 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error deleting topic for project {project_uuid}"
             ) from e
 
-        response_content = response.json()
+        try:
+            response_content = response.json()
+        except Exception as e:
+            logger.error("Error parsing topics for project %s: %s", project_uuid, e)
+            response_content = response.text
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error deleting topic for project %s: %s", project_uuid, response.text
+            )
+            capture_message(
+                "Error deleting topic for project %s: %s", project_uuid, response.text
+            )
+
+            raise ConversationsMetricsError(
+                f"Error deleting topic for project {project_uuid}"
+            )
 
         self._save_cache_for_project_resource(
             project_uuid, ConversationsMetricsResource.TOPICS, response_content
@@ -365,8 +450,30 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error deleting subtopic for project {project_uuid}"
             ) from e
 
-        response_content = response.json()
+        try:
+            response_content = response.json()
+        except Exception as e:
+            logger.error("Error parsing topics for project %s: %s", project_uuid, e)
+            response_content = response.text
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error deleting subtopic for project %s: %s",
+                project_uuid,
+                response.text,
+            )
+            capture_message(
+                "Error deleting subtopic for project %s: %s",
+                project_uuid,
+                response.text,
+            )
+
+            raise ConversationsMetricsError(
+                f"Error deleting subtopic for project {project_uuid}"
+            )
 
         self._save_cache_for_project_resource(
             project_uuid, ConversationsMetricsResource.SUBTOPICS, response_content
         )
+
+        return response_content
