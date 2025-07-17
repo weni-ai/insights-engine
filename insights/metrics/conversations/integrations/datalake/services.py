@@ -5,12 +5,8 @@ from datetime import datetime
 from uuid import UUID
 
 from django.conf import settings
-from sentry_sdk import capture_exception
 
-from insights.metrics.conversations.dataclass import (
-    ConversationsTotalsMetric,
-    ConversationsTotalsMetrics,
-)
+
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
