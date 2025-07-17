@@ -35,6 +35,7 @@ class ConversationsMetricsService:
     def get_topics_distribution(
         self, project: "Project", start_date: datetime, end_date: datetime
     ) -> TopicsDistributionMetrics:
+        # TODO: Get active topics and subtopics from Nexus (cached)
         try:
             topics = self.datalake_service.get_topics_distribution(
                 project_uuid=project.uuid,
