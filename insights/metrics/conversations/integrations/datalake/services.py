@@ -2,10 +2,12 @@ from abc import ABC
 import json
 import logging
 from datetime import datetime
+from uuid import UUID
 
 from django.conf import settings
 
 
+from insights.metrics.conversations.dataclass import SubjectsDistributionMetrics
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
@@ -84,3 +86,20 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             logger.warning("Failed to deserialize cached data: %s", e)
 
             return None
+
+    def get_subjects_distribution(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SubjectsDistributionMetrics:
+        """
+        Get subjects distribution from Datalake.
+        """
+        # TODO: Add cache
+
+        results = self.events_client.get_events(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            key="topics",
+        )
+
+        subjects = []
