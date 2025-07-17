@@ -1,16 +1,18 @@
+import uuid
+
 from django.test import TestCase
 
 from insights.metrics.conversations.dataclass import (
-    SubjectGroup,
-    SubjectItem,
-    SubjectsDistributionMetrics,
+    Subtopic,
+    Topic,
+    TopicsDistributionMetrics,
 )
 from insights.projects.models import Project
 from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
-    SubjectItemSerializer,
+    SubtopicSerializer,
+    TopicSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
-    SubjectGroupSerializer,
     TopicsDistributionMetricsSerializer,
 )
 
@@ -115,44 +117,74 @@ class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
 
 
-class TestSubjectItemSerializer(TestCase):
+class TestSubtopicSerializer(TestCase):
     def test_serializer(self):
-        subject = SubjectItem(name="Test Subject", percentage=0.5)
-        serializer = SubjectItemSerializer(subject)
-        self.assertEqual(serializer.data["name"], "Test Subject")
+        subtopic = Subtopic(
+            uuid=uuid.uuid4(),
+            name="Test Subtopic",
+            percentage=0.5,
+        )
+        serializer = SubtopicSerializer(subtopic)
+        self.assertEqual(serializer.data["name"], "Test Subtopic")
         self.assertEqual(serializer.data["percentage"], 0.5)
 
 
-class TestSubjectGroupSerializer(TestCase):
+class TestTopicSerializer(TestCase):
     def test_serializer(self):
-        group = SubjectGroup(
-            name="Test Group",
+        topic = Topic(
+            uuid=uuid.uuid4(),
+            name="Test Topic",
             percentage=0.5,
-            subjects=[SubjectItem(name="Test Subject", percentage=0.5)],
+            subtopics=[
+                Subtopic(
+                    uuid=uuid.uuid4(),
+                    name="Test Subtopic",
+                    percentage=0.5,
+                )
+            ],
         )
-        serializer = SubjectGroupSerializer(group)
-        self.assertEqual(serializer.data["name"], "Test Group")
+        serializer = TopicSerializer(topic)
+        self.assertEqual(serializer.data["uuid"], str(topic.uuid))
+        self.assertEqual(serializer.data["name"], "Test Topic")
         self.assertEqual(serializer.data["percentage"], 0.5)
         self.assertEqual(
-            serializer.data["subjects"],
-            [{"name": "Test Subject", "percentage": 0.5}],
+            [
+                {
+                    "uuid": str(subtopic.uuid),
+                    "name": subtopic.name,
+                    "percentage": subtopic.percentage,
+                }
+                for subtopic in topic.subtopics
+            ],
+            serializer.data["subtopics"],
         )
 
 
 class TestTopicsDistributionMetricsSerializer(TestCase):
     def test_serializer(self):
-        groups = [
-            SubjectGroup(
-                name="Test Group",
+        topics = [
+            Topic(
+                uuid=uuid.uuid4(),
+                name="Test Topic",
                 percentage=0.5,
-                subjects=[SubjectItem(name="Test Subject", percentage=0.5)],
+                subtopics=[
+                    Subtopic(
+                        uuid=uuid.uuid4(),
+                        name="Test Subtopic",
+                        percentage=0.5,
+                    )
+                ],
             )
         ]
-        subjects_distribution_metrics = SubjectsDistributionMetrics(groups=groups)
-        serializer = TopicsDistributionMetricsSerializer(subjects_distribution_metrics)
-        for group_data, group in zip(serializer.data["groups"], groups):
-            self.assertEqual(group_data["name"], group.name)
-            self.assertEqual(group_data["percentage"], group.percentage)
-            for subject_data, subject in zip(group_data["subjects"], group.subjects):
-                self.assertEqual(subject_data["name"], subject.name)
-                self.assertEqual(subject_data["percentage"], subject.percentage)
+        topics_distribution_metrics = TopicsDistributionMetrics(topics=topics)
+        serializer = TopicsDistributionMetricsSerializer(topics_distribution_metrics)
+        for topic_data, topic in zip(serializer.data["topics"], topics):
+            self.assertEqual(topic_data["uuid"], str(topic.uuid))
+            self.assertEqual(topic_data["name"], topic.name)
+            self.assertEqual(topic_data["percentage"], topic.percentage)
+            for subtopic_data, subtopic in zip(
+                topic_data["subtopics"], topic.subtopics
+            ):
+                self.assertEqual(subtopic_data["uuid"], str(subtopic.uuid))
+                self.assertEqual(subtopic_data["name"], subtopic.name)
+                self.assertEqual(subtopic_data["percentage"], subtopic.percentage)

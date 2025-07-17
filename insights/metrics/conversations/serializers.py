@@ -38,32 +38,34 @@ class TopicsDistributionMetricsQueryParamsSerializer(
     ConversationBaseQueryParamsSerializer
 ):
     """
-    Serializer for subjects distribution metrics query params
+    Serializer for topics distribution metrics query params
     """
 
 
-class SubjectItemSerializer(serializers.Serializer):
+class SubtopicSerializer(serializers.Serializer):
     """
-    Serializer for subject item
+    Serializer for subtopic
     """
 
+    uuid = serializers.UUIDField()
     name = serializers.CharField()
     percentage = serializers.FloatField()
 
 
-class SubjectGroupSerializer(serializers.Serializer):
+class TopicSerializer(serializers.Serializer):
     """
-    Serializer for subject group
+    Serializer for topic
     """
 
+    uuid = serializers.UUIDField()
     name = serializers.CharField()
     percentage = serializers.FloatField()
-    subjects = SubjectItemSerializer(many=True)
+    subtopics = SubtopicSerializer(many=True)
 
 
 class TopicsDistributionMetricsSerializer(serializers.Serializer):
     """
-    Serializer for subjects distribution metrics
+    Serializer for topics distribution metrics
     """
 
-    groups = SubjectGroupSerializer(many=True)
+    topics = TopicSerializer(many=True)

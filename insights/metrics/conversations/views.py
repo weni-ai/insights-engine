@@ -31,7 +31,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
     )
     def topics_distribution(self, request: Request) -> Response:
         """
-        Get subjects distribution
+        Get topics distribution
         """
         serializer = TopicsDistributionMetricsQueryParamsSerializer(
             data=request.query_params

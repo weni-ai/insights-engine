@@ -4,13 +4,28 @@ from rest_framework.response import Response
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
-from insights.metrics.conversations.tests.mock import (
-    CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA,
+from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
+    MockConversationsMetricsService,
 )
+from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.views import ConversationsMetricsViewSet
 from insights.projects.models import Project
 
 
 class BaseTestConversationsMetricsViewSet(APITestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.original_service = ConversationsMetricsViewSet.service
+        ConversationsMetricsViewSet.service = ConversationsMetricsService(
+            datalake_service=MockConversationsMetricsService(),
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        ConversationsMetricsViewSet.service = cls.original_service
+
     def get_topics_distribution(self, query_params: dict) -> Response:
         url = "/v1/metrics/conversations/topics-distribution/"
 
@@ -73,13 +88,13 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        for group_data, group in zip(
-            response.data["groups"],
-            CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA.get("groups"),
-        ):
-            self.assertEqual(group_data["name"], group["name"])
-            self.assertEqual(group_data["percentage"], group["percentage"])
-
-            for subject_data, subject in zip(group_data["topics"], group["topics"]):
-                self.assertEqual(subject_data["name"], subject["name"])
-                self.assertEqual(subject_data["percentage"], subject["percentage"])
+        self.assertIn("topics", response.data)
+        self.assertEqual(len(response.data["topics"]), 1)
+        self.assertIn("uuid", response.data["topics"][0])
+        self.assertIn("name", response.data["topics"][0])
+        self.assertIn("percentage", response.data["topics"][0])
+        self.assertIn("subtopics", response.data["topics"][0])
+        self.assertEqual(len(response.data["topics"][0]["subtopics"]), 1)
+        self.assertIn("uuid", response.data["topics"][0]["subtopics"][0])
+        self.assertIn("name", response.data["topics"][0]["subtopics"][0])
+        self.assertIn("percentage", response.data["topics"][0]["subtopics"][0])

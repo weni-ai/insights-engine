@@ -101,7 +101,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> TopicsDistributionMetrics:
         """
-        Get subjects distribution from Datalake.
+        Get topics distribution from Datalake.
         """
         # TODO: Add cache
 
@@ -119,10 +119,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             raise e
 
         topics_data = {"OTHER": 0}
-        total_subjects_count = 0
+        total_topics_count = 0
 
         for event in events:
-            total_subjects_count += 1
+            total_topics_count += 1
             metadata = event.get("metadata")
 
             if isinstance(metadata, str):
@@ -154,7 +154,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topic = Topic(
                 uuid=topic_uuid,
                 name=topic_name,
-                percentage=topic_data["count"] / total_subjects_count,
+                percentage=topic_data["count"] / total_topics_count,
                 subtopics=[
                     Subtopic(
                         uuid=subtopic_uuid,
