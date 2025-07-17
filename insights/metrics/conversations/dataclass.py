@@ -19,7 +19,7 @@ class Topic:
 
     name: str
     percentage: float
-    topics: list[Subtopic]
+    subtopics: list[Subtopic]
 
 
 @dataclass(frozen=True)

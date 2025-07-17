@@ -5,9 +5,13 @@ from datetime import datetime
 from uuid import UUID
 
 from django.conf import settings
+from sentry_sdk import capture_exception
 
-
-from insights.metrics.conversations.dataclass import SubjectsDistributionMetrics
+from insights.metrics.conversations.dataclass import (
+    Subtopic,
+    Topic,
+    TopicsDistributionMetrics,
+)
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
@@ -89,14 +93,14 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
     def get_topics_distribution(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
-    ) -> SubjectsDistributionMetrics:
+    ) -> TopicsDistributionMetrics:
         """
         Get subjects distribution from Datalake.
         """
         # TODO: Add cache
 
         try:
-            results = self.events_client.get_events(
+            events = self.events_client.get_events(
                 project_uuid=project_uuid,
                 start_date=start_date,
                 end_date=end_date,
@@ -104,7 +108,54 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             )
         except Exception as e:
             logger.error("Failed to get topics distribution from Datalake: %s", e)
+            capture_exception(e)
 
-            return None
+            raise e
+
+        topics_data = {"OTHER": 0}
+        total_subjects_count = 0
+
+        for event in events:
+            total_subjects_count += 1
+            metadata = event.get("metadata")
+
+            if isinstance(metadata, str):
+                metadata = json.loads(metadata)
+
+            topic_uuid = metadata.get("topic_uuid")
+            topic_name = metadata.get("value")
+
+            if not topic_uuid:
+                topics_data["OTHER"] += 1
+                continue
+
+            if topic_uuid not in topics_data:
+                topics_data[topic_uuid] = {"subtopics": {}, "count": 0}
+
+            subtopic_uuid = metadata.get("subtopic_uuid")
+            subtopic_name = metadata.get("subtopic")
+
+            if subtopic_uuid:
+                topics_data[topic_uuid]["count"] += 1
+                if subtopic_uuid not in topics_data[topic_uuid]["subtopics"]:
+                    topics_data[topic_uuid]["subtopics"][subtopic_uuid] = 0
+
+                topics_data[topic_uuid]["subtopics"][subtopic_uuid] += 1
 
         topics = []
+
+        for topic_uuid, topic_data in topics_data.items():
+            topic = Topic(
+                name=topic_name,
+                percentage=topic_data["count"] / total_subjects_count,
+                subtopics=[
+                    Subtopic(
+                        name=subtopic_name,
+                        percentage=subtopic_data["count"] / topic_data["count"],
+                    )
+                    for subtopic_uuid, subtopic_data in topic_data["subtopics"].items()
+                ],
+            )
+            topics.append(topic)
+
+        return TopicsDistributionMetrics(topics=topics)
