@@ -136,49 +136,65 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 logger.warning(f"Cache retrieval failed: {e}")
 
         try:
-            events = self.events_client.get_events(
+            resolved_events_count = self.events_client.get_events_count(
                 project=project_uuid,
                 date_start=start_date,
                 date_end=end_date,
                 event_name=self.event_name,
                 key="conversation_classification",
-            )
+                value="resolved",
+            ).get("count", 0)
+            unresolved_events_count = self.events_client.get_events_count(
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name=self.event_name,
+                key="conversation_classification",
+                value="unresolved",
+            ).get("count", 0)
+            abandoned_events_count = self.events_client.get_events_count(
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name=self.event_name,
+                key="conversation_classification",
+                value="abandoned",
+            ).get("count", 0)
         except Exception as e:
             capture_exception(e)
             logger.error(e)
 
             raise e
 
-        if not events:
-            metric = ConversationsTotalsMetric(value=0, percentage=0)
-
-            return ConversationsTotalsMetrics(
-                total_conversations=metric, resolved=metric, unresolved=metric
-            )
-
-        total_conversations = 0
-        resolved = 0
-        unresolved = 0
-
-        for event in events:
-            value = event.get("value")
-            total_conversations += 1
-            if value in ("resolved", '"resolved"'):
-                resolved += 1
-            elif value in ("unresolved", '"unresolved"'):
-                unresolved += 1
+        total_conversations = (
+            resolved_events_count + unresolved_events_count + abandoned_events_count
+        )
 
         percentage_resolved = (
-            100 * resolved / total_conversations if total_conversations > 0 else 0
+            100 * resolved_events_count / total_conversations
+            if total_conversations > 0
+            else 0
         )
         percentage_unresolved = (
-            100 * unresolved / total_conversations if total_conversations > 0 else 0
+            100 * unresolved_events_count / total_conversations
+            if total_conversations > 0
+            else 0
         )
+        percentage_abandoned = (
+            100 * abandoned_events_count / total_conversations
+            if total_conversations > 0
+            else 0
+        )
+
+        # Round percentages to 2 decimal places
         percentage_resolved = (
             round(percentage_resolved, 2) if percentage_resolved > 0 else 0
         )
         percentage_unresolved = (
             round(percentage_unresolved, 2) if percentage_unresolved > 0 else 0
+        )
+        percentage_abandoned = (
+            round(percentage_abandoned, 2) if percentage_abandoned > 0 else 0
         )
 
         results = ConversationsTotalsMetrics(
@@ -186,10 +202,13 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 value=total_conversations, percentage=100
             ),
             resolved=ConversationsTotalsMetric(
-                value=resolved, percentage=percentage_resolved
+                value=resolved_events_count, percentage=percentage_resolved
             ),
             unresolved=ConversationsTotalsMetric(
-                value=unresolved, percentage=percentage_unresolved
+                value=unresolved_events_count, percentage=percentage_unresolved
+            ),
+            abandoned=ConversationsTotalsMetric(
+                value=abandoned_events_count, percentage=percentage_abandoned
             ),
         )
 

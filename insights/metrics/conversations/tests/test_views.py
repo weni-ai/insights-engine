@@ -70,6 +70,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             total_conversations=ConversationsTotalsMetric(value=100, percentage=100),
             resolved=ConversationsTotalsMetric(value=60, percentage=60),
             unresolved=ConversationsTotalsMetric(value=40, percentage=40),
+            abandoned=ConversationsTotalsMetric(value=0, percentage=0),
         )
 
         response = self.get_totals(
