@@ -22,6 +22,7 @@ class ConversationsTotalsMetrics:
     total_conversations: ConversationsTotalsMetric
     resolved: ConversationsTotalsMetric
     unresolved: ConversationsTotalsMetric
+    abandoned: ConversationsTotalsMetric
 
 
 @dataclass(frozen=True)

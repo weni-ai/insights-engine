@@ -13,6 +13,12 @@ class BaseDataLakeEventsClient(ABC):
         Get events from the DataLakeEvents source.
         """
 
+    @abstractmethod
+    def get_events_count(self, **query_kwargs) -> dict:
+        """
+        Get the count of events from the DataLakeEvents source.
+        """
+
 
 class DataLakeEventsClient(BaseDataLakeEventsClient):
     """
