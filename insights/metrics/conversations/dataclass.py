@@ -2,9 +2,9 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class SubjectItem:
+class Subtopic:
     """
-    A subject.
+    A subtopic.
     """
 
     name: str
@@ -12,20 +12,20 @@ class SubjectItem:
 
 
 @dataclass(frozen=True)
-class SubjectGroup:
+class Topic:
     """
-    A group of subjects.
+    A topics, that consists of subtopics.
     """
 
     name: str
     percentage: float
-    subjects: list[SubjectItem]
+    topics: list[Subtopic]
 
 
 @dataclass(frozen=True)
-class SubjectsDistributionMetrics:
+class TopicsDistributionMetrics:
     """
-    Metrics for the distribution of subjects in a conversation.
+    Metrics for the distribution of topics in a conversation.
     """
 
-    groups: list[SubjectGroup]
+    topics: list[Topic]

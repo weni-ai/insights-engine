@@ -11,8 +11,8 @@ from insights.projects.models import Project
 
 
 class BaseTestConversationsMetricsViewSet(APITestCase):
-    def get_subjects_distribution(self, query_params: dict) -> Response:
-        url = "/v1/metrics/conversations/subjects-distribution/"
+    def get_topics_distribution(self, query_params: dict) -> Response:
+        url = "/v1/metrics/conversations/topics-distribution/"
 
         return self.client.get(url, query_params)
 
@@ -20,8 +20,8 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
 ):
-    def test_cannot_get_subjects_distribution_when_unauthenticated(self):
-        response = self.get_subjects_distribution({})
+    def test_cannot_get_topics_distribution_when_unauthenticated(self):
+        response = self.get_topics_distribution({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -35,22 +35,22 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
 
         self.client.force_authenticate(self.user)
 
-    def test_cannot_get_subjects_distribution_without_project_uuid(self):
-        response = self.get_subjects_distribution({})
+    def test_cannot_get_topics_distribution_without_project_uuid(self):
+        response = self.get_topics_distribution({})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data["project_uuid"][0].code,
             "required",
         )
 
-    def test_cannot_get_subjects_distribution_without_permission(self):
-        response = self.get_subjects_distribution({"project_uuid": self.project.uuid})
+    def test_cannot_get_topics_distribution_without_permission(self):
+        response = self.get_topics_distribution({"project_uuid": self.project.uuid})
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @with_project_auth
-    def test_cannot_get_subjects_distribution_without_required_fields(self):
-        response = self.get_subjects_distribution({"project_uuid": self.project.uuid})
+    def test_cannot_get_topics_distribution_without_required_fields(self):
+        response = self.get_topics_distribution({"project_uuid": self.project.uuid})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
@@ -63,8 +63,8 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
     @with_project_auth
-    def test_get_subjects_distribution(self):
-        response = self.get_subjects_distribution(
+    def test_get_topics_distribution(self):
+        response = self.get_topics_distribution(
             {
                 "project_uuid": self.project.uuid,
                 "start_date": "2021-01-01",
@@ -79,6 +79,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         ):
             self.assertEqual(group_data["name"], group["name"])
             self.assertEqual(group_data["percentage"], group["percentage"])
-            for subject_data, subject in zip(group_data["subjects"], group["subjects"]):
+            for subject_data, subject in zip(group_data["topics"], group["topics"]):
                 self.assertEqual(subject_data["name"], subject["name"])
                 self.assertEqual(subject_data["percentage"], subject["percentage"])

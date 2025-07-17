@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from insights.metrics.conversations.dataclass import (
     SubjectGroup,
     SubjectItem,
-    SubjectsDistributionMetrics,
+    TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA,
@@ -21,9 +21,9 @@ class ConversationsMetricsService:
     """
 
     @classmethod
-    def get_subjects_distribution(
+    def get_topics_distribution(
         cls, project: "Project", start_date: datetime, end_date: datetime
-    ) -> SubjectsDistributionMetrics:
+    ) -> TopicsDistributionMetrics:
         # Mock data for now
         groups = []
         for group in CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA["groups"]:
@@ -39,4 +39,4 @@ class ConversationsMetricsService:
                     subjects=subjects,
                 )
             )
-        return SubjectsDistributionMetrics(groups=groups)
+        return TopicsDistributionMetrics(groups=groups)

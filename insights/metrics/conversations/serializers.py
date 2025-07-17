@@ -34,7 +34,7 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         return attrs
 
 
-class SubjectsDistributionMetricsQueryParamsSerializer(
+class TopicsDistributionMetricsQueryParamsSerializer(
     ConversationBaseQueryParamsSerializer
 ):
     """

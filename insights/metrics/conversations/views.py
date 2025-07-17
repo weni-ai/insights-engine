@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.serializers import (
-    SubjectsDistributionMetricsQueryParamsSerializer,
+    TopicsDistributionMetricsQueryParamsSerializer,
     SubjectsDistributionMetricsSerializer,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
@@ -24,15 +24,15 @@ class ConversationsMetricsViewSet(GenericViewSet):
     @action(
         detail=False,
         methods=["get"],
-        url_path="subjects-distribution",
-        url_name="subjects-distribution",
+        url_path="topics-distribution",
+        url_name="topics-distribution",
         serializer_class=SubjectsDistributionMetricsSerializer,
     )
-    def subjects_distribution(self, request: Request) -> Response:
+    def topics_distribution(self, request: Request) -> Response:
         """
         Get subjects distribution
         """
-        serializer = SubjectsDistributionMetricsQueryParamsSerializer(
+        serializer = TopicsDistributionMetricsQueryParamsSerializer(
             data=request.query_params
         )
         if not serializer.is_valid():
@@ -40,7 +40,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        metrics = self.service.get_subjects_distribution(
+        metrics = self.service.get_topics_distribution(
             serializer.validated_data["project"],
             serializer.validated_data["start_date"],
             serializer.validated_data["end_date"],

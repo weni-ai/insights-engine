@@ -87,7 +87,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             return None
 
-    def get_subjects_distribution(
+    def get_topics_distribution(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SubjectsDistributionMetrics:
         """
@@ -95,11 +95,16 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         """
         # TODO: Add cache
 
-        results = self.events_client.get_events(
-            project_uuid=project_uuid,
-            start_date=start_date,
-            end_date=end_date,
-            key="topics",
-        )
+        try:
+            results = self.events_client.get_events(
+                project_uuid=project_uuid,
+                start_date=start_date,
+                end_date=end_date,
+                key="topics",
+            )
+        except Exception as e:
+            logger.error("Failed to get topics distribution from Datalake: %s", e)
 
-        subjects = []
+            return None
+
+        topics = []

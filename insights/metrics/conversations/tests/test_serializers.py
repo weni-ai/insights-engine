@@ -9,7 +9,7 @@ from insights.projects.models import Project
 from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
     SubjectItemSerializer,
-    SubjectsDistributionMetricsQueryParamsSerializer,
+    TopicsDistributionMetricsQueryParamsSerializer,
     SubjectGroupSerializer,
     SubjectsDistributionMetricsSerializer,
 )
@@ -65,14 +65,14 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
 
 
-class TestSubjectsDistributionMetricsQueryParamsSerializer(TestCase):
+class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
     def setUp(self):
         self.project = Project.objects.create(
             name="Test Project",
         )
 
     def test_serializer(self):
-        serializer = SubjectsDistributionMetricsQueryParamsSerializer(
+        serializer = TopicsDistributionMetricsQueryParamsSerializer(
             data={
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
@@ -89,7 +89,7 @@ class TestSubjectsDistributionMetricsQueryParamsSerializer(TestCase):
         self.assertEqual(str(serializer.validated_data["end_date"]), "2021-01-02")
 
     def test_serializer_invalid_start_date(self):
-        serializer = SubjectsDistributionMetricsQueryParamsSerializer(
+        serializer = TopicsDistributionMetricsQueryParamsSerializer(
             data={
                 "start_date": "2021-01-02",
                 "end_date": "2021-01-01",
@@ -103,7 +103,7 @@ class TestSubjectsDistributionMetricsQueryParamsSerializer(TestCase):
         )
 
     def test_serializer_invalid_project_uuid(self):
-        serializer = SubjectsDistributionMetricsQueryParamsSerializer(
+        serializer = TopicsDistributionMetricsQueryParamsSerializer(
             data={
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
