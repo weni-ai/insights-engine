@@ -32,3 +32,31 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         attrs["project"] = project
 
         return attrs
+
+
+class ConversationsTotalsMetricSerializer(serializers.Serializer):
+    """
+    Serializer for conversation totals metrics by type
+    """
+
+    value = serializers.IntegerField()
+    percentage = serializers.FloatField()
+
+
+class ConversationTotalsMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for conversation totals metrics
+    """
+
+    total_conversations = ConversationsTotalsMetricSerializer()
+    resolved = ConversationsTotalsMetricSerializer()
+    unresolved = ConversationsTotalsMetricSerializer()
+    abandoned = ConversationsTotalsMetricSerializer()
+
+
+class ConversationTotalsMetricsQueryParamsSerializer(
+    ConversationBaseQueryParamsSerializer
+):
+    """
+    Serializer for conversation totals metrics query params
+    """
