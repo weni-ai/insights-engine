@@ -1,6 +1,11 @@
+import logging
 from datetime import date, datetime
+
 import pytz
+
 from insights.authentication.authentication import FlowsInternalAuthentication
+
+logger = logging.getLogger(__name__)
 
 
 def format_to_iso_utc(date_str, end_of_day=False):
@@ -17,6 +22,9 @@ def format_to_iso_utc(date_str, end_of_day=False):
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     except ValueError:
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error in date formatting: {e}")
         return None
 
 
