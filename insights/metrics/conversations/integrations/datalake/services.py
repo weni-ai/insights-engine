@@ -10,6 +10,7 @@ from sentry_sdk import capture_exception
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
+    TopicsDistributionMetrics,
 )
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
@@ -36,6 +37,11 @@ class BaseConversationsMetricsService(ABC):
         """
         Get conversations totals from Datalake.
         """
+
+    def get_topics_distribution(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> TopicsDistributionMetrics:
+        pass
 
 
 class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
@@ -76,9 +82,31 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             serialized_value = json.dumps(value, default=str)
             self.cache_client.set(key, serialized_value, ex=self.cache_ttl)
         except Exception as e:
-            logger.warning(f"Failed to save results to cache: {e}")
+            logger.warning("Failed to save results to cache: %s", e)
 
-    def _get_results_from_cache(self, key: str) -> ConversationsTotalsMetrics:
+    def _get_cached_results(self, key: str) -> dict:
+        """
+        Get results from cache with JSON deserialization.
+        """
+        try:
+            cached_data = self.cache_client.get(key)
+            if cached_data:
+                # Handle both string and bytes from Redis
+                if isinstance(cached_data, bytes):
+                    cached_data = cached_data.decode("utf-8")
+
+                # Parse the JSON data and reconstruct the objects
+                data = json.loads(cached_data)
+                return data
+            return None
+        except (json.JSONDecodeError, AttributeError, KeyError, TypeError) as e:
+            logger.warning("Failed to deserialize cached data: %s", e)
+
+            return None
+
+    def _get_conversations_totals_cached_results(
+        self, key: str
+    ) -> ConversationsTotalsMetrics:
         """
         Get results from cache with JSON deserialization.
         """
@@ -123,7 +151,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         if self.cache_results:
             try:
-                cached_results = self._get_results_from_cache(
+                cached_results = self._get_conversations_totals_cached_results(
                     key=self._get_cache_key(
                         project_uuid=project_uuid,
                         start_date=start_date,

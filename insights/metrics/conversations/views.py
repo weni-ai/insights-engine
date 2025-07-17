@@ -10,6 +10,8 @@ from rest_framework.exceptions import PermissionDenied
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
+    TopicsDistributionMetricsQueryParamsSerializer,
+    TopicsDistributionMetricsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
     ConversationTotalsMetricsSerializer,
     ConversationsSubjectsMetricsQueryParamsSerializer,
@@ -22,8 +24,6 @@ from insights.metrics.conversations.serializers import (
     NPSSerializer,
     RoomsByQueueMetricQueryParamsSerializer,
     RoomsByQueueMetricSerializer,
-    SubjectsDistributionMetricsQueryParamsSerializer,
-    SubjectsDistributionMetricsSerializer,
     SubjectsMetricsSerializer,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
@@ -136,15 +136,15 @@ class ConversationsMetricsViewSet(GenericViewSet):
     @action(
         detail=False,
         methods=["get"],
-        url_path="subjects-distribution",
-        url_name="subjects-distribution",
-        serializer_class=SubjectsDistributionMetricsSerializer,
+        url_path="topics-distribution",
+        url_name="topics-distribution",
+        serializer_class=TopicsDistributionMetricsSerializer,
     )
-    def subjects_distribution(self, request: Request) -> Response:
+    def topics_distribution(self, request: Request) -> Response:
         """
-        Get subjects distribution
+        Get topics distribution
         """
-        serializer = SubjectsDistributionMetricsQueryParamsSerializer(
+        serializer = TopicsDistributionMetricsQueryParamsSerializer(
             data=request.query_params
         )
         if not serializer.is_valid():
@@ -152,13 +152,20 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        metrics = self.service.get_subjects_distribution(
-            serializer.validated_data["project"],
-            serializer.validated_data["start_date"],
-            serializer.validated_data["end_date"],
-        )
+        try:
+            metrics = self.service.get_topics_distribution(
+                serializer.validated_data["project"],
+                serializer.validated_data["start_date"],
+                serializer.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         return Response(
-            SubjectsDistributionMetricsSerializer(metrics).data,
+            TopicsDistributionMetricsSerializer(metrics).data,
             status=status.HTTP_200_OK,
         )
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 
 from insights.metrics.conversations.enums import ConversationsTimeseriesUnit
 
@@ -87,33 +88,35 @@ class RoomsByQueueMetric:
 
 
 @dataclass(frozen=True)
-class SubjectItem:
+class Subtopic:
     """
-    A subject.
+    A subtopic.
     """
 
+    uuid: UUID
     name: str
     percentage: float
 
 
 @dataclass(frozen=True)
-class SubjectGroup:
+class Topic:
     """
-    A group of subjects.
+    A topics, that consists of subtopics.
     """
 
+    uuid: UUID
     name: str
     percentage: float
-    subjects: list[SubjectItem]
+    subtopics: list[Subtopic]
 
 
 @dataclass(frozen=True)
-class SubjectsDistributionMetrics:
+class TopicsDistributionMetrics:
     """
-    Metrics for the distribution of subjects in a conversation.
+    Metrics for the distribution of topics in a conversation.
     """
 
-    groups: list[SubjectGroup]
+    topics: list[Topic]
 
 
 @dataclass

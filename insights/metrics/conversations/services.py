@@ -9,17 +9,18 @@ from rest_framework import status
 
 import pytz
 
+
+from sentry_sdk import capture_exception
+
 from insights.metrics.conversations.dataclass import (
     NPS,
     QueueMetric,
     RoomsByQueueMetric,
     ConversationsTotalsMetrics,
     ConversationsTimeseriesMetrics,
-    SubjectGroup,
-    SubjectItem,
     SubjectMetricData,
-    SubjectsDistributionMetrics,
     SubjectsMetrics,
+    TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import (
     ConversationsMetricsResource,
@@ -45,6 +46,8 @@ from insights.sources.integrations.clients import NexusClient
 
 logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from datetime import date
     from insights.projects.models import Project
@@ -57,12 +60,12 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
     def __init__(
         self,
-        datalake_client: BaseConversationsMetricsService = DatalakeConversationsMetricsService(),
+        datalake_service: BaseConversationsMetricsService = DatalakeConversationsMetricsService(),
         nexus_client: NexusClient = NexusClient(),
         cache_client: CacheClient = CacheClient(),
         nexus_cache_ttl: int = 60,
     ):
-        self.datalake_client = datalake_client
+        self.datalake_service = datalake_service
         self.nexus_client = nexus_client
         self.cache_client = cache_client
         self.nexus_cache_ttl = nexus_cache_ttl
@@ -74,7 +77,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         Get conversations metrics totals
         """
 
-        return self.datalake_client.get_conversations_totals(
+        return self.datalake_service.get_conversations_totals(
             project_uuid=project.uuid,
             start_date=start_date,
             end_date=end_date,
@@ -186,27 +189,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             has_more = True
 
         return RoomsByQueueMetric(queues=queues_metrics, has_more=has_more)
-
-    @classmethod
-    def get_subjects_distribution(
-        cls, project: "Project", start_date: datetime, end_date: datetime
-    ) -> SubjectsDistributionMetrics:
-        # Mock data for now
-        groups = []
-        for group in CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA["groups"]:
-            subjects = []
-            for subject in group["subjects"]:
-                subjects.append(
-                    SubjectItem(name=subject["name"], percentage=subject["percentage"])
-                )
-            groups.append(
-                SubjectGroup(
-                    name=group["name"],
-                    percentage=group["percentage"],
-                    subjects=subjects,
-                )
-            )
-        return SubjectsDistributionMetrics(groups=groups)
 
     @classmethod
     def get_nps(
@@ -471,3 +453,22 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         return response_content
+
+    def get_topics_distribution(
+        self, project: "Project", start_date: datetime, end_date: datetime
+    ) -> TopicsDistributionMetrics:
+        try:
+            topics = self.datalake_service.get_topics_distribution(
+                project_uuid=project.uuid,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        except Exception as e:
+            logger.error("Failed to get topics distribution: %s", e)
+            event_id = capture_exception(e)
+
+            raise ConversationsMetricsError(
+                f"Failed to get topics distribution. Event ID: {event_id}"
+            ) from e
+
+        return topics

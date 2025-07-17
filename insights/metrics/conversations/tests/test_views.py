@@ -14,6 +14,9 @@ from insights.metrics.conversations.enums import (
     NPSType,
 )
 from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
+from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
+    MockConversationsMetricsService,
+)
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA,
@@ -37,6 +40,7 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         cls.original_service = ConversationsMetricsViewSet.service
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
             nexus_client=MockNexusClient(),
+            datalake_service=MockConversationsMetricsService(),
         )
 
     @classmethod
@@ -61,11 +65,6 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
     def get_queues_metrics(self, query_params: dict) -> Response:
         url = "/v1/metrics/conversations/queues/"
-
-        return self.client.get(url, query_params)
-
-    def get_subjects_distribution(self, query_params: dict) -> Response:
-        url = "/v1/metrics/conversations/subjects-distribution/"
 
         return self.client.get(url, query_params)
 
@@ -109,6 +108,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.delete(url, data, format="json")
 
+    def get_topics_distribution(self, query_params: dict) -> Response:
+        url = "/v1/metrics/conversations/topics-distribution/"
+
+        return self.client.get(url, query_params)
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -130,11 +134,6 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_queue_metrics_when_unauthenticated(self):
         response = self.get_queues_metrics({})
-
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_cannot_get_subjects_distribution_when_unauthenticated(self):
-        response = self.get_subjects_distribution({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -170,6 +169,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_delete_subtopic_when_unauthenticated(self):
         response = self.delete_subtopic(uuid.uuid4(), uuid.uuid4(), {})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_topics_distribution_when_unauthenticated(self):
+        response = self.get_topics_distribution({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -568,22 +572,14 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
         self.assertEqual(response.data["has_more"], True)
 
-    def test_cannot_get_subjects_distribution_without_project_uuid(self):
-        response = self.get_subjects_distribution({})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data["project_uuid"][0].code,
-            "required",
-        )
-
-    def test_cannot_get_subjects_distribution_without_permission(self):
-        response = self.get_subjects_distribution({"project_uuid": self.project.uuid})
+    def test_cannot_get_topics_distribution_without_permission(self):
+        response = self.get_topics_distribution({"project_uuid": self.project.uuid})
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @with_project_auth
-    def test_cannot_get_subjects_distribution_without_required_fields(self):
-        response = self.get_subjects_distribution({"project_uuid": self.project.uuid})
+    def test_cannot_get_topics_distribution_without_required_fields(self):
+        response = self.get_topics_distribution({"project_uuid": self.project.uuid})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
@@ -594,28 +590,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             response.data["end_date"][0].code,
             "required",
         )
-
-    @with_project_auth
-    def test_get_subjects_distribution(self):
-        response = self.get_subjects_distribution(
-            {
-                "project_uuid": self.project.uuid,
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-            }
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        for group_data, group in zip(
-            response.data["groups"],
-            CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA.get("groups"),
-        ):
-            self.assertEqual(group_data["name"], group["name"])
-            self.assertEqual(group_data["percentage"], group["percentage"])
-            for subject_data, subject in zip(group_data["subjects"], group["subjects"]):
-                self.assertEqual(subject_data["name"], subject["name"])
-                self.assertEqual(subject_data["percentage"], subject["percentage"])
 
     def test_cannot_get_nps_without_project_uuid(self):
         response = self.get_nps({})
@@ -791,3 +765,32 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_cannot_get_topics_distribution_without_project_uuid(self):
+        response = self.get_topics_distribution({})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["project_uuid"][0].code,
+            "required",
+        )
+
+    @with_project_auth
+    def test_get_topics_distribution(self):
+        response = self.get_topics_distribution(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+            }
+        )
+
+        self.assertIn("topics", response.data)
+        self.assertEqual(len(response.data["topics"]), 1)
+        self.assertIn("uuid", response.data["topics"][0])
+        self.assertIn("name", response.data["topics"][0])
+        self.assertIn("percentage", response.data["topics"][0])
+        self.assertIn("subtopics", response.data["topics"][0])
+        self.assertEqual(len(response.data["topics"][0]["subtopics"]), 1)
+        self.assertIn("uuid", response.data["topics"][0]["subtopics"][0])
+        self.assertIn("name", response.data["topics"][0]["subtopics"][0])
+        self.assertIn("percentage", response.data["topics"][0]["subtopics"][0])
