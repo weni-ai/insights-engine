@@ -61,7 +61,7 @@ class SubjectGroupSerializer(serializers.Serializer):
     subjects = SubjectItemSerializer(many=True)
 
 
-class SubjectsDistributionMetricsSerializer(serializers.Serializer):
+class TopicsDistributionMetricsSerializer(serializers.Serializer):
     """
     Serializer for subjects distribution metrics
     """

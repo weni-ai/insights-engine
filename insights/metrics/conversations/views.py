@@ -6,9 +6,10 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
     TopicsDistributionMetricsQueryParamsSerializer,
-    SubjectsDistributionMetricsSerializer,
+    TopicsDistributionMetricsSerializer,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 
@@ -26,7 +27,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         methods=["get"],
         url_path="topics-distribution",
         url_name="topics-distribution",
-        serializer_class=SubjectsDistributionMetricsSerializer,
+        serializer_class=TopicsDistributionMetricsSerializer,
     )
     def topics_distribution(self, request: Request) -> Response:
         """
@@ -40,12 +41,19 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        metrics = self.service.get_topics_distribution(
-            serializer.validated_data["project"],
-            serializer.validated_data["start_date"],
-            serializer.validated_data["end_date"],
-        )
+        try:
+            metrics = self.service.get_topics_distribution(
+                serializer.validated_data["project"],
+                serializer.validated_data["start_date"],
+                serializer.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         return Response(
-            SubjectsDistributionMetricsSerializer(metrics).data,
+            TopicsDistributionMetricsSerializer(metrics).data,
             status=status.HTTP_200_OK,
         )

@@ -11,7 +11,7 @@ from insights.metrics.conversations.serializers import (
     SubjectItemSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
     SubjectGroupSerializer,
-    SubjectsDistributionMetricsSerializer,
+    TopicsDistributionMetricsSerializer,
 )
 
 
@@ -139,7 +139,7 @@ class TestSubjectGroupSerializer(TestCase):
         )
 
 
-class TestSubjectsDistributionMetricsSerializer(TestCase):
+class TestTopicsDistributionMetricsSerializer(TestCase):
     def test_serializer(self):
         groups = [
             SubjectGroup(
@@ -149,9 +149,7 @@ class TestSubjectsDistributionMetricsSerializer(TestCase):
             )
         ]
         subjects_distribution_metrics = SubjectsDistributionMetrics(groups=groups)
-        serializer = SubjectsDistributionMetricsSerializer(
-            subjects_distribution_metrics
-        )
+        serializer = TopicsDistributionMetricsSerializer(subjects_distribution_metrics)
         for group_data, group in zip(serializer.data["groups"], groups):
             self.assertEqual(group_data["name"], group.name)
             self.assertEqual(group_data["percentage"], group.percentage)

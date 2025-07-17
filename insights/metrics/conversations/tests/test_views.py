@@ -79,6 +79,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         ):
             self.assertEqual(group_data["name"], group["name"])
             self.assertEqual(group_data["percentage"], group["percentage"])
+
             for subject_data, subject in zip(group_data["topics"], group["topics"]):
                 self.assertEqual(subject_data["name"], subject["name"])
                 self.assertEqual(subject_data["percentage"], subject["percentage"])
