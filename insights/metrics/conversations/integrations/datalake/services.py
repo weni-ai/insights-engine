@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 import json
 import logging
 from datetime import datetime
@@ -29,6 +29,12 @@ class BaseConversationsMetricsService(ABC):
     """
     Base class for conversations metrics services.
     """
+
+    @abstractmethod
+    def get_topics_distribution(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> TopicsDistributionMetrics:
+        pass
 
 
 class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
@@ -146,10 +152,12 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         for topic_uuid, topic_data in topics_data.items():
             topic = Topic(
+                uuid=topic_uuid,
                 name=topic_name,
                 percentage=topic_data["count"] / total_subjects_count,
                 subtopics=[
                     Subtopic(
+                        uuid=subtopic_uuid,
                         name=subtopic_name,
                         percentage=subtopic_data["count"] / topic_data["count"],
                     )

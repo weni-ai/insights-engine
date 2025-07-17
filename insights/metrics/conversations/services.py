@@ -28,16 +28,16 @@ class ConversationsMetricsService:
 
     def __init__(
         self,
-        datalake_client: BaseConversationsMetricsService = DatalakeConversationsMetricsService(),
+        datalake_service: BaseConversationsMetricsService = DatalakeConversationsMetricsService(),
     ):
-        self.datalake_client = datalake_client
+        self.datalake_service = datalake_service
 
     def get_topics_distribution(
         self, project: "Project", start_date: datetime, end_date: datetime
     ) -> TopicsDistributionMetrics:
         try:
-            topics = self.datalake_client.get_topics_distribution(
-                project=project.uuid,
+            topics = self.datalake_service.get_topics_distribution(
+                project_uuid=project.uuid,
                 start_date=start_date,
                 end_date=end_date,
             )

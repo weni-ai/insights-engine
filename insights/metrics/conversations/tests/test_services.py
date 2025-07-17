@@ -2,12 +2,17 @@ from datetime import datetime
 from django.test import TestCase
 
 from insights.metrics.conversations.dataclass import TopicsDistributionMetrics
+from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
+    MockConversationsMetricsService,
+)
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import Project
 
 
 class TestConversationsMetricsService(TestCase):
-    service = ConversationsMetricsService()
+    service = ConversationsMetricsService(
+        datalake_service=MockConversationsMetricsService()
+    )
 
     def test_get_topics_distribution(self):
         project = Project.objects.create(
