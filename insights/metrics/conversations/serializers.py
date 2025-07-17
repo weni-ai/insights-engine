@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from insights.metrics.conversations.enums import ConversationType
 from insights.projects.models import Project
 
 
@@ -40,6 +41,11 @@ class TopicsDistributionMetricsQueryParamsSerializer(
     """
     Serializer for topics distribution metrics query params
     """
+
+    conversation_type = serializers.ChoiceField(
+        choices=ConversationType.choices,
+        required=True,
+    )
 
 
 class SubtopicSerializer(serializers.Serializer):

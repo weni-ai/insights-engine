@@ -8,6 +8,7 @@ from sentry_sdk import capture_exception
 from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
 )
+from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
@@ -33,7 +34,11 @@ class ConversationsMetricsService:
         self.datalake_service = datalake_service
 
     def get_topics_distribution(
-        self, project: "Project", start_date: datetime, end_date: datetime
+        self,
+        project: "Project",
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
     ) -> TopicsDistributionMetrics:
         # TODO: Get active topics and subtopics from Nexus (cached)
         try:
@@ -41,6 +46,7 @@ class ConversationsMetricsService:
                 project_uuid=project.uuid,
                 start_date=start_date,
                 end_date=end_date,
+                conversation_type=conversation_type,
             )
         except Exception as e:
             logger.error("Failed to get topics distribution: %s", e)

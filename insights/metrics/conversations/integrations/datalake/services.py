@@ -12,6 +12,7 @@ from insights.metrics.conversations.dataclass import (
     Topic,
     TopicsDistributionMetrics,
 )
+from insights.metrics.conversations.enums import ConversationType
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
@@ -32,7 +33,11 @@ class BaseConversationsMetricsService(ABC):
 
     @abstractmethod
     def get_topics_distribution(
-        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
     ) -> TopicsDistributionMetrics:
         pass
 
@@ -98,12 +103,17 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             return None
 
     def get_topics_distribution(
-        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
     ) -> TopicsDistributionMetrics:
         """
         Get topics distribution from Datalake.
         """
         # TODO: Add cache
+        # TODO: Filter by conversation type (metadata)
 
         try:
             events = self.events_client.get_events(
