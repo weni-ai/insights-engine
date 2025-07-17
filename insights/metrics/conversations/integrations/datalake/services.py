@@ -76,11 +76,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             serialized_value = json.dumps(value, default=str)
             self.cache_client.set(key, serialized_value, ex=self.cache_ttl)
         except Exception as e:
-            logger.warning(f"Failed to save results to cache: {e}")
+            logger.warning("Failed to save results to cache: %s", e)
 
-    def _get_conversations_totals_from_cache(
-        self, key: str
-    ) -> ConversationsTotalsMetrics:
+    def _get_cached_results(self, key: str) -> dict:
         """
         Get results from cache with JSON deserialization.
         """
@@ -93,24 +91,39 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
                 # Parse the JSON data and reconstruct the objects
                 data = json.loads(cached_data)
-
-                # Reconstruct ConversationsTotalsMetrics from cached data
-                return ConversationsTotalsMetrics(
-                    total_conversations=ConversationsTotalsMetric(
-                        value=data["total_conversations"]["value"],
-                        percentage=data["total_conversations"]["percentage"],
-                    ),
-                    resolved=ConversationsTotalsMetric(
-                        value=data["resolved"]["value"],
-                        percentage=data["resolved"]["percentage"],
-                    ),
-                    unresolved=ConversationsTotalsMetric(
-                        value=data["unresolved"]["value"],
-                        percentage=data["unresolved"]["percentage"],
-                    ),
-                )
+                return data
+            return None
         except (json.JSONDecodeError, AttributeError, KeyError, TypeError) as e:
-            logger.warning(f"Failed to deserialize cached data: {e}")
+            logger.warning("Failed to deserialize cached data: %s", e)
+
+            return None
+
+    def _get_conversations_totals_from_cache(
+        self, key: str
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get results from cache with JSON deserialization.
+        """
+        cached_data = self._get_cached_results(key)
+        if cached_data:
+            return ConversationsTotalsMetrics(
+                total_conversations=ConversationsTotalsMetric(
+                    value=cached_data["total_conversations"]["value"],
+                    percentage=cached_data["total_conversations"]["percentage"],
+                ),
+                resolved=ConversationsTotalsMetric(
+                    value=cached_data["resolved"]["value"],
+                    percentage=cached_data["resolved"]["percentage"],
+                ),
+                unresolved=ConversationsTotalsMetric(
+                    value=cached_data["unresolved"]["value"],
+                    percentage=cached_data["unresolved"]["percentage"],
+                ),
+                abandoned=ConversationsTotalsMetric(
+                    value=cached_data["abandoned"]["value"],
+                    percentage=cached_data["abandoned"]["percentage"],
+                ),
+            )
         return None
 
     def get_conversations_totals(
