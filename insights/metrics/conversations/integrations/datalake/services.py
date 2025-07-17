@@ -1,8 +1,7 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 import json
 import logging
 from datetime import datetime
-from uuid import UUID
 
 from django.conf import settings
 
