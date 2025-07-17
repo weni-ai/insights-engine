@@ -25,14 +25,6 @@ class BaseConversationsMetricsService(ABC):
     Base class for conversations metrics services.
     """
 
-    @abstractmethod
-    def get_conversations_totals(
-        self, project_uuid: UUID, start_date: datetime, end_date: datetime
-    ) -> ConversationsTotalsMetrics:
-        """
-        Get conversations totals from Datalake.
-        """
-
 
 class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
     """
