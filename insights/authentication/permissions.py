@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
@@ -35,7 +35,9 @@ class ProjectAuthQueryParamPermission(permissions.BasePermission):
         project_uuid = request.query_params.get("project_uuid")
 
         if not project_uuid:
-            return False
+            raise ValidationError(
+                {"project_uuid": ["This field is required"]}, code="required"
+            )
 
         return ProjectAuth.objects.filter(
             project__uuid=project_uuid, user=request.user, role=1
