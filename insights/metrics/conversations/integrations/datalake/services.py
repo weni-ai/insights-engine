@@ -78,7 +78,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         except Exception as e:
             logger.warning(f"Failed to save results to cache: {e}")
 
-    def _get_results_from_cache(self, key: str) -> ConversationsTotalsMetrics:
+    def _get_conversations_totals_from_cache(
+        self, key: str
+    ) -> ConversationsTotalsMetrics:
         """
         Get results from cache with JSON deserialization.
         """
@@ -123,7 +125,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         if self.cache_results:
             try:
-                cached_results = self._get_results_from_cache(
+                cached_results = self._get_conversations_totals_from_cache(
                     key=self._get_cache_key(
                         project_uuid=project_uuid,
                         start_date=start_date,
