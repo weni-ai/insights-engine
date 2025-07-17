@@ -141,6 +141,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 date_start=start_date,
                 date_end=end_date,
                 event_name=self.event_name,
+                key="conversation_classification",
             )
         except Exception as e:
             capture_exception(e)
