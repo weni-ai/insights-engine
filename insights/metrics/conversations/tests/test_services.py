@@ -11,7 +11,7 @@ from insights.projects.models import Project
 
 class TestConversationsMetricsService(TestCase):
     service = ConversationsMetricsService(
-        datalake_client=MockConversationsMetricsService()
+        datalake_service=MockConversationsMetricsService()
     )
 
     def setUp(self):
