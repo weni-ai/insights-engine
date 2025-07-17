@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from weni_datalake_sdk.clients.redshift.events import get_events
+from weni_datalake_sdk.clients.redshift.events import get_events, get_events_count
 
 
 class BaseDataLakeEventsClient(ABC):
@@ -25,6 +25,19 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
         """
         try:
             events = get_events(
+                **query_kwargs,
+            )
+        except Exception as e:
+            raise e
+
+        return events
+
+    def get_events_count(self, **query_kwargs) -> dict:
+        """
+        Get the count of events from the DataLakeEvents source.
+        """
+        try:
+            events = get_events_count(
                 **query_kwargs,
             )
         except Exception as e:
