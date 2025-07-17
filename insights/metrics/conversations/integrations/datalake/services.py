@@ -143,7 +143,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 event_name=self.event_name,
                 key="conversation_classification",
                 value="resolved",
-            ).get("count", 0)
+            )[0].get("count", 0)
             unresolved_events_count = self.events_client.get_events_count(
                 project=project_uuid,
                 date_start=start_date,
@@ -151,7 +151,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 event_name=self.event_name,
                 key="conversation_classification",
                 value="unresolved",
-            ).get("count", 0)
+            )[0].get("count", 0)
             abandoned_events_count = self.events_client.get_events_count(
                 project=project_uuid,
                 date_start=start_date,
@@ -159,7 +159,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 event_name=self.event_name,
                 key="conversation_classification",
                 value="abandoned",
-            ).get("count", 0)
+            )[0].get("count", 0)
         except Exception as e:
             capture_exception(e)
             logger.error(e)
