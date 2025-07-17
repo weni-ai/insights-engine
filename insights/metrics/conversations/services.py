@@ -36,8 +36,8 @@ class ConversationsMetricsService:
         self, project: "Project", start_date: datetime, end_date: datetime
     ) -> TopicsDistributionMetrics:
         try:
-            self.datalake_client.get_topics_distribution(
-                project_uuid=project.uuid,
+            topics = self.datalake_client.get_topics_distribution(
+                project=project.uuid,
                 start_date=start_date,
                 end_date=end_date,
             )
@@ -48,3 +48,5 @@ class ConversationsMetricsService:
             raise ConversationsMetricsError(
                 f"Failed to get topics distribution. Event ID: {event_id}"
             ) from e
+
+        return topics
