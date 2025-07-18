@@ -157,6 +157,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 serializer.validated_data["project"],
                 serializer.validated_data["start_date"],
                 serializer.validated_data["end_date"],
+                serializer.validated_data["type"],
             )
         except ConversationsMetricsError as e:
             return Response(

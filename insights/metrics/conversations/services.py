@@ -28,11 +28,11 @@ from insights.metrics.conversations.enums import (
     ConversationsTimeseriesUnit,
     NPSType,
 )
+from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.chats.db.client import ChatsClient
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
 from insights.metrics.conversations.tests.mock import (
-    CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA,
     CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
     CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
     NPS_METRICS_MOCK_DATA,
@@ -455,13 +455,19 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         return response_content
 
     def get_topics_distribution(
-        self, project: "Project", start_date: datetime, end_date: datetime
+        self,
+        project: "Project",
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
     ) -> TopicsDistributionMetrics:
+        # TODO: Get active topics and subtopics from Nexus (cached)
         try:
             topics = self.datalake_service.get_topics_distribution(
                 project_uuid=project.uuid,
                 start_date=start_date,
                 end_date=end_date,
+                conversation_type=conversation_type,
             )
         except Exception as e:
             logger.error("Failed to get topics distribution: %s", e)

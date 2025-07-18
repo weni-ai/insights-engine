@@ -22,6 +22,7 @@ from insights.metrics.conversations.tests.mock import (
     NPS_METRICS_MOCK_DATA,
 )
 from insights.metrics.conversations.enums import (
+    ConversationType,
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
     NPSType,
@@ -262,7 +263,7 @@ class TestConversationsMetricsService(TestCase):
         start_date = datetime(2021, 1, 1)
         end_date = datetime(2021, 1, 2)
         topics_distribution = self.service.get_topics_distribution(
-            project, start_date, end_date
+            project, start_date, end_date, ConversationType.AI
         )
         self.assertIsInstance(topics_distribution, TopicsDistributionMetrics)
 

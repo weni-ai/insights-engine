@@ -9,11 +9,12 @@ from insights.metrics.conversations.dataclass import (
     ConversationsTimeseriesMetrics,
     SubjectMetricData,
     SubjectsMetrics,
-    Subtopic,
-    Topic,
+    SubtopicMetrics,
+    TopicMetrics,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import (
+    ConversationType,
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
     NPSType,
@@ -582,6 +583,7 @@ class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
                 "project_uuid": self.project.uuid,
+                "type": ConversationType.AI,
             }
         )
         self.assertTrue(serializer.is_valid())
@@ -599,6 +601,7 @@ class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-02",
                 "end_date": "2021-01-01",
                 "project_uuid": self.project.uuid,
+                "type": ConversationType.AI,
             }
         )
         self.assertFalse(serializer.is_valid())
@@ -613,6 +616,7 @@ class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
                 "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
+                "type": ConversationType.AI,
             }
         )
         self.assertFalse(serializer.is_valid())
@@ -622,7 +626,7 @@ class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
 
 class TestSubtopicSerializer(TestCase):
     def test_serializer(self):
-        subtopic = Subtopic(
+        subtopic = SubtopicMetrics(
             uuid=uuid.uuid4(),
             name="Test Subtopic",
             percentage=0.5,
@@ -634,12 +638,12 @@ class TestSubtopicSerializer(TestCase):
 
 class TestTopicSerializer(TestCase):
     def test_serializer(self):
-        topic = Topic(
+        topic = TopicMetrics(
             uuid=uuid.uuid4(),
             name="Test Topic",
             percentage=0.5,
             subtopics=[
-                Subtopic(
+                SubtopicMetrics(
                     uuid=uuid.uuid4(),
                     name="Test Subtopic",
                     percentage=0.5,
@@ -666,12 +670,12 @@ class TestTopicSerializer(TestCase):
 class TestTopicsDistributionMetricsSerializer(TestCase):
     def test_serializer(self):
         topics = [
-            Topic(
+            TopicMetrics(
                 uuid=uuid.uuid4(),
                 name="Test Topic",
                 percentage=0.5,
                 subtopics=[
-                    Subtopic(
+                    SubtopicMetrics(
                         uuid=uuid.uuid4(),
                         name="Test Subtopic",
                         percentage=0.5,

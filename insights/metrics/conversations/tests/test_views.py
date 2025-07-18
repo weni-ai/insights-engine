@@ -9,6 +9,7 @@ from rest_framework.test import APITestCase
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.metrics.conversations.enums import (
+    ConversationType,
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
     NPSType,
@@ -19,7 +20,6 @@ from insights.metrics.conversations.integrations.datalake.tests.mock_services im
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.tests.mock import (
-    CONVERSATIONS_SUBJECTS_DISTRIBUTION_MOCK_DATA,
     CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
     CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
     NPS_METRICS_MOCK_DATA,
@@ -781,6 +781,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                 "project_uuid": self.project.uuid,
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
+                "type": ConversationType.AI,
             }
         )
 

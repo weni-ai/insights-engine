@@ -5,10 +5,11 @@ import uuid
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
-    Subtopic,
-    Topic,
+    SubtopicMetrics,
+    TopicMetrics,
     TopicsDistributionMetrics,
 )
+from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
 )
@@ -30,16 +31,20 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         )
 
     def get_topics_distribution(
-        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
     ) -> TopicsDistributionMetrics:
         return TopicsDistributionMetrics(
             topics=[
-                Topic(
+                TopicMetrics(
                     uuid=uuid.uuid4(),
                     name="Topic 1",
                     percentage=100,
                     subtopics=[
-                        Subtopic(
+                        SubtopicMetrics(
                             uuid=uuid.uuid4(),
                             name="Subtopic 1",
                             percentage=100,
