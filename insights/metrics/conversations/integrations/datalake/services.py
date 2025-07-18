@@ -123,6 +123,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     value=cached_data["abandoned"]["value"],
                     percentage=cached_data["abandoned"]["percentage"],
                 ),
+                transferred_to_human=ConversationsTotalsMetric(
+                    value=cached_data["transferred_to_human"]["value"],
+                    percentage=cached_data["transferred_to_human"]["percentage"],
+                ),
             )
         return None
 
@@ -175,6 +179,15 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 key="conversation_classification",
                 value="abandoned",
             )[0].get("count", 0)
+            transferred_to_human_events_count = self.events_client.get_events_count(
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name=self.event_name,
+                key="conversation_classification",
+                metadata_key="human_support",
+                metadata_value=True,
+            )[0].get("count", 0)
         except Exception as e:
             capture_exception(e)
             logger.error(e)
@@ -200,6 +213,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             if total_conversations > 0
             else 0
         )
+        percentage_transferred_to_human = (
+            100 * transferred_to_human_events_count / total_conversations
+            if total_conversations > 0
+            else 0
+        )
 
         # Round percentages to 2 decimal places
         percentage_resolved = (
@@ -210,6 +228,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
         percentage_abandoned = (
             round(percentage_abandoned, 2) if percentage_abandoned > 0 else 0
+        )
+        percentage_transferred_to_human = (
+            round(percentage_transferred_to_human, 2)
+            if percentage_transferred_to_human > 0
+            else 0
         )
 
         results = ConversationsTotalsMetrics(
@@ -224,6 +247,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             ),
             abandoned=ConversationsTotalsMetric(
                 value=abandoned_events_count, percentage=percentage_abandoned
+            ),
+            transferred_to_human=ConversationsTotalsMetric(
+                value=transferred_to_human_events_count,
+                percentage=percentage_transferred_to_human,
             ),
         )
 

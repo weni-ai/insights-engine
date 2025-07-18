@@ -23,4 +23,5 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
             resolved=ConversationsTotalsMetric(value=60, percentage=60),
             unresolved=ConversationsTotalsMetric(value=40, percentage=40),
             abandoned=ConversationsTotalsMetric(value=0, percentage=0),
+            transferred_to_human=ConversationsTotalsMetric(value=0, percentage=0),
         )

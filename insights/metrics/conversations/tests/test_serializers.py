@@ -69,6 +69,7 @@ class TestConversationTotalsMetricsSerializer(TestCase):
             resolved=ConversationsTotalsMetric(value=100, percentage=100),
             unresolved=ConversationsTotalsMetric(value=50, percentage=50),
             abandoned=ConversationsTotalsMetric(value=0, percentage=0),
+            transferred_to_human=ConversationsTotalsMetric(value=0, percentage=0),
         )
         serializer = ConversationTotalsMetricsSerializer(totals)
         data = serializer.data
