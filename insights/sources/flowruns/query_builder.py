@@ -71,7 +71,10 @@ class FlowRunElasticSearchQueryBuilder:
     def recurrence(self, op_field: str, limit: int = 100, *args, **kwargs):
         aggs = {
             "values": {
-                "nested": {"path": "values"},
+                "nested": {
+                    "path": "values",
+                    "query": {"term": {"values.name": op_field}},
+                },
                 "aggs": {
                     "agg_field": {
                         "filter": {
@@ -79,7 +82,11 @@ class FlowRunElasticSearchQueryBuilder:
                         },
                         "aggs": {
                             "agg_value": {
-                                "terms": {"size": limit, "field": "values.value"}
+                                "terms": {
+                                    "size": limit,
+                                    "field": "values.value",
+                                    "execution_hint": "map",
+                                }
                             }
                         },
                     }
