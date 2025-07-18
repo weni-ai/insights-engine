@@ -116,11 +116,16 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         # TODO: Filter by conversation type (metadata)
 
         try:
+            human_support = (
+                True if conversation_type == ConversationType.HUMAN else False
+            )
+
             events = self.events_client.get_events(
                 project_uuid=project_uuid,
                 start_date=start_date,
                 end_date=end_date,
                 key="topics",
+                human_support=human_support,
             )
         except Exception as e:
             logger.error("Failed to get topics distribution from Datalake: %s", e)

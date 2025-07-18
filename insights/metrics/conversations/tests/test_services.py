@@ -2,6 +2,7 @@ from datetime import datetime
 from django.test import TestCase
 
 from insights.metrics.conversations.dataclass import TopicsDistributionMetrics
+from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockConversationsMetricsService,
 )
@@ -21,7 +22,7 @@ class TestConversationsMetricsService(TestCase):
         start_date = datetime(2021, 1, 1)
         end_date = datetime(2021, 1, 2)
         topics_distribution = self.service.get_topics_distribution(
-            project, start_date, end_date
+            project, start_date, end_date, ConversationType.AI
         )
 
         self.assertIsInstance(topics_distribution, TopicsDistributionMetrics)

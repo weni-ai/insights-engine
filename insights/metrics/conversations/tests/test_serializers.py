@@ -7,6 +7,7 @@ from insights.metrics.conversations.dataclass import (
     Topic,
     TopicsDistributionMetrics,
 )
+from insights.metrics.conversations.enums import ConversationType
 from insights.projects.models import Project
 from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
@@ -79,6 +80,7 @@ class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
                 "project_uuid": self.project.uuid,
+                "type": ConversationType.AI,
             }
         )
         self.assertTrue(serializer.is_valid())
@@ -96,6 +98,7 @@ class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-02",
                 "end_date": "2021-01-01",
                 "project_uuid": self.project.uuid,
+                "type": ConversationType.AI,
             }
         )
         self.assertFalse(serializer.is_valid())
@@ -110,6 +113,7 @@ class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
                 "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
+                "type": ConversationType.AI,
             }
         )
         self.assertFalse(serializer.is_valid())

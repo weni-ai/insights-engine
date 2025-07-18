@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
+from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockConversationsMetricsService,
 )
@@ -84,6 +85,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                 "project_uuid": self.project.uuid,
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
+                "type": ConversationType.AI,
             }
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)

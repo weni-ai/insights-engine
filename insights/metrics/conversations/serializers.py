@@ -42,7 +42,7 @@ class TopicsDistributionMetricsQueryParamsSerializer(
     Serializer for topics distribution metrics query params
     """
 
-    conversation_type = serializers.ChoiceField(
+    type = serializers.ChoiceField(
         choices=ConversationType.choices,
         required=True,
     )
