@@ -152,7 +152,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 date_start=start_date,
                 date_end=end_date,
                 key="topics",
-                human_support=human_support,
+                metadata_key="human_support",
+                metadata_value=human_support,
             )
         except Exception as e:
             logger.error("Failed to get topics distribution from Datalake: %s", e)
