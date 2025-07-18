@@ -149,8 +149,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             events = self.events_client.get_events(
                 project=project_uuid,
-                start_date=start_date,
-                end_date=end_date,
+                date_start=start_date,
+                date_end=end_date,
                 key="topics",
                 human_support=human_support,
             )
