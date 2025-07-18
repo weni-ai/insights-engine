@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from insights.metrics.conversations.enums import ConversationType
 from insights.projects.models import Project
 
 
@@ -32,3 +33,45 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         attrs["project"] = project
 
         return attrs
+
+
+class TopicsDistributionMetricsQueryParamsSerializer(
+    ConversationBaseQueryParamsSerializer
+):
+    """
+    Serializer for topics distribution metrics query params
+    """
+
+    type = serializers.ChoiceField(
+        choices=ConversationType.choices,
+        required=True,
+    )
+
+
+class SubtopicSerializer(serializers.Serializer):
+    """
+    Serializer for subtopic
+    """
+
+    uuid = serializers.UUIDField()
+    name = serializers.CharField()
+    percentage = serializers.FloatField()
+
+
+class TopicSerializer(serializers.Serializer):
+    """
+    Serializer for topic
+    """
+
+    uuid = serializers.UUIDField()
+    name = serializers.CharField()
+    percentage = serializers.FloatField()
+    subtopics = SubtopicSerializer(many=True)
+
+
+class TopicsDistributionMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for topics distribution metrics
+    """
+
+    topics = TopicSerializer(many=True)
