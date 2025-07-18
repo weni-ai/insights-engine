@@ -327,6 +327,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             if isinstance(metadata, str):
                 metadata = json.loads(metadata)
 
+            if not metadata:
+                continue
+
             topic_uuid = metadata.get("topic_uuid")
             topic_name = metadata.get("value")
 
