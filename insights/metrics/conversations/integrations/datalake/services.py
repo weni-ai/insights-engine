@@ -276,7 +276,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if cached_results := self._get_cached_results(cache_key):
-            cached_results = json.loads(cached_results)
+            if not isinstance(cached_results, dict):
+                cached_results = json.loads(cached_results)
+
             topics = [
                 TopicMetrics(
                     uuid=topic["uuid"],
