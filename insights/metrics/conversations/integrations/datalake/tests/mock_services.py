@@ -2,8 +2,8 @@ from datetime import datetime
 from uuid import UUID
 import uuid
 from insights.metrics.conversations.dataclass import (
-    Subtopic,
-    Topic,
+    SubtopicMetrics,
+    TopicMetrics,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import ConversationType
@@ -26,12 +26,12 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
     ) -> TopicsDistributionMetrics:
         return TopicsDistributionMetrics(
             topics=[
-                Topic(
+                TopicMetrics(
                     uuid=uuid.uuid4(),
                     name="Topic 1",
                     percentage=100,
                     subtopics=[
-                        Subtopic(
+                        SubtopicMetrics(
                             uuid=uuid.uuid4(),
                             name="Subtopic 1",
                             percentage=100,

@@ -1,28 +1,27 @@
 from dataclasses import dataclass
-from uuid import UUID
 
 
 @dataclass(frozen=True)
-class Subtopic:
+class SubtopicMetrics:
     """
     A subtopic.
     """
 
-    uuid: UUID
+    uuid: str
     name: str
     percentage: float
 
 
 @dataclass(frozen=True)
-class Topic:
+class TopicMetrics:
     """
     A topics, that consists of subtopics.
     """
 
-    uuid: UUID
+    uuid: str | None
     name: str
     percentage: float
-    subtopics: list[Subtopic]
+    subtopics: list[SubtopicMetrics]
 
 
 @dataclass(frozen=True)
@@ -31,4 +30,4 @@ class TopicsDistributionMetrics:
     Metrics for the distribution of topics in a conversation.
     """
 
-    topics: list[Topic]
+    topics: list[TopicMetrics]
