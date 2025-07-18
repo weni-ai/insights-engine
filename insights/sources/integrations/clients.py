@@ -1,6 +1,10 @@
+from abc import ABC, abstractmethod
 import logging
+from uuid import UUID
 import requests
+from requests.models import Response
 import json
+
 
 from django.conf import settings
 from rest_framework import status
@@ -55,3 +59,133 @@ class WeniIntegrationsClient(InternalAuthentication):
         )
 
         return response
+
+
+class BaseNexusClient(ABC):
+    """
+    Base client for Nexus API.
+    """
+
+    @abstractmethod
+    def get_topics(self, project_uuid: UUID) -> Response:
+        """
+        Get conversation topics for a project.
+        """
+
+    @abstractmethod
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
+        """
+        Get conversation subtopics for a topic.
+        """
+
+    @abstractmethod
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> Response:
+        """
+        Create a conversation topic for a project.
+        """
+
+    @abstractmethod
+    def create_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
+    ) -> Response:
+        """
+        Create a conversation subtopic for a project.
+        """
+
+    @abstractmethod
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
+        """
+        Delete a conversation topic for a project.
+        """
+
+    @abstractmethod
+    def delete_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
+    ) -> Response:
+        """
+        Delete a conversation subtopic for a project.
+        """
+
+
+class NexusClient:
+    """
+    Client for Nexus API.
+    """
+
+    def __init__(self):
+        self.base_url = settings.NEXUS_BASE_URL
+        self.headers = {
+            "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
+        }
+        self.timeout = 60
+
+    def get_topics(self, project_uuid: UUID) -> Response:
+        """
+        Get conversation topics for a project.
+        """
+        url = f"{self.base_url}/{project_uuid}/topics/"
+
+        return requests.get(url=url, headers=self.headers, timeout=self.timeout)
+
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
+        """
+        Get subtopics for a topic.
+        """
+
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/"
+
+        return requests.get(url=url, headers=self.headers, timeout=self.timeout)
+
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> Response:
+        """
+        Create a topic for a project.
+        """
+
+        url = f"{self.base_url}/{project_uuid}/topics/"
+
+        body = {
+            "name": name,
+            "description": description,
+        }
+
+        return requests.post(
+            url=url, headers=self.headers, timeout=self.timeout, json=body
+        )
+
+    def create_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
+    ) -> Response:
+        """
+        Create a subtopic for a project.
+        """
+
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/"
+
+        body = {
+            "name": name,
+            "description": description,
+        }
+
+        return requests.post(
+            url=url, headers=self.headers, timeout=self.timeout, json=body
+        )
+
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
+        """
+        Delete a topic for a project.
+        """
+
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/"
+
+        return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
+
+    def delete_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
+    ) -> Response:
+        """
+        Delete a subtopic for a project.
+        """
+
+        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
+
+        return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
