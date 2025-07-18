@@ -470,7 +470,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 conversation_type=conversation_type,
             )
         except Exception as e:
-            logger.error("Failed to get topics distribution: %s", e)
+            logger.error("Failed to get topics distribution", exc_info=True)
             event_id = capture_exception(e)
 
             raise ConversationsMetricsError(
