@@ -302,7 +302,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             )
 
             events = self.events_client.get_events(
-                project_uuid=project_uuid,
+                project=project_uuid,
                 start_date=start_date,
                 end_date=end_date,
                 key="topics",
