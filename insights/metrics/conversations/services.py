@@ -48,31 +48,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         self.cache_client = cache_client
         self.nexus_cache_ttl = nexus_cache_ttl
 
-    def get_topics_distribution(
-        self,
-        project: "Project",
-        start_date: datetime,
-        end_date: datetime,
-        conversation_type: ConversationType,
-    ) -> TopicsDistributionMetrics:
-        # TODO: Get active topics and subtopics from Nexus (cached)
-        try:
-            topics = self.datalake_service.get_topics_distribution(
-                project_uuid=project.uuid,
-                start_date=start_date,
-                end_date=end_date,
-                conversation_type=conversation_type,
-            )
-        except Exception as e:
-            logger.error("Failed to get topics distribution", exc_info=True)
-            event_id = capture_exception(e)
-
-            raise ConversationsMetricsError(
-                f"Failed to get topics distribution. Event ID: {event_id}"
-            ) from e
-
-        return topics
-
     def get_topics(self, project_uuid: UUID) -> dict:
         """
         Get conversation topics
@@ -322,3 +297,30 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         return response_content
+
+    def get_topics_distribution(
+        self,
+        project: "Project",
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> TopicsDistributionMetrics:
+
+        current_topics = self.get_topics(project.uuid)
+
+        try:
+            topics = self.datalake_service.get_topics_distribution(
+                project_uuid=project.uuid,
+                start_date=start_date,
+                end_date=end_date,
+                conversation_type=conversation_type,
+            )
+        except Exception as e:
+            logger.error("Failed to get topics distribution", exc_info=True)
+            event_id = capture_exception(e)
+
+            raise ConversationsMetricsError(
+                f"Failed to get topics distribution. Event ID: {event_id}"
+            ) from e
+
+        return topics
