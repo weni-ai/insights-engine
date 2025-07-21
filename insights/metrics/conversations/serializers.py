@@ -168,35 +168,6 @@ class TopicsDistributionMetricsQueryParamsSerializer(
     )
 
 
-class SubtopicSerializer(serializers.Serializer):
-    """
-    Serializer for subtopic
-    """
-
-    uuid = serializers.UUIDField()
-    name = serializers.CharField()
-    percentage = serializers.FloatField()
-
-
-class TopicSerializer(serializers.Serializer):
-    """
-    Serializer for topic
-    """
-
-    uuid = serializers.UUIDField()
-    name = serializers.CharField()
-    percentage = serializers.FloatField()
-    subtopics = SubtopicSerializer(many=True)
-
-
-class TopicsDistributionMetricsSerializer(serializers.Serializer):
-    """
-    Serializer for topics distribution metrics
-    """
-
-    topics = TopicSerializer(many=True)
-
-
 class NPSQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
     """
     Serializer for NPS query params
@@ -248,3 +219,34 @@ class DeleteTopicSerializer(serializers.Serializer):
     """
 
     project_uuid = serializers.UUIDField(required=True)
+
+
+class SubtopicSerializer(serializers.Serializer):
+    """
+    Serializer for subtopic
+    """
+
+    uuid = serializers.UUIDField()
+    name = serializers.CharField()
+    quantity = serializers.IntegerField()
+    percentage = serializers.FloatField()
+
+
+class TopicSerializer(serializers.Serializer):
+    """
+    Serializer for topic
+    """
+
+    uuid = serializers.UUIDField()
+    name = serializers.CharField()
+    quantity = serializers.IntegerField()
+    percentage = serializers.FloatField()
+    subtopics = SubtopicSerializer(many=True)
+
+
+class TopicsDistributionMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for topics distribution metrics
+    """
+
+    topics = TopicSerializer(many=True)

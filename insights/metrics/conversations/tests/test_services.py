@@ -256,17 +256,6 @@ class TestConversationsMetricsService(TestCase):
             ),
         )
 
-    def test_get_topics_distribution(self):
-        project = Project.objects.create(
-            name="Test Project",
-        )
-        start_date = datetime(2021, 1, 1)
-        end_date = datetime(2021, 1, 2)
-        topics_distribution = self.service.get_topics_distribution(
-            project, start_date, end_date, ConversationType.AI
-        )
-        self.assertIsInstance(topics_distribution, TopicsDistributionMetrics)
-
     def test_get_nps(self):
         """
         Test the NPS method
@@ -286,6 +275,18 @@ class TestConversationsMetricsService(TestCase):
 
     def tearDown(self) -> None:
         cache.clear()
+
+    def test_get_topics_distribution(self):
+        project = Project.objects.create(
+            name="Test Project",
+        )
+        start_date = datetime(2021, 1, 1)
+        end_date = datetime(2021, 1, 2)
+        topics_distribution = self.service.get_topics_distribution(
+            project, start_date, end_date, ConversationType.AI
+        )
+
+        self.assertIsInstance(topics_distribution, TopicsDistributionMetrics)
 
     def test_get_topics(self):
         topics = self.service.get_topics(

@@ -94,6 +94,7 @@ class SubtopicMetrics:
 
     uuid: str
     name: str
+    quantity: int
     percentage: float
 
 
@@ -105,6 +106,7 @@ class TopicMetrics:
 
     uuid: str | None
     name: str
+    quantity: int
     percentage: float
     subtopics: list[SubtopicMetrics]
 

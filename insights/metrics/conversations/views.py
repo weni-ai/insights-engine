@@ -10,6 +10,9 @@ from rest_framework.exceptions import PermissionDenied
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
+    CreateTopicSerializer,
+    DeleteTopicSerializer,
+    GetTopicsQueryParamsSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
     TopicsDistributionMetricsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
@@ -17,9 +20,6 @@ from insights.metrics.conversations.serializers import (
     ConversationsSubjectsMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsSerializer,
-    CreateTopicSerializer,
-    DeleteTopicSerializer,
-    GetTopicsQueryParamsSerializer,
     NPSQueryParamsSerializer,
     NPSSerializer,
     RoomsByQueueMetricQueryParamsSerializer,

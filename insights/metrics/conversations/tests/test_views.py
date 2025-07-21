@@ -39,8 +39,8 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         super().setUpClass()
         cls.original_service = ConversationsMetricsViewSet.service
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
-            nexus_client=MockNexusClient(),
             datalake_service=MockConversationsMetricsService(),
+            nexus_client=MockNexusClient(),
         )
 
     @classmethod
@@ -795,3 +795,30 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertIn("uuid", response.data["topics"][0]["subtopics"][0])
         self.assertIn("name", response.data["topics"][0]["subtopics"][0])
         self.assertIn("percentage", response.data["topics"][0]["subtopics"][0])
+
+    def test_cannot_get_topics_distribution_without_project_uuid(self):
+        response = self.get_topics_distribution({})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["project_uuid"][0].code,
+            "required",
+        )
+
+    @with_project_auth
+    def test_get_topics_distribution(self):
+        response = self.get_topics_distribution(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "type": ConversationType.AI,
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertIn("topics", response.data)
+        self.assertIn("uuid", response.data["topics"][0])
+        self.assertIn("name", response.data["topics"][0])
+        self.assertIn("quantity", response.data["topics"][0])
+        self.assertIn("subtopics", response.data["topics"][0])
+        self.assertIn("percentage", response.data["topics"][0])
