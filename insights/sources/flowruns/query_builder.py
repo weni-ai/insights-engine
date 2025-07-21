@@ -93,7 +93,11 @@ class FlowRunElasticSearchQueryBuilder:
 
         query = self.validated_query
 
-        if "bool" in query and "must" in query["bool"]:
+        if (
+            "bool" in query
+            and "must" in query["bool"]
+            and isinstance(query["bool"]["must"], list)
+        ):
             query["bool"]["must"].append(
                 {
                     "nested": {
