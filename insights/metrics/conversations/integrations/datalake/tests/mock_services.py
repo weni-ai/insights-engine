@@ -24,19 +24,17 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         conversation_type: ConversationType,
     ) -> TopicsDistributionMetrics:
-        return TopicsDistributionMetrics(
-            topics=[
-                TopicMetrics(
-                    uuid=uuid.uuid4(),
-                    name="Topic 1",
-                    quantity=100,
-                    subtopics=[
-                        SubtopicMetrics(
-                            uuid=uuid.uuid4(),
-                            name="Subtopic 1",
-                            quantity=100,
-                        )
-                    ],
-                )
-            ]
-        )
+        return {
+            "OTHER": {
+                "name": "OTHER",
+                "count": 100,
+                "subtopics": {},
+            },
+            uuid.uuid4(): {
+                "name": "Topic 1",
+                "count": 100,
+                "subtopics": {
+                    uuid.uuid4(): {"name": "Subtopic 1", "count": 100},
+                },
+            },
+        }

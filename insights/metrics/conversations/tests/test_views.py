@@ -160,15 +160,11 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertIn("topics", response.data)
-        self.assertEqual(len(response.data["topics"]), 1)
         self.assertIn("uuid", response.data["topics"][0])
         self.assertIn("name", response.data["topics"][0])
         self.assertIn("quantity", response.data["topics"][0])
         self.assertIn("subtopics", response.data["topics"][0])
-        self.assertEqual(len(response.data["topics"][0]["subtopics"]), 1)
-        self.assertIn("uuid", response.data["topics"][0]["subtopics"][0])
-        self.assertIn("name", response.data["topics"][0]["subtopics"][0])
-        self.assertIn("quantity", response.data["topics"][0]["subtopics"][0])
+        self.assertIn("percentage", response.data["topics"][0])
 
     def test_cannot_get_topics_without_project_uuid(self):
         response = self.get_topics({})

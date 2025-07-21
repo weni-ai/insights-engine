@@ -3,15 +3,12 @@ import json
 import logging
 from datetime import datetime
 from uuid import UUID
-from dataclasses import asdict
 
 
 from django.conf import settings
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.dataclass import (
-    SubtopicMetrics,
-    TopicMetrics,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import ConversationType
@@ -110,7 +107,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
-    ) -> TopicsDistributionMetrics:
+    ) -> dict:
         """
         Get topics distribution from Datalake.
         """
@@ -125,24 +122,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             if not isinstance(cached_results, dict):
                 cached_results = json.loads(cached_results)
 
-            topics = [
-                TopicMetrics(
-                    uuid=topic["uuid"],
-                    name=topic["name"],
-                    percentage=topic["percentage"],
-                    subtopics=[
-                        SubtopicMetrics(
-                            uuid=subtopic["uuid"],
-                            name=subtopic["name"],
-                            percentage=subtopic["percentage"],
-                        )
-                        for subtopic in topic["subtopics"]
-                    ],
-                )
-                for topic in cached_results["topics"]
-            ]
-
-            return TopicsDistributionMetrics(topics=topics)
+            return cached_results
 
         try:
             human_support = (
@@ -167,7 +147,12 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         topics_data = {}
         total_topics_count = 0
 
-        other_count = 0
+        # unclassified conversations
+        other_topic = {
+            "name": "OTHER",
+            "count": 0,
+        }
+        topics_data["OTHER"] = other_topic
 
         for event in events:
             total_topics_count += 1
@@ -183,57 +168,35 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topic_name = metadata.get("value")
 
             if not topic_uuid:
-                other_count += 1
+                other_topic["count"] += 1
                 continue
 
             if topic_uuid not in topics_data:
                 topics_data[topic_uuid] = {
+                    "name": topic_name,
                     "subtopics": {},
                     "count": 0,
-                    "other_count": 0,
+                    "other_count": 0,  # unclassified conversations
                 }
+
+            topics_data[topic_uuid]["count"] += 1
 
             subtopic_uuid = metadata.get("subtopic_uuid")
             subtopic_name = metadata.get("subtopic")
 
             if subtopic_uuid:
-                topics_data[topic_uuid]["count"] += 1
+                if not subtopic_uuid:
+                    topics_data[topic_uuid]["other_count"] += 1
+                    continue
+
                 if subtopic_uuid not in topics_data[topic_uuid]["subtopics"]:
-                    topics_data[topic_uuid]["subtopics"][subtopic_uuid] = 0
+                    topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
+                        "name": subtopic_name,
+                        "count": 0,
+                    }
 
-                topics_data[topic_uuid]["subtopics"][subtopic_uuid] += 1
+                topics_data[topic_uuid]["subtopics"][subtopic_uuid]["count"] += 1
 
-        topics = []
+        self._save_results_to_cache(cache_key, topics_data)
 
-        if other_count > 0:
-            topics.append(
-                TopicMetrics(
-                    uuid=None,
-                    name="OTHER",
-                    quantity=other_count,
-                    subtopics=[],
-                )
-            )
-
-        for topic_uuid, topic_data in topics_data.items():
-            topic = TopicMetrics(
-                uuid=str(topic_uuid),
-                name=topic_name,
-                quantity=topic_data["count"],
-                subtopics=[
-                    SubtopicMetrics(
-                        uuid=str(subtopic_uuid),
-                        name=subtopic_name,
-                        quantity=subtopic_data["count"],
-                    )
-                    for subtopic_uuid, subtopic_data in topic_data["subtopics"].items()
-                ],
-            )
-            topics.append(topic)
-
-        topics_distribution = TopicsDistributionMetrics(topics=topics)
-
-        serialized_topics_distribution = asdict(topics_distribution)
-        self._save_results_to_cache(cache_key, serialized_topics_distribution)
-
-        return topics_distribution
+        return topics_data

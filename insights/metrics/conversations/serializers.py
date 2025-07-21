@@ -56,6 +56,7 @@ class SubtopicSerializer(serializers.Serializer):
     uuid = serializers.UUIDField()
     name = serializers.CharField()
     quantity = serializers.IntegerField()
+    percentage = serializers.FloatField()
 
 
 class TopicSerializer(serializers.Serializer):
@@ -66,6 +67,7 @@ class TopicSerializer(serializers.Serializer):
     uuid = serializers.UUIDField()
     name = serializers.CharField()
     quantity = serializers.IntegerField()
+    percentage = serializers.FloatField()
     subtopics = SubtopicSerializer(many=True)
 
 

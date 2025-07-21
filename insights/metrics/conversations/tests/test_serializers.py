@@ -126,11 +126,13 @@ class TestSubtopicSerializer(TestCase):
         subtopic = SubtopicMetrics(
             uuid=uuid.uuid4(),
             name="Test Subtopic",
+            percentage=100,
             quantity=1,
         )
         serializer = SubtopicSerializer(subtopic)
         self.assertEqual(serializer.data["name"], "Test Subtopic")
         self.assertEqual(serializer.data["quantity"], 1)
+        self.assertEqual(serializer.data["percentage"], 100)
 
 
 class TestTopicSerializer(TestCase):
@@ -139,11 +141,13 @@ class TestTopicSerializer(TestCase):
             uuid=uuid.uuid4(),
             name="Test Topic",
             quantity=1,
+            percentage=100,
             subtopics=[
                 SubtopicMetrics(
                     uuid=uuid.uuid4(),
                     name="Test Subtopic",
                     quantity=1,
+                    percentage=100,
                 )
             ],
         )
@@ -151,12 +155,14 @@ class TestTopicSerializer(TestCase):
         self.assertEqual(serializer.data["uuid"], str(topic.uuid))
         self.assertEqual(serializer.data["name"], "Test Topic")
         self.assertEqual(serializer.data["quantity"], 1)
+        self.assertEqual(serializer.data["percentage"], 100)
         self.assertEqual(
             [
                 {
                     "uuid": str(subtopic.uuid),
                     "name": subtopic.name,
                     "quantity": subtopic.quantity,
+                    "percentage": subtopic.percentage,
                 }
                 for subtopic in topic.subtopics
             ],
@@ -171,11 +177,13 @@ class TestTopicsDistributionMetricsSerializer(TestCase):
                 uuid=uuid.uuid4(),
                 name="Test Topic",
                 quantity=1,
+                percentage=100,
                 subtopics=[
                     SubtopicMetrics(
                         uuid=uuid.uuid4(),
                         name="Test Subtopic",
                         quantity=1,
+                        percentage=100,
                     )
                 ],
             )
@@ -186,9 +194,11 @@ class TestTopicsDistributionMetricsSerializer(TestCase):
             self.assertEqual(topic_data["uuid"], str(topic.uuid))
             self.assertEqual(topic_data["name"], topic.name)
             self.assertEqual(topic_data["quantity"], topic.quantity)
+            self.assertEqual(topic_data["percentage"], topic.percentage)
             for subtopic_data, subtopic in zip(
                 topic_data["subtopics"], topic.subtopics
             ):
                 self.assertEqual(subtopic_data["uuid"], str(subtopic.uuid))
                 self.assertEqual(subtopic_data["name"], subtopic.name)
                 self.assertEqual(subtopic_data["quantity"], subtopic.quantity)
+                self.assertEqual(subtopic_data["percentage"], subtopic.percentage)
