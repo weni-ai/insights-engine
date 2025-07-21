@@ -9,7 +9,7 @@ class SubtopicMetrics:
 
     uuid: str
     name: str
-    percentage: float
+    quantity: int
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class TopicMetrics:
 
     uuid: str | None
     name: str
-    percentage: float
+    quantity: int
     subtopics: list[SubtopicMetrics]
 
 

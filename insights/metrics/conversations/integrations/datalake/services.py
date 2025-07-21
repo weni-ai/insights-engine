@@ -210,7 +210,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 TopicMetrics(
                     uuid=None,
                     name="OTHER",
-                    percentage=other_count / total_topics_count,
+                    quantity=other_count,
                     subtopics=[],
                 )
             )
@@ -219,12 +219,12 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topic = TopicMetrics(
                 uuid=str(topic_uuid),
                 name=topic_name,
-                percentage=topic_data["count"] / total_topics_count,
+                quantity=topic_data["count"],
                 subtopics=[
                     SubtopicMetrics(
                         uuid=str(subtopic_uuid),
                         name=subtopic_name,
-                        percentage=subtopic_data["count"] / topic_data["count"],
+                        quantity=subtopic_data["count"],
                     )
                     for subtopic_uuid, subtopic_data in topic_data["subtopics"].items()
                 ],

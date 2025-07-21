@@ -29,12 +29,12 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
                 TopicMetrics(
                     uuid=uuid.uuid4(),
                     name="Topic 1",
-                    percentage=100,
+                    quantity=100,
                     subtopics=[
                         SubtopicMetrics(
                             uuid=uuid.uuid4(),
                             name="Subtopic 1",
-                            percentage=100,
+                            quantity=100,
                         )
                     ],
                 )
