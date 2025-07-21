@@ -71,10 +71,7 @@ class FlowRunElasticSearchQueryBuilder:
     def recurrence(self, op_field: str, limit: int = 100, *args, **kwargs):
         aggs = {
             "values": {
-                "nested": {
-                    "path": "values",
-                    "query": {"term": {"values.name": op_field}},
-                },
+                "nested": {"path": "values"},
                 "aggs": {
                     "agg_field": {
                         "filter": {
@@ -93,6 +90,7 @@ class FlowRunElasticSearchQueryBuilder:
                 },
             }
         }
+
         return ["_search", {"size": 0, "query": self.validated_query, "aggs": aggs}]
 
     def count_value(self, op_field: str, op_sub_field: str, *args, **kwargs):
