@@ -8,3 +8,8 @@ class ConversationType(TextChoices):
 
     HUMAN = "HUMAN"
     AI = "AI"
+
+
+class ConversationsMetricsResource(TextChoices):
+    TOPICS = "topics"
+    SUBTOPICS = "subtopics"
