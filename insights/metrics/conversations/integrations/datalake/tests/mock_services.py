@@ -2,8 +2,6 @@ from datetime import datetime
 from uuid import UUID
 import uuid
 from insights.metrics.conversations.dataclass import (
-    SubtopicMetrics,
-    TopicMetrics,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import ConversationType
