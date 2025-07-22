@@ -295,13 +295,37 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 "topics": {
                     "8f972fee-0018-49fe-b0a1-24630eda8d52": {
                         "name": "Topic 1",
+                        "count": 600,
                         "subtopics": {
                             "8f972fee-0018-49fe-b0a1-24630eda8d52": {
                                 "name": "Subtopic 1",
-                                "count": 10,
-                            }
+                                "count": 400,
+                            },
+                            "OTHER": {
+                                "name": "OTHER",
+                                "count": 200,
+                            },
                         },
-                    }
+                    },
+                    "148dabc2-cc50-4d2f-a309-6a89207684f9": {
+                        "name": "Topic 2",
+                        "count": 300,
+                        "subtopics": {
+                            "148dabc2-cc50-4d2f-a309-6a89207684f9": {
+                                "name": "Subtopic 2",
+                                "count": 200,
+                            },
+                            "OTHER": {
+                                "name": "OTHER",
+                                "count": 100,
+                            },
+                        },
+                    },
+                    "OTHER": {
+                        "name": "OTHER",
+                        "count": 100,
+                        "subtopics": {},
+                    },
                 }
             }
         cache_key = self._get_cache_key(
