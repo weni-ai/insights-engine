@@ -231,6 +231,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error deleting topic for project {project_uuid}. Event_id: {event_id}"
             )
 
+        self._clear_cache_for_project_resource(
+            project_uuid, ConversationsMetricsResource.TOPICS
+        )
+
         return None
 
     def delete_subtopic(
@@ -252,12 +256,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error deleting subtopic for project {project_uuid}. Event_id: {event_id}"
             ) from e
 
-        try:
-            response_content = response.json()
-        except Exception as e:
-            logger.error("Error parsing topics for project %s: %s", project_uuid, e)
-            response_content = response.text
-
         if not status.is_success(response.status_code):
             logger.error(
                 "Error deleting subtopic for project %s: %s",
@@ -272,4 +270,8 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error deleting subtopic for project {project_uuid}. Event_id: {event_id}"
             )
 
-        return response_content
+        self._clear_cache_for_project_resource(
+            project_uuid, ConversationsMetricsResource.SUBTOPICS
+        )
+
+        return None
