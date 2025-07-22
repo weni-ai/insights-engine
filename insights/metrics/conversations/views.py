@@ -176,7 +176,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
             raise PermissionDenied("User does not have permission for this project")
 
         try:
-            topic = self.service.delete_topic(
+            self.service.delete_topic(
                 serializer.validated_data["project_uuid"],
                 topic_uuid,
             )
@@ -186,7 +186,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return Response(topic, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=False,
