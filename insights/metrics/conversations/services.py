@@ -525,7 +525,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                         name=subtopic_data["name"],
                         quantity=subtopic_data["count"],
                         percentage=(
-                            subtopic_data["count"] / total_topics_count
+                            (subtopic_data["count"] / total_topics_count) * 100
                             if total_topics_count > 0
                             else None
                         ),
@@ -539,7 +539,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                         name="OTHER",
                         quantity=other_subtopic_count,
                         percentage=(
-                            other_subtopic_count / total_topics_count
+                            (other_subtopic_count / total_topics_count) * 100
                             if total_topics_count > 0
                             else None
                         ),
@@ -551,7 +551,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 name=topic_data["name"],
                 quantity=topic_data["count"],
                 percentage=(
-                    topic_data["count"] / total_topics_count
+                    (topic_data["count"] / total_topics_count) * 100
                     if total_topics_count > 0
                     else None
                 ),
@@ -566,7 +566,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 name="OTHER",
                 quantity=other_topic_count,
                 percentage=(
-                    other_topic_count / total_topics_count
+                    (other_topic_count / total_topics_count) * 100
                     if total_topics_count > 0
                     else None
                 ),
