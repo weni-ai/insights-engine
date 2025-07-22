@@ -297,7 +297,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 date_end=end_date,
                 key="topics",
                 metadata_key="human_support",
-                metadata_value=human_support,
+                metadata_value=str(human_support),
             )
         except Exception as e:
             capture_exception(e)
