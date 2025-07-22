@@ -32,3 +32,11 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         attrs["project"] = project
 
         return attrs
+
+
+class CsatMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for csat metrics query params
+    """
+
+    agent_uuid = serializers.UUIDField(required=True)
