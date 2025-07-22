@@ -10,7 +10,7 @@ from insights.metrics.conversations.integrations.datalake.services import (
 )
 
 
-class MockConversationsMetricsService(BaseConversationsMetricsService):
+class MockDatalakeConversationsMetricsService(BaseConversationsMetricsService):
     """
     Mock service for conversations metrics.
     """

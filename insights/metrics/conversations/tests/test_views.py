@@ -8,7 +8,7 @@ from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockConversationsMetricsService,
+    MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.views import ConversationsMetricsViewSet
@@ -22,7 +22,7 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         super().setUpClass()
         cls.original_service = ConversationsMetricsViewSet.service
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
-            datalake_service=MockConversationsMetricsService(),
+            datalake_service=MockDatalakeConversationsMetricsService(),
             nexus_client=MockNexusClient(),
         )
 
