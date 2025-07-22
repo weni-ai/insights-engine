@@ -79,12 +79,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         Get conversation subtopics
         """
-
-        if cached_results := self._get_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.SUBTOPICS
-        ):
-            return json.loads(cached_results)
-
         try:
             response = self.nexus_client.get_subtopics(project_uuid, topic_uuid)
 
@@ -113,10 +107,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             raise ConversationsMetricsError(
                 f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
-
-        self._save_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.SUBTOPICS, response_content
-        )
 
         return response_content
 
@@ -199,7 +189,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         self._clear_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.SUBTOPICS
+            project_uuid, ConversationsMetricsResource.TOPICS
         )
 
         return response_content
@@ -271,7 +261,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         self._clear_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.SUBTOPICS
+            project_uuid, ConversationsMetricsResource.TOPICS
         )
 
         return None
