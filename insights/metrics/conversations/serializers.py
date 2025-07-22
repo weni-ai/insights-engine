@@ -40,5 +40,5 @@ class CsatMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
     Serializer for csat metrics query params
     """
 
-    agent_uuid = serializers.UUIDField(required=True)
+    widget_uuid = serializers.UUIDField(required=True)
     type = serializers.ChoiceField(required=True, choices=CsatMetricsType.choices)

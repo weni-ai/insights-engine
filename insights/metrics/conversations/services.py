@@ -1,6 +1,7 @@
 from uuid import UUID
 from datetime import datetime
 
+from insights.sources.flowruns.usecases import QueryExecutor as FlowRunsQueryExecutor
 from insights.metrics.conversations.enums import CsatMetricsType
 
 
@@ -20,5 +21,23 @@ class ConversationsMetricsService:
         """
         Get csat metrics
         """
-        # TODO
+
+        # TODO: Check the correct filters names
+        # TODO: Add all filters
+
+        filters = {
+            "created_on": {
+                "gte": start_date,
+                "lte": end_date,
+            },
+        }
+
+        source_query = FlowRunsQueryExecutor(
+            project_uuid=project_uuid,
+            agent_uuid=agent_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        source_query.execute()
         return {}
