@@ -158,6 +158,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 serializer.validated_data["start_date"],
                 serializer.validated_data["end_date"],
                 serializer.validated_data["type"],
+                mock_data=request.query_params.get("mock_data", True),  # Staging only
             )
         except ConversationsMetricsError as e:
             return Response(

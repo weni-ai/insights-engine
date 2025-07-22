@@ -284,10 +284,26 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
+        mock_data: bool = False,
     ) -> dict:
         """
         Get topics distribution from Datalake.
         """
+        # Staging only mock data, should NOT be used in production
+        if mock_data:
+            return {
+                "topics": {
+                    "8f972fee-0018-49fe-b0a1-24630eda8d52": {
+                        "name": "Topic 1",
+                        "subtopics": {
+                            "8f972fee-0018-49fe-b0a1-24630eda8d52": {
+                                "name": "Subtopic 1",
+                                "count": 10,
+                            }
+                        },
+                    }
+                }
+            }
         cache_key = self._get_cache_key(
             project_uuid=project_uuid,
             start_date=start_date,
