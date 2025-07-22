@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from insights.metrics.conversations.enums import CsatMetricsType
 from insights.projects.models import Project
 
 
@@ -40,3 +41,4 @@ class CsatMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
     """
 
     agent_uuid = serializers.UUIDField(required=True)
+    type = serializers.ChoiceField(required=True, choices=CsatMetricsType.choices)

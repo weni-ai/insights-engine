@@ -28,6 +28,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
             agent_uuid=query_params.validated_data["agent_uuid"],
             start_date=query_params.validated_data["start_date"],
             end_date=query_params.validated_data["end_date"],
+            metric_type=query_params.validated_data["type"],
         )
 
         return Response(csat_metrics, status=status.HTTP_200_OK)

@@ -1,6 +1,8 @@
 from uuid import UUID
 from datetime import datetime
 
+from insights.metrics.conversations.enums import CsatMetricsType
+
 
 class ConversationsMetricsService:
     """
@@ -13,9 +15,10 @@ class ConversationsMetricsService:
         agent_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
+        metric_type: CsatMetricsType,
     ) -> dict:
         """
         Get csat metrics
         """
-
-        pass
+        # TODO
+        return {}
