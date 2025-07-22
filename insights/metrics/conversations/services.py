@@ -307,6 +307,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
+        mock_data: bool = False,
     ) -> TopicsDistributionMetrics:
         """
         Get topics distribution
@@ -340,10 +341,15 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 start_date=start_date,
                 end_date=end_date,
                 conversation_type=conversation_type,
+                mock_data=mock_data,
             )
         except Exception as e:
             logger.error("Failed to get topics distribution", exc_info=True)
             event_id = capture_exception(e)
+
+            import pdb
+
+            pdb.set_trace()
 
             raise ConversationsMetricsError(
                 f"Failed to get topics distribution. Event ID: {event_id}"

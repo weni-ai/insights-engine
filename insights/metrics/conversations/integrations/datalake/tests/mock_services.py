@@ -21,6 +21,7 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
+        mock_data: bool = False,
     ) -> TopicsDistributionMetrics:
         return {
             "OTHER": {
