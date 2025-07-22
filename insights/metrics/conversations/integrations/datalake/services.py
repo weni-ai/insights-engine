@@ -186,7 +186,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 event_name=self.event_name,
                 key="conversation_classification",
                 metadata_key="human_support",
-                metadata_value=True,
+                metadata_value="true",
             )[0].get("count", 0)
         except Exception as e:
             capture_exception(e)
