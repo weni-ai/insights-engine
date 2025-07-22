@@ -33,14 +33,14 @@ from insights.metrics.conversations.tests.mock import (
 )
 from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockConversationsMetricsService,
+    MockDatalakeConversationsMetricsService,
 )
 from insights.projects.models import Project
 
 
 class TestConversationsMetricsService(TestCase):
     service = ConversationsMetricsService(
-        datalake_service=MockConversationsMetricsService(),
+        datalake_service=MockDatalakeConversationsMetricsService(),
         nexus_client=MockNexusClient(),
     )
 

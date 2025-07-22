@@ -16,7 +16,7 @@ from insights.metrics.conversations.enums import (
 )
 from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockConversationsMetricsService,
+    MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.tests.mock import (
@@ -39,7 +39,7 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         super().setUpClass()
         cls.original_service = ConversationsMetricsViewSet.service
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
-            datalake_service=MockConversationsMetricsService(),
+            datalake_service=MockDatalakeConversationsMetricsService(),
             nexus_client=MockNexusClient(),
         )
 
