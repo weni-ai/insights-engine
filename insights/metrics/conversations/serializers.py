@@ -59,6 +59,7 @@ class ConversationTotalsMetricsSerializer(serializers.Serializer):
     resolved = ConversationsTotalsMetricSerializer()
     unresolved = ConversationsTotalsMetricSerializer()
     abandoned = ConversationsTotalsMetricSerializer()
+    transferred_to_human = ConversationsTotalsMetricSerializer()
 
 
 class ConversationTotalsMetricsQueryParamsSerializer(

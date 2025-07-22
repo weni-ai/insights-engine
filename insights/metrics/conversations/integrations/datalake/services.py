@@ -110,43 +110,36 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             return None
 
-    def _get_conversations_totals_cached_results(
+    def _get_conversations_totals_from_cache(
         self, key: str
     ) -> ConversationsTotalsMetrics:
         """
         Get results from cache with JSON deserialization.
         """
-        try:
-            cached_data = self.cache_client.get(key)
-            if cached_data:
-                # Handle both string and bytes from Redis
-                if isinstance(cached_data, bytes):
-                    cached_data = cached_data.decode("utf-8")
-
-                # Parse the JSON data and reconstruct the objects
-                data = json.loads(cached_data)
-
-                # Reconstruct ConversationsTotalsMetrics from cached data
-                return ConversationsTotalsMetrics(
-                    total_conversations=ConversationsTotalsMetric(
-                        value=data["total_conversations"]["value"],
-                        percentage=data["total_conversations"]["percentage"],
-                    ),
-                    resolved=ConversationsTotalsMetric(
-                        value=data["resolved"]["value"],
-                        percentage=data["resolved"]["percentage"],
-                    ),
-                    unresolved=ConversationsTotalsMetric(
-                        value=data["unresolved"]["value"],
-                        percentage=data["unresolved"]["percentage"],
-                    ),
-                    abandoned=ConversationsTotalsMetric(
-                        value=data["abandoned"]["value"],
-                        percentage=data["abandoned"]["percentage"],
-                    ),
-                )
-        except (json.JSONDecodeError, AttributeError, KeyError, TypeError) as e:
-            logger.warning(f"Failed to deserialize cached data: {e}")
+        cached_data = self._get_cached_results(key)
+        if cached_data:
+            return ConversationsTotalsMetrics(
+                total_conversations=ConversationsTotalsMetric(
+                    value=cached_data["total_conversations"]["value"],
+                    percentage=cached_data["total_conversations"]["percentage"],
+                ),
+                resolved=ConversationsTotalsMetric(
+                    value=cached_data["resolved"]["value"],
+                    percentage=cached_data["resolved"]["percentage"],
+                ),
+                unresolved=ConversationsTotalsMetric(
+                    value=cached_data["unresolved"]["value"],
+                    percentage=cached_data["unresolved"]["percentage"],
+                ),
+                abandoned=ConversationsTotalsMetric(
+                    value=cached_data["abandoned"]["value"],
+                    percentage=cached_data["abandoned"]["percentage"],
+                ),
+                transferred_to_human=ConversationsTotalsMetric(
+                    value=cached_data["transferred_to_human"]["value"],
+                    percentage=cached_data["transferred_to_human"]["percentage"],
+                ),
+            )
         return None
 
     def get_conversations_totals(
@@ -161,7 +154,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         if self.cache_results:
             try:
-                cached_results = self._get_conversations_totals_cached_results(
+                cached_results = self._get_conversations_totals_from_cache(
                     key=self._get_cache_key(
                         project_uuid=project_uuid,
                         start_date=start_date,
@@ -198,6 +191,15 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 key="conversation_classification",
                 value="abandoned",
             )[0].get("count", 0)
+            transferred_to_human_events_count = self.events_client.get_events_count(
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name=self.event_name,
+                key="conversation_classification",
+                metadata_key="human_support",
+                metadata_value="true",
+            )[0].get("count", 0)
         except Exception as e:
             capture_exception(e)
             logger.error(e)
@@ -223,6 +225,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             if total_conversations > 0
             else 0
         )
+        percentage_transferred_to_human = (
+            100 * transferred_to_human_events_count / total_conversations
+            if total_conversations > 0
+            else 0
+        )
 
         # Round percentages to 2 decimal places
         percentage_resolved = (
@@ -233,6 +240,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
         percentage_abandoned = (
             round(percentage_abandoned, 2) if percentage_abandoned > 0 else 0
+        )
+        percentage_transferred_to_human = (
+            round(percentage_transferred_to_human, 2)
+            if percentage_transferred_to_human > 0
+            else 0
         )
 
         results = ConversationsTotalsMetrics(
@@ -247,6 +259,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             ),
             abandoned=ConversationsTotalsMetric(
                 value=abandoned_events_count, percentage=percentage_abandoned
+            ),
+            transferred_to_human=ConversationsTotalsMetric(
+                value=transferred_to_human_events_count,
+                percentage=percentage_transferred_to_human,
             ),
         )
 
