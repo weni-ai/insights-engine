@@ -15,6 +15,12 @@ class ConversationsMetricsService:
     Service to get conversations metrics
     """
 
+    def __init__(
+        self,
+        flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
+    ):
+        self.flowruns_query_executor = flowruns_query_executor
+
     def _get_csat_metrics_from_flowruns(
         self,
         flow_uuid: UUID,
@@ -31,7 +37,7 @@ class ConversationsMetricsService:
             "flow": flow_uuid,
         }
 
-        return FlowRunsQueryExecutor.execute(
+        return self.flowruns_query_executor.execute(
             filters,
             operation="recurrence",
             parser=parse_dict_to_json,
