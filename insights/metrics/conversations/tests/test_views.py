@@ -4,7 +4,9 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from insights.authentication.authentication import User
+from insights.authentication.tests.decorators import with_project_auth
 from insights.dashboards.models import Dashboard
+from insights.metrics.conversations.enums import CsatMetricsType
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.views import ConversationsMetricsViewSet
 from insights.projects.models import Project
@@ -56,6 +58,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         super().tearDownClass()
         ConversationsMetricsViewSet.service = cls.original_service
 
+    @with_project_auth
     def test_get_csat_metrics(self):
         widget = Widget.objects.create(
             name="Test Widget",
@@ -72,3 +75,17 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                 "op_field": "result",
             },
         )
+
+        response = self.get_csat_metrics(
+            {
+                "project_uuid": self.project.uuid,
+                "widget_uuid": widget.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+                "type": CsatMetricsType.HUMAN,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("results", response.data)
+        self.assertIsInstance(response.data["results"], list)
