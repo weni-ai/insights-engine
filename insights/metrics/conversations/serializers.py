@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from insights.metrics.conversations.enums import CsatMetricsType
 from insights.projects.models import Project
+from insights.widgets.models import Widget
 
 
 class ConversationBaseQueryParamsSerializer(serializers.Serializer):
@@ -42,3 +43,21 @@ class CsatMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
 
     widget_uuid = serializers.UUIDField(required=True)
     type = serializers.ChoiceField(required=True, choices=CsatMetricsType.choices)
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        widget = Widget.objects.filter(
+            uuid=attrs["widget_uuid"], dashboard__project=attrs["project"]
+        ).first()
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"widget_uuid": "Widget not found"}, code="widget_not_found"
+            )
+
+        attrs["widget"] = widget
+        return attrs

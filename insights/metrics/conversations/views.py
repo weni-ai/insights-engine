@@ -25,7 +25,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
         csat_metrics = self.service.get_csat_metrics(
             project_uuid=query_params.validated_data["project_uuid"],
-            widget_uuid=query_params.validated_data["widget_uuid"],
+            widget=query_params.validated_data["widget"],
             start_date=query_params.validated_data["start_date"],
             end_date=query_params.validated_data["end_date"],
             metric_type=query_params.validated_data["type"],
