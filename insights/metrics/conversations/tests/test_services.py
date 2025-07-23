@@ -42,10 +42,13 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        self.service.get_csat_metrics(
+        results = self.service.get_csat_metrics(
             project_uuid=self.project.uuid,
             widget=widget,
             start_date=datetime.now() - timedelta(days=30),
             end_date=datetime.now(),
             metric_type=CsatMetricsType.HUMAN,
         )
+
+        self.assertIn("results", results)
+        self.assertIsInstance(results["results"], list)
