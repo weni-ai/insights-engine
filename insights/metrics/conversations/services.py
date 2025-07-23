@@ -24,14 +24,14 @@ class ConversationsMetricsService:
         end_date: datetime,
     ) -> dict:
         filters = {
-            "ended_at": {
+            "modified_on": {
                 "gte": start_date,
                 "lte": end_date,
             },
             "flow": flow_uuid,
         }
 
-        source_query = FlowRunsQueryExecutor(
+        return FlowRunsQueryExecutor.execute(
             filters,
             operation="recurrence",
             parser=parse_dict_to_json,
@@ -41,13 +41,11 @@ class ConversationsMetricsService:
             },
         )
 
-        return source_query.execute()
-
     def _get_csat_metrics_from_datalake(
         self, agent_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> dict:
         # TODO
-        pass
+        return {}
 
     def get_csat_metrics(
         self,

@@ -49,6 +49,7 @@ class QueryExecutor:
             query_kwargs=query_kwargs,
         )
         endpoint, params = query_generator.generate()
+        print(endpoint, params)
         response = Connection(endpoint).get(params=params)
 
         if operation == "recurrence":
