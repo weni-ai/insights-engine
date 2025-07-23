@@ -3,7 +3,9 @@ from datetime import datetime
 
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.projects.parsers import parse_dict_to_json
-from insights.sources.flowruns.usecases import QueryExecutor as FlowRunsQueryExecutor
+from insights.sources.flowruns.usecases.query_execute import (
+    QueryExecutor as FlowRunsQueryExecutor,
+)
 from insights.metrics.conversations.enums import CsatMetricsType
 from insights.widgets.models import Widget
 
