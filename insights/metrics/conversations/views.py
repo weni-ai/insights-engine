@@ -2,7 +2,9 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
+from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.serializers import CsatMetricsQueryParamsSerializer
 from insights.metrics.conversations.services import ConversationsMetricsService
 
@@ -13,8 +15,14 @@ class ConversationsMetricsViewSet(GenericViewSet):
     """
 
     service = ConversationsMetricsService()
+    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
 
-    @action(detail=False, methods=["get"])
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="csat-metrics",
+        url_name="csat-metrics",
+    )
     def csat_metrics(self, request) -> Response:
         """
         Get csat metrics

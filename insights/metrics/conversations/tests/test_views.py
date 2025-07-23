@@ -1,19 +1,33 @@
+from django.urls import reverse
 from rest_framework.test import APITestCase
+from rest_framework.response import Response
+from rest_framework import status
 
 from insights.authentication.authentication import User
 from insights.dashboards.models import Dashboard
+from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.views import ConversationsMetricsViewSet
 from insights.projects.models import Project
+from insights.sources.flowruns.tests.mock_query_executor import (
+    MockFlowRunsQueryExecutor,
+)
 from insights.widgets.models import Widget
 
 
 class BaseTestConversationsMetricsViewSet(APITestCase):
-    pass
+    def get_csat_metrics(self, query_params: dict) -> Response:
+        url = reverse("conversations-csat-metrics")
+
+        return self.client.get(url, query_params, format="json")
 
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
 ):
-    pass
+    def test_cannot_get_csat_metrics_when_unauthenticated(self):
+        response = self.get_csat_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TestConversationsMetricsViewSetAsAuthenticatedUser(
@@ -29,6 +43,19 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
 
         self.client.force_authenticate(self.user)
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.original_service = ConversationsMetricsViewSet.service
+        ConversationsMetricsViewSet.service = ConversationsMetricsService(
+            flowruns_query_executor=MockFlowRunsQueryExecutor,
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        ConversationsMetricsViewSet.service = cls.original_service
+
     def test_get_csat_metrics(self):
         widget = Widget.objects.create(
             name="Test Widget",
@@ -36,4 +63,12 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             source="flowruns",
             type="flow_result",
             position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "csat",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+            },
         )
