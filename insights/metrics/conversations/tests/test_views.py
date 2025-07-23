@@ -58,8 +58,29 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         super().tearDownClass()
         ConversationsMetricsViewSet.service = cls.original_service
 
+    def test_cannot_get_csat_metrics_without_project_uuid(self):
+        response = self.get_csat_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_cannot_get_csat_metrics_without_permission(self):
+        response = self.get_csat_metrics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     @with_project_auth
-    def test_get_csat_metrics(self):
+    def test_cannot_get_csat_metrics_without_required_params(self):
+        response = self.get_csat_metrics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["widget_uuid"][0].code, "required")
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+        self.assertEqual(response.data["type"][0].code, "required")
+
+    @with_project_auth
+    def test_get_csat_metrics_human(self):
         widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
