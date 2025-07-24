@@ -131,7 +131,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 True if conversation_type == ConversationType.HUMAN else False
             )
 
-            events_count = self.events_client.get_events_count_by_group(
+            topics_events = self.events_client.get_events_count_by_group(
                 event_name=self.event_name,
                 project=project_uuid,
                 date_start=start_date,
@@ -139,6 +139,19 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 key="topics",
                 metadata_key="human_support",
                 metadata_value=str(human_support),
+                group_by="topic_uuid",
+            )
+
+            # Subtopics
+            subtopics_events = self.events_client.get_events_count_by_group(
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                key="topics",
+                metadata_key="human_support",
+                metadata_value=str(human_support),
+                group_by="subtopic_uuid",
             )
         except Exception as e:
             logger.error("Failed to get topics distribution from Datalake: %s", e)
@@ -146,14 +159,38 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
-        subtopics = {str(subtopic.uuid): subtopic for subtopic in subtopics}
         topics_data = {"OTHER": {"topic_name": "Other", "count": 0, "subtopics": {}}}
 
-        for event_count in events_count:
-            subtopic_uuid = event_count.get("group_value")
+        for topic_event in topics_events:
+            if topic_event.get("group_value") in {"", None}:
+                topics_data["OTHER"]["count"] += topic_event.get("count", 0)
+                continue
 
-            if subtopic_uuid in {"", None} or subtopic_uuid not in subtopics:
-                topics_data["OTHER"]["count"] += event_count.get("count", 0)
+            topic_uuid = topic_event.get("group_value")
+            topic_name = topic_event.get("topic_name")
+            topic_count = topic_event.get("count")
+
+            if topic_uuid not in topics_data:
+                topics_data[topic_uuid] = {
+                    "topic_name": topic_name,
+                    "topic_uuid": topic_uuid,
+                    "count": topic_count,
+                    "subtopics": {
+                        "OTHER": {
+                            "count": topic_count,
+                            "subtopic_name": "Other",
+                            "subtopic_uuid": "OTHER",
+                        },
+                    },
+                }
+
+        subtopics = {str(subtopic.uuid): subtopic for subtopic in subtopics}
+
+        for subtopic_event in subtopics_events:
+            subtopic_uuid = subtopic_event.get("group_value")
+
+            if not subtopic_uuid or subtopic_uuid not in subtopics:
+                topics_data["OTHER"]["count"] += subtopic_event.get("count", 0)
                 continue
 
             topic_uuid = subtopics[subtopic_uuid].topic_uuid
@@ -167,7 +204,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     "subtopics": {},
                 }
 
-            topics_data[topic_uuid]["count"] += event_count.get("count", 0)
+            topics_data[topic_uuid]["count"] += subtopic_event.get("count", 0)
+
+            if subtopic_uuid in {"", None}:
+                pass
 
             subtopic_name = subtopics[subtopic_uuid].subtopic_name
 
@@ -180,7 +220,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             topics_data[topic_uuid]["subtopics"][subtopic_uuid][
                 "count"
-            ] += event_count.get("count", 0)
+            ] += subtopic_event.get("count", 0)
+            topics_data[topic_uuid]["subtopics"]["OTHER"][
+                "count"
+            ] -= subtopic_event.get("count", 0)
 
         self._save_results_to_cache(cache_key, topics_data)
 
