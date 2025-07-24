@@ -9,6 +9,7 @@ from django.conf import settings
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.dataclass import (
+    SubtopicTopicRelation,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import ConversationType
@@ -107,6 +108,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
+        subtopics: list[SubtopicTopicRelation],
     ) -> dict:
         """
         Get topics distribution from Datalake.
@@ -129,7 +131,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 True if conversation_type == ConversationType.HUMAN else False
             )
 
-            events = self.events_client.get_events(
+            events_count = self.events_client.get_events_count_by_group(
                 event_name=self.event_name,
                 project=project_uuid,
                 date_start=start_date,
@@ -144,58 +146,41 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
-        topics_data = {}
-        total_topics_count = 0
+        subtopics = {str(subtopic.uuid): subtopic for subtopic in subtopics}
+        topics_data = {"OTHER": {"topic_name": "Other", "count": 0, "subtopics": {}}}
 
-        # unclassified conversations
-        other_topic = {
-            "name": "OTHER",
-            "count": 0,
-        }
-        topics_data["OTHER"] = other_topic
+        for event_count in events_count:
+            subtopic_uuid = event_count.get("group_value")
 
-        for event in events:
-            total_topics_count += 1
-            metadata = event.get("metadata")
-
-            if isinstance(metadata, str):
-                metadata = json.loads(metadata)
-
-            if not metadata:
+            if subtopic_uuid in {"", None} or subtopic_uuid not in subtopics:
+                topics_data["OTHER"]["count"] += event_count.get("count", 0)
                 continue
 
-            topic_uuid = metadata.get("topic_uuid")
-            topic_name = metadata.get("value")
-
-            if not topic_uuid:
-                other_topic["count"] += 1
-                continue
+            topic_uuid = subtopics[subtopic_uuid].topic_uuid
+            topic_name = subtopics[subtopic_uuid].topic_name
 
             if topic_uuid not in topics_data:
                 topics_data[topic_uuid] = {
-                    "name": topic_name,
-                    "subtopics": {},
+                    "topic_name": topic_name,
+                    "topic_uuid": topic_uuid,
                     "count": 0,
-                    "other_count": 0,  # unclassified conversations
+                    "subtopics": {},
                 }
 
-            topics_data[topic_uuid]["count"] += 1
+            topics_data[topic_uuid]["count"] += event_count.get("count", 0)
 
-            subtopic_uuid = metadata.get("subtopic_uuid")
-            subtopic_name = metadata.get("subtopic")
+            subtopic_name = subtopics[subtopic_uuid].subtopic_name
 
-            if subtopic_uuid:
-                if not subtopic_uuid:
-                    topics_data[topic_uuid]["other_count"] += 1
-                    continue
+            if subtopic_uuid not in topics_data[topic_uuid]["subtopics"]:
+                topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
+                    "count": 0,
+                    "subtopic_name": subtopic_name,
+                    "subtopic_uuid": subtopic_uuid,
+                }
 
-                if subtopic_uuid not in topics_data[topic_uuid]["subtopics"]:
-                    topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
-                        "name": subtopic_name,
-                        "count": 0,
-                    }
-
-                topics_data[topic_uuid]["subtopics"][subtopic_uuid]["count"] += 1
+            topics_data[topic_uuid]["subtopics"][subtopic_uuid][
+                "count"
+            ] += event_count.get("count", 0)
 
         self._save_results_to_cache(cache_key, topics_data)
 

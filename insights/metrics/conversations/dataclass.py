@@ -33,3 +33,14 @@ class TopicsDistributionMetrics:
     """
 
     topics: list[TopicMetrics]
+
+
+class SubtopicTopicRelation:
+    """
+    Subtopic -> Topic relation
+    """
+
+    subtopic_uuid: str
+    subtopic_name: str
+    topic_uuid: str
+    topic_name: str
