@@ -200,7 +200,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         percentage_resolved = round(
             (
-                (resolved_events_count * (100 / total_conversations))
+                (resolved_events_count * (total_conversations / 100))
                 if total_conversations > 0
                 else 0
             ),
@@ -209,7 +209,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         percentage_unresolved = round(
             (
-                (unresolved_events_count * (100 / total_conversations))
+                (unresolved_events_count * (total_conversations / 100))
                 if total_conversations > 0
                 else 0
             ),
@@ -217,7 +217,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
         percentage_abandoned = round(
             (
-                (abandoned_events_count * (100 / total_conversations))
+                (abandoned_events_count * (total_conversations / 100))
                 if total_conversations > 0
                 else 0
             ),
@@ -225,7 +225,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
         percentage_transferred_to_human = round(
             (
-                (transferred_to_human_events_count * (100 / total_conversations))
+                (transferred_to_human_events_count * (total_conversations / 100))
                 if total_conversations > 0
                 else 0
             ),
