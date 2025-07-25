@@ -144,6 +144,10 @@ class ConversationsMetricsViewSet(GenericViewSet):
         """
         Get topics distribution
         """
+        print(request.query_params)
+
+        print("Mock data", request.query_params.get("mock_data", True))
+
         serializer = TopicsDistributionMetricsQueryParamsSerializer(
             data=request.query_params
         )
