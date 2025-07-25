@@ -128,3 +128,25 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             capture_exception(e)
 
             raise e
+
+        # The frontend application will display fixed labels for the CSAT scores
+        # For example, "1" can be displayed as "1 - Very dissatisfied"
+        scores = {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+        }
+
+        # Each metric is a dict grouped by the event's value
+        # (in this case, the event's value is the CSAT score)
+        for metric in csat_metrics:
+            if metric.get("group_value") not in scores:
+                # We ignore metrics that are not CSAT scores
+                # This is a safety measure to avoid unexpected values
+                continue
+
+            scores[metric.get("group_value")] += metric.get("count")
+
+        return scores
