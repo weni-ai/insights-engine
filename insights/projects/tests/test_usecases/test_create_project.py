@@ -2,6 +2,11 @@ from uuid import uuid4
 
 from django.test import TestCase
 
+from insights.dashboards.models import (
+    CONVERSATION_DASHBOARD_NAME,
+    HUMAN_SERVICE_DASHBOARD_NAME,
+    Dashboard,
+)
 from insights.projects.usecases.create import ProjectsUseCase
 from insights.projects.usecases.project_dto import ProjectCreationDTO
 
@@ -20,6 +25,18 @@ class TestCreateProjectUseCase(TestCase):
 
         self.assertEqual(project.uuid, project_dto.uuid)
         self.assertIsNone(project.vtex_account)
+        self.assertEqual(
+            Dashboard.objects.filter(
+                project=project, name=HUMAN_SERVICE_DASHBOARD_NAME
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            Dashboard.objects.filter(
+                project=project, name=CONVERSATION_DASHBOARD_NAME
+            ).count(),
+            1,
+        )
 
     def test_create_project_with_vtex_account(self):
         project_dto = ProjectCreationDTO(
@@ -35,3 +52,15 @@ class TestCreateProjectUseCase(TestCase):
 
         self.assertEqual(project.uuid, project_dto.uuid)
         self.assertEqual(project.vtex_account, project_dto.vtex_account)
+        self.assertEqual(
+            Dashboard.objects.filter(
+                project=project, name=HUMAN_SERVICE_DASHBOARD_NAME
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            Dashboard.objects.filter(
+                project=project, name=CONVERSATION_DASHBOARD_NAME
+            ).count(),
+            1,
+        )
