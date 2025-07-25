@@ -285,8 +285,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
-        mock_data: bool = False,
         subtopics: list[SubtopicTopicRelation],
+        mock_data: bool = False,
     ) -> dict:
         """
         Get topics distribution from Datalake.
