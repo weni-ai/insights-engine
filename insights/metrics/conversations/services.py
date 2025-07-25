@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from django.conf import settings
 from rest_framework import status
 
 from sentry_sdk import capture_exception, capture_message
