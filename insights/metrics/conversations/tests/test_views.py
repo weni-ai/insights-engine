@@ -623,7 +623,11 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             }
         )
 
-        self.assertIn("topics", response.data)
+        self.assertIn("score", response.data)
+        self.assertIn("total_responses", response.data)
+        self.assertIn("promoters", response.data)
+        self.assertIn("detractors", response.data)
+        self.assertIn("passives", response.data)
 
     def test_cannot_get_topics_without_project_uuid(self):
         response = self.get_topics({})
