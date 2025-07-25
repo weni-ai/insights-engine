@@ -392,6 +392,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             subtopic.subtopic_uuid: subtopic.topic_uuid for subtopic in subtopics
         }
 
+        print("Topics from subtopics", topics_from_subtopics)
+
         for topic_uuid, topic_name in topics_from_subtopics.items():
             if topic_uuid not in topics_data:
                 topics_data[topic_uuid] = {
@@ -469,5 +471,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             ] -= subtopic_event.get("count", 0)
 
         self._save_results_to_cache(cache_key, topics_data)
+
+        print("Topics data", topics_data)
 
         return topics_data
