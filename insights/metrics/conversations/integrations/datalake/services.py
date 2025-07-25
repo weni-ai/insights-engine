@@ -2,6 +2,7 @@ from abc import ABC
 import json
 import logging
 from datetime import datetime
+from uuid import UUID
 
 from django.conf import settings
 
@@ -23,6 +24,15 @@ class BaseConversationsMetricsService(ABC):
     """
     Base class for conversations metrics services.
     """
+
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        raise NotImplementedError("Subclasses must implement this method")
 
 
 class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
@@ -84,3 +94,34 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             logger.warning("Failed to deserialize cached data: %s", e)
 
             return None
+
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        cache_key = self._get_cache_key(
+            project_uuid=project_uuid,
+            agent_uuid=agent_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if cached_results := self._get_cached_results(cache_key):
+            if not isinstance(cached_results, dict):
+                cached_results = json.loads(cached_results)
+
+            return cached_results
+
+        try:
+            csat_metrics = self.events_client.get_csat_metrics(
+                event_name=self.event_name,
+                project=project_uuid,
+                agent_uuid=agent_uuid,
+                date_start=start_date,
+                date_end=end_date,
+            )
+        except Exception as e:
+            logger.error("Failed to get csat metrics: %s", e)
