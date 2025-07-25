@@ -211,41 +211,38 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             resolved_events_count + unresolved_events_count + abandoned_events_count
         )
 
-        percentage_resolved = (
-            100 * resolved_events_count / total_conversations
-            if total_conversations > 0
-            else 0
-        )
-        percentage_unresolved = (
-            100 * unresolved_events_count / total_conversations
-            if total_conversations > 0
-            else 0
-        )
-        percentage_abandoned = (
-            100 * abandoned_events_count / total_conversations
-            if total_conversations > 0
-            else 0
-        )
-        percentage_transferred_to_human = (
-            100 * transferred_to_human_events_count / total_conversations
-            if total_conversations > 0
-            else 0
+        percentage_resolved = round(
+            (
+                (resolved_events_count * (total_conversations / 100))
+                if total_conversations > 0
+                else 0
+            ),
+            2,
         )
 
-        # Round percentages to 2 decimal places
-        percentage_resolved = (
-            round(percentage_resolved, 2) if percentage_resolved > 0 else 0
+        percentage_unresolved = round(
+            (
+                (unresolved_events_count * (total_conversations / 100))
+                if total_conversations > 0
+                else 0
+            ),
+            2,
         )
-        percentage_unresolved = (
-            round(percentage_unresolved, 2) if percentage_unresolved > 0 else 0
+        percentage_abandoned = round(
+            (
+                (abandoned_events_count * (total_conversations / 100))
+                if total_conversations > 0
+                else 0
+            ),
+            2,
         )
-        percentage_abandoned = (
-            round(percentage_abandoned, 2) if percentage_abandoned > 0 else 0
-        )
-        percentage_transferred_to_human = (
-            round(percentage_transferred_to_human, 2)
-            if percentage_transferred_to_human > 0
-            else 0
+        percentage_transferred_to_human = round(
+            (
+                (transferred_to_human_events_count * (total_conversations / 100))
+                if total_conversations > 0
+                else 0
+            ),
+            2,
         )
 
         results = ConversationsTotalsMetrics(
