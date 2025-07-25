@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import logging
 from datetime import datetime
@@ -9,6 +10,7 @@ from rest_framework import status
 from sentry_sdk import capture_exception, capture_message
 
 from insights.metrics.conversations.dataclass import (
+    ConversationsTotalsMetrics,
     SubtopicMetrics,
     SubtopicTopicRelation,
     TopicMetrics,
@@ -365,4 +367,17 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return TopicsDistributionMetrics(
             topics=topics_metrics,
+        )
+
+    def get_totals(
+        self, project: "Project", start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations metrics totals
+        """
+
+        return self.datalake_service.get_conversations_totals(
+            project_uuid=project.uuid,
+            start_date=start_date,
+            end_date=end_date,
         )

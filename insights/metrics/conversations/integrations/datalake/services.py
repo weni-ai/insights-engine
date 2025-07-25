@@ -4,11 +4,12 @@ import logging
 from datetime import datetime
 from uuid import UUID
 
-
 from django.conf import settings
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.dataclass import (
+    ConversationsTotalsMetric,
+    ConversationsTotalsMetrics,
     SubtopicTopicRelation,
     TopicsDistributionMetrics,
 )
@@ -40,6 +41,13 @@ class BaseConversationsMetricsService(ABC):
         conversation_type: ConversationType,
     ) -> TopicsDistributionMetrics:
         pass
+
+    def get_conversations_totals(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations totals from Datalake.
+        """
 
 
 class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
@@ -266,3 +274,138 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         self._save_results_to_cache(cache_key, topics_data)
 
         return topics_data
+
+    def get_conversations_totals(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations totals from Datalake.
+        """
+
+        if self.cache_results:
+            try:
+                cached_results = self._get_conversations_totals_from_cache(
+                    key=self._get_cache_key(
+                        project_uuid=project_uuid,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
+                )
+                if cached_results:
+                    return cached_results
+            except Exception as e:
+                logger.warning(f"Cache retrieval failed: {e}")
+
+        try:
+            resolved_events_count = self.events_client.get_events_count(
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name=self.event_name,
+                key="conversation_classification",
+                value="resolved",
+            )[0].get("count", 0)
+            unresolved_events_count = self.events_client.get_events_count(
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name=self.event_name,
+                key="conversation_classification",
+                value="unresolved",
+            )[0].get("count", 0)
+            abandoned_events_count = self.events_client.get_events_count(
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name=self.event_name,
+                key="conversation_classification",
+                value="abandoned",
+            )[0].get("count", 0)
+            transferred_to_human_events_count = self.events_client.get_events_count(
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name=self.event_name,
+                key="conversation_classification",
+                metadata_key="human_support",
+                metadata_value="true",
+            )[0].get("count", 0)
+        except Exception as e:
+            capture_exception(e)
+            logger.error(e)
+
+            raise e
+
+        total_conversations = (
+            resolved_events_count + unresolved_events_count + abandoned_events_count
+        )
+
+        percentage_resolved = round(
+            (
+                (resolved_events_count / total_conversations * 100)
+                if total_conversations > 0
+                else 0
+            ),
+            2,
+        )
+
+        percentage_unresolved = round(
+            (
+                (unresolved_events_count / total_conversations * 100)
+                if total_conversations > 0
+                else 0
+            ),
+            2,
+        )
+
+        percentage_abandoned = round(
+            (
+                (abandoned_events_count / total_conversations * 100)
+                if total_conversations > 0
+                else 0
+            ),
+            2,
+        )
+
+        percentage_transferred_to_human = round(
+            (
+                (transferred_to_human_events_count / total_conversations * 100)
+                if total_conversations > 0
+                else 0
+            ),
+            2,
+        )
+
+        results = ConversationsTotalsMetrics(
+            total_conversations=ConversationsTotalsMetric(
+                value=total_conversations, percentage=100
+            ),
+            resolved=ConversationsTotalsMetric(
+                value=resolved_events_count, percentage=percentage_resolved
+            ),
+            unresolved=ConversationsTotalsMetric(
+                value=unresolved_events_count, percentage=percentage_unresolved
+            ),
+            abandoned=ConversationsTotalsMetric(
+                value=abandoned_events_count, percentage=percentage_abandoned
+            ),
+            transferred_to_human=ConversationsTotalsMetric(
+                value=transferred_to_human_events_count,
+                percentage=percentage_transferred_to_human,
+            ),
+        )
+
+        if self.cache_results:
+            params = {
+                "project_uuid": project_uuid,
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+            self._save_results_to_cache(
+                key=self._get_cache_key(**params), value=results
+            )
+
+        return results

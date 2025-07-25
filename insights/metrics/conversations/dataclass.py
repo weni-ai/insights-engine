@@ -14,6 +14,16 @@ class SubtopicMetrics:
 
 
 @dataclass(frozen=True)
+class ConversationsTotalsMetric:
+    """
+    Dataclass for conversations totals
+    """
+
+    value: int
+    percentage: float
+
+
+@dataclass(frozen=True)
 class TopicMetrics:
     """
     A topics, that consists of subtopics.
@@ -45,3 +55,16 @@ class SubtopicTopicRelation:
     subtopic_name: str
     topic_uuid: str
     topic_name: str
+
+
+@dataclass(frozen=True)
+class ConversationsTotalsMetrics:
+    """
+    Dataclass for conversations totals metrics
+    """
+
+    total_conversations: ConversationsTotalsMetric
+    resolved: ConversationsTotalsMetric
+    unresolved: ConversationsTotalsMetric
+    abandoned: ConversationsTotalsMetric
+    transferred_to_human: bool

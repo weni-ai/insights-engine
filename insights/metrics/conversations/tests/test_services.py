@@ -1,9 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
+
+from insights.projects.models import Project
 from django.test import TestCase
 from django.core.cache import cache
 
-from insights.metrics.conversations.dataclass import TopicsDistributionMetrics
+from insights.metrics.conversations.dataclass import (
+    ConversationsTotalsMetrics,
+    TopicsDistributionMetrics,
+)
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
@@ -20,6 +25,9 @@ class TestConversationsMetricsService(TestCase):
     )
 
     def setUp(self) -> None:
+        self.project = Project.objects.create(name="Test Project")
+        self.start_date = datetime.now() - timedelta(days=30)
+        self.end_date = datetime.now()
         cache.clear()
 
     def tearDown(self) -> None:
@@ -79,3 +87,12 @@ class TestConversationsMetricsService(TestCase):
             topic_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
             subtopic_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
         )
+
+    def test_get_totals(self):
+        totals = self.service.get_totals(
+            project=self.project,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(totals, ConversationsTotalsMetrics)
