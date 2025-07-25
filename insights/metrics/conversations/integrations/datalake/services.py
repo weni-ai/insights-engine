@@ -357,6 +357,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 group_by="topic_uuid",
             )
 
+            print("Topics events from datalake", topics_events)
+
             # Subtopics
             subtopics_events = self.events_client.get_events_count_by_group(
                 event_name=self.event_name,
@@ -368,6 +370,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 metadata_value=str(human_support),
                 group_by="subtopic_uuid",
             )
+
+            print("Subtopics events from datalake", subtopics_events)
         except Exception as e:
             capture_exception(e)
             logger.error(e)
