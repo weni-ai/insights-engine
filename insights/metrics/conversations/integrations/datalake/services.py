@@ -128,7 +128,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         try:
             human_support = (
-                True if conversation_type == ConversationType.HUMAN else False
+                "true" if conversation_type == ConversationType.HUMAN else "false"
             )
 
             topics_events = self.events_client.get_events_count_by_group(
@@ -138,7 +138,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 date_end=str(end_date),
                 key="topics",
                 metadata_key="human_support",
-                metadata_value=str(human_support),
+                metadata_value=human_support,
                 group_by="topic_uuid",
             )
 
@@ -150,7 +150,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 date_end=str(end_date),
                 key="topics",
                 metadata_key="human_support",
-                metadata_value=str(human_support),
+                metadata_value=human_support,
                 group_by="subtopic_uuid",
             )
         except Exception as e:
