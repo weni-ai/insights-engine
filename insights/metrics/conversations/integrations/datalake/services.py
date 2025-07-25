@@ -357,8 +357,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topics_events = self.events_client.get_events_count_by_group(
                 event_name=self.event_name,
                 project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
+                date_start=str(start_date),
+                date_end=str(end_date),
                 key="topics",
                 metadata_key="human_support",
                 metadata_value=str(human_support),
@@ -371,8 +371,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             subtopics_events = self.events_client.get_events_count_by_group(
                 event_name=self.event_name,
                 project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
+                date_start=str(start_date),
+                date_end=str(end_date),
                 key="topics",
                 metadata_key="human_support",
                 metadata_value=str(human_support),
