@@ -48,10 +48,16 @@ class ConversationsMetricsService:
         )
 
     def _get_csat_metrics_from_datalake(
-        self, agent_uuid: UUID, start_date: datetime, end_date: datetime
+        self,
+        project_uuid: UUID,
+        agent_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
     ) -> dict:
         # TODO
-        return {}
+        return self.datalake_service.get_csat_metrics(
+            project_uuid, agent_uuid, start_date, end_date
+        )
 
     def get_csat_metrics(
         self,
@@ -93,4 +99,6 @@ class ConversationsMetricsService:
                 "Agent UUID is required in the widget config"
             )
 
-        return self._get_csat_metrics_from_datalake(agent_uuid, start_date, end_date)
+        return self._get_csat_metrics_from_datalake(
+            project_uuid, agent_uuid, start_date, end_date
+        )
