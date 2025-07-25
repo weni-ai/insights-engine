@@ -5,7 +5,7 @@ from datetime import datetime
 from uuid import UUID
 
 from django.conf import settings
-
+from sentry_sdk import capture_exception
 
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
@@ -116,7 +116,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             return cached_results
 
         try:
-            csat_metrics = self.events_client.get_csat_metrics(
+            csat_metrics = self.events_client.get_events_count_by_group(
                 event_name=self.event_name,
                 project=project_uuid,
                 agent_uuid=agent_uuid,
@@ -125,3 +125,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             )
         except Exception as e:
             logger.error("Failed to get csat metrics: %s", e)
+            capture_exception(e)
+
+            raise e
