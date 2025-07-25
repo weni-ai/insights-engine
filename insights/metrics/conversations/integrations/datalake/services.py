@@ -343,7 +343,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         try:
             human_support = (
-                True if conversation_type == ConversationType.HUMAN else False
+                "true" if conversation_type == ConversationType.HUMAN else "false"
             )
 
             print("Event name", self.event_name)
@@ -361,7 +361,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 date_end=str(end_date),
                 key="topics",
                 metadata_key="human_support",
-                metadata_value=str(human_support),
+                metadata_value=human_support,
                 group_by="topic_uuid",
             )
 
@@ -375,7 +375,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 date_end=str(end_date),
                 key="topics",
                 metadata_key="human_support",
-                metadata_value=str(human_support),
+                metadata_value=human_support,
                 group_by="subtopic_uuid",
             )
 
@@ -409,6 +409,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             else:
                 topics_data[topic_uuid]["count"] += 0
 
+        if topics_events == [{}]:
+            return topics_events
+
         for topic_event in topics_events:
             topic_uuid = topic_event.get("group_value")
 
@@ -420,6 +423,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topic_count = topic_event.get("count", 0)
 
             topics_data[topic_uuid]["count"] += topic_count
+
+        if subtopics_events == [{}]:
+            return subtopics_events
 
         subtopics = {str(subtopic.subtopic_uuid): subtopic for subtopic in subtopics}
 
