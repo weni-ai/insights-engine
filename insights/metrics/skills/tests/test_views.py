@@ -38,7 +38,8 @@ class TestSkillsMetricsViewAsAuthenticatedUser(BaseTestSkillsMetrisView):
     def test_cannot_get_metrics_for_skill_without_project_uuid(self):
         response = self.get_metrics_for_skill({})
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
 
     def test_cannot_get_metrics_for_skill_without_project_permission(self):
         response = self.get_metrics_for_skill({"project_uuid": self.project.uuid})
