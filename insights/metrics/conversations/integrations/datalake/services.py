@@ -11,6 +11,7 @@ from sentry_sdk import capture_exception
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
+    SubtopicTopicRelation,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import ConversationType
@@ -285,6 +286,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         conversation_type: ConversationType,
         mock_data: bool = False,
+        subtopics: list[SubtopicTopicRelation],
     ) -> dict:
         """
         Get topics distribution from Datalake.
@@ -344,7 +346,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 True if conversation_type == ConversationType.HUMAN else False
             )
 
-            events = self.events_client.get_events(
+            topics_events = self.events_client.get_events_count_by_group(
                 event_name=self.event_name,
                 project=project_uuid,
                 date_start=start_date,
@@ -352,6 +354,19 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 key="topics",
                 metadata_key="human_support",
                 metadata_value=str(human_support),
+                group_by="topic_uuid",
+            )
+
+            # Subtopics
+            subtopics_events = self.events_client.get_events_count_by_group(
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                key="topics",
+                metadata_key="human_support",
+                metadata_value=str(human_support),
+                group_by="subtopic_uuid",
             )
         except Exception as e:
             capture_exception(e)
@@ -359,58 +374,71 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
-        topics_data = {}
-        total_topics_count = 0
+        topics_data = {"OTHER": {"topic_name": "Other", "count": 0, "subtopics": {}}}
 
-        # unclassified conversations
-        other_topic = {
-            "name": "OTHER",
-            "count": 0,
-        }
-        topics_data["OTHER"] = other_topic
-
-        for event in events:
-            total_topics_count += 1
-            metadata = event.get("metadata")
-
-            if isinstance(metadata, str):
-                metadata = json.loads(metadata)
-
-            if not metadata:
+        for topic_event in topics_events:
+            if topic_event.get("group_value") in {"", None}:
+                topics_data["OTHER"]["count"] += topic_event.get("count", 0)
                 continue
 
-            topic_uuid = metadata.get("topic_uuid")
-            topic_name = metadata.get("value")
+            topic_uuid = topic_event.get("group_value")
+            topic_name = topic_event.get("topic_name")
+            topic_count = topic_event.get("count")
 
-            if not topic_uuid:
-                other_topic["count"] += 1
+            if topic_uuid not in topics_data:
+                topics_data[topic_uuid] = {
+                    "topic_name": topic_name,
+                    "topic_uuid": topic_uuid,
+                    "count": topic_count,
+                    "subtopics": {
+                        "OTHER": {
+                            "count": topic_count,
+                            "subtopic_name": "Other",
+                            "subtopic_uuid": "OTHER",
+                        },
+                    },
+                }
+
+        subtopics = {str(subtopic.uuid): subtopic for subtopic in subtopics}
+
+        for subtopic_event in subtopics_events:
+            subtopic_uuid = subtopic_event.get("group_value")
+
+            if not subtopic_uuid:
                 continue
+
+            if subtopic_uuid not in subtopics:
+                topics_data["OTHER"]["count"] += subtopic_event.get("count", 0)
+                continue
+
+            topic_uuid = subtopics[subtopic_uuid].topic_uuid
+            topic_name = subtopics[subtopic_uuid].topic_name
 
             if topic_uuid not in topics_data:
                 topics_data[topic_uuid] = {
                     "name": topic_name,
-                    "subtopics": {},
+                    "uuid": topic_uuid,
                     "count": 0,
-                    "other_count": 0,  # unclassified conversations
+                    "subtopics": {},
                 }
 
-            topics_data[topic_uuid]["count"] += 1
+            topics_data[topic_uuid]["count"] += subtopic_event.get("count", 0)
 
-            subtopic_uuid = metadata.get("subtopic_uuid")
-            subtopic_name = metadata.get("subtopic")
+            subtopic_name = subtopics[subtopic_uuid].subtopic_name
 
-            if subtopic_uuid:
-                if not subtopic_uuid:
-                    topics_data[topic_uuid]["other_count"] += 1
-                    continue
+            if subtopic_uuid not in topics_data[topic_uuid]["subtopics"]:
+                topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
+                    "count": 0,
+                    "name": subtopic_name,
+                    "uuid": subtopic_uuid,
+                }
 
-                if subtopic_uuid not in topics_data[topic_uuid]["subtopics"]:
-                    topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
-                        "name": subtopic_name,
-                        "count": 0,
-                    }
-
-                topics_data[topic_uuid]["subtopics"][subtopic_uuid]["count"] += 1
+            topics_data[topic_uuid]["subtopics"][subtopic_uuid][
+                "count"
+            ] += subtopic_event.get("count", 0)
+            topics_data[topic_uuid]["subtopics"]["OTHER"][
+                "count"
+            ] -= subtopic_event.get("count", 0)
 
         self._save_results_to_cache(cache_key, topics_data)
 

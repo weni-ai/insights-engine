@@ -132,3 +132,15 @@ class NPS:
     promoters: int
     detractors: int
     passives: int
+
+
+@dataclass(frozen=True)
+class SubtopicTopicRelation:
+    """
+    Subtopic -> Topic relation
+    """
+
+    subtopic_uuid: str
+    subtopic_name: str
+    topic_uuid: str
+    topic_name: str

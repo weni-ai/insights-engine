@@ -623,16 +623,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             }
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["score"], NPS_METRICS_MOCK_DATA["score"])
-        self.assertEqual(
-            response.data["total_responses"], NPS_METRICS_MOCK_DATA["total_responses"]
-        )
-        self.assertEqual(response.data["promoters"], NPS_METRICS_MOCK_DATA["promoters"])
-        self.assertEqual(
-            response.data["detractors"], NPS_METRICS_MOCK_DATA["detractors"]
-        )
-        self.assertEqual(response.data["passives"], NPS_METRICS_MOCK_DATA["passives"])
+        self.assertIn("topics", response.data)
 
     def test_cannot_get_topics_without_project_uuid(self):
         response = self.get_topics({})

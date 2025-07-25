@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from django.conf import settings
 import pytz
 from rest_framework import status
 
@@ -19,6 +18,7 @@ from insights.metrics.conversations.dataclass import (
     SubjectMetricData,
     SubjectsMetrics,
     SubtopicMetrics,
+    SubtopicTopicRelation,
     TopicMetrics,
     TopicsDistributionMetrics,
 )
@@ -452,26 +452,18 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         # If the topic distribution is limited by Nexus topics,
         # the client will see other topics listed as "OTHER"
-        if settings.LIMIT_TOPICS_DISTRIBUTION_BY_NEXUS_TOPICS:
-            current_topics_data = self.get_topics(project.uuid)
+        current_topics_data = self.get_topics(project.uuid)
 
-            current_topics = {
-                topic["uuid"]: {
-                    "name": topic["name"],
-                    "uuid": topic["uuid"],
-                    "subtopics_uuids": {
-                        subtopic["uuid"]: {
-                            "name": subtopic["name"],
-                            "uuid": subtopic["uuid"],
-                        }
-                        for subtopic in topic["subtopic"]
-                    },
-                }
-                for topic in current_topics_data
-            }
-
-        else:
-            current_topics = {}
+        subtopics = [
+            SubtopicTopicRelation(
+                subtopic_uuid=subtopic.get("uuid"),
+                subtopic_name=subtopic.get("name"),
+                topic_uuid=topic.get("uuid"),
+                topic_name=topic.get("name"),
+            )
+            for topic in current_topics_data
+            for subtopic in topic["subtopic"]
+        ]
 
         try:
             topics = self.datalake_service.get_topics_distribution(
@@ -480,6 +472,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 end_date=end_date,
                 conversation_type=conversation_type,
                 mock_data=mock_data,
+                subtopics=subtopics,
             )
         except Exception as e:
             logger.error("Failed to get topics distribution", exc_info=True)
@@ -495,84 +488,38 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         topics_metrics = []
 
-        total_topics_count = sum(topic_data["count"] for topic_data in topics.values())
-        other_topic_count = topics.pop("OTHER", {}).get("count", 0)
+        total_count = sum(topic_data.get("count", 0) for topic_data in topics.values())
 
         for topic_uuid, topic_data in topics.items():
-            if (
-                settings.LIMIT_TOPICS_DISTRIBUTION_BY_NEXUS_TOPICS
-                and topic_uuid not in current_topics
-            ):
-                other_topic_count += topic_data["count"]
-                continue
-
-            other_subtopic_count = topic_data.pop("other_count", 0)
-
-            subtopics = []
-
+            subtopic_metrics = []
+            topic_count = topic_data.get("count")
             for subtopic_uuid, subtopic_data in topic_data["subtopics"].items():
-                if (
-                    settings.LIMIT_TOPICS_DISTRIBUTION_BY_NEXUS_TOPICS
-                    and subtopic_uuid
-                    not in current_topics[topic_uuid]["subtopics_uuids"]
-                ):
-                    other_subtopic_count += subtopic_data["count"]
-                    continue
-
-                subtopics.append(
+                subtopic_metrics.append(
                     SubtopicMetrics(
                         uuid=subtopic_uuid,
                         name=subtopic_data["name"],
                         quantity=subtopic_data["count"],
                         percentage=(
-                            (subtopic_data["count"] / total_topics_count) * 100
-                            if total_topics_count > 0
-                            else None
+                            ((subtopic_data["count"] / topic_count) * 100)
+                            if topic_count
+                            else 0
                         ),
                     )
                 )
 
-            if other_subtopic_count > 0:
-                subtopics.append(
-                    SubtopicMetrics(
-                        uuid=None,
-                        name="OTHER",
-                        quantity=other_subtopic_count,
-                        percentage=(
-                            (other_subtopic_count / total_topics_count) * 100
-                            if total_topics_count > 0
-                            else None
-                        ),
-                    )
+            topics_metrics.append(
+                TopicMetrics(
+                    uuid=topic_uuid,
+                    name=topic_data["name"],
+                    quantity=topic_data["count"],
+                    percentage=(
+                        ((topic_data["count"] / total_count) * 100)
+                        if total_count
+                        else 0
+                    ),
+                    subtopics=subtopic_metrics,
                 )
-
-            topic_metrics = TopicMetrics(
-                uuid=topic_uuid,
-                name=topic_data["name"],
-                quantity=topic_data["count"],
-                percentage=(
-                    (topic_data["count"] / total_topics_count) * 100
-                    if total_topics_count > 0
-                    else None
-                ),
-                subtopics=subtopics,
             )
-
-            topics_metrics.append(topic_metrics)
-
-        if other_topic_count > 0:
-            other_topic_metrics = TopicMetrics(
-                uuid=None,
-                name="OTHER",
-                quantity=other_topic_count,
-                percentage=(
-                    (other_topic_count / total_topics_count) * 100
-                    if total_topics_count > 0
-                    else None
-                ),
-                subtopics=[],
-            )
-            topics_metrics.append(other_topic_metrics)
 
         return TopicsDistributionMetrics(
             topics=topics_metrics,
