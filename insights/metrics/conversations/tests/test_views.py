@@ -2,14 +2,18 @@ import uuid
 from unittest.mock import patch
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.test import APITestCase
+from rest_framework.response import Response
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
+)
+from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
+    MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.views import ConversationsMetricsViewSet
@@ -23,6 +27,7 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         super().setUpClass()
         cls.original_service = ConversationsMetricsViewSet.service
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
+            datalake_service=MockDatalakeConversationsMetricsService(),
             nexus_client=MockNexusClient(),
         )
 
@@ -30,6 +35,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
     def tearDownClass(cls):
         super().tearDownClass()
         ConversationsMetricsViewSet.service = cls.original_service
+
+    def get_topics_distribution(self, query_params: dict) -> Response:
+        url = "/v1/metrics/conversations/topics-distribution/"
+
+        return self.client.get(url, query_params)
 
     def get_topics(self, query_params: dict) -> Response:
         url = reverse("conversations-topics")
@@ -75,6 +85,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
 ):
+    def test_cannot_get_topics_distribution_when_unauthenticated(self):
+        response = self.get_topics_distribution({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_cannot_get_topics_when_unauthenticated(self):
         response = self.get_topics({})
 
@@ -119,6 +134,47 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.project = Project.objects.create(name="Test Project")  # type: ignore
 
         self.client.force_authenticate(self.user)
+
+    def test_cannot_get_topics_distribution_without_project_uuid(self):
+        response = self.get_topics_distribution({})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["project_uuid"][0].code,
+            "required",
+        )
+
+    def test_cannot_get_topics_distribution_without_permission(self):
+        response = self.get_topics_distribution({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_cannot_get_topics_distribution_without_required_fields(self):
+        response = self.get_topics_distribution({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["start_date"][0].code,
+            "required",
+        )
+        self.assertEqual(
+            response.data["end_date"][0].code,
+            "required",
+        )
+
+    @with_project_auth
+    def test_get_topics_distribution(self):
+        response = self.get_topics_distribution(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "type": ConversationType.AI,
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertIn("topics", response.data)
 
     def test_cannot_get_topics_without_project_uuid(self):
         response = self.get_topics({})

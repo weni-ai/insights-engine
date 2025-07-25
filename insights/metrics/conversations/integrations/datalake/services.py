@@ -10,7 +10,10 @@ from sentry_sdk import capture_exception
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
+    SubtopicTopicRelation,
+    TopicsDistributionMetrics,
 )
+from insights.metrics.conversations.enums import ConversationType
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
@@ -30,6 +33,15 @@ class BaseConversationsMetricsService(ABC):
     """
 
     @abstractmethod
+    def get_topics_distribution(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> TopicsDistributionMetrics:
+        pass
+
     def get_conversations_totals(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> ConversationsTotalsMetrics:
@@ -98,37 +110,170 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             return None
 
-    def _get_conversations_totals_from_cache(
-        self, key: str
-    ) -> ConversationsTotalsMetrics:
+    def get_topics_distribution(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+        subtopics: list[SubtopicTopicRelation],
+    ) -> dict:
         """
-        Get results from cache with JSON deserialization.
+        Get topics distribution from Datalake.
         """
-        cached_data = self._get_cached_results(key)
-        if cached_data:
-            return ConversationsTotalsMetrics(
-                total_conversations=ConversationsTotalsMetric(
-                    value=cached_data["total_conversations"]["value"],
-                    percentage=cached_data["total_conversations"]["percentage"],
-                ),
-                resolved=ConversationsTotalsMetric(
-                    value=cached_data["resolved"]["value"],
-                    percentage=cached_data["resolved"]["percentage"],
-                ),
-                unresolved=ConversationsTotalsMetric(
-                    value=cached_data["unresolved"]["value"],
-                    percentage=cached_data["unresolved"]["percentage"],
-                ),
-                abandoned=ConversationsTotalsMetric(
-                    value=cached_data["abandoned"]["value"],
-                    percentage=cached_data["abandoned"]["percentage"],
-                ),
-                transferred_to_human=ConversationsTotalsMetric(
-                    value=cached_data["transferred_to_human"]["value"],
-                    percentage=cached_data["transferred_to_human"]["percentage"],
-                ),
+        cache_key = self._get_cache_key(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            conversation_type=conversation_type,
+        )
+
+        if cached_results := self._get_cached_results(cache_key):
+            if not isinstance(cached_results, dict):
+                cached_results = json.loads(cached_results)
+
+            return cached_results
+
+        try:
+            human_support = (
+                "true" if conversation_type == ConversationType.HUMAN else "false"
             )
-        return None
+
+            topics_events = self.events_client.get_events_count_by_group(
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=str(start_date),
+                date_end=str(end_date),
+                key="topics",
+                metadata_key="human_support",
+                metadata_value=human_support,
+                group_by="topic_uuid",
+            )
+
+            # Subtopics
+            subtopics_events = self.events_client.get_events_count_by_group(
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=str(start_date),
+                date_end=str(end_date),
+                key="topics",
+                metadata_key="human_support",
+                metadata_value=human_support,
+                group_by="subtopic_uuid",
+            )
+        except Exception as e:
+            logger.error("Failed to get topics distribution from Datalake: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        topics_data = {
+            "OTHER": {"name": "Other", "uuid": None, "count": 0, "subtopics": {}}
+        }
+
+        topics_from_subtopics = {
+            subtopic.topic_uuid: {
+                "name": subtopic.topic_name,
+                "uuid": subtopic.topic_uuid,
+                "subtopics": {
+                    subtopic.subtopic_uuid: {
+                        "name": subtopic.subtopic_name,
+                        "uuid": subtopic.subtopic_uuid,
+                    }
+                    for subtopic in subtopics
+                },
+            }
+            for subtopic in subtopics
+        }
+
+        for topic_uuid, topic_data in topics_from_subtopics.items():
+            if topic_uuid not in topics_data:
+                topic_subtopics = {}
+                for subtopic_uuid, subtopic_data in topic_data.get(
+                    "subtopics", {}
+                ).items():
+                    topic_subtopics[subtopic_uuid] = {
+                        "name": subtopic_data.get("name"),
+                        "uuid": subtopic_uuid,
+                    }
+
+                topic_subtopics["OTHER"] = {
+                    "count": 0,
+                    "name": "Other",
+                    "uuid": None,
+                }
+
+                topics_data[topic_uuid] = {
+                    "name": topic_data.get("name"),
+                    "uuid": topic_uuid,
+                    "count": 0,
+                    "subtopics": topic_subtopics,
+                }
+            else:
+                topics_data[topic_uuid]["count"] += 0
+
+        if topics_events == [{}]:
+            return topics_events
+
+        for topic_event in topics_events:
+            topic_uuid = topic_event.get("group_value")
+
+            if topic_uuid in {"", None} or topic_uuid not in topics_from_subtopics:
+                topics_data["OTHER"]["count"] += topic_event.get("count", 0)
+                continue
+
+            topic_name = topic_event.get("topic_name")
+            topic_count = topic_event.get("count", 0)
+
+            topics_data[topic_uuid]["count"] += topic_count
+
+        if subtopics_events == [{}]:
+            return subtopics_events
+
+        subtopics = {str(subtopic.subtopic_uuid): subtopic for subtopic in subtopics}
+
+        for subtopic_event in subtopics_events:
+            subtopic_uuid = subtopic_event.get("group_value")
+
+            if not subtopic_uuid:
+                continue
+
+            if subtopic_uuid not in subtopics:
+                topics_data["OTHER"]["count"] += subtopic_event.get("count", 0)
+                continue
+
+            topic_uuid = subtopics[subtopic_uuid].topic_uuid
+            topic_name = subtopics[subtopic_uuid].topic_name
+
+            if topic_uuid not in topics_data:
+                topics_data[topic_uuid] = {
+                    "name": topic_name,
+                    "uuid": topic_uuid,
+                    "count": 0,
+                    "subtopics": {},
+                }
+
+            topics_data[topic_uuid]["count"] += subtopic_event.get("count", 0)
+
+            subtopic_name = subtopics[subtopic_uuid].subtopic_name
+
+            if subtopic_uuid not in topics_data[topic_uuid]["subtopics"]:
+                topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
+                    "count": 0,
+                    "name": subtopic_name,
+                    "uuid": subtopic_uuid,
+                }
+
+            topics_data[topic_uuid]["subtopics"][subtopic_uuid][
+                "count"
+            ] += subtopic_event.get("count", 0)
+            topics_data[topic_uuid]["subtopics"]["OTHER"][
+                "count"
+            ] -= subtopic_event.get("count", 0)
+
+        self._save_results_to_cache(cache_key, topics_data)
+
+        return topics_data
 
     def get_conversations_totals(
         self,

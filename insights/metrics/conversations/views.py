@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
-
 from rest_framework import status
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
@@ -15,6 +15,8 @@ from insights.metrics.conversations.serializers import (
     CreateTopicSerializer,
     DeleteTopicSerializer,
     GetTopicsQueryParamsSerializer,
+    TopicsDistributionMetricsQueryParamsSerializer,
+    TopicsDistributionMetricsSerializer,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
@@ -22,7 +24,6 @@ from insights.projects.models import ProjectAuth
 
 if TYPE_CHECKING:
     from uuid import UUID
-    from rest_framework.request import Request
     from insights.users.models import User
 
 
@@ -33,6 +34,43 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
     service = ConversationsMetricsService()
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="topics-distribution",
+        url_name="topics-distribution",
+        serializer_class=TopicsDistributionMetricsSerializer,
+    )
+    def topics_distribution(self, request: Request) -> Response:
+        """
+        Get topics distribution
+        """
+        serializer = TopicsDistributionMetricsQueryParamsSerializer(
+            data=request.query_params
+        )
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            metrics = self.service.get_topics_distribution(
+                serializer.validated_data["project"],
+                serializer.validated_data["start_date"],
+                serializer.validated_data["end_date"],
+                serializer.validated_data["type"],
+            )
+        except ConversationsMetricsError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            TopicsDistributionMetricsSerializer(metrics).data,
+            status=status.HTTP_200_OK,
+        )
 
     def _check_project_permission_for_user(
         self, project_uuid: "UUID", user: "User"

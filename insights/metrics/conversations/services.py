@@ -1,14 +1,24 @@
 from datetime import datetime
 import json
+import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
-import logging
 
-from sentry_sdk import capture_message, capture_exception
 from rest_framework import status
 
-from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
-from insights.metrics.conversations.enums import ConversationsMetricsResource
+from sentry_sdk import capture_exception, capture_message
+
+from insights.metrics.conversations.dataclass import (
+    ConversationsTotalsMetrics,
+    SubtopicMetrics,
+    SubtopicTopicRelation,
+    TopicMetrics,
+    TopicsDistributionMetrics,
+)
+from insights.metrics.conversations.enums import (
+    ConversationType,
+    ConversationsMetricsResource,
+)
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
@@ -277,6 +287,86 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         )
 
         return None
+
+    def get_topics_distribution(
+        self,
+        project: "Project",
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> TopicsDistributionMetrics:
+        """
+        Get topics distribution
+        """
+        # If the topic distribution is limited by Nexus topics,
+        # the client will see other topics listed as "OTHER"
+        current_topics_data = self.get_topics(project.uuid)
+
+        subtopics = [
+            SubtopicTopicRelation(
+                subtopic_uuid=subtopic.get("uuid"),
+                subtopic_name=subtopic.get("name"),
+                topic_uuid=topic.get("uuid"),
+                topic_name=topic.get("name"),
+            )
+            for topic in current_topics_data
+            for subtopic in topic["subtopic"]
+        ]
+
+        try:
+            topics = self.datalake_service.get_topics_distribution(
+                project_uuid=project.uuid,
+                start_date=start_date,
+                end_date=end_date,
+                conversation_type=conversation_type,
+                subtopics=subtopics,
+            )
+        except Exception as e:
+            logger.error("Failed to get topics distribution", exc_info=True)
+            event_id = capture_exception(e)
+
+            raise ConversationsMetricsError(
+                f"Failed to get topics distribution. Event ID: {event_id}"
+            ) from e
+
+        topics_metrics = []
+
+        total_count = sum(topic_data.get("count", 0) for topic_data in topics.values())
+
+        for topic_uuid, topic_data in topics.items():
+            subtopic_metrics = []
+            topic_count = topic_data.get("count")
+            for subtopic_uuid, subtopic_data in topic_data["subtopics"].items():
+                subtopic_metrics.append(
+                    SubtopicMetrics(
+                        uuid=subtopic_uuid,
+                        name=subtopic_data.get("name"),
+                        quantity=subtopic_data.get("count"),
+                        percentage=(
+                            ((subtopic_data.get("count") / topic_count) * 100)
+                            if topic_count
+                            else 0
+                        ),
+                    )
+                )
+
+            topics_metrics.append(
+                TopicMetrics(
+                    uuid=topic_uuid,
+                    name=topic_data.get("name"),
+                    quantity=topic_data.get("count"),
+                    percentage=(
+                        ((topic_data.get("count") / total_count) * 100)
+                        if total_count
+                        else 0
+                    ),
+                    subtopics=subtopic_metrics,
+                )
+            )
+
+        return TopicsDistributionMetrics(
+            topics=topics_metrics,
+        )
 
     def get_totals(
         self, project: "Project", start_date: datetime, end_date: datetime

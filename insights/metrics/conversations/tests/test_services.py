@@ -5,9 +5,13 @@ from insights.projects.models import Project
 from django.test import TestCase
 from django.core.cache import cache
 
-from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
+from insights.metrics.conversations.dataclass import (
+    ConversationsTotalsMetrics,
+    TopicsDistributionMetrics,
+)
+from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockConversationsMetricsService,
+    MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.sources.integrations.tests.mock_clients import MockNexusClient
@@ -15,8 +19,8 @@ from insights.sources.integrations.tests.mock_clients import MockNexusClient
 
 class TestConversationsMetricsService(TestCase):
     service = ConversationsMetricsService(
+        datalake_service=MockDatalakeConversationsMetricsService(),
         nexus_client=MockNexusClient(),
-        datalake_service=MockConversationsMetricsService(),
     )
 
     def setUp(self) -> None:
@@ -27,6 +31,18 @@ class TestConversationsMetricsService(TestCase):
 
     def tearDown(self) -> None:
         cache.clear()
+
+    def test_get_topics_distribution(self):
+        project = Project.objects.create(
+            name="Test Project",
+        )
+        start_date = datetime(2021, 1, 1)
+        end_date = datetime(2021, 1, 2)
+        topics_distribution = self.service.get_topics_distribution(
+            project, start_date, end_date, ConversationType.AI
+        )
+
+        self.assertIsInstance(topics_distribution, TopicsDistributionMetrics)
 
     def test_get_topics(self):
         topics = self.service.get_topics(
