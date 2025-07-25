@@ -21,7 +21,7 @@ class TestConversationsDashboardCreation(TestCase):
         dashboard = self.usecase.create_for_project(self.project)
 
         self.assertIsInstance(dashboard, Dashboard)
-        self.assertEqual(dashboard.name, "weni_conversations_dashboard")
+        self.assertEqual(dashboard.name, "conversations_dashboard.title")
         self.assertEqual(dashboard.project, self.project)
         self.assertEqual(dashboard.is_deletable, False)
         self.assertEqual(dashboard.is_editable, False)
@@ -55,7 +55,7 @@ class TestConversationsDashboardCreation(TestCase):
         self.assertEqual(created, Project.objects.count())
 
         self.assertEqual(
-            Dashboard.objects.filter(name="weni_conversations_dashboard").count(),
+            Dashboard.objects.filter(name="conversations_dashboard.title").count(),
             Project.objects.count(),
         )
 
@@ -68,7 +68,7 @@ class TestConversationsDashboardCreation(TestCase):
             )
 
         self.assertEqual(
-            Dashboard.objects.filter(name="weni_conversations_dashboard").count(),
+            Dashboard.objects.filter(name="conversations_dashboard.title").count(),
             1,
         )
 
@@ -77,6 +77,6 @@ class TestConversationsDashboardCreation(TestCase):
         self.assertEqual(created, Project.objects.exclude(pk=self.project.pk).count())
 
         self.assertEqual(
-            Dashboard.objects.filter(name="weni_conversations_dashboard").count(),
+            Dashboard.objects.filter(name="conversations_dashboard.title").count(),
             Project.objects.all().count(),
         )

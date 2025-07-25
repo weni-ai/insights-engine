@@ -5,7 +5,7 @@ from insights.shared.models import BaseModel, ConfigurableModel
 
 
 HUMAN_SERVICE_DASHBOARD_NAME = "Atendimento humano"
-CONVERSATION_DASHBOARD_NAME = "weni_conversations_dashboard"
+CONVERSATION_DASHBOARD_NAME = "conversations_dashboard.title"
 
 
 class DashboardTemplate(BaseModel, ConfigurableModel):
