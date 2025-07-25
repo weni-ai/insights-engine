@@ -1,3 +1,5 @@
+import pytz
+from datetime import datetime, time
 from rest_framework import serializers
 
 from insights.metrics.conversations.enums import ConversationType
@@ -31,6 +33,16 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
             )
 
         attrs["project"] = project
+
+        timezone = pytz.timezone(project.timezone) if project.timezone else pytz.UTC
+
+        # Convert start_date to datetime at midnight (00:00:00) in project timezone
+        start_datetime = datetime.combine(attrs["start_date"], time.min)
+        attrs["start_date"] = timezone.localize(start_datetime)
+
+        # Convert end_date to datetime at 23:59:59 in project timezone
+        end_datetime = datetime.combine(attrs["end_date"], time(23, 59, 59))
+        attrs["end_date"] = timezone.localize(end_datetime)
 
         return attrs
 
