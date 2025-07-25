@@ -35,6 +35,7 @@ class TopicsDistributionMetrics:
     topics: list[TopicMetrics]
 
 
+@dataclass(frozen=True)
 class SubtopicTopicRelation:
     """
     Subtopic -> Topic relation

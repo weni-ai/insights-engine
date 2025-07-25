@@ -34,7 +34,14 @@ class MockNexusClient(BaseNexusClient):
                 "uuid": "2026cedc-67f6-4a04-977a-55cc581defa9",
                 "created_at": "2025-07-15T20:56:47.582521Z",
                 "description": "Quando cliente pede para cancelar um pedido",
-                "subtopic": [],
+                "subtopic": [
+                    {
+                        "name": "Subtopic 1",
+                        "uuid": "023d2374-04ef-45b5-8b5f-5c031fafd59e",
+                        "created_at": "2025-07-15T20:56:47.582521Z",
+                        "description": "Quando cliente pede para cancelar um pedido",
+                    },
+                ],
             }
         ]
 

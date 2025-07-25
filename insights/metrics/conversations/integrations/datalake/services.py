@@ -201,8 +201,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             if topic_uuid not in topics_data:
                 topics_data[topic_uuid] = {
-                    "topic_name": topic_name,
-                    "topic_uuid": topic_uuid,
+                    "name": topic_name,
+                    "uuid": topic_uuid,
                     "count": 0,
                     "subtopics": {},
                 }
@@ -214,8 +214,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             if subtopic_uuid not in topics_data[topic_uuid]["subtopics"]:
                 topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
                     "count": 0,
-                    "subtopic_name": subtopic_name,
-                    "subtopic_uuid": subtopic_uuid,
+                    "name": subtopic_name,
+                    "uuid": subtopic_uuid,
                 }
 
             topics_data[topic_uuid]["subtopics"][subtopic_uuid][
