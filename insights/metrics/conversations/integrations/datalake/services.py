@@ -189,7 +189,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         for subtopic_event in subtopics_events:
             subtopic_uuid = subtopic_event.get("group_value")
 
-            if not subtopic_uuid or subtopic_uuid not in subtopics:
+            if not subtopic_uuid:
+                continue
+
+            if subtopic_uuid not in subtopics:
                 topics_data["OTHER"]["count"] += subtopic_event.get("count", 0)
                 continue
 
@@ -205,9 +208,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 }
 
             topics_data[topic_uuid]["count"] += subtopic_event.get("count", 0)
-
-            if subtopic_uuid in {"", None}:
-                pass
 
             subtopic_name = subtopics[subtopic_uuid].subtopic_name
 

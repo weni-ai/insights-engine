@@ -345,7 +345,22 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         topics_metrics = []
 
-        # TODO
+        for topic in topics:
+            subtopic_metrics = []
+            topic_count = topic.get("count")
+            for subtopic in topic["subtopics"]:
+                subtopic_metrics.append(
+                    SubtopicMetrics(
+                        uuid=subtopic["subtopic_uuid"],
+                        name=subtopic["subtopic_name"],
+                        quantity=subtopic["count"],
+                        percentage=(
+                            ((subtopic["count"] / topic_count) * 100)
+                            if topic_count
+                            else 0
+                        ),
+                    )
+                )
 
         return TopicsDistributionMetrics(
             topics=topics_metrics,
