@@ -161,28 +161,38 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         topics_data = {"OTHER": {"topic_name": "Other", "count": 0, "subtopics": {}}}
 
+        topics_from_subtopics = {
+            subtopic.subtopic_uuid: subtopic.topic_uuid for subtopic in subtopics
+        }
+
+        for topic_uuid, topic_name in topics_from_subtopics.items():
+            if topic_uuid not in topics_data:
+                topics_data[topic_uuid] = {
+                    "name": topic_name,
+                    "uuid": topic_uuid,
+                    "count": 0,
+                    "subtopics": {
+                        "OTHER": {
+                            "count": 0,
+                            "name": "Other",
+                            "uuid": "OTHER",
+                        }
+                    },
+                }
+            else:
+                topics_data[topic_uuid]["count"] += 0
+
         for topic_event in topics_events:
-            if topic_event.get("group_value") in {"", None}:
+            topic_uuid = topic_event.get("group_value")
+
+            if topic_uuid in {"", None} or topic_uuid not in topics_from_subtopics:
                 topics_data["OTHER"]["count"] += topic_event.get("count", 0)
                 continue
 
-            topic_uuid = topic_event.get("group_value")
             topic_name = topic_event.get("topic_name")
-            topic_count = topic_event.get("count")
+            topic_count = topic_event.get("count", 0)
 
-            if topic_uuid not in topics_data:
-                topics_data[topic_uuid] = {
-                    "topic_name": topic_name,
-                    "topic_uuid": topic_uuid,
-                    "count": topic_count,
-                    "subtopics": {
-                        "OTHER": {
-                            "count": topic_count,
-                            "subtopic_name": "Other",
-                            "subtopic_uuid": "OTHER",
-                        },
-                    },
-                }
+            topics_data[topic_uuid]["count"] += topic_count
 
         subtopics = {str(subtopic.subtopic_uuid): subtopic for subtopic in subtopics}
 
