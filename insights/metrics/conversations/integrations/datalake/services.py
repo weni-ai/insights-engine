@@ -399,7 +399,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     },
                 }
 
-        subtopics = {str(subtopic.uuid): subtopic for subtopic in subtopics}
+        subtopics = {str(subtopic.subtopic_uuid): subtopic for subtopic in subtopics}
 
         for subtopic_event in subtopics_events:
             subtopic_uuid = subtopic_event.get("group_value")
