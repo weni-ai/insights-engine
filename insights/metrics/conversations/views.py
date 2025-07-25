@@ -146,7 +146,8 @@ class ConversationsMetricsViewSet(GenericViewSet):
         """
         print(request.query_params)
 
-        print("Mock data", request.query_params.get("mock_data", True))
+        mock_data = request.query_params.get("mock_data", "true").lower() == "true"
+        print("Mock data", mock_data)
 
         serializer = TopicsDistributionMetricsQueryParamsSerializer(
             data=request.query_params
@@ -162,7 +163,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 serializer.validated_data["start_date"],
                 serializer.validated_data["end_date"],
                 serializer.validated_data["type"],
-                mock_data=request.query_params.get("mock_data", True),  # Staging only
+                mock_data=mock_data,  # Staging only
             )
         except ConversationsMetricsError as e:
             return Response(
