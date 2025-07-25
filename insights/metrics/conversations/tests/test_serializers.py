@@ -342,8 +342,13 @@ class TestConversationsTimeseriesMetricsQueryParamsSerializer(TestCase):
             serializer.validated_data["unit"], ConversationsTimeseriesUnit.DAY
         )
         self.assertEqual(serializer.validated_data["project"], self.project)
-        self.assertEqual(str(serializer.validated_data["start_date"]), "2021-01-01")
-        self.assertEqual(str(serializer.validated_data["end_date"]), "2021-01-02")
+        self.assertEqual(
+            str(serializer.validated_data["start_date"]),
+            "2021-01-01 00:00:00+00:00",
+        )
+        self.assertEqual(
+            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59+00:00"
+        )
 
     def test_serializer_invalid_start_date(self):
         serializer = ConversationsTimeseriesMetricsQueryParamsSerializer(
@@ -447,8 +452,13 @@ class TestConversationsSubjectsMetricsQueryParamsSerializer(TestCase):
             }
         )
         self.assertTrue(serializer.is_valid())
-        self.assertEqual(str(serializer.validated_data["start_date"]), "2021-01-01")
-        self.assertEqual(str(serializer.validated_data["end_date"]), "2021-01-02")
+        self.assertEqual(
+            str(serializer.validated_data["start_date"]),
+            "2021-01-01 00:00:00+00:00",
+        )
+        self.assertEqual(
+            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59+00:00"
+        )
         self.assertEqual(serializer.validated_data["project"], self.project)
         self.assertEqual(
             str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
@@ -529,8 +539,13 @@ class TestRoomsByQueueMetricQueryParamsSerializer(TestCase):
             }
         )
         self.assertTrue(serializer.is_valid())
-        self.assertEqual(str(serializer.validated_data["start_date"]), "2021-01-01")
-        self.assertEqual(str(serializer.validated_data["end_date"]), "2021-01-02")
+        self.assertEqual(
+            str(serializer.validated_data["start_date"]),
+            "2021-01-01 00:00:00+00:00",
+        )
+        self.assertEqual(
+            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59+00:00"
+        )
         self.assertEqual(
             str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
         )
