@@ -167,23 +167,39 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             subtopic.topic_uuid: {
                 "name": subtopic.topic_name,
                 "uuid": subtopic.topic_uuid,
+                "subtopics": {
+                    subtopic.subtopic_uuid: {
+                        "name": subtopic.subtopic_name,
+                        "uuid": subtopic.subtopic_uuid,
+                    }
+                    for subtopic in subtopics
+                },
             }
             for subtopic in subtopics
         }
 
         for topic_uuid, topic_data in topics_from_subtopics.items():
             if topic_uuid not in topics_data:
+                subtopics = {}
+                for subtopic_uuid, subtopic_data in topic_data.get(
+                    "subtopics", {}
+                ).items():
+                    subtopics[subtopic_uuid] = {
+                        "name": subtopic_data.get("name"),
+                        "uuid": subtopic_uuid,
+                    }
+
+                subtopics["OTHER"] = {
+                    "count": 0,
+                    "name": "Other",
+                    "uuid": None,
+                }
+
                 topics_data[topic_uuid] = {
                     "name": topic_data.get("name"),
                     "uuid": topic_uuid,
                     "count": 0,
-                    "subtopics": {
-                        "OTHER": {
-                            "count": 0,
-                            "name": "Other",
-                            "uuid": None,
-                        }
-                    },
+                    "subtopics": subtopics,
                 }
             else:
                 topics_data[topic_uuid]["count"] += 0
