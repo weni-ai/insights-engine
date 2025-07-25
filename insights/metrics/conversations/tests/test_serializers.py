@@ -1,3 +1,4 @@
+from datetime import datetime, time
 from django.test import TestCase
 
 from insights.projects.models import Project
@@ -26,8 +27,66 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
             str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
         )
         self.assertEqual(serializer.validated_data["project"], self.project)
-        self.assertEqual(str(serializer.validated_data["start_date"]), "2021-01-01")
-        self.assertEqual(str(serializer.validated_data["end_date"]), "2021-01-02")
+
+        # Test that start_date is converted to datetime at midnight
+        start_date = serializer.validated_data["start_date"]
+        self.assertIsInstance(start_date, datetime)
+        self.assertIsNotNone(start_date.tzinfo)  # Should be timezone-aware
+        self.assertEqual(start_date.time(), time.min)  # Should be 00:00:00
+        self.assertEqual(start_date.date().isoformat(), "2021-01-01")
+
+        # Test that end_date is converted to datetime at 23:59:59
+        end_date = serializer.validated_data["end_date"]
+        self.assertIsInstance(end_date, datetime)
+        self.assertIsNotNone(end_date.tzinfo)  # Should be timezone-aware
+        self.assertEqual(end_date.time(), time(23, 59, 59))  # Should be 23:59:59
+        self.assertEqual(end_date.date().isoformat(), "2021-01-02")
+
+    def test_serializer_with_timezone(self):
+        # Create a project with a specific timezone
+        project_with_tz = Project.objects.create(
+            name="Test Project with TZ", timezone="America/New_York"
+        )
+
+        serializer = ConversationBaseQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": project_with_tz.uuid,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+
+        start_date = serializer.validated_data["start_date"]
+        end_date = serializer.validated_data["end_date"]
+
+        # Check that timezone is correctly applied
+        self.assertEqual(str(start_date.tzinfo), "America/New_York")
+        self.assertEqual(str(end_date.tzinfo), "America/New_York")
+
+        # Check times are correct
+        self.assertEqual(start_date.time(), time.min)
+        self.assertEqual(end_date.time(), time(23, 59, 59))
+
+    def test_serializer_without_timezone(self):
+        # Create a project without timezone (should default to UTC)
+        project_no_tz = Project.objects.create(name="Test Project No TZ", timezone="")
+
+        serializer = ConversationBaseQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": project_no_tz.uuid,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+
+        start_date = serializer.validated_data["start_date"]
+        end_date = serializer.validated_data["end_date"]
+
+        # Check that UTC timezone is applied when no timezone is set
+        self.assertEqual(str(start_date.tzinfo), "UTC")
+        self.assertEqual(str(end_date.tzinfo), "UTC")
 
     def test_serializer_invalid_start_date(self):
         serializer = ConversationBaseQueryParamsSerializer(
