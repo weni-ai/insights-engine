@@ -7,7 +7,7 @@ class SubtopicMetrics:
     A subtopic.
     """
 
-    uuid: str
+    uuid: str | None
     name: str
     quantity: int
     percentage: float
