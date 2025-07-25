@@ -230,7 +230,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         methods=["get"],
         serializer_class=ConversationTotalsMetricsSerializer,
     )
-    def totals(self, request: Request, *args, **kwargs) -> Response:
+    def totals(self, request: "Request", *args, **kwargs) -> Response:
         """
         Get conversations metrics totals
         """

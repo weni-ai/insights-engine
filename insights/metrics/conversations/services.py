@@ -1,10 +1,13 @@
+from datetime import datetime
 import json
+from typing import TYPE_CHECKING
 from uuid import UUID
 import logging
 
 from sentry_sdk import capture_message, capture_exception
 from rest_framework import status
 
+from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
 from insights.metrics.conversations.enums import ConversationsMetricsResource
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.datalake.services import (
@@ -17,6 +20,9 @@ from insights.sources.integrations.clients import NexusClient
 
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from insights.projects.models import Project
 
 
 class ConversationsMetricsService(ConversationsServiceCachingMixin):
