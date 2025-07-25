@@ -227,7 +227,7 @@ class SubtopicSerializer(serializers.Serializer):
     Serializer for subtopic
     """
 
-    uuid = serializers.UUIDField()
+    uuid = serializers.UUIDField(required=False, allow_null=True)
     name = serializers.CharField()
     quantity = serializers.IntegerField()
     percentage = serializers.FloatField()
@@ -238,7 +238,7 @@ class TopicSerializer(serializers.Serializer):
     Serializer for topic
     """
 
-    uuid = serializers.UUIDField()
+    uuid = serializers.UUIDField(required=False, allow_null=True)
     name = serializers.CharField()
     quantity = serializers.IntegerField()
     percentage = serializers.FloatField()

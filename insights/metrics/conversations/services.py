@@ -495,10 +495,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 subtopic_metrics.append(
                     SubtopicMetrics(
                         uuid=subtopic_uuid,
-                        name=subtopic_data["name"],
-                        quantity=subtopic_data["count"],
+                        name=subtopic_data.get("name"),
+                        quantity=subtopic_data.get("count"),
                         percentage=(
-                            ((subtopic_data["count"] / topic_count) * 100)
+                            ((subtopic_data.get("count") / topic_count) * 100)
                             if topic_count
                             else 0
                         ),
@@ -508,10 +508,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             topics_metrics.append(
                 TopicMetrics(
                     uuid=topic_uuid,
-                    name=topic_data["name"],
-                    quantity=topic_data["count"],
+                    name=topic_data.get("name"),
+                    quantity=topic_data.get("count"),
                     percentage=(
-                        ((topic_data["count"] / total_count) * 100)
+                        ((topic_data.get("count") / total_count) * 100)
                         if total_count
                         else 0
                     ),

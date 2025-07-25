@@ -386,7 +386,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
-        topics_data = {"OTHER": {"topic_name": "Other", "count": 0, "subtopics": {}}}
+        topics_data = {
+            "OTHER": {"name": "Other", "uuid": None, "count": 0, "subtopics": {}}
+        }
 
         topics_from_subtopics = {
             subtopic.subtopic_uuid: subtopic.topic_uuid for subtopic in subtopics
@@ -404,7 +406,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                         "OTHER": {
                             "count": 0,
                             "name": "Other",
-                            "uuid": "OTHER",
+                            "uuid": None,
                         }
                     },
                 }
