@@ -14,7 +14,6 @@ from insights.metrics.conversations.integrations.datalake.tests.mock_services im
     MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
-from insights.projects.models import Project
 from insights.sources.integrations.tests.mock_clients import MockNexusClient
 
 

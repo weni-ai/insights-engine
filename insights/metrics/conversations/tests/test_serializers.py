@@ -21,7 +21,6 @@ from insights.metrics.conversations.serializers import (
     TopicsDistributionMetricsQueryParamsSerializer,
     TopicsDistributionMetricsSerializer,
 )
-from insights.projects.models import Project
 
 
 class TestConversationBaseQueryParamsSerializer(TestCase):
