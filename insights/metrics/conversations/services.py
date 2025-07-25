@@ -478,10 +478,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             logger.error("Failed to get topics distribution", exc_info=True)
             event_id = capture_exception(e)
 
-            import pdb
-
-            pdb.set_trace()
-
             raise ConversationsMetricsError(
                 f"Failed to get topics distribution. Event ID: {event_id}"
             ) from e
