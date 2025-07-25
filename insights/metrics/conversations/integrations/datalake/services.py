@@ -164,7 +164,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         }
 
         topics_from_subtopics = {
-            subtopic.subtopic_uuid: {
+            subtopic.topic_uuid: {
                 "name": subtopic.topic_name,
                 "uuid": subtopic.topic_uuid,
             }
