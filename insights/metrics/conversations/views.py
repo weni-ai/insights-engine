@@ -7,8 +7,11 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
+from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
+    ConversationTotalsMetricsQueryParamsSerializer,
+    ConversationTotalsMetricsSerializer,
     CreateTopicSerializer,
     DeleteTopicSerializer,
     GetTopicsQueryParamsSerializer,
@@ -29,6 +32,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
     """
 
     service = ConversationsMetricsService()
+    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
 
     def _check_project_permission_for_user(
         self, project_uuid: "UUID", user: "User"
@@ -220,3 +224,35 @@ class ConversationsMetricsViewSet(GenericViewSet):
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        serializer_class=ConversationTotalsMetricsSerializer,
+    )
+    def totals(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Get conversations metrics totals
+        """
+
+        query_params_serializer = ConversationTotalsMetricsQueryParamsSerializer(
+            data=request.query_params,
+        )
+        query_params_serializer.is_valid(raise_exception=True)
+
+        try:
+            totals = self.service.get_totals(
+                project=query_params_serializer.validated_data["project"],
+                start_date=request.query_params.get("start_date"),
+                end_date=request.query_params.get("end_date"),
+            )
+        except Exception:
+            return Response(
+                {"error": "Error getting conversations metrics totals"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            ConversationTotalsMetricsSerializer(totals).data,
+            status=status.HTTP_200_OK,
+        )

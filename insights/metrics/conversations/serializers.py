@@ -77,3 +77,32 @@ class DeleteTopicSerializer(serializers.Serializer):
     """
 
     project_uuid = serializers.UUIDField(required=True)
+
+
+class ConversationsTotalsMetricSerializer(serializers.Serializer):
+    """
+    Serializer for conversation totals metrics by type
+    """
+
+    value = serializers.IntegerField()
+    percentage = serializers.FloatField()
+
+
+class ConversationTotalsMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for conversation totals metrics
+    """
+
+    total_conversations = ConversationsTotalsMetricSerializer()
+    resolved = ConversationsTotalsMetricSerializer()
+    unresolved = ConversationsTotalsMetricSerializer()
+    abandoned = ConversationsTotalsMetricSerializer()
+    transferred_to_human = ConversationsTotalsMetricSerializer()
+
+
+class ConversationTotalsMetricsQueryParamsSerializer(
+    ConversationBaseQueryParamsSerializer
+):
+    """
+    Serializer for conversation totals metrics query params
+    """

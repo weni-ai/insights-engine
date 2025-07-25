@@ -7,6 +7,10 @@ from rest_framework import status
 
 from insights.metrics.conversations.enums import ConversationsMetricsResource
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseConversationsMetricsService,
+    DatalakeConversationsMetricsService,
+)
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
 from insights.sources.cache import CacheClient
 from insights.sources.integrations.clients import NexusClient
@@ -22,10 +26,12 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
     def __init__(
         self,
+        datalake_service: BaseConversationsMetricsService = DatalakeConversationsMetricsService(),
         nexus_client: NexusClient = NexusClient(),
         cache_client: CacheClient = CacheClient(),
         nexus_cache_ttl: int = 60,
     ):
+        self.datalake_service = datalake_service
         self.nexus_client = nexus_client
         self.cache_client = cache_client
         self.nexus_cache_ttl = nexus_cache_ttl
@@ -265,3 +271,16 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         )
 
         return None
+
+    def get_totals(
+        self, project: "Project", start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations metrics totals
+        """
+
+        return self.datalake_service.get_conversations_totals(
+            project_uuid=project.uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
