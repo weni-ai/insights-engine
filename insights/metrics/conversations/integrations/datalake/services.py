@@ -346,6 +346,14 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 True if conversation_type == ConversationType.HUMAN else False
             )
 
+            print("Event name", self.event_name)
+            print("Project", project_uuid)
+            print("Start date", start_date)
+            print("End date", end_date)
+            print("Key", "topics")
+            print("Metadata key", "human_support")
+            print("Metadata value", str(human_support))
+
             topics_events = self.events_client.get_events_count_by_group(
                 event_name=self.event_name,
                 project=project_uuid,
