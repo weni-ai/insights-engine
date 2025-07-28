@@ -88,7 +88,7 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         return self.client.get(url, query_params)
 
     def get_csat_metrics(self, query_params: dict) -> Response:
-        url = reverse("conversations-csat-metrics")
+        url = reverse("conversations-csat")
 
         return self.client.get(url, query_params, format="json")
 
