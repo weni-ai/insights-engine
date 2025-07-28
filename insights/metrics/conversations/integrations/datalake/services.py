@@ -287,7 +287,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         if self.cache_results:
             try:
-                cached_results = self._get_conversations_totals_from_cache(
+                cached_results = self._get_cached_results(
                     key=self._get_cache_key(
                         project_uuid=project_uuid,
                         start_date=start_date,
