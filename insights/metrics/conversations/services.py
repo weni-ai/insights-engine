@@ -502,7 +502,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         passives = results.get("8", 0) + results.get("7", 0)
         detractors = sum(results.get(str(i), 0) for i in range(7))
 
-        score = (promoters - detractors) / total_responses * 100
+        score = round(
+            (promoters - detractors) / total_responses * 100 if total_responses else 0,
+            2,
+        )
 
         return NPSMetrics(
             total_responses=total_responses,
@@ -545,7 +548,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         assert isinstance(results["results"], list), "Results must be a list"
 
         results_counts = {
-            result.get("label"): result.get("full_value")
+            result.get("label"): result.get("full_value", 0)
             for result in results["results"]
         }
 

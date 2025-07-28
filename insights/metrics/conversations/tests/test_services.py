@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import patch
 import uuid
 from uuid import UUID
 from django.test import TestCase
@@ -7,9 +8,14 @@ from django.core.cache import cache
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
+    NPSMetrics,
     TopicsDistributionMetrics,
 )
-from insights.metrics.conversations.enums import ConversationType, CsatMetricsType
+from insights.metrics.conversations.enums import (
+    ConversationType,
+    CsatMetricsType,
+    NpsMetricsType,
+)
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
 )
@@ -108,6 +114,39 @@ class TestConversationsMetricsService(TestCase):
             self.assertEqual(
                 result["value"], round((result["full_value"] / totals) * 100, 2)
             )
+
+    @patch(
+        "insights.sources.flowruns.tests.mock_query_executor.MockFlowRunsQueryExecutor.execute"
+    )
+    def test_get_nps_metrics_from_flowruns(self, mock_execute):
+        mock_execute.return_value = {
+            "results": [{"label": str(n), "full_value": 10} for n in range(0, 11)],
+        }
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "nps",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+            },
+        )
+
+        results = self.service.get_nps_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=datetime.now() - timedelta(days=30),
+            end_date=datetime.now(),
+            metric_type=NpsMetricsType.HUMAN,
+        )
+
+        self.assertIsInstance(results, NPSMetrics)
 
     def test_get_topics_distribution(self):
         project = Project.objects.create(
