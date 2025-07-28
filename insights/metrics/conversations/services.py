@@ -473,9 +473,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         # AI
-        agent_uuid = (
-            widget.config.get("filter", {}).get("datalake_config", {}).get("agent_uuid")
-        )
+        agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
 
         if not agent_uuid:
             raise ConversationsMetricsError(

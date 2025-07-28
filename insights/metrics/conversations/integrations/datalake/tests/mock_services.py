@@ -26,13 +26,11 @@ class MockDatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
     ) -> dict:
         return {
-            "results": [
-                {"label": "5", "value": 20.99, "full_value": 17},
-                {"label": "4", "value": 16.05, "full_value": 13},
-                {"label": "3", "value": 14.81, "full_value": 12},
-                {"label": "2", "value": 9.88, "full_value": 8},
-                {"label": "1", "value": 8.64, "full_value": 7},
-            ]
+            "1": 10,
+            "2": 20,
+            "3": 30,
+            "4": 40,
+            "5": 50,
         }
 
     def get_topics_distribution(

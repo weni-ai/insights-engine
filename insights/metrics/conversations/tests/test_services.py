@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import uuid
 from uuid import UUID
 from django.test import TestCase
 from django.core.cache import cache
@@ -69,6 +70,44 @@ class TestConversationsMetricsService(TestCase):
 
         self.assertIn("results", results)
         self.assertIsInstance(results["results"], list)
+
+    def test_get_csat_metrics_from_datalake(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "csat",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        results = self.service.get_csat_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=datetime.now() - timedelta(days=30),
+            end_date=datetime.now(),
+            metric_type=CsatMetricsType.AI,
+        )
+
+        self.assertIn("results", results)
+        self.assertIsInstance(results["results"], list)
+
+        totals = sum(result["full_value"] for result in results["results"])
+
+        for result in results["results"]:
+            self.assertEqual(
+                result["value"], round((result["full_value"] / totals) * 100, 2)
+            )
 
     def test_get_topics_distribution(self):
         project = Project.objects.create(
