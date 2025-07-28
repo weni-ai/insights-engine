@@ -423,9 +423,24 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         end_date: datetime,
     ) -> dict:
         # TODO
-        return self.datalake_service.get_csat_metrics(
+        metrics = self.datalake_service.get_csat_metrics(
             project_uuid, agent_uuid, start_date, end_date
         )
+
+        total_count = sum(metrics.values())
+
+        results = {
+            "results": [
+                {
+                    "label": score,
+                    "value": round((score_count / total_count) * 100, 2),
+                    "full_value": score_count,
+                }
+                for score, score_count in metrics.items()
+            ]
+        }
+
+        return results
 
     def get_csat_metrics(
         self,
