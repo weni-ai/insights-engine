@@ -123,8 +123,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     cached_data = cached_data.decode("utf-8")
 
                 # Parse the JSON data and reconstruct the objects
-                data = json.loads(cached_data)
-                return data
+                if not isinstance(cached_data, dict):
+                    cached_data = json.loads(cached_data)
+
+                return cached_data
             return None
         except (json.JSONDecodeError, AttributeError, KeyError, TypeError) as e:
             logger.warning("Failed to deserialize cached data: %s", e)
@@ -139,15 +141,17 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
     ) -> dict:
         cache_key = self._get_cache_key(
+            data_type="csat_metrics",
             project_uuid=project_uuid,
             agent_uuid=agent_uuid,
             start_date=start_date,
             end_date=end_date,
         )
 
-        if cached_results := self._get_cached_results(cache_key):
-            if not isinstance(cached_results, dict):
-                cached_results = json.loads(cached_results)
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
 
             return cached_results
 
@@ -186,7 +190,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             scores[metric.get("group_value")] += metric.get("count")
 
-        self._save_results_to_cache(cache_key, scores)
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, scores)
 
         return scores
 
@@ -200,7 +205,48 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         """
         Get nps metrics from Datalake.
         """
-        pass
+        cache_key = self._get_cache_key(
+            data_type="nps_metrics",
+            project_uuid=project_uuid,
+            agent_uuid=agent_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
+
+                return cached_results
+
+        try:
+            nps_metrics = self.events_client.get_events_count_by_group(
+                key="nps",
+                event_name=self.event_name,
+                project=project_uuid,
+                agent_uuid=agent_uuid,
+                date_start=start_date,
+                date_end=end_date,
+            )
+        except Exception as e:
+            logger.error("Failed to get nps metrics: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        scores = {n: 0 for n in range(1, 11)}
+
+        for metric in nps_metrics:
+            if metric.get("group_value") not in scores:
+                continue
+
+            scores[metric.get("group_value")] += metric.get("count")
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, scores)
+
+        return scores
 
     def get_topics_distribution(
         self,
