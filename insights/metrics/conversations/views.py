@@ -39,8 +39,8 @@ class ConversationsMetricsViewSet(GenericViewSet):
     @action(
         detail=False,
         methods=["get"],
-        url_path="csat-metrics",
-        url_name="csat-metrics",
+        url_path="csat",
+        url_name="csat",
     )
     def csat_metrics(self, request) -> Response:
         """
