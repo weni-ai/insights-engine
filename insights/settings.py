@@ -314,3 +314,14 @@ WEBHOOK_URL = env.str(
     "WEBHOOK_URL", default="https://webhook.weni.ai/webhook/project/update"
 )
 STATIC_TOKEN = env.str("STATIC_TOKEN", default="")
+
+
+CACHE_DATALAKE_EVENTS_RESULTS = env.bool("CACHE_DATALAKE_EVENTS_RESULTS", default=True)
+CACHE_DATALAKE_EVENTS_RESULTS_TTL = env.int(
+    "CACHE_DATALAKE_EVENTS_RESULTS_TTL", default=60 * 60
+)
+NEXUS_BASE_URL = env.str("NEXUS_BASE_URL", default="")
+NEXUS_API_TOKEN = env.str("NEXUS_API_TOKEN", default="")
+LIMIT_TOPICS_DISTRIBUTION_BY_NEXUS_TOPICS = env.bool(
+    "LIMIT_TOPICS_DISTRIBUTION_BY_NEXUS_TOPICS", default=True
+)
