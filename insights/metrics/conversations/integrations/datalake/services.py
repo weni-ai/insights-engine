@@ -272,7 +272,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 "count"
             ] -= subtopic_event.get("count", 0)
 
-        self._save_results_to_cache(cache_key, topics_data)
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, topics_data)
 
         return topics_data
 
