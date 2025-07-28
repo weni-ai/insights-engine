@@ -43,6 +43,16 @@ class BaseConversationsMetricsService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_topics_distribution(
         self,
         project_uuid: UUID,
@@ -178,6 +188,18 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         self._save_results_to_cache(cache_key, scores)
 
         return scores
+
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get nps metrics from Datalake.
+        """
+        pass
 
     def get_topics_distribution(
         self,

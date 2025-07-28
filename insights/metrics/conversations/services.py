@@ -29,6 +29,7 @@ from insights.metrics.conversations.enums import (
     ConversationType,
     ConversationsMetricsResource,
     CsatMetricsType,
+    NpsMetricsType,
 )
 from insights.sources.integrations.clients import NexusClient
 from insights.widgets.models import Widget
@@ -483,3 +484,68 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         return self._get_csat_metrics_from_datalake(
             project_uuid, agent_uuid, start_date, end_date
         )
+
+    def _get_nps_metrics_from_flowruns(
+        self,
+        flow_uuid: UUID,
+        project_uuid: UUID,
+        op_field: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get nps metrics from flowruns
+        """
+        filters = {
+            "modified_on": {
+                "gte": start_date,
+                "lte": end_date,
+            },
+            "flow": flow_uuid,
+        }
+
+        results = self.flowruns_query_executor.execute(
+            filters,
+            operation="recurrence",
+            parser=parse_dict_to_json,
+            query_kwargs={
+                "project": project_uuid,
+                "op_field": op_field,
+            },
+        )
+
+        # TODO: Implement NPS methodology
+        transformed_results = {}
+
+        return transformed_results
+
+    def _get_nps_metrics_from_datalake(
+        self,
+        project_uuid: UUID,
+        agent_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get nps metrics from datalake
+        """
+        pass
+
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: NpsMetricsType,
+    ) -> dict:
+        """
+        Get nps metrics
+        """
+        # HUMAN
+        if metric_type == NpsMetricsType.HUMAN:
+            return self._get_nps_metrics_from_flowruns(
+                project_uuid, start_date, end_date
+            )
+
+        # AI
+        return self._get_nps_metrics_from_datalake(project_uuid, start_date, end_date)
