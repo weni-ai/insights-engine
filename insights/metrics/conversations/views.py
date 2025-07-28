@@ -15,8 +15,10 @@ from insights.metrics.conversations.serializers import (
     CsatMetricsQueryParamsSerializer,
     DeleteTopicSerializer,
     GetTopicsQueryParamsSerializer,
+    NpsMetricsQueryParamsSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
     TopicsDistributionMetricsSerializer,
+    NpsMetricsSerializer,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
@@ -59,6 +61,37 @@ class ConversationsMetricsViewSet(GenericViewSet):
         )
 
         return Response(csat_metrics, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="nps",
+        url_name="nps",
+    )
+    def nps_metrics(self, request) -> Response:
+        """
+        Get nps metrics
+        """
+        query_params = NpsMetricsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            nps_metrics = self.service.get_nps_metrics(
+                project_uuid=query_params.validated_data["project_uuid"],
+                widget=query_params.validated_data["widget"],
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+                metric_type=query_params.validated_data["type"],
+            )
+        except ConversationsMetricsError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            NpsMetricsSerializer(nps_metrics).data, status=status.HTTP_200_OK
+        )
 
     @action(
         detail=False,
