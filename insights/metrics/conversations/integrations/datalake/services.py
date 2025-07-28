@@ -286,15 +286,17 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         Get conversations totals from Datalake.
         """
 
+        cache_key = self._get_cache_key(
+            data_type="conversations_totals",
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
         if self.cache_results:
             try:
                 cached_results = self._get_cached_results(
-                    key=self._get_cache_key(
-                        data_type="conversations_totals",
-                        project_uuid=project_uuid,
-                        start_date=start_date,
-                        end_date=end_date,
-                    )
+                    key=cache_key,
                 )
                 if cached_results:
                     return cached_results
@@ -401,13 +403,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results:
-            params = {
-                "project_uuid": project_uuid,
-                "start_date": start_date,
-                "end_date": end_date,
-            }
             self._save_results_to_cache(
-                key=self._get_cache_key(**params), value=results
+                key=cache_key,
+                value=results,
             )
 
         return results
