@@ -438,13 +438,17 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             op_field = widget.config.get("op_field")
 
             if not flow_uuid:
+                event_id = capture_message("Flow UUID is required in the widget config")
+
                 raise ConversationsMetricsError(
-                    "Flow UUID is required in the widget config"
+                    f"Flow UUID is required in the widget config. Event ID: {event_id}"
                 )
 
             if not op_field:
+                event_id = capture_message("Op field is required in the widget config")
+
                 raise ConversationsMetricsError(
-                    "Op field is required in the widget config"
+                    f"Op field is required in the widget config. Event ID: {event_id}"
                 )
 
             return self._get_csat_metrics_from_flowruns(
