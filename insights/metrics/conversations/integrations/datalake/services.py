@@ -68,7 +68,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         self.cache_client = cache_client
         self.cache_ttl = cache_ttl
 
-    def _get_cache_key(self, **params) -> str:
+    def _get_cache_key(self, data_type: str, **params) -> str:
         """
         Get cache key for conversations totals with consistent datetime formatting.
         """
@@ -78,7 +78,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 formatted_params[key] = value.isoformat()
             else:
                 formatted_params[key] = str(value)
-        return f"conversations_totals_{json.dumps(formatted_params, sort_keys=True)}"
+        return f"{data_type}_{json.dumps(formatted_params, sort_keys=True)}"
 
     def _save_results_to_cache(self, key: str, value) -> None:
         """
@@ -122,6 +122,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         Get topics distribution from Datalake.
         """
         cache_key = self._get_cache_key(
+            data_type="topics_distribution",
             project_uuid=project_uuid,
             start_date=start_date,
             end_date=end_date,
@@ -289,6 +290,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             try:
                 cached_results = self._get_cached_results(
                     key=self._get_cache_key(
+                        data_type="conversations_totals",
                         project_uuid=project_uuid,
                         start_date=start_date,
                         end_date=end_date,
