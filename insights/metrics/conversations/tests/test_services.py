@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from unittest.mock import patch
 import uuid
 from uuid import UUID
 from django.test import TestCase
