@@ -585,8 +585,17 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             op_field = widget.config.get("op_field")
 
             if not flow_uuid:
+                event_id = capture_message("Flow UUID is required in the widget config")
+
                 raise ConversationsMetricsError(
-                    "Flow UUID is required in the widget config"
+                    f"Flow UUID is required in the widget config. Event ID: {event_id}"
+                )
+
+            if not op_field:
+                event_id = capture_message("Op field is required in the widget config")
+
+                raise ConversationsMetricsError(
+                    f"Op field is required in the widget config. Event ID: {event_id}"
                 )
 
             return self._get_nps_metrics_from_flowruns(
@@ -597,8 +606,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
 
         if not agent_uuid:
+            event_id = capture_message("Agent UUID is required in the widget config")
+
             raise ConversationsMetricsError(
-                "Agent UUID is required in the widget config"
+                f"Agent UUID is required in the widget config. Event ID: {event_id}"
             )
 
         return self._get_nps_metrics_from_datalake(
