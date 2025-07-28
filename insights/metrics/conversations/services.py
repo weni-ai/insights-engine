@@ -515,6 +515,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         )
 
         # TODO: Implement NPS methodology
+        # before returning the results
         transformed_results = {}
 
         return transformed_results
@@ -529,11 +530,21 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         Get nps metrics from datalake
         """
-        pass
+
+        results = self.datalake_service.get_nps_metrics(
+            project_uuid, agent_uuid, start_date, end_date
+        )
+
+        # TODO: Implement NPS methodology
+        # before returning the results
+        transformed_results = {}
+
+        return transformed_results
 
     def get_nps_metrics(
         self,
         project_uuid: UUID,
+        widget: Widget,
         start_date: datetime,
         end_date: datetime,
         metric_type: NpsMetricsType,
@@ -543,9 +554,26 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         # HUMAN
         if metric_type == NpsMetricsType.HUMAN:
+            flow_uuid = widget.config.get("filter", {}).get("flow")
+            op_field = widget.config.get("op_field")
+
+            if not flow_uuid:
+                raise ConversationsMetricsError(
+                    "Flow UUID is required in the widget config"
+                )
+
             return self._get_nps_metrics_from_flowruns(
-                project_uuid, start_date, end_date
+                flow_uuid, project_uuid, op_field, start_date, end_date
             )
 
         # AI
-        return self._get_nps_metrics_from_datalake(project_uuid, start_date, end_date)
+        agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+
+        if not agent_uuid:
+            raise ConversationsMetricsError(
+                "Agent UUID is required in the widget config"
+            )
+
+        return self._get_nps_metrics_from_datalake(
+            project_uuid, agent_uuid, start_date, end_date
+        )
