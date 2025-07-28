@@ -79,7 +79,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         self.cache_client = cache_client
         self.cache_ttl = cache_ttl
 
-    def _get_cache_key(self, **params) -> str:
+    def _get_cache_key(self, data_type: str, **params) -> str:
         """
         Get cache key for conversations totals with consistent datetime formatting.
         """
@@ -89,7 +89,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 formatted_params[key] = value.isoformat()
             else:
                 formatted_params[key] = str(value)
-        return f"conversations_totals_{json.dumps(formatted_params, sort_keys=True)}"
+        return f"{data_type}_{json.dumps(formatted_params, sort_keys=True)}"
 
     def _save_results_to_cache(self, key: str, value) -> None:
         """
@@ -191,6 +191,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         Get topics distribution from Datalake.
         """
         cache_key = self._get_cache_key(
+            data_type="topics_distribution",
             project_uuid=project_uuid,
             start_date=start_date,
             end_date=end_date,
@@ -282,7 +283,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 topics_data[topic_uuid]["count"] += 0
 
         if topics_events == [{}]:
-            return topics_events
+            return topics_data
 
         for topic_event in topics_events:
             topic_uuid = topic_event.get("group_value")
@@ -354,14 +355,17 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         Get conversations totals from Datalake.
         """
 
+        cache_key = self._get_cache_key(
+            data_type="conversations_totals",
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
         if self.cache_results:
             try:
-                cached_results = self._get_conversations_totals_from_cache(
-                    key=self._get_cache_key(
-                        project_uuid=project_uuid,
-                        start_date=start_date,
-                        end_date=end_date,
-                    )
+                cached_results = self._get_cached_results(
+                    key=cache_key,
                 )
                 if cached_results:
                     return cached_results
@@ -468,13 +472,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results:
-            params = {
-                "project_uuid": project_uuid,
-                "start_date": start_date,
-                "end_date": end_date,
-            }
             self._save_results_to_cache(
-                key=self._get_cache_key(**params), value=results
+                key=cache_key,
+                value=results,
             )
 
         return results
