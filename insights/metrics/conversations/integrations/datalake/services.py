@@ -156,7 +156,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             raise e
 
         # The frontend application will display fixed labels for the CSAT scores
-        # For example, "1" can be displayed as "1 - Very dissatisfied"
+        # For example, "1" can be displayed as "Very dissatisfied"
         scores = {
             "1": 0,
             "2": 0,
