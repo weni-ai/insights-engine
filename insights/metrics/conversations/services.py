@@ -9,6 +9,7 @@ from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
+    NPSMetrics,
     SubtopicMetrics,
     SubtopicTopicRelation,
     TopicMetrics,
@@ -485,6 +486,28 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             project_uuid, agent_uuid, start_date, end_date
         )
 
+    def _transform_nps_results(self, results: dict) -> NPSMetrics:
+        """
+        Apply NPS methodology to the results
+
+        https://www.salesforce.com/eu/learning-centre/customer-service/calculate-net-promoter-score/
+        """
+
+        total_responses = sum(results.get(str(i), 0) for i in range(11))
+        promoters = results.get("10", 0) + results.get("9", 0)
+        passives = results.get("8", 0) + results.get("7", 0)
+        detractors = sum(results.get(str(i), 0) for i in range(7))
+
+        score = (promoters - detractors) / total_responses * 100
+
+        return NPSMetrics(
+            total_responses=total_responses,
+            promoters=promoters,
+            passives=passives,
+            detractors=detractors,
+            score=score,
+        )
+
     def _get_nps_metrics_from_flowruns(
         self,
         flow_uuid: UUID,
@@ -514,11 +537,15 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             },
         )
 
-        # TODO: Implement NPS methodology
-        # before returning the results
-        transformed_results = {}
+        assert "results" in results, "Results must contain a 'results' key"
+        assert isinstance(results["results"], list), "Results must be a list"
 
-        return transformed_results
+        results_counts = {
+            result.get("label"): result.get("full_value")
+            for result in results["results"]
+        }
+
+        return self._transform_nps_results(results_counts)
 
     def _get_nps_metrics_from_datalake(
         self,
@@ -535,11 +562,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             project_uuid, agent_uuid, start_date, end_date
         )
 
-        # TODO: Implement NPS methodology
-        # before returning the results
-        transformed_results = {}
-
-        return transformed_results
+        return self._transform_nps_results(results)
 
     def get_nps_metrics(
         self,

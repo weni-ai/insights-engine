@@ -235,7 +235,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
-        scores = {n: 0 for n in range(1, 11)}
+        scores = {n: 0 for n in range(0, 11)}
 
         for metric in nps_metrics:
             if metric.get("group_value") not in scores:

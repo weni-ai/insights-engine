@@ -68,3 +68,12 @@ class ConversationsTotalsMetrics:
     unresolved: ConversationsTotalsMetric
     abandoned: ConversationsTotalsMetric
     transferred_to_human: bool
+
+
+@dataclass(frozen=True)
+class NPSMetrics:
+    total_responses: int
+    promoters: int
+    passives: int
+    detractors: int
+    score: int
