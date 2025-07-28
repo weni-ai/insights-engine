@@ -213,7 +213,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 topics_data[topic_uuid]["count"] += 0
 
         if topics_events == [{}]:
-            return topics_events
+            return topics_data
 
         for topic_event in topics_events:
             topic_uuid = topic_event.get("group_value")
