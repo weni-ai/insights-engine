@@ -175,6 +175,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             scores[metric.get("group_value")] += metric.get("count")
 
+        self._save_results_to_cache(cache_key, scores)
+
         return scores
 
     def get_topics_distribution(
