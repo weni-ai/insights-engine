@@ -165,3 +165,18 @@ class TestWidgetViewSetAsAuthenticationUser(BaseTestWidgetViewSet):
         }
 
         self.assertEqual(widget.report.config, expected_report_config)
+
+    def test_cannot_delete_widget_without_permission(self):
+        widget = self._create_widget()
+        response = self.delete_widget(widget.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    @with_project_auth
+    def test_delete_widget_with_permission(self):
+        widget = self._create_widget()
+        response = self.delete_widget(widget.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertFalse(Widget.objects.filter(uuid=widget.uuid).exists())
