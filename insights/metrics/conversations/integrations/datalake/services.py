@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 import json
 import logging
 from datetime import datetime
@@ -272,6 +273,13 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 "count"
             ] -= subtopic_event.get("count", 0)
 
+        if (
+            len(topics_data.keys()) == 1
+            and topics_data.get("OTHER")
+            and topics_data.get("OTHER", {}).get("count") == 0
+        ):
+            topics_data = {}
+
         if self.cache_results:
             self._save_results_to_cache(cache_key, topics_data)
 
@@ -300,7 +308,33 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     key=cache_key,
                 )
                 if cached_results:
-                    return cached_results
+                    # Reconstruct ConversationsTotalsMetrics from cached data
+                    return ConversationsTotalsMetrics(
+                        total_conversations=ConversationsTotalsMetric(
+                            value=cached_results["total_conversations"]["value"],
+                            percentage=cached_results["total_conversations"][
+                                "percentage"
+                            ],
+                        ),
+                        resolved=ConversationsTotalsMetric(
+                            value=cached_results["resolved"]["value"],
+                            percentage=cached_results["resolved"]["percentage"],
+                        ),
+                        unresolved=ConversationsTotalsMetric(
+                            value=cached_results["unresolved"]["value"],
+                            percentage=cached_results["unresolved"]["percentage"],
+                        ),
+                        abandoned=ConversationsTotalsMetric(
+                            value=cached_results["abandoned"]["value"],
+                            percentage=cached_results["abandoned"]["percentage"],
+                        ),
+                        transferred_to_human=ConversationsTotalsMetric(
+                            value=cached_results["transferred_to_human"]["value"],
+                            percentage=cached_results["transferred_to_human"][
+                                "percentage"
+                            ],
+                        ),
+                    )
             except Exception as e:
                 logger.warning(f"Cache retrieval failed: {e}")
 
@@ -404,9 +438,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results:
+            # Convert ConversationsTotalsMetrics to dict for proper JSON serialization
+            results_dict = asdict(results)
             self._save_results_to_cache(
                 key=cache_key,
-                value=results,
+                value=results_dict,
             )
 
         return results
