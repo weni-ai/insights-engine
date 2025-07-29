@@ -221,7 +221,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     topics_to_delete.append(topic_uuid)
 
             for topic_uuid in topics_to_delete:
-                del topics_data[topic_uuid]
+                if topic_uuid in topics_data:
+                    del topics_data[topic_uuid]
 
             if self.cache_results:
                 self._save_results_to_cache(cache_key, topics_data)
@@ -247,7 +248,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     topics_to_delete.append(topic_uuid)
 
             for topic_uuid in topics_to_delete:
-                del topics_data[topic_uuid]
+                if topic_uuid in topics_data:
+                    del topics_data[topic_uuid]
 
             if self.cache_results:
                 self._save_results_to_cache(cache_key, topics_data)
@@ -309,7 +311,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     subtopics_to_delete[topic_uuid].append(subtopic_uuid)
 
         for topic_uuid in topics_to_delete:
-            del topics_data[topic_uuid]
+            if topic_uuid in topics_data:
+                del topics_data[topic_uuid]
 
         for topic_uuid, subtopic_uuids in subtopics_to_delete.items():
             if topic_uuid in topics_data:
