@@ -145,7 +145,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         try:
             csat_metrics = self.events_client.get_events_count_by_group(
-                key="csat_score",
+                key="csat",
                 event_name=self.event_name,
                 project=project_uuid,
                 date_start=start_date,
