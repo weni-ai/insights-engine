@@ -200,20 +200,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return RoomsByQueueMetric(queues=queues_metrics, has_more=has_more)
 
-    @classmethod
-    def get_nps(
-        cls,
-        project: "Project",
-        start_date: datetime.date,
-        end_date: datetime.date,
-        type: NPSType,
-    ) -> NPS:
-        """
-        Get the NPS for a project
-        """
-        # Mock data for now
-        return NPS(**NPS_METRICS_MOCK_DATA)
-
     def get_topics(self, project_uuid: UUID) -> dict:
         """
         Get conversation topics

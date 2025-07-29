@@ -151,24 +151,6 @@ class ConversationsMetricsViewSet(GenericViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @action(detail=False, methods=["get"], serializer_class=NPSSerializer)
-    def nps(self, request: Request, *args, **kwargs):
-        """
-        Get the NPS for a project
-        """
-        query_params = NPSQueryParamsSerializer(data=request.query_params)
-        query_params.is_valid(raise_exception=True)
-
-        nps = self.service.get_nps(
-            project=query_params.validated_data["project"],
-            start_date=query_params.validated_data["start_date"],
-            end_date=query_params.validated_data["end_date"],
-            type=query_params.validated_data["type"],
-        )
-        serializer = NPSSerializer(nps)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
     def _check_project_permission_for_user(
         self, project_uuid: "UUID", user: "User"
     ) -> bool:

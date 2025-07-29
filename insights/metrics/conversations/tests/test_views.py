@@ -658,23 +658,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["end_date"][0].code, "required")
         self.assertEqual(response.data["type"][0].code, "required")
 
-    @with_project_auth
-    def test_get_nps(self):
-        response = self.get_nps(
-            {
-                "project_uuid": self.project.uuid,
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-                "type": NPSType.HUMAN,
-            }
-        )
-
-        self.assertIn("score", response.data)
-        self.assertIn("total_responses", response.data)
-        self.assertIn("promoters", response.data)
-        self.assertIn("detractors", response.data)
-        self.assertIn("passives", response.data)
-
     def test_cannot_get_topics_without_project_uuid(self):
         response = self.get_topics({})
 
