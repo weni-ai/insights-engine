@@ -222,6 +222,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             ):
                 topics_data = {}
 
+            if self.cache_results:
+                self._save_results_to_cache(cache_key, topics_data)
+
             return topics_data
 
         for topic_event in topics_events:
@@ -240,6 +243,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             for topic_uuid, topic_data in topics_data.items():
                 if topic_data.get("count", 0) == 0:
                     del topics_data[topic_uuid]
+
+            if self.cache_results:
+                self._save_results_to_cache(cache_key, topics_data)
 
             return topics_data
 
