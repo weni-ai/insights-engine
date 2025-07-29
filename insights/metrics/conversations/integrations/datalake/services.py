@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 import json
 import logging
 from datetime import datetime
@@ -183,12 +184,22 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         # Each metric is a dict grouped by the event's value
         # (in this case, the event's value is the CSAT score)
         for metric in csat_metrics:
-            if metric.get("group_value") not in scores:
+            payload_value = metric.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            if payload_value not in scores:
                 # We ignore metrics that are not CSAT scores
                 # This is a safety measure to avoid unexpected values
                 continue
 
-            scores[metric.get("group_value")] += metric.get("count")
+            scores[payload_value] += metric.get("count")
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, scores)
@@ -238,10 +249,20 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         scores = {n: 0 for n in range(0, 11)}
 
         for metric in nps_metrics:
-            if metric.get("group_value") not in scores:
+            payload_value = metric.get("payload_value")
+
+            if payload_value is None:
                 continue
 
-            scores[metric.get("group_value")] += metric.get("count")
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            if payload_value not in scores:
+                continue
+
+            scores[payload_value] += metric.get("count")
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, scores)
@@ -352,6 +373,18 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 topics_data[topic_uuid]["count"] += 0
 
         if topics_events == [{}]:
+            topics_to_delete = []
+            for topic_uuid, topic_data in topics_data.items():
+                if topic_data.get("count", 0) == 0:
+                    topics_to_delete.append(topic_uuid)
+
+            for topic_uuid in topics_to_delete:
+                if topic_uuid in topics_data:
+                    del topics_data[topic_uuid]
+
+            if self.cache_results:
+                self._save_results_to_cache(cache_key, topics_data)
+
             return topics_data
 
         for topic_event in topics_events:
@@ -367,7 +400,19 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topics_data[topic_uuid]["count"] += topic_count
 
         if subtopics_events == [{}]:
-            return subtopics_events
+            topics_to_delete = []
+            for topic_uuid, topic_data in topics_data.items():
+                if topic_data.get("count", 0) == 0:
+                    topics_to_delete.append(topic_uuid)
+
+            for topic_uuid in topics_to_delete:
+                if topic_uuid in topics_data:
+                    del topics_data[topic_uuid]
+
+            if self.cache_results:
+                self._save_results_to_cache(cache_key, topics_data)
+
+            return topics_data
 
         subtopics = {str(subtopic.subtopic_uuid): subtopic for subtopic in subtopics}
 
@@ -410,7 +455,31 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 "count"
             ] -= subtopic_event.get("count", 0)
 
-        self._save_results_to_cache(cache_key, topics_data)
+        topics_to_delete = []
+        subtopics_to_delete = {}
+
+        for topic_uuid, topic_data in topics_data.items():
+            if topic_data.get("count", 0) == 0:
+                topics_to_delete.append(topic_uuid)
+                continue
+
+            subtopics_to_delete[topic_uuid] = []
+            for subtopic_uuid, subtopic_data in topic_data.get("subtopics", {}).items():
+                if subtopic_data.get("count", 0) == 0:
+                    subtopics_to_delete[topic_uuid].append(subtopic_uuid)
+
+        for topic_uuid in topics_to_delete:
+            if topic_uuid in topics_data:
+                del topics_data[topic_uuid]
+
+        for topic_uuid, subtopic_uuids in subtopics_to_delete.items():
+            if topic_uuid in topics_data:
+                for subtopic_uuid in subtopic_uuids:
+                    if subtopic_uuid in topics_data[topic_uuid]["subtopics"]:
+                        del topics_data[topic_uuid]["subtopics"][subtopic_uuid]
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, topics_data)
 
         return topics_data
 
@@ -437,7 +506,33 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     key=cache_key,
                 )
                 if cached_results:
-                    return cached_results
+                    # Reconstruct ConversationsTotalsMetrics from cached data
+                    return ConversationsTotalsMetrics(
+                        total_conversations=ConversationsTotalsMetric(
+                            value=cached_results["total_conversations"]["value"],
+                            percentage=cached_results["total_conversations"][
+                                "percentage"
+                            ],
+                        ),
+                        resolved=ConversationsTotalsMetric(
+                            value=cached_results["resolved"]["value"],
+                            percentage=cached_results["resolved"]["percentage"],
+                        ),
+                        unresolved=ConversationsTotalsMetric(
+                            value=cached_results["unresolved"]["value"],
+                            percentage=cached_results["unresolved"]["percentage"],
+                        ),
+                        abandoned=ConversationsTotalsMetric(
+                            value=cached_results["abandoned"]["value"],
+                            percentage=cached_results["abandoned"]["percentage"],
+                        ),
+                        transferred_to_human=ConversationsTotalsMetric(
+                            value=cached_results["transferred_to_human"]["value"],
+                            percentage=cached_results["transferred_to_human"][
+                                "percentage"
+                            ],
+                        ),
+                    )
             except Exception as e:
                 logger.warning(f"Cache retrieval failed: {e}")
 
@@ -541,9 +636,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results:
+            # Convert ConversationsTotalsMetrics to dict for proper JSON serialization
+            results_dict = asdict(results)
             self._save_results_to_cache(
                 key=cache_key,
-                value=results,
+                value=results_dict,
             )
 
         return results
