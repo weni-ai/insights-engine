@@ -237,7 +237,14 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topics_data[topic_uuid]["count"] += topic_count
 
         if subtopics_events == [{}]:
-            return subtopics_events
+            if (
+                len(topics_data.keys()) == 1
+                and topics_data.get("OTHER")
+                and topics_data.get("OTHER", {}).get("count") == 0
+            ):
+                topics_data = {}
+
+            return topics_data
 
         subtopics = {str(subtopic.subtopic_uuid): subtopic for subtopic in subtopics}
 
