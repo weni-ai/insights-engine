@@ -16,7 +16,7 @@ class BaseTestWidgetViewSet(APITestCase):
     def create_widget(self, data: dict) -> Response:
         url = reverse("widget-list")
 
-        return self.client.post(url, data)
+        return self.client.post(url, data, format="json")
 
     def list_widgets(self) -> Response:
         url = reverse("widget-list")
@@ -26,7 +26,7 @@ class BaseTestWidgetViewSet(APITestCase):
     def update_widget(self, widget_uuid: UUID, data: dict) -> Response:
         url = reverse("widget-detail", args=[widget_uuid])
 
-        return self.client.patch(url, data)
+        return self.client.patch(url, data, format="json")
 
     def delete_widget(self, widget_uuid: UUID) -> Response:
         url = reverse("widget-detail", args=[widget_uuid])
@@ -97,3 +97,32 @@ class TestWidgetViewSetAsAuthenticationUser(BaseTestWidgetViewSet):
         self.assertIn(
             str(widget.uuid), {widget["uuid"] for widget in response.data["results"]}
         )
+
+    def test_create_widget_without_permission(self):
+        response = self.create_widget(
+            {
+                "name": "testwidget",
+                "dashboard": self.dashboard.uuid,
+                "source": "test",
+                "position": [],
+                "config": {},
+                "type": "test",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_create_widget_with_permission(self):
+        response = self.create_widget(
+            {
+                "name": "testwidget",
+                "dashboard": self.dashboard.uuid,
+                "source": "test",
+                "position": [],
+                "config": {},
+                "type": "test",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
