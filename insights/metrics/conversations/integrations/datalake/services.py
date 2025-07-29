@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 import json
 import logging
 from datetime import datetime
@@ -214,6 +215,13 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 topics_data[topic_uuid]["count"] += 0
 
         if topics_events == [{}]:
+            for topic_uuid, topic_data in topics_data.items():
+                if topic_data.get("count", 0) == 0:
+                    del topics_data[topic_uuid]
+
+            if self.cache_results:
+                self._save_results_to_cache(cache_key, topics_data)
+
             return topics_data
 
         for topic_event in topics_events:
@@ -229,7 +237,14 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topics_data[topic_uuid]["count"] += topic_count
 
         if subtopics_events == [{}]:
-            return subtopics_events
+            for topic_uuid, topic_data in topics_data.items():
+                if topic_data.get("count", 0) == 0:
+                    del topics_data[topic_uuid]
+
+            if self.cache_results:
+                self._save_results_to_cache(cache_key, topics_data)
+
+            return topics_data
 
         subtopics = {str(subtopic.subtopic_uuid): subtopic for subtopic in subtopics}
 
@@ -272,6 +287,15 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 "count"
             ] -= subtopic_event.get("count", 0)
 
+        for topic_uuid, topic_data in topics_data.items():
+            if topic_data.get("count", 0) == 0:
+                del topics_data[topic_uuid]
+                continue
+
+            for subtopic_uuid, subtopic_data in topic_data.get("subtopics", {}).items():
+                if subtopic_data.get("count", 0) == 0:
+                    del topic_data["subtopics"][subtopic_uuid]
+
         if self.cache_results:
             self._save_results_to_cache(cache_key, topics_data)
 
@@ -300,7 +324,33 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     key=cache_key,
                 )
                 if cached_results:
-                    return cached_results
+                    # Reconstruct ConversationsTotalsMetrics from cached data
+                    return ConversationsTotalsMetrics(
+                        total_conversations=ConversationsTotalsMetric(
+                            value=cached_results["total_conversations"]["value"],
+                            percentage=cached_results["total_conversations"][
+                                "percentage"
+                            ],
+                        ),
+                        resolved=ConversationsTotalsMetric(
+                            value=cached_results["resolved"]["value"],
+                            percentage=cached_results["resolved"]["percentage"],
+                        ),
+                        unresolved=ConversationsTotalsMetric(
+                            value=cached_results["unresolved"]["value"],
+                            percentage=cached_results["unresolved"]["percentage"],
+                        ),
+                        abandoned=ConversationsTotalsMetric(
+                            value=cached_results["abandoned"]["value"],
+                            percentage=cached_results["abandoned"]["percentage"],
+                        ),
+                        transferred_to_human=ConversationsTotalsMetric(
+                            value=cached_results["transferred_to_human"]["value"],
+                            percentage=cached_results["transferred_to_human"][
+                                "percentage"
+                            ],
+                        ),
+                    )
             except Exception as e:
                 logger.warning(f"Cache retrieval failed: {e}")
 
@@ -404,9 +454,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results:
+            # Convert ConversationsTotalsMetrics to dict for proper JSON serialization
+            results_dict = asdict(results)
             self._save_results_to_cache(
                 key=cache_key,
-                value=results,
+                value=results_dict,
             )
 
         return results
