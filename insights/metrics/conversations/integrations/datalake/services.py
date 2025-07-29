@@ -293,8 +293,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 if subtopic_data.get("count", 0) == 0:
                     del topic_data["subtopics"][subtopic_uuid]
 
-        return topics_data
-
         if self.cache_results:
             self._save_results_to_cache(cache_key, topics_data)
 
