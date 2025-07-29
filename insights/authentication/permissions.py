@@ -24,24 +24,6 @@ class ProjectAuthPermission(permissions.BasePermission):
         ).exists()
 
 
-class CanCreateWidgetPermission(permissions.BasePermission):
-    """
-    Permission that verifies if the user has permission to create a widget.
-    """
-
-    def has_permission(self, request, view) -> bool:
-        dashboard_uuid = request.data.get("dashboard")
-
-        if not dashboard_uuid:
-            return False
-
-        return ProjectAuth.objects.filter(
-            project__dashboards__uuid=dashboard_uuid,
-            user=request.user,
-            role=1,
-        ).exists()
-
-
 class ProjectAuthQueryParamPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         project_uuid = request.query_params.get("project_uuid")
