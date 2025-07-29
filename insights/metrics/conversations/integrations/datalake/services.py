@@ -237,12 +237,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topics_data[topic_uuid]["count"] += topic_count
 
         if subtopics_events == [{}]:
-            if (
-                len(topics_data.keys()) == 1
-                and topics_data.get("OTHER")
-                and topics_data.get("OTHER", {}).get("count") == 0
-            ):
-                topics_data = {}
+            for topic_uuid, topic_data in topics_data.items():
+                if topic_data.get("count", 0) == 0:
+                    del topics_data[topic_uuid]
 
             return topics_data
 
@@ -287,12 +284,16 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 "count"
             ] -= subtopic_event.get("count", 0)
 
-        if (
-            len(topics_data.keys()) == 1
-            and topics_data.get("OTHER")
-            and topics_data.get("OTHER", {}).get("count") == 0
-        ):
-            topics_data = {}
+        for topic_uuid, topic_data in topics_data.items():
+            if topic_data.get("count", 0) == 0:
+                del topics_data[topic_uuid]
+                continue
+
+            for subtopic_uuid, subtopic_data in topic_data.get("subtopics", {}).items():
+                if subtopic_data.get("count", 0) == 0:
+                    del topic_data["subtopics"][subtopic_uuid]
+
+        return topics_data
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, topics_data)
