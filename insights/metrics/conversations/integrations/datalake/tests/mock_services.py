@@ -18,6 +18,30 @@ class MockDatalakeConversationsMetricsService(BaseConversationsMetricsService):
     Mock service for conversations metrics.
     """
 
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        return {
+            "1": 10,
+            "2": 20,
+            "3": 30,
+            "4": 40,
+            "5": 50,
+        }
+
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        return {str(i): 10 for i in range(0, 11)}
+
     def get_topics_distribution(
         self,
         project_uuid: UUID,

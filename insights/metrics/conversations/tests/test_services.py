@@ -2,19 +2,25 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 import uuid
 from uuid import UUID
+
 from django.test import TestCase
 from django.core.cache import cache
 from django.utils import timezone
 
 from insights.sources.integrations.tests.mock_clients import MockNexusClient
+from insights.sources.flowruns.tests.mock_query_executor import (
+    MockFlowRunsQueryExecutor,
+)
+from insights.widgets.models import Widget
 
-
+from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     QueueMetric,
     RoomsByQueueMetric,
     SubjectMetricData,
     SubjectsMetrics,
     TopicsDistributionMetrics,
+    NPSMetrics,
 )
 from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
 from insights.metrics.conversations.tests.mock import (
@@ -26,6 +32,8 @@ from insights.metrics.conversations.enums import (
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
     NPSType,
+    CsatMetricsType,
+    NpsMetricsType,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.tests.mock import (
@@ -39,16 +47,21 @@ from insights.projects.models import Project
 
 
 class TestConversationsMetricsService(TestCase):
-    service = ConversationsMetricsService(
-        datalake_service=MockDatalakeConversationsMetricsService(),
-        nexus_client=MockNexusClient(),
-    )
 
     def setUp(self):
         cache.clear()
         self.project = Project.objects.create(name="Test Project")
         self.start_date = datetime.now() - timedelta(days=30)
         self.end_date = datetime.now()
+        self.dashboard = Dashboard.objects.create(
+            name="Test Dashboard",
+            project=self.project,
+        )
+        self.service = ConversationsMetricsService(
+            datalake_service=MockDatalakeConversationsMetricsService(),
+            nexus_client=MockNexusClient(),
+            flowruns_query_executor=MockFlowRunsQueryExecutor,
+        )
 
     def test_get_timeseries_for_day_unit(self):
         data = self.service.get_timeseries(
@@ -267,6 +280,156 @@ class TestConversationsMetricsService(TestCase):
 
     def tearDown(self) -> None:
         cache.clear()
+
+    def test_get_csat_metrics_from_flowruns(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "csat",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+            },
+        )
+
+        results = self.service.get_csat_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=datetime.now() - timedelta(days=30),
+            end_date=datetime.now(),
+            metric_type=CsatMetricsType.HUMAN,
+        )
+
+        self.assertIn("results", results)
+        self.assertIsInstance(results["results"], list)
+
+    def test_get_csat_metrics_from_datalake(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "csat",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        results = self.service.get_csat_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=datetime.now() - timedelta(days=30),
+            end_date=datetime.now(),
+            metric_type=CsatMetricsType.AI,
+        )
+
+        self.assertIn("results", results)
+        self.assertIsInstance(results["results"], list)
+
+        totals = sum(result["full_value"] for result in results["results"])
+
+        for result in results["results"]:
+            self.assertEqual(
+                result["value"], round((result["full_value"] / totals) * 100, 2)
+            )
+
+    def test_get_nps_metrics_from_flowruns(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "nps",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+            },
+        )
+
+        results = self.service.get_nps_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=datetime.now() - timedelta(days=30),
+            end_date=datetime.now(),
+            metric_type=NpsMetricsType.HUMAN,
+        )
+
+        self.assertIsInstance(results, NPSMetrics)
+
+    def test_get_nps_metrics_from_datalake(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "nps",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        results = self.service.get_nps_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=datetime.now() - timedelta(days=30),
+            end_date=datetime.now(),
+            metric_type=NpsMetricsType.AI,
+        )
+
+        self.assertIsInstance(results, NPSMetrics)
+
+    def test_nps_result_transformation(self):
+        results = {
+            "10": 100,
+            "9": 25,
+            "8": 22,
+            "7": 20,
+            "6": 20,
+            "5": 5,
+            "4": 1,
+            "3": 3,
+            "2": 1,
+            "1": 2,
+            "0": 1,
+        }
+
+        expected_results = NPSMetrics(
+            total_responses=200,
+            promoters=125,
+            passives=42,
+            detractors=33,
+            score=46.0,
+        )
+
+        transformed_results = self.service._transform_nps_results(results)
+
+        self.assertEqual(expected_results, transformed_results)
 
     def test_get_topics_distribution(self):
         project = Project.objects.create(

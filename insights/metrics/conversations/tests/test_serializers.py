@@ -1,8 +1,8 @@
 import uuid
-
 from datetime import datetime, time
 from django.test import TestCase
 
+from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
@@ -18,6 +18,7 @@ from insights.metrics.conversations.enums import (
     ConversationType,
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
+    CsatMetricsType,
     NPSType,
 )
 from insights.metrics.conversations.serializers import (
@@ -27,6 +28,7 @@ from insights.metrics.conversations.serializers import (
     ConversationsSubjectsMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsSerializer,
+    CsatMetricsQueryParamsSerializer,
     NPSQueryParamsSerializer,
     NPSSerializer,
     RoomsByQueueMetricQueryParamsSerializer,
@@ -37,6 +39,7 @@ from insights.metrics.conversations.serializers import (
     TopicsDistributionMetricsSerializer,
 )
 from insights.projects.models import Project
+from insights.widgets.models import Widget
 
 
 class TestConversationBaseQueryParamsSerializer(TestCase):
@@ -145,59 +148,6 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("project_uuid", serializer.errors)
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
-
-
-class TestConversationTotalsMetricsSerializer(TestCase):
-    def test_serializer(self):
-        totals = ConversationsTotalsMetrics(
-            total_conversations=ConversationsTotalsMetric(value=150, percentage=150),
-            resolved=ConversationsTotalsMetric(value=100, percentage=100),
-            unresolved=ConversationsTotalsMetric(value=50, percentage=50),
-            abandoned=ConversationsTotalsMetric(value=0, percentage=0),
-            transferred_to_human=ConversationsTotalsMetric(value=0, percentage=0),
-        )
-        serializer = ConversationTotalsMetricsSerializer(totals)
-        data = serializer.data
-
-        self.assertEqual(
-            data["total_conversations"]["value"], totals.total_conversations.value
-        )
-        self.assertEqual(
-            data["total_conversations"]["percentage"],
-            totals.total_conversations.percentage,
-        )
-        self.assertEqual(data["resolved"]["value"], totals.resolved.value)
-        self.assertEqual(data["resolved"]["percentage"], totals.resolved.percentage)
-        self.assertEqual(data["unresolved"]["value"], totals.unresolved.value)
-        self.assertEqual(data["unresolved"]["percentage"], totals.unresolved.percentage)
-
-
-class TestConversationTotalsMetricsQueryParamsSerializer(TestCase):
-    def setUp(self):
-        self.project = Project.objects.create(
-            name="Test Project",
-        )
-
-    def test_serializer(self):
-        serializer = ConversationTotalsMetricsQueryParamsSerializer(
-            data={
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-                "project_uuid": self.project.uuid,
-            }
-        )
-        self.assertTrue(serializer.is_valid())
-        self.assertIn("project", serializer.validated_data)
-        self.assertEqual(
-            str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
-        )
-        self.assertEqual(serializer.validated_data["project"], self.project)
-        self.assertEqual(
-            str(serializer.validated_data["start_date"]), "2021-01-01 00:00:00+00:00"
-        )
-        self.assertEqual(
-            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59+00:00"
-        )
 
     def test_serializer_invalid_start_date(self):
         serializer = ConversationTotalsMetricsQueryParamsSerializer(
@@ -867,3 +817,81 @@ class TestConversationTotalsMetricsQueryParamsSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("project_uuid", serializer.errors)
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+
+class TestCsatMetricsQueryParamsSerializer(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+        )
+        self.dashboard = Dashboard.objects.create(
+            name="Test Dashboard",
+            project=self.project,
+        )
+        self.widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "csat",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+            },
+        )
+
+    def test_serializer(self):
+        serializer = CsatMetricsQueryParamsSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "widget_uuid": self.widget.uuid,
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "type": CsatMetricsType.HUMAN,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(
+            str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
+        )
+        self.assertEqual(serializer.validated_data["project"], self.project)
+        self.assertEqual(
+            str(serializer.validated_data["start_date"]), "2021-01-01 00:00:00+00:00"
+        )
+        self.assertEqual(
+            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59+00:00"
+        )
+        self.assertEqual(serializer.validated_data["type"], CsatMetricsType.HUMAN)
+        self.assertEqual(serializer.validated_data["widget"], self.widget)
+
+    def test_serializer_invalid_type(self):
+        serializer = CsatMetricsQueryParamsSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "widget_uuid": self.widget.uuid,
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "type": "invalid",
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("type", serializer.errors)
+        self.assertEqual(serializer.errors["type"][0].code, "invalid_choice")
+
+    def test_serializer_invalid_widget_uuid(self):
+        serializer = CsatMetricsQueryParamsSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "widget_uuid": uuid.uuid4(),
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "type": CsatMetricsType.HUMAN,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["widget_uuid"][0].code, "widget_not_found")

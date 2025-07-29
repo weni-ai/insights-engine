@@ -87,16 +87,6 @@ class SubtopicMetrics:
 
 
 @dataclass(frozen=True)
-class ConversationsTotalsMetric:
-    """
-    Dataclass for conversations totals
-    """
-
-    value: int
-    percentage: float
-
-
-@dataclass(frozen=True)
 class TopicMetrics:
     """
     A topics, that consists of subtopics.
@@ -154,3 +144,12 @@ class ConversationsTotalsMetrics:
     unresolved: ConversationsTotalsMetric
     abandoned: ConversationsTotalsMetric
     transferred_to_human: ConversationsTotalsMetric
+
+
+@dataclass(frozen=True)
+class NPSMetrics:
+    total_responses: int
+    promoters: int
+    passives: int
+    detractors: int
+    score: int

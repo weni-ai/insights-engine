@@ -37,3 +37,21 @@ class ConversationType(TextChoices):
 
     HUMAN = "HUMAN"
     AI = "AI"
+
+
+class CsatMetricsType(TextChoices):
+    """
+    Csat metrics type
+    """
+
+    AI = "AI"
+    HUMAN = "HUMAN"
+
+
+class NpsMetricsType(TextChoices):
+    """
+    Nps metrics type
+    """
+
+    AI = "AI"
+    HUMAN = "HUMAN"

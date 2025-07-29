@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 import json
 import logging
 from datetime import datetime
@@ -35,22 +36,42 @@ class BaseConversationsMetricsService(ABC):
     """
 
     @abstractmethod
-    def get_conversations_totals(
-        self, project_uuid: UUID, start_date: datetime, end_date: datetime
-    ) -> ConversationsTotalsMetrics:
-        """
-        Get conversations totals from Datalake.
-        """
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_topics_distribution(
         self,
         project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
-        mock_data: bool = False,
     ) -> TopicsDistributionMetrics:
         pass
+
+    @abstractmethod
+    def get_conversations_totals(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations totals from Datalake.
+        """
 
 
 class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
@@ -105,13 +126,150 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     cached_data = cached_data.decode("utf-8")
 
                 # Parse the JSON data and reconstruct the objects
-                data = json.loads(cached_data)
-                return data
+                if not isinstance(cached_data, dict):
+                    cached_data = json.loads(cached_data)
+
+                return cached_data
             return None
         except (json.JSONDecodeError, AttributeError, KeyError, TypeError) as e:
             logger.warning("Failed to deserialize cached data: %s", e)
 
             return None
+
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        cache_key = self._get_cache_key(
+            data_type="csat_metrics",
+            project_uuid=project_uuid,
+            agent_uuid=agent_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
+
+            return cached_results
+
+        try:
+            csat_metrics = self.events_client.get_events_count_by_group(
+                key="csat_score",
+                event_name=self.event_name,
+                project=project_uuid,
+                agent_uuid=agent_uuid,
+                date_start=start_date,
+                date_end=end_date,
+            )
+        except Exception as e:
+            logger.error("Failed to get csat metrics: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        # The frontend application will display fixed labels for the CSAT scores
+        # For example, "1" can be displayed as "Very dissatisfied"
+        scores = {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+        }
+
+        # Each metric is a dict grouped by the event's value
+        # (in this case, the event's value is the CSAT score)
+        for metric in csat_metrics:
+            payload_value = metric.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            if payload_value not in scores:
+                # We ignore metrics that are not CSAT scores
+                # This is a safety measure to avoid unexpected values
+                continue
+
+            scores[payload_value] += metric.get("count")
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, scores)
+
+        return scores
+
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get nps metrics from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="nps_metrics",
+            project_uuid=project_uuid,
+            agent_uuid=agent_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
+
+                return cached_results
+
+        try:
+            nps_metrics = self.events_client.get_events_count_by_group(
+                key="nps",
+                event_name=self.event_name,
+                project=project_uuid,
+                agent_uuid=agent_uuid,
+                date_start=start_date,
+                date_end=end_date,
+            )
+        except Exception as e:
+            logger.error("Failed to get nps metrics: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        scores = {n: 0 for n in range(0, 11)}
+
+        for metric in nps_metrics:
+            payload_value = metric.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            if payload_value not in scores:
+                continue
+
+            scores[payload_value] += metric.get("count")
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, scores)
+
+        return scores
 
     def get_topics_distribution(
         self,
@@ -244,6 +402,18 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 topics_data[topic_uuid]["count"] += 0
 
         if topics_events == [{}]:
+            topics_to_delete = []
+            for topic_uuid, topic_data in topics_data.items():
+                if topic_data.get("count", 0) == 0:
+                    topics_to_delete.append(topic_uuid)
+
+            for topic_uuid in topics_to_delete:
+                if topic_uuid in topics_data:
+                    del topics_data[topic_uuid]
+
+            if self.cache_results:
+                self._save_results_to_cache(cache_key, topics_data)
+
             return topics_data
 
         for topic_event in topics_events:
@@ -259,7 +429,19 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topics_data[topic_uuid]["count"] += topic_count
 
         if subtopics_events == [{}]:
-            return subtopics_events
+            topics_to_delete = []
+            for topic_uuid, topic_data in topics_data.items():
+                if topic_data.get("count", 0) == 0:
+                    topics_to_delete.append(topic_uuid)
+
+            for topic_uuid in topics_to_delete:
+                if topic_uuid in topics_data:
+                    del topics_data[topic_uuid]
+
+            if self.cache_results:
+                self._save_results_to_cache(cache_key, topics_data)
+
+            return topics_data
 
         subtopics = {str(subtopic.subtopic_uuid): subtopic for subtopic in subtopics}
 
@@ -302,12 +484,28 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 "count"
             ] -= subtopic_event.get("count", 0)
 
-        if (
-            len(topics_data.keys()) == 1
-            and topics_data.get("OTHER")
-            and topics_data.get("OTHER", {}).get("count") == 0
-        ):
-            topics_data = {}
+        topics_to_delete = []
+        subtopics_to_delete = {}
+
+        for topic_uuid, topic_data in topics_data.items():
+            if topic_data.get("count", 0) == 0:
+                topics_to_delete.append(topic_uuid)
+                continue
+
+            subtopics_to_delete[topic_uuid] = []
+            for subtopic_uuid, subtopic_data in topic_data.get("subtopics", {}).items():
+                if subtopic_data.get("count", 0) == 0:
+                    subtopics_to_delete[topic_uuid].append(subtopic_uuid)
+
+        for topic_uuid in topics_to_delete:
+            if topic_uuid in topics_data:
+                del topics_data[topic_uuid]
+
+        for topic_uuid, subtopic_uuids in subtopics_to_delete.items():
+            if topic_uuid in topics_data:
+                for subtopic_uuid in subtopic_uuids:
+                    if subtopic_uuid in topics_data[topic_uuid]["subtopics"]:
+                        del topics_data[topic_uuid]["subtopics"][subtopic_uuid]
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, topics_data)
@@ -468,28 +666,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         if self.cache_results:
             # Convert ConversationsTotalsMetrics to dict for proper JSON serialization
-            results_dict = {
-                "total_conversations": {
-                    "value": results.total_conversations.value,
-                    "percentage": results.total_conversations.percentage,
-                },
-                "resolved": {
-                    "value": results.resolved.value,
-                    "percentage": results.resolved.percentage,
-                },
-                "unresolved": {
-                    "value": results.unresolved.value,
-                    "percentage": results.unresolved.percentage,
-                },
-                "abandoned": {
-                    "value": results.abandoned.value,
-                    "percentage": results.abandoned.percentage,
-                },
-                "transferred_to_human": {
-                    "value": results.transferred_to_human.value,
-                    "percentage": results.transferred_to_human.percentage,
-                },
-            }
+            results_dict = asdict(results)
             self._save_results_to_cache(
                 key=cache_key,
                 value=results_dict,

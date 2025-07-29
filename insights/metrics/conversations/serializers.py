@@ -6,10 +6,13 @@ from rest_framework import serializers
 from insights.metrics.conversations.enums import (
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
+    CsatMetricsType,
     NPSType,
+    NpsMetricsType,
 )
 from insights.metrics.conversations.enums import ConversationType
 from insights.projects.models import Project
+from insights.widgets.models import Widget
 
 
 class ConversationBaseQueryParamsSerializer(serializers.Serializer):
@@ -168,6 +171,33 @@ class RoomsByQueueMetricSerializer(serializers.Serializer):
     has_more = serializers.BooleanField()
 
 
+class CsatMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for csat metrics query params
+    """
+
+    widget_uuid = serializers.UUIDField(required=True)
+    type = serializers.ChoiceField(required=True, choices=CsatMetricsType.choices)
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        widget = Widget.objects.filter(
+            uuid=attrs["widget_uuid"], dashboard__project=attrs["project"]
+        ).first()
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"widget_uuid": "Widget not found"}, code="widget_not_found"
+            )
+
+        attrs["widget"] = widget
+        return attrs
+
+
 class TopicsDistributionMetricsQueryParamsSerializer(
     ConversationBaseQueryParamsSerializer
 ):
@@ -263,3 +293,42 @@ class TopicsDistributionMetricsSerializer(serializers.Serializer):
     """
 
     topics = TopicSerializer(many=True)
+
+
+class NpsMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for NPS metrics query params
+    """
+
+    widget_uuid = serializers.UUIDField(required=True)
+    type = serializers.ChoiceField(required=True, choices=NpsMetricsType.choices)
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        widget = Widget.objects.filter(
+            uuid=attrs["widget_uuid"], dashboard__project=attrs["project"]
+        ).first()
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"widget_uuid": "Widget not found"}, code="widget_not_found"
+            )
+
+        attrs["widget"] = widget
+        return attrs
+
+
+class NpsMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for NPS metrics
+    """
+
+    total_responses = serializers.IntegerField()
+    promoters = serializers.IntegerField()
+    passives = serializers.IntegerField()
+    detractors = serializers.IntegerField()
+    score = serializers.IntegerField()

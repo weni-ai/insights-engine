@@ -8,6 +8,7 @@ import pytz
 from rest_framework import status
 
 from sentry_sdk import capture_exception, capture_message
+from insights.projects.parsers import parse_dict_to_json
 
 from insights.metrics.conversations.dataclass import (
     NPS,
@@ -21,6 +22,7 @@ from insights.metrics.conversations.dataclass import (
     SubtopicTopicRelation,
     TopicMetrics,
     TopicsDistributionMetrics,
+    NPSMetrics,
 )
 from insights.metrics.conversations.enums import (
     ConversationType,
@@ -28,6 +30,8 @@ from insights.metrics.conversations.enums import (
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
     NPSType,
+    CsatMetricsType,
+    NpsMetricsType,
 )
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.chats.db.client import ChatsClient
@@ -42,10 +46,15 @@ from insights.metrics.conversations.integrations.datalake.services import (
     DatalakeConversationsMetricsService,
 )
 from insights.sources.cache import CacheClient
+from insights.sources.flowruns.usecases.query_execute import (
+    QueryExecutor as FlowRunsQueryExecutor,
+)
 from insights.sources.integrations.clients import NexusClient
+from insights.widgets.models import Widget
 
 
 logger = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from datetime import date
@@ -63,11 +72,13 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         nexus_client: NexusClient = NexusClient(),
         cache_client: CacheClient = CacheClient(),
         nexus_cache_ttl: int = 60,
+        flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
     ):
         self.datalake_service = datalake_service
         self.nexus_client = nexus_client
         self.cache_client = cache_client
         self.nexus_cache_ttl = nexus_cache_ttl
+        self.flowruns_query_executor = flowruns_query_executor
 
     def get_totals(
         self, project: "Project", start_date: datetime, end_date: datetime
@@ -525,4 +536,245 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return TopicsDistributionMetrics(
             topics=topics_metrics,
+        )
+
+    def get_totals(
+        self, project: "Project", start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations metrics totals
+        """
+
+        return self.datalake_service.get_conversations_totals(
+            project_uuid=project.uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def _get_csat_metrics_from_flowruns(
+        self,
+        flow_uuid: UUID,
+        project_uuid: UUID,
+        op_field: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        filters = {
+            "modified_on": {
+                "gte": start_date,
+                "lte": end_date,
+            },
+            "flow": flow_uuid,
+        }
+
+        return self.flowruns_query_executor.execute(
+            filters,
+            operation="recurrence",
+            parser=parse_dict_to_json,
+            query_kwargs={
+                "project": project_uuid,
+                "op_field": op_field,
+            },
+        )
+
+    def _get_csat_metrics_from_datalake(
+        self,
+        project_uuid: UUID,
+        agent_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        # TODO
+        metrics = self.datalake_service.get_csat_metrics(
+            project_uuid, agent_uuid, start_date, end_date
+        )
+
+        total_count = sum(metrics.values())
+
+        results = {
+            "results": [
+                {
+                    "label": score,
+                    "value": round((score_count / total_count) * 100, 2),
+                    "full_value": score_count,
+                }
+                for score, score_count in metrics.items()
+            ]
+        }
+
+        return results
+
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: CsatMetricsType,
+    ) -> dict:
+        """
+        Get csat metrics
+        """
+        # HUMAN
+        if metric_type == CsatMetricsType.HUMAN:
+            flow_uuid = widget.config.get("filter", {}).get("flow")
+            op_field = widget.config.get("op_field")
+
+            if not flow_uuid:
+                event_id = capture_message("Flow UUID is required in the widget config")
+
+                raise ConversationsMetricsError(
+                    f"Flow UUID is required in the widget config. Event ID: {event_id}"
+                )
+
+            if not op_field:
+                event_id = capture_message("Op field is required in the widget config")
+
+                raise ConversationsMetricsError(
+                    f"Op field is required in the widget config. Event ID: {event_id}"
+                )
+
+            return self._get_csat_metrics_from_flowruns(
+                flow_uuid, project_uuid, op_field, start_date, end_date
+            )
+
+        # AI
+        agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+
+        if not agent_uuid:
+            raise ConversationsMetricsError(
+                "Agent UUID is required in the widget config"
+            )
+
+        return self._get_csat_metrics_from_datalake(
+            project_uuid, agent_uuid, start_date, end_date
+        )
+
+    def _transform_nps_results(self, results: dict) -> NPSMetrics:
+        """
+        Apply NPS methodology to the results
+
+        https://www.salesforce.com/eu/learning-centre/customer-service/calculate-net-promoter-score/
+        """
+
+        total_responses = sum(results.get(str(i), 0) for i in range(11))
+        promoters = results.get("10", 0) + results.get("9", 0)
+        passives = results.get("8", 0) + results.get("7", 0)
+        detractors = sum(results.get(str(i), 0) for i in range(7))
+
+        score = round(
+            (promoters - detractors) / total_responses * 100 if total_responses else 0,
+            2,
+        )
+
+        return NPSMetrics(
+            total_responses=total_responses,
+            promoters=promoters,
+            passives=passives,
+            detractors=detractors,
+            score=score,
+        )
+
+    def _get_nps_metrics_from_flowruns(
+        self,
+        flow_uuid: UUID,
+        project_uuid: UUID,
+        op_field: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get nps metrics from flowruns
+        """
+        filters = {
+            "modified_on": {
+                "gte": start_date,
+                "lte": end_date,
+            },
+            "flow": flow_uuid,
+        }
+
+        results = self.flowruns_query_executor.execute(
+            filters,
+            operation="recurrence",
+            parser=parse_dict_to_json,
+            query_kwargs={
+                "project": project_uuid,
+                "op_field": op_field,
+            },
+        )
+
+        assert "results" in results, "Results must contain a 'results' key"
+        assert isinstance(results["results"], list), "Results must be a list"
+
+        results_counts = {
+            result.get("label"): result.get("full_value", 0)
+            for result in results["results"]
+        }
+
+        return self._transform_nps_results(results_counts)
+
+    def _get_nps_metrics_from_datalake(
+        self,
+        project_uuid: UUID,
+        agent_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get nps metrics from datalake
+        """
+
+        results = self.datalake_service.get_nps_metrics(
+            project_uuid, agent_uuid, start_date, end_date
+        )
+
+        return self._transform_nps_results(results)
+
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: NpsMetricsType,
+    ) -> dict:
+        """
+        Get nps metrics
+        """
+        # HUMAN
+        if metric_type == NpsMetricsType.HUMAN:
+            flow_uuid = widget.config.get("filter", {}).get("flow")
+            op_field = widget.config.get("op_field")
+
+            if not flow_uuid:
+                event_id = capture_message("Flow UUID is required in the widget config")
+
+                raise ConversationsMetricsError(
+                    f"Flow UUID is required in the widget config. Event ID: {event_id}"
+                )
+
+            if not op_field:
+                event_id = capture_message("Op field is required in the widget config")
+
+                raise ConversationsMetricsError(
+                    f"Op field is required in the widget config. Event ID: {event_id}"
+                )
+
+            return self._get_nps_metrics_from_flowruns(
+                flow_uuid, project_uuid, op_field, start_date, end_date
+            )
+
+        # AI
+        agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+
+        if not agent_uuid:
+            event_id = capture_message("Agent UUID is required in the widget config")
+
+            raise ConversationsMetricsError(
+                f"Agent UUID is required in the widget config. Event ID: {event_id}"
+            )
+
+        return self._get_nps_metrics_from_datalake(
+            project_uuid, agent_uuid, start_date, end_date
         )
