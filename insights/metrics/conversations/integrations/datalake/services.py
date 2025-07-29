@@ -215,9 +215,13 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 topics_data[topic_uuid]["count"] += 0
 
         if topics_events == [{}]:
+            topics_to_delete = []
             for topic_uuid, topic_data in topics_data.items():
                 if topic_data.get("count", 0) == 0:
-                    del topics_data[topic_uuid]
+                    topics_to_delete.append(topic_uuid)
+
+            for topic_uuid in topics_to_delete:
+                del topics_data[topic_uuid]
 
             if self.cache_results:
                 self._save_results_to_cache(cache_key, topics_data)
@@ -237,9 +241,13 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             topics_data[topic_uuid]["count"] += topic_count
 
         if subtopics_events == [{}]:
+            topics_to_delete = []
             for topic_uuid, topic_data in topics_data.items():
                 if topic_data.get("count", 0) == 0:
-                    del topics_data[topic_uuid]
+                    topics_to_delete.append(topic_uuid)
+
+            for topic_uuid in topics_to_delete:
+                del topics_data[topic_uuid]
 
             if self.cache_results:
                 self._save_results_to_cache(cache_key, topics_data)
@@ -287,14 +295,27 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 "count"
             ] -= subtopic_event.get("count", 0)
 
+        topics_to_delete = []
+        subtopics_to_delete = {}
+
         for topic_uuid, topic_data in topics_data.items():
             if topic_data.get("count", 0) == 0:
-                del topics_data[topic_uuid]
+                topics_to_delete.append(topic_uuid)
                 continue
 
+            subtopics_to_delete[topic_uuid] = []
             for subtopic_uuid, subtopic_data in topic_data.get("subtopics", {}).items():
                 if subtopic_data.get("count", 0) == 0:
-                    del topic_data["subtopics"][subtopic_uuid]
+                    subtopics_to_delete[topic_uuid].append(subtopic_uuid)
+
+        for topic_uuid in topics_to_delete:
+            del topics_data[topic_uuid]
+
+        for topic_uuid, subtopic_uuids in subtopics_to_delete.items():
+            if topic_uuid in topics_data:
+                for subtopic_uuid in subtopic_uuids:
+                    if subtopic_uuid in topics_data[topic_uuid]["subtopics"]:
+                        del topics_data[topic_uuid]["subtopics"][subtopic_uuid]
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, topics_data)
