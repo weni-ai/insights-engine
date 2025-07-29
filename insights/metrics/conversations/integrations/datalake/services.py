@@ -307,7 +307,33 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     key=cache_key,
                 )
                 if cached_results:
-                    return cached_results
+                    # Reconstruct ConversationsTotalsMetrics from cached data
+                    return ConversationsTotalsMetrics(
+                        total_conversations=ConversationsTotalsMetric(
+                            value=cached_results["total_conversations"]["value"],
+                            percentage=cached_results["total_conversations"][
+                                "percentage"
+                            ],
+                        ),
+                        resolved=ConversationsTotalsMetric(
+                            value=cached_results["resolved"]["value"],
+                            percentage=cached_results["resolved"]["percentage"],
+                        ),
+                        unresolved=ConversationsTotalsMetric(
+                            value=cached_results["unresolved"]["value"],
+                            percentage=cached_results["unresolved"]["percentage"],
+                        ),
+                        abandoned=ConversationsTotalsMetric(
+                            value=cached_results["abandoned"]["value"],
+                            percentage=cached_results["abandoned"]["percentage"],
+                        ),
+                        transferred_to_human=ConversationsTotalsMetric(
+                            value=cached_results["transferred_to_human"]["value"],
+                            percentage=cached_results["transferred_to_human"][
+                                "percentage"
+                            ],
+                        ),
+                    )
             except Exception as e:
                 logger.warning(f"Cache retrieval failed: {e}")
 
@@ -411,9 +437,32 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results:
+            # Convert ConversationsTotalsMetrics to dict for proper JSON serialization
+            results_dict = {
+                "total_conversations": {
+                    "value": results.total_conversations.value,
+                    "percentage": results.total_conversations.percentage,
+                },
+                "resolved": {
+                    "value": results.resolved.value,
+                    "percentage": results.resolved.percentage,
+                },
+                "unresolved": {
+                    "value": results.unresolved.value,
+                    "percentage": results.unresolved.percentage,
+                },
+                "abandoned": {
+                    "value": results.abandoned.value,
+                    "percentage": results.abandoned.percentage,
+                },
+                "transferred_to_human": {
+                    "value": results.transferred_to_human.value,
+                    "percentage": results.transferred_to_human.percentage,
+                },
+            }
             self._save_results_to_cache(
                 key=cache_key,
-                value=results,
+                value=results_dict,
             )
 
         return results
