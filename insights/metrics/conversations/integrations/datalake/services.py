@@ -137,7 +137,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             end_date=end_date,
         )
 
-        if cached_results := self._get_cached_results(cache_key):
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
             if not isinstance(cached_results, dict):
                 cached_results = json.loads(cached_results)
 
@@ -189,7 +191,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             scores[payload_value] += metric.get("count")
 
-        self._save_results_to_cache(cache_key, scores)
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, scores)
 
         return scores
 
