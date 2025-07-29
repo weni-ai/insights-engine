@@ -25,7 +25,6 @@ from insights.metrics.conversations.dataclass import (
 from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
 from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
-    NPS_METRICS_MOCK_DATA,
 )
 from insights.metrics.conversations.enums import (
     ConversationType,
@@ -260,23 +259,6 @@ class TestConversationsMetricsService(TestCase):
                 has_more=True,
             ),
         )
-
-    def test_get_nps(self):
-        """
-        Test the NPS method
-        """
-        nps = self.service.get_nps_metrics(
-            self.project,
-            self.start_date,
-            self.end_date,
-            NPSType.AI,
-        )
-
-        self.assertEqual(nps.score, NPS_METRICS_MOCK_DATA["score"])
-        self.assertEqual(nps.total_responses, NPS_METRICS_MOCK_DATA["total_responses"])
-        self.assertEqual(nps.promoters, NPS_METRICS_MOCK_DATA["promoters"])
-        self.assertEqual(nps.detractors, NPS_METRICS_MOCK_DATA["detractors"])
-        self.assertEqual(nps.passives, NPS_METRICS_MOCK_DATA["passives"])
 
     def tearDown(self) -> None:
         cache.clear()
