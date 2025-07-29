@@ -151,10 +151,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             end_date=end_date,
         )
 
-        if self.cache_results:
-            if cached_results := self._get_cached_results(cache_key):
-                if not isinstance(cached_results, dict):
-                    cached_results = json.loads(cached_results)
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            if not isinstance(cached_results, dict):
+                cached_results = json.loads(cached_results)
 
             return cached_results
 

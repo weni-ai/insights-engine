@@ -570,7 +570,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         start_date: datetime,
         end_date: datetime,
     ) -> dict:
-        # TODO
         metrics = self.datalake_service.get_csat_metrics(
             project_uuid, agent_uuid, start_date, end_date
         )
