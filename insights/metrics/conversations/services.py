@@ -1,6 +1,6 @@
 import json
-import logging
 from datetime import datetime
+import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -83,7 +83,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         )
 
     def get_timeseries(
-        cls,
+        self,
         project: "Project",
         start_date: datetime,
         end_date: datetime,
@@ -484,7 +484,11 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         topics_metrics = []
 
-        total_count = sum(topic_data.get("count", 0) for topic_data in topics.values())
+        total_count = (
+            sum(topic_data.get("count", 0) for topic_data in topics.values())
+            if topics
+            else 0
+        )
 
         print("Topics", topics)
 

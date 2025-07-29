@@ -14,19 +14,6 @@ class ConversationsTotalsMetric:
 
 
 @dataclass(frozen=True)
-class ConversationsTotalsMetrics:
-    """
-    Dataclass for conversations totals metrics
-    """
-
-    total_conversations: ConversationsTotalsMetric
-    resolved: ConversationsTotalsMetric
-    unresolved: ConversationsTotalsMetric
-    abandoned: ConversationsTotalsMetric
-    transferred_to_human: bool
-
-
-@dataclass(frozen=True)
 class ConversationsTimeseriesData:
     """
     Data class to store the data for the conversations timeseries metrics.
@@ -100,6 +87,16 @@ class SubtopicMetrics:
 
 
 @dataclass(frozen=True)
+class ConversationsTotalsMetric:
+    """
+    Dataclass for conversations totals
+    """
+
+    value: int
+    percentage: float
+
+
+@dataclass(frozen=True)
 class TopicMetrics:
     """
     A topics, that consists of subtopics.
@@ -144,3 +141,16 @@ class SubtopicTopicRelation:
     subtopic_name: str
     topic_uuid: str
     topic_name: str
+
+
+@dataclass(frozen=True)
+class ConversationsTotalsMetrics:
+    """
+    Dataclass for conversations totals metrics
+    """
+
+    total_conversations: ConversationsTotalsMetric
+    resolved: ConversationsTotalsMetric
+    unresolved: ConversationsTotalsMetric
+    abandoned: ConversationsTotalsMetric
+    transferred_to_human: ConversationsTotalsMetric

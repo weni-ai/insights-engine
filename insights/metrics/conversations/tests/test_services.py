@@ -50,14 +50,6 @@ class TestConversationsMetricsService(TestCase):
         self.start_date = datetime.now() - timedelta(days=30)
         self.end_date = datetime.now()
 
-    def test_get_totals(self):
-        totals = self.service.get_totals(
-            project=self.project,
-            start_date=self.start_date,
-            end_date=self.end_date,
-        )
-        self.assertIsInstance(totals, ConversationsTotalsMetrics)
-
     def test_get_timeseries_for_day_unit(self):
         data = self.service.get_timeseries(
             project=self.project,
@@ -330,3 +322,12 @@ class TestConversationsMetricsService(TestCase):
             topic_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
             subtopic_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
         )
+
+    def test_get_totals(self):
+        totals = self.service.get_totals(
+            project=self.project,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(totals, ConversationsTotalsMetrics)

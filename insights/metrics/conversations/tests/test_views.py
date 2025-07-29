@@ -22,7 +22,6 @@ from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
     CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
-    NPS_METRICS_MOCK_DATA,
 )
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
@@ -113,6 +112,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params)
 
+    def get_totals(self, query_params: dict) -> Response:
+        url = "/v1/metrics/conversations/totals/"
+
+        return self.client.get(url, query_params)
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -139,6 +143,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_nps_when_unauthenticated(self):
         response = self.get_nps({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_topics_distribution_when_unauthenticated(self):
+        response = self.get_topics_distribution({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -174,6 +183,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_topics_distribution_when_unauthenticated(self):
         response = self.get_topics_distribution({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_totals_when_not_authenticated(self):
+        response = self.get_totals({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -761,36 +775,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-
-    def test_cannot_get_topics_distribution_without_project_uuid(self):
-        response = self.get_topics_distribution({})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data["project_uuid"][0].code,
-            "required",
-        )
-
-    @with_project_auth
-    def test_get_topics_distribution(self):
-        response = self.get_topics_distribution(
-            {
-                "project_uuid": self.project.uuid,
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-                "type": ConversationType.AI,
-            }
-        )
-
-        self.assertIn("topics", response.data)
-        self.assertEqual(len(response.data["topics"]), 1)
-        self.assertIn("uuid", response.data["topics"][0])
-        self.assertIn("name", response.data["topics"][0])
-        self.assertIn("percentage", response.data["topics"][0])
-        self.assertIn("subtopics", response.data["topics"][0])
-        self.assertEqual(len(response.data["topics"][0]["subtopics"]), 1)
-        self.assertIn("uuid", response.data["topics"][0]["subtopics"][0])
-        self.assertIn("name", response.data["topics"][0]["subtopics"][0])
-        self.assertIn("percentage", response.data["topics"][0]["subtopics"][0])
 
     def test_cannot_get_topics_distribution_without_project_uuid(self):
         response = self.get_topics_distribution({})

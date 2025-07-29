@@ -10,13 +10,13 @@ from rest_framework.exceptions import PermissionDenied
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
+    ConversationTotalsMetricsQueryParamsSerializer,
+    ConversationTotalsMetricsSerializer,
     CreateTopicSerializer,
     DeleteTopicSerializer,
     GetTopicsQueryParamsSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
     TopicsDistributionMetricsSerializer,
-    ConversationTotalsMetricsQueryParamsSerializer,
-    ConversationTotalsMetricsSerializer,
     ConversationsSubjectsMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsSerializer,
@@ -46,38 +46,6 @@ class ConversationsMetricsViewSet(GenericViewSet):
     @action(
         detail=False,
         methods=["get"],
-        serializer_class=ConversationTotalsMetricsSerializer,
-    )
-    def totals(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get conversations metrics totals
-        """
-
-        query_params_serializer = ConversationTotalsMetricsQueryParamsSerializer(
-            data=request.query_params,
-        )
-        query_params_serializer.is_valid(raise_exception=True)
-
-        try:
-            totals = self.service.get_totals(
-                project=query_params_serializer.validated_data["project"],
-                start_date=request.query_params.get("start_date"),
-                end_date=request.query_params.get("end_date"),
-            )
-        except Exception:
-            return Response(
-                {"error": "Error getting conversations metrics totals"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        return Response(
-            ConversationTotalsMetricsSerializer(totals).data,
-            status=status.HTTP_200_OK,
-        )
-
-    @action(
-        detail=False,
-        methods=["get"],
         serializer_class=ConversationsTimeseriesMetricsSerializer,
     )
     def timeseries(self, request: Request, *args, **kwargs) -> Response:
@@ -95,7 +63,10 @@ class ConversationsMetricsViewSet(GenericViewSet):
             unit=query_params.validated_data["unit"],
         )
 
-        return Response(self.serializer_class(data).data, status=status.HTTP_200_OK)
+        return Response(
+            ConversationsTimeseriesMetricsSerializer(data).data,
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["get"], serializer_class=SubjectsMetricsSerializer)
     def subjects(self, request: Request) -> Response:
@@ -384,3 +355,35 @@ class ConversationsMetricsViewSet(GenericViewSet):
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        serializer_class=ConversationTotalsMetricsSerializer,
+    )
+    def totals(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get conversations metrics totals
+        """
+
+        query_params_serializer = ConversationTotalsMetricsQueryParamsSerializer(
+            data=request.query_params,
+        )
+        query_params_serializer.is_valid(raise_exception=True)
+
+        try:
+            totals = self.service.get_totals(
+                project=query_params_serializer.validated_data["project"],
+                start_date=request.query_params.get("start_date"),
+                end_date=request.query_params.get("end_date"),
+            )
+        except Exception:
+            return Response(
+                {"error": "Error getting conversations metrics totals"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            ConversationTotalsMetricsSerializer(totals).data,
+            status=status.HTTP_200_OK,
+        )

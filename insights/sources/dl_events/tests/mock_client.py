@@ -20,3 +20,10 @@ class ClassificationMockDataLakeEventsClient(BaseDataLakeEventsClient):
         """
 
         return [{"count": 10}]
+
+    def get_events_count_by_group(self, **query_kwargs) -> dict:
+        """
+        Get the count of events from the DataLakeEvents source.
+        """
+
+        return [{"count": 10}]
