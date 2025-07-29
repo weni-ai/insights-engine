@@ -126,3 +126,42 @@ class TestWidgetViewSetAsAuthenticationUser(BaseTestWidgetViewSet):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_update_widget_without_permission(self):
+        widget = self._create_widget()
+        response = self.update_widget(widget.uuid, {"name": "testwidget2"})
+
+        # The queryset excludes widgets that the user does not have permission to access
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    @with_project_auth
+    def test_update_and_configure_recurrence_widget(self):
+        widget = self._create_widget()
+        self.assertFalse(hasattr(widget, "report"))
+
+        payload = {
+            "type": "recurrence",
+            "source": "flowruns",
+            "config": {
+                "operation": "recurrence",
+                "op_field": "example",
+                "limit": 5,
+                "filter": {"flow": "cce1d832-c36f-49a7-9181-d65d3e7ff262"},
+            },
+        }
+
+        response = self.update_widget(widget.uuid, payload)
+
+        widget.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(hasattr(widget, "report"))
+
+        expected_report_config = {
+            "operation": widget.config.get("operation"),
+            "op_field": widget.config.get("op_field"),
+            "filter": widget.config.get("filter"),
+            "data_suffix": "%",
+        }
+
+        self.assertEqual(widget.report.config, expected_report_config)
