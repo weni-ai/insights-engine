@@ -1,19 +1,20 @@
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 
-from insights.authentication.permissions import WidgetAuthPermission
+from insights.authentication.permissions import ProjectAuthPermission
 
 from .models import Report, Widget
 from .serializers import WidgetSerializer
 
 
-class WidgetListUpdateViewSet(
+class WidgetViewSet(
+    mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
     mixins.RetrieveModelMixin,
 ):
-    permission_classes = [WidgetAuthPermission]
+    permission_classes = [ProjectAuthPermission]
     queryset = Widget.objects.all()
     serializer_class = WidgetSerializer
 
