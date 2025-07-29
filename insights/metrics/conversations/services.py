@@ -339,7 +339,11 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         topics_metrics = []
 
-        total_count = sum(topic_data.get("count", 0) for topic_data in topics.values())
+        total_count = (
+            sum(topic_data.get("count", 0) for topic_data in topics.values())
+            if topics
+            else 0
+        )
 
         for topic_uuid, topic_data in topics.items():
             subtopic_metrics = []
