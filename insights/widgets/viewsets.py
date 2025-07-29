@@ -1,6 +1,7 @@
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from django.db.models import QuerySet
+from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.projects.models import ProjectAuth
@@ -23,9 +24,9 @@ class WidgetViewSet(
     @property
     def permission_classes(self):
         if self.action == "create":
-            return [CanCreateWidgetPermission]
+            return [IsAuthenticated, CanCreateWidgetPermission]
 
-        return [ProjectAuthPermission]
+        return [IsAuthenticated, ProjectAuthPermission]
 
     def get_queryset(self) -> QuerySet[Widget]:
         return self.queryset.filter(
