@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 import json
 import logging
 from datetime import datetime
@@ -438,28 +439,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         if self.cache_results:
             # Convert ConversationsTotalsMetrics to dict for proper JSON serialization
-            results_dict = {
-                "total_conversations": {
-                    "value": results.total_conversations.value,
-                    "percentage": results.total_conversations.percentage,
-                },
-                "resolved": {
-                    "value": results.resolved.value,
-                    "percentage": results.resolved.percentage,
-                },
-                "unresolved": {
-                    "value": results.unresolved.value,
-                    "percentage": results.unresolved.percentage,
-                },
-                "abandoned": {
-                    "value": results.abandoned.value,
-                    "percentage": results.abandoned.percentage,
-                },
-                "transferred_to_human": {
-                    "value": results.transferred_to_human.value,
-                    "percentage": results.transferred_to_human.percentage,
-                },
-            }
+            results_dict = asdict(results)
             self._save_results_to_cache(
                 key=cache_key,
                 value=results_dict,
