@@ -130,6 +130,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
     ) -> dict:
         cache_key = self._get_cache_key(
+            data_type="csat_metrics",
             project_uuid=project_uuid,
             agent_uuid=agent_uuid,
             start_date=start_date,
@@ -147,9 +148,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 key="csat_score",
                 event_name=self.event_name,
                 project=project_uuid,
-                agent_uuid=agent_uuid,
                 date_start=start_date,
                 date_end=end_date,
+                metadata_key="agent_uuid",
+                metadata_value=agent_uuid,
             )
         except Exception as e:
             logger.error("Failed to get csat metrics: %s", e)
