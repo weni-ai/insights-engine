@@ -170,12 +170,22 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         # Each metric is a dict grouped by the event's value
         # (in this case, the event's value is the CSAT score)
         for metric in csat_metrics:
-            if metric.get("group_value") not in scores:
+            payload_value = metric.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            if payload_value not in scores:
                 # We ignore metrics that are not CSAT scores
                 # This is a safety measure to avoid unexpected values
                 continue
 
-            scores[metric.get("group_value")] += metric.get("count")
+            scores[payload_value] += metric.get("count")
 
         self._save_results_to_cache(cache_key, scores)
 
