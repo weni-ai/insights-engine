@@ -265,7 +265,7 @@ class TestConversationsMetricsService(TestCase):
         """
         Test the NPS method
         """
-        nps = self.service.get_nps(
+        nps = self.service.get_nps_metrics(
             self.project,
             self.start_date,
             self.end_date,
