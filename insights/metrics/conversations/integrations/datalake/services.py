@@ -250,7 +250,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
-        scores = {n: 0 for n in range(0, 11)}
+        scores = {str(n): 0 for n in range(0, 11)}
 
         for metric in nps_metrics:
             payload_value = metric.get("payload_value")
