@@ -252,7 +252,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
+        print(nps_metrics)
+
         scores = {n: 0 for n in range(0, 11)}
+
+        print(scores)
 
         for metric in nps_metrics:
             payload_value = metric.get("payload_value")
@@ -269,6 +273,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 continue
 
             scores[payload_value] += metric.get("count")
+
+        print(scores)
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, scores)
