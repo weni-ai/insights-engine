@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
@@ -7,27 +7,20 @@ from insights.projects.models import Project, ProjectAuth
 
 
 class ProjectAuthPermission(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        if type(obj) is Project:
+    """
+    Permission that verifies if the user has access to the project.
+    """
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        if isinstance(obj, Project):
             project = obj
         else:
+            assert hasattr(obj, "project"), "Object must have a project attribute"
             project = obj.project
 
-        user = request.user
-        auth = ProjectAuth.objects.filter(project=project, user=user, role=1).first()
-        if not auth:
-            raise PermissionDenied("User does not have permission for this project")
-        return True
-
-
-class WidgetAuthPermission(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        project = obj.dashboard.project
-        user = request.user
-        auth = ProjectAuth.objects.filter(project=project, user=user, role=1).first()
-        if not auth:
-            raise PermissionDenied("User does not have permission for this project")
-        return True
+        return ProjectAuth.objects.filter(
+            project=project, user=request.user, role=1
+        ).exists()
 
 
 class ProjectAuthQueryParamPermission(permissions.BasePermission):
