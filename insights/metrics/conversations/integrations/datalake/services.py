@@ -235,7 +235,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         try:
             nps_metrics = self.events_client.get_events_count_by_group(
-                key="nps",
+                key="weni_nps",
                 event_name=self.event_name,
                 project=project_uuid,
                 agent_uuid=agent_uuid,
