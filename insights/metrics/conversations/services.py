@@ -580,7 +580,11 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             "results": [
                 {
                     "label": score,
-                    "value": round((score_count / total_count) * 100, 2),
+                    "value": (
+                        round((score_count / total_count) * 100, 2)
+                        if total_count
+                        else 0
+                    ),
                     "full_value": score_count,
                 }
                 for score, score_count in metrics.items()

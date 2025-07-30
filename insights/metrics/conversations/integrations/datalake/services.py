@@ -161,7 +161,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         try:
             csat_metrics = self.events_client.get_events_count_by_group(
-                key="csat",
+                key="weni_csat",
                 event_name=self.event_name,
                 project=project_uuid,
                 date_start=start_date,
@@ -237,7 +237,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         try:
             nps_metrics = self.events_client.get_events_count_by_group(
-                key="nps",
+                key="weni_nps",
                 event_name=self.event_name,
                 project=project_uuid,
                 agent_uuid=agent_uuid,
