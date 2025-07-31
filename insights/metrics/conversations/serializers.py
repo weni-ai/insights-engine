@@ -2,8 +2,9 @@ import pytz
 from datetime import datetime, time
 from rest_framework import serializers
 
-from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.enums import CsatMetricsType, ConversationType
 from insights.projects.models import Project
+from insights.widgets.models import Widget
 
 
 class ConversationBaseQueryParamsSerializer(serializers.Serializer):
@@ -44,6 +45,33 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         end_datetime = datetime.combine(attrs["end_date"], time(23, 59, 59))
         attrs["end_date"] = timezone.localize(end_datetime)
 
+        return attrs
+
+
+class CsatMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for csat metrics query params
+    """
+
+    widget_uuid = serializers.UUIDField(required=True)
+    type = serializers.ChoiceField(required=True, choices=CsatMetricsType.choices)
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        widget = Widget.objects.filter(
+            uuid=attrs["widget_uuid"], dashboard__project=attrs["project"]
+        ).first()
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"widget_uuid": "Widget not found"}, code="widget_not_found"
+            )
+
+        attrs["widget"] = widget
         return attrs
 
 

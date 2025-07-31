@@ -1,12 +1,11 @@
-from datetime import datetime
-import json
 import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
-
-from rest_framework import status
+from datetime import datetime
+import json
 
 from sentry_sdk import capture_exception, capture_message
+from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
@@ -15,21 +14,28 @@ from insights.metrics.conversations.dataclass import (
     TopicMetrics,
     TopicsDistributionMetrics,
 )
-from insights.metrics.conversations.enums import (
-    ConversationType,
-    ConversationsMetricsResource,
-)
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
     DatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
+from insights.projects.parsers import parse_dict_to_json
 from insights.sources.cache import CacheClient
+from insights.sources.flowruns.usecases.query_execute import (
+    QueryExecutor as FlowRunsQueryExecutor,
+)
+from insights.metrics.conversations.enums import (
+    ConversationType,
+    ConversationsMetricsResource,
+    CsatMetricsType,
+)
 from insights.sources.integrations.clients import NexusClient
+from insights.widgets.models import Widget
 
 
 logger = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from insights.projects.models import Project
@@ -46,11 +52,13 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         nexus_client: NexusClient = NexusClient(),
         cache_client: CacheClient = CacheClient(),
         nexus_cache_ttl: int = 60,
+        flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
     ):
         self.datalake_service = datalake_service
         self.nexus_client = nexus_client
         self.cache_client = cache_client
         self.nexus_cache_ttl = nexus_cache_ttl
+        self.flowruns_query_executor = flowruns_query_executor
 
     def get_topics(self, project_uuid: UUID) -> dict:
         """
@@ -384,3 +392,81 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             start_date=start_date,
             end_date=end_date,
         )
+
+    def _get_csat_metrics_from_flowruns(
+        self,
+        flow_uuid: UUID,
+        project_uuid: UUID,
+        op_field: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        filters = {
+            "modified_on": {
+                "gte": start_date,
+                "lte": end_date,
+            },
+            "flow": flow_uuid,
+        }
+
+        return self.flowruns_query_executor.execute(
+            filters,
+            operation="recurrence",
+            parser=parse_dict_to_json,
+            query_kwargs={
+                "project": project_uuid,
+                "op_field": op_field,
+            },
+        )
+
+    def _get_csat_metrics_from_datalake(
+        self, agent_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> dict:
+        # TODO
+        return {}
+
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: CsatMetricsType,
+    ) -> dict:
+        """
+        Get csat metrics
+        """
+        # HUMAN
+        if metric_type == CsatMetricsType.HUMAN:
+            flow_uuid = widget.config.get("filter", {}).get("flow")
+            op_field = widget.config.get("op_field")
+
+            if not flow_uuid:
+                event_id = capture_message("Flow UUID is required in the widget config")
+
+                raise ConversationsMetricsError(
+                    f"Flow UUID is required in the widget config. Event ID: {event_id}"
+                )
+
+            if not op_field:
+                event_id = capture_message("Op field is required in the widget config")
+
+                raise ConversationsMetricsError(
+                    f"Op field is required in the widget config. Event ID: {event_id}"
+                )
+
+            return self._get_csat_metrics_from_flowruns(
+                flow_uuid, project_uuid, op_field, start_date, end_date
+            )
+
+        # AI
+        agent_uuid = (
+            widget.config.get("filter", {}).get("datalake_config", {}).get("agent_uuid")
+        )
+
+        if not agent_uuid:
+            raise ConversationsMetricsError(
+                "Agent UUID is required in the widget config"
+            )
+
+        return self._get_csat_metrics_from_datalake(agent_uuid, start_date, end_date)

@@ -1,24 +1,29 @@
 import uuid
 from unittest.mock import patch
 from django.urls import reverse
-from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
+from rest_framework import status
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
+from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
 )
-from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.enums import ConversationType, CsatMetricsType
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.views import ConversationsMetricsViewSet
 from insights.projects.models import Project
+from insights.sources.flowruns.tests.mock_query_executor import (
+    MockFlowRunsQueryExecutor,
+)
 from insights.sources.integrations.tests.mock_clients import MockNexusClient
+from insights.widgets.models import Widget
 
 
 class BaseTestConversationsMetricsViewSet(APITestCase):
@@ -29,6 +34,7 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
             datalake_service=MockDatalakeConversationsMetricsService(),
             nexus_client=MockNexusClient(),
+            flowruns_query_executor=MockFlowRunsQueryExecutor,
         )
 
     @classmethod
@@ -81,6 +87,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params)
 
+    def get_csat_metrics(self, query_params: dict) -> Response:
+        url = reverse("conversations-csat")
+
+        return self.client.get(url, query_params, format="json")
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -125,6 +136,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_cannot_get_csat_metrics_when_unauthenticated(self):
+        response = self.get_csat_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class TestConversationsMetricsViewSetAsAuthenticatedUser(
     BaseTestConversationsMetricsViewSet
@@ -132,6 +148,10 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
     def setUp(self) -> None:
         self.user = User.objects.create(email="test@test.com")
         self.project = Project.objects.create(name="Test Project")  # type: ignore
+        self.dashboard = Dashboard.objects.create(
+            name="Test Dashboard",
+            project=self.project,
+        )
 
         self.client.force_authenticate(self.user)
 
@@ -361,3 +381,54 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["resolved"]["percentage"], 60)
         self.assertEqual(response.data["unresolved"]["value"], 40)
         self.assertEqual(response.data["unresolved"]["percentage"], 40)
+
+    def test_cannot_get_csat_metrics_without_project_uuid(self):
+        response = self.get_csat_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_cannot_get_csat_metrics_without_permission(self):
+        response = self.get_csat_metrics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_cannot_get_csat_metrics_without_required_params(self):
+        response = self.get_csat_metrics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["widget_uuid"][0].code, "required")
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+        self.assertEqual(response.data["type"][0].code, "required")
+
+    @with_project_auth
+    def test_get_csat_metrics_human(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "csat",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+            },
+        )
+
+        response = self.get_csat_metrics(
+            {
+                "project_uuid": self.project.uuid,
+                "widget_uuid": widget.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+                "type": CsatMetricsType.HUMAN,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
