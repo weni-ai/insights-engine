@@ -8,4 +8,3 @@ class DatalakeConversationsClassification(models.TextChoices):
 
     RESOLVED = "resolved"
     UNRESOLVED = "unresolved"
-    ABANDONED = "abandoned"

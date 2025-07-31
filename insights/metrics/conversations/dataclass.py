@@ -66,7 +66,6 @@ class ConversationsTotalsMetrics:
     total_conversations: ConversationsTotalsMetric
     resolved: ConversationsTotalsMetric
     unresolved: ConversationsTotalsMetric
-    abandoned: ConversationsTotalsMetric
     transferred_to_human: ConversationsTotalsMetric
 
 
