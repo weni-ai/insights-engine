@@ -442,7 +442,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
-        mock_data: bool = False,
     ) -> TopicsDistributionMetrics:
         """
         Get topics distribution
@@ -469,7 +468,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 end_date=end_date,
                 conversation_type=conversation_type,
                 subtopics=subtopics,
-                mock_data=mock_data,
             )
         except Exception as e:
             logger.error("Failed to get topics distribution", exc_info=True)

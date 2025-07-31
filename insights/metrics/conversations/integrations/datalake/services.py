@@ -286,37 +286,36 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         conversation_type: ConversationType,
         subtopics: list[SubtopicTopicRelation],
-        mock_data: bool = False,
     ) -> dict:
         """
         Get topics distribution from Datalake.
         """
-        if mock_data:
-            return {
-                "OTHER": {
-                    "name": "OTHER",
-                    "uuid": None,
-                    "count": 100,
-                    "subtopics": {},
-                },
-                uuid.uuid4(): {
-                    "name": "Cancelamento",
-                    "uuid": "2026cedc-67f6-4a04-977a-55cc581defa9",
-                    "count": 100,
-                    "subtopics": {
-                        uuid.uuid4(): {
-                            "name": "Subtopic 1",
-                            "uuid": uuid.uuid4(),
-                            "count": 70,
-                        },
-                        "OTHER": {
-                            "name": "OTHER",
-                            "uuid": None,
-                            "count": 30,
-                        },
-                    },
-                },
-            }
+        # if mock_data:
+        #     return {
+        #         "OTHER": {
+        #             "name": "OTHER",
+        #             "uuid": None,
+        #             "count": 100,
+        #             "subtopics": {},
+        #         },
+        #         uuid.uuid4(): {
+        #             "name": "Cancelamento",
+        #             "uuid": "2026cedc-67f6-4a04-977a-55cc581defa9",
+        #             "count": 100,
+        #             "subtopics": {
+        #                 uuid.uuid4(): {
+        #                     "name": "Subtopic 1",
+        #                     "uuid": uuid.uuid4(),
+        #                     "count": 70,
+        #                 },
+        #                 "OTHER": {
+        #                     "name": "OTHER",
+        #                     "uuid": None,
+        #                     "count": 30,
+        #                 },
+        #             },
+        #         },
+        #     }
         cache_key = self._get_cache_key(
             data_type="topics_distribution",
             project_uuid=project_uuid,

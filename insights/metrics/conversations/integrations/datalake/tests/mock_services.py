@@ -49,7 +49,6 @@ class MockDatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         conversation_type: ConversationType,
         subtopics: list[SubtopicTopicRelation],
-        mock_data: bool = False,
     ) -> TopicsDistributionMetrics:
         return {
             "OTHER": {
