@@ -2,7 +2,11 @@ import pytz
 from datetime import datetime, time
 from rest_framework import serializers
 
-from insights.metrics.conversations.enums import CsatMetricsType, ConversationType
+from insights.metrics.conversations.enums import (
+    CsatMetricsType,
+    ConversationType,
+    NpsMetricsType,
+)
 from insights.projects.models import Project
 from insights.widgets.models import Widget
 
@@ -179,3 +183,42 @@ class ConversationTotalsMetricsQueryParamsSerializer(
     """
     Serializer for conversation totals metrics query params
     """
+
+
+class NpsMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for NPS metrics query params
+    """
+
+    widget_uuid = serializers.UUIDField(required=True)
+    type = serializers.ChoiceField(required=True, choices=NpsMetricsType.choices)
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        widget = Widget.objects.filter(
+            uuid=attrs["widget_uuid"], dashboard__project=attrs["project"]
+        ).first()
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"widget_uuid": "Widget not found"}, code="widget_not_found"
+            )
+
+        attrs["widget"] = widget
+        return attrs
+
+
+class NpsMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for NPS metrics
+    """
+
+    total_responses = serializers.IntegerField()
+    promoters = serializers.IntegerField()
+    passives = serializers.IntegerField()
+    detractors = serializers.IntegerField()
+    score = serializers.IntegerField()

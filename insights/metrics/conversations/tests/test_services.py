@@ -7,9 +7,14 @@ from django.core.cache import cache
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
+    NPSMetrics,
     TopicsDistributionMetrics,
 )
-from insights.metrics.conversations.enums import ConversationType, CsatMetricsType
+from insights.metrics.conversations.enums import (
+    ConversationType,
+    CsatMetricsType,
+    NpsMetricsType,
+)
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
 )
@@ -108,6 +113,90 @@ class TestConversationsMetricsService(TestCase):
             self.assertEqual(
                 result["value"], round((result["full_value"] / totals) * 100, 2)
             )
+
+    def test_get_nps_metrics_from_flowruns(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "nps",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+            },
+        )
+
+        results = self.service.get_nps_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=datetime.now() - timedelta(days=30),
+            end_date=datetime.now(),
+            metric_type=NpsMetricsType.HUMAN,
+        )
+
+        self.assertIsInstance(results, NPSMetrics)
+
+    def test_get_nps_metrics_from_datalake(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                    "op_field": "nps",
+                },
+                "operation": "recurrence",
+                "op_field": "result",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        results = self.service.get_nps_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=datetime.now() - timedelta(days=30),
+            end_date=datetime.now(),
+            metric_type=NpsMetricsType.AI,
+        )
+
+        self.assertIsInstance(results, NPSMetrics)
+
+    def test_nps_result_transformation(self):
+        results = {
+            "10": 100,
+            "9": 25,
+            "8": 22,
+            "7": 20,
+            "6": 20,
+            "5": 5,
+            "4": 1,
+            "3": 3,
+            "2": 1,
+            "1": 2,
+            "0": 1,
+        }
+
+        expected_results = NPSMetrics(
+            total_responses=200,
+            promoters=125,
+            passives=42,
+            detractors=33,
+            score=46.0,
+        )
+
+        transformed_results = self.service._transform_nps_results(results)
+
+        self.assertEqual(expected_results, transformed_results)
 
     def test_get_topics_distribution(self):
         project = Project.objects.create(

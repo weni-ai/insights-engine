@@ -9,6 +9,7 @@ from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
+    NPSMetrics,
     SubtopicMetrics,
     SubtopicTopicRelation,
     TopicMetrics,
@@ -29,6 +30,7 @@ from insights.metrics.conversations.enums import (
     ConversationType,
     ConversationsMetricsResource,
     CsatMetricsType,
+    NpsMetricsType,
 )
 from insights.sources.integrations.clients import NexusClient
 from insights.widgets.models import Widget
@@ -492,5 +494,134 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         return self._get_csat_metrics_from_datalake(
+            project_uuid, agent_uuid, start_date, end_date
+        )
+
+    def _transform_nps_results(self, results: dict) -> NPSMetrics:
+        """
+        Apply NPS methodology to the results
+
+        https://www.salesforce.com/eu/learning-centre/customer-service/calculate-net-promoter-score/
+        """
+
+        total_responses = sum(results.get(str(i), 0) for i in range(11))
+        promoters = results.get("10", 0) + results.get("9", 0)
+        passives = results.get("8", 0) + results.get("7", 0)
+        detractors = sum(results.get(str(i), 0) for i in range(7))
+
+        score = round(
+            (promoters - detractors) / total_responses * 100 if total_responses else 0,
+            2,
+        )
+
+        return NPSMetrics(
+            total_responses=total_responses,
+            promoters=promoters,
+            passives=passives,
+            detractors=detractors,
+            score=score,
+        )
+
+    def _get_nps_metrics_from_flowruns(
+        self,
+        flow_uuid: UUID,
+        project_uuid: UUID,
+        op_field: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get nps metrics from flowruns
+        """
+        filters = {
+            "modified_on": {
+                "gte": start_date,
+                "lte": end_date,
+            },
+            "flow": flow_uuid,
+        }
+
+        results = self.flowruns_query_executor.execute(
+            filters,
+            operation="recurrence",
+            parser=parse_dict_to_json,
+            query_kwargs={
+                "project": project_uuid,
+                "op_field": op_field,
+            },
+        )
+
+        assert "results" in results, "Results must contain a 'results' key"
+        assert isinstance(results["results"], list), "Results must be a list"
+
+        results_counts = {
+            result.get("label"): result.get("full_value", 0)
+            for result in results["results"]
+        }
+
+        return self._transform_nps_results(results_counts)
+
+    def _get_nps_metrics_from_datalake(
+        self,
+        project_uuid: UUID,
+        agent_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get nps metrics from datalake
+        """
+
+        results = self.datalake_service.get_nps_metrics(
+            project_uuid, agent_uuid, start_date, end_date
+        )
+
+        return self._transform_nps_results(results)
+
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: NpsMetricsType,
+    ) -> dict:
+        """
+        Get nps metrics
+        """
+        # HUMAN
+        if metric_type == NpsMetricsType.HUMAN:
+            flow_uuid = widget.config.get("filter", {}).get("flow")
+            op_field = widget.config.get("op_field")
+
+            if not flow_uuid:
+                event_id = capture_message("Flow UUID is required in the widget config")
+
+                raise ConversationsMetricsError(
+                    f"Flow UUID is required in the widget config. Event ID: {event_id}"
+                )
+
+            if not op_field:
+                event_id = capture_message("Op field is required in the widget config")
+
+                raise ConversationsMetricsError(
+                    f"Op field is required in the widget config. Event ID: {event_id}"
+                )
+
+            return self._get_nps_metrics_from_flowruns(
+                flow_uuid, project_uuid, op_field, start_date, end_date
+            )
+
+        # AI
+        agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+
+        if not agent_uuid:
+            event_id = capture_message("Agent UUID is required in the widget config")
+
+            raise ConversationsMetricsError(
+                f"Agent UUID is required in the widget config. Event ID: {event_id}"
+            )
+
+        return self._get_nps_metrics_from_datalake(
             project_uuid, agent_uuid, start_date, end_date
         )

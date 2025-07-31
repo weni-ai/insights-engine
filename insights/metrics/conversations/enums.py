@@ -10,6 +10,15 @@ class CsatMetricsType(TextChoices):
     HUMAN = "HUMAN"
 
 
+class NpsMetricsType(TextChoices):
+    """
+    Nps metrics type
+    """
+
+    AI = "AI"
+    HUMAN = "HUMAN"
+
+
 class ConversationType(TextChoices):
     """
     Conversation type

@@ -44,6 +44,16 @@ class BaseConversationsMetricsService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_topics_distribution(
         self,
         project_uuid: UUID,
@@ -114,8 +124,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     cached_data = cached_data.decode("utf-8")
 
                 # Parse the JSON data and reconstruct the objects
-                data = json.loads(cached_data)
-                return data
+                if not isinstance(cached_data, dict):
+                    cached_data = json.loads(cached_data)
+
+                return cached_data
             return None
         except (json.JSONDecodeError, AttributeError, KeyError, TypeError) as e:
             logger.warning("Failed to deserialize cached data: %s", e)
@@ -187,6 +199,71 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             if payload_value not in scores:
                 # We ignore metrics that are not CSAT scores
                 # This is a safety measure to avoid unexpected values
+                continue
+
+            scores[payload_value] += metric.get("count")
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, scores)
+
+        return scores
+
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get nps metrics from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="nps_metrics",
+            project_uuid=project_uuid,
+            agent_uuid=agent_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
+
+                return cached_results
+
+        try:
+            nps_metrics = self.events_client.get_events_count_by_group(
+                key="weni_nps",
+                event_name=self.event_name,
+                project=project_uuid,
+                agent_uuid=agent_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                metadata_key="agent_uuid",
+                metadata_value=agent_uuid,
+            )
+        except Exception as e:
+            logger.error("Failed to get nps metrics: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        scores = {str(n): 0 for n in range(0, 11)}
+
+        for metric in nps_metrics:
+            payload_value = metric.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            if payload_value not in scores:
                 continue
 
             scores[payload_value] += metric.get("count")
