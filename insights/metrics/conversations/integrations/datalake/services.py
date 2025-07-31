@@ -34,6 +34,16 @@ class BaseConversationsMetricsService(ABC):
     """
 
     @abstractmethod
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_topics_distribution(
         self,
         project_uuid: UUID,
@@ -43,6 +53,7 @@ class BaseConversationsMetricsService(ABC):
     ) -> TopicsDistributionMetrics:
         pass
 
+    @abstractmethod
     def get_conversations_totals(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> ConversationsTotalsMetrics:
@@ -110,6 +121,80 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             logger.warning("Failed to deserialize cached data: %s", e)
 
             return None
+
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        cache_key = self._get_cache_key(
+            data_type="csat_metrics",
+            project_uuid=project_uuid,
+            agent_uuid=agent_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            if not isinstance(cached_results, dict):
+                cached_results = json.loads(cached_results)
+
+            return cached_results
+
+        try:
+            csat_metrics = self.events_client.get_events_count_by_group(
+                key="weni_csat",
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                metadata_key="agent_uuid",
+                metadata_value=agent_uuid,
+            )
+        except Exception as e:
+            logger.error("Failed to get csat metrics: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        # The frontend application will display fixed labels for the CSAT scores
+        # For example, "1" can be displayed as "Very dissatisfied"
+        scores = {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+        }
+
+        # Each metric is a dict grouped by the event's value
+        # (in this case, the event's value is the CSAT score)
+        for metric in csat_metrics:
+            payload_value = metric.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            if payload_value not in scores:
+                # We ignore metrics that are not CSAT scores
+                # This is a safety measure to avoid unexpected values
+                continue
+
+            scores[payload_value] += metric.get("count")
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, scores)
+
+        return scores
 
     def get_topics_distribution(
         self,

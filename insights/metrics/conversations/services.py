@@ -420,10 +420,34 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         )
 
     def _get_csat_metrics_from_datalake(
-        self, agent_uuid: UUID, start_date: datetime, end_date: datetime
+        self,
+        project_uuid: UUID,
+        agent_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
     ) -> dict:
-        # TODO
-        return {}
+        metrics = self.datalake_service.get_csat_metrics(
+            project_uuid, agent_uuid, start_date, end_date
+        )
+
+        total_count = sum(metrics.values())
+
+        results = {
+            "results": [
+                {
+                    "label": score,
+                    "value": (
+                        round((score_count / total_count) * 100, 2)
+                        if total_count
+                        else 0
+                    ),
+                    "full_value": score_count,
+                }
+                for score, score_count in metrics.items()
+            ]
+        }
+
+        return results
 
     def get_csat_metrics(
         self,
@@ -460,13 +484,13 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         # AI
-        agent_uuid = (
-            widget.config.get("filter", {}).get("datalake_config", {}).get("agent_uuid")
-        )
+        agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
 
         if not agent_uuid:
             raise ConversationsMetricsError(
                 "Agent UUID is required in the widget config"
             )
 
-        return self._get_csat_metrics_from_datalake(agent_uuid, start_date, end_date)
+        return self._get_csat_metrics_from_datalake(
+            project_uuid, agent_uuid, start_date, end_date
+        )

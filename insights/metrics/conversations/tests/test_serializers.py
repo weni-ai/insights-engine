@@ -1,5 +1,5 @@
-from datetime import datetime, time
 import uuid
+from datetime import datetime, time
 from django.test import TestCase
 
 from insights.dashboards.models import Dashboard
