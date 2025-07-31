@@ -526,10 +526,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                             value=cached_results["unresolved"]["value"],
                             percentage=cached_results["unresolved"]["percentage"],
                         ),
-                        abandoned=ConversationsTotalsMetric(
-                            value=cached_results["abandoned"]["value"],
-                            percentage=cached_results["abandoned"]["percentage"],
-                        ),
                         transferred_to_human=ConversationsTotalsMetric(
                             value=cached_results["transferred_to_human"]["value"],
                             percentage=cached_results["transferred_to_human"][
@@ -557,14 +553,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 key="conversation_classification",
                 value="unresolved",
             )[0].get("count", 0)
-            abandoned_events_count = self.events_client.get_events_count(
-                project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name=self.event_name,
-                key="conversation_classification",
-                value="abandoned",
-            )[0].get("count", 0)
             transferred_to_human_events_count = self.events_client.get_events_count(
                 project=project_uuid,
                 date_start=start_date,
@@ -580,9 +568,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
-        total_conversations = (
-            resolved_events_count + unresolved_events_count + abandoned_events_count
-        )
+        total_conversations = resolved_events_count + unresolved_events_count
 
         percentage_resolved = round(
             (
@@ -596,15 +582,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         percentage_unresolved = round(
             (
                 (unresolved_events_count / total_conversations * 100)
-                if total_conversations > 0
-                else 0
-            ),
-            2,
-        )
-
-        percentage_abandoned = round(
-            (
-                (abandoned_events_count / total_conversations * 100)
                 if total_conversations > 0
                 else 0
             ),
@@ -629,9 +606,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             ),
             unresolved=ConversationsTotalsMetric(
                 value=unresolved_events_count, percentage=percentage_unresolved
-            ),
-            abandoned=ConversationsTotalsMetric(
-                value=abandoned_events_count, percentage=percentage_abandoned
             ),
             transferred_to_human=ConversationsTotalsMetric(
                 value=transferred_to_human_events_count,

@@ -173,7 +173,6 @@ class ConversationTotalsMetricsSerializer(serializers.Serializer):
     total_conversations = ConversationsTotalsMetricSerializer()
     resolved = ConversationsTotalsMetricSerializer()
     unresolved = ConversationsTotalsMetricSerializer()
-    abandoned = ConversationsTotalsMetricSerializer()
     transferred_to_human = ConversationsTotalsMetricSerializer()
 
 
