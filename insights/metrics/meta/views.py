@@ -404,6 +404,8 @@ class InternalWhatsAppMessageTemplatesView(GenericViewSet):
             filters=filters,
             skip_kwargs_validation=True,
             include_data_points=False,
+            # Returning the original exceptions because this is an internal endpoint
+            return_exceptions=True,
         )
 
         return Response(data, status=status.HTTP_200_OK)
