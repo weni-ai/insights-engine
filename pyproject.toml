@@ -30,6 +30,8 @@ redis = "^5.2.0"
 responses = "^0.25.3"
 babel = "^2.17.0"
 weni-datalake-sdk = "0.3.0"
+celery = "^5.5.3"
+django-celery-beat = "^2.8.1"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.22.2"
