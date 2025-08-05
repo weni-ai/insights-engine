@@ -1,10 +1,12 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from insights.shared.models import (
     BaseModel,
     ConfigurableModel,
     SoftDeleteModel,
 )
+from insights.projects.choices import IndexerActivationStatus
 
 
 class Project(BaseModel, ConfigurableModel, SoftDeleteModel):
@@ -41,3 +43,23 @@ class ProjectAuth(BaseModel):
 
     def __str__(self):
         return f"[{self.role}] {self.project.name} - {self.user.email}"
+
+
+class ProjectIndexerActivation(BaseModel):
+    """
+    Model to track the activation status of the indexer for a project
+    """
+
+    project = models.ForeignKey(
+        Project, related_name="indexer_activations", on_delete=models.CASCADE
+    )
+    status = models.IntegerField(
+        choices=IndexerActivationStatus, default=IndexerActivationStatus.PENDING
+    )
+
+    class Meta:
+        verbose_name = _("Project Indexer Activation")
+        verbose_name_plural = _("Project Indexer Activations")
+
+    def __str__(self):
+        return f"{self.project.name} - {self.get_status_display()}"
