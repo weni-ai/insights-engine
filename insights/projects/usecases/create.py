@@ -19,7 +19,23 @@ class ProjectsUseCase:
         except Exception as exception:
             raise Exception(f"[ ProjectsUseCase ] error: {str(exception)}")
 
+    def get_main_project(self, org_uuid: str) -> Project:
+        return Project.objects.filter(
+            org_uuid=org_uuid, config__is_main_project=True
+        ).first()
+
     def create_project(self, project_dto: ProjectCreationDTO) -> Project:
+
+        main_project = self.get_main_project(project_dto.org_uuid)
+
+        if main_project:
+            config = {
+                "is_secondary_project": True,
+                "main_project_uuid": str(main_project.uuid),
+            }
+        else:
+            config = {}
+
         project = Project.objects.create(
             uuid=project_dto.uuid,
             name=project_dto.name,
@@ -27,6 +43,8 @@ class ProjectsUseCase:
             timezone=project_dto.timezone,
             date_format=project_dto.date_format,
             vtex_account=project_dto.vtex_account,
+            org_uuid=project_dto.org_uuid,
+            config=config,
         )
         CreateHumanService().create_dashboard(project)
         return project

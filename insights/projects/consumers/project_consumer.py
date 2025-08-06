@@ -1,3 +1,4 @@
+from uuid import UUID
 import amqp
 
 from insights.event_driven.consumers import EDAConsumer
@@ -15,6 +16,14 @@ class ProjectConsumer(EDAConsumer):
         body = JSONParser.parse(message.body)
 
         try:
+            if body.get("organization_uuid"):
+                try:
+                    org_uuid = UUID(body.get("organization_uuid"))
+                except ValueError:
+                    org_uuid = None
+            else:
+                org_uuid = None
+
             project_dto = ProjectCreationDTO(
                 uuid=body.get("uuid"),
                 name=body.get("name"),
@@ -22,6 +31,7 @@ class ProjectConsumer(EDAConsumer):
                 date_format=body.get("date_format"),
                 timezone=body.get("timezone"),
                 vtex_account=body.get("vtex_account"),
+                org_uuid=org_uuid,
             )
 
             authorizations = body.get("authorizations", [])
