@@ -12,3 +12,11 @@ class ProjectSerializer(serializers.ModelSerializer):
             "timezone",
             "is_active",
         ]
+
+
+class SetProjectAsSecondarySerializer(serializers.Serializer):
+    """
+    Serializer to set a project as secondary.
+    """
+
+    main_project = serializers.UUIDField(required=True, allow_null=False)
