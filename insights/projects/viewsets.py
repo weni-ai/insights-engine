@@ -11,10 +11,14 @@ from insights.authentication.authentication import StaticTokenAuthentication
 from insights.authentication.permissions import (
     IsServiceAuthentication,
     ProjectAuthPermission,
+    InternalAuthenticationPermission,
 )
 from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
-from insights.projects.serializers import ProjectSerializer
+from insights.projects.serializers import (
+    ProjectSerializer,
+    SetProjectAsSecondarySerializer,
+)
 from insights.shared.viewsets import get_source
 
 logger = logging.getLogger(__name__)
@@ -130,3 +134,28 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     def get_allowed_projects(self, request, *args, **kwargs):
         projects = Project.objects.filter(is_allowed=True).values("uuid")
         return Response(list(projects), status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="set-as-secondary",
+        url_name="set-as-secondary",
+        permission_classes=[IsAuthenticated, InternalAuthenticationPermission],
+    )
+    def set_as_secondary(self, request, *args, **kwargs):
+        serializer = SetProjectAsSecondarySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        project: Project = self.get_object()
+
+        current_config = project.config or {}
+
+        if not current_config.get("is_secondary"):
+            current_config["is_secondary"] = True
+            current_config["main_project"] = str(
+                serializer.validated_data["main_project"]
+            )
+            project.config = current_config
+            project.save(update_fields=["config"])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

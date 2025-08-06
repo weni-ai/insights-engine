@@ -7,17 +7,24 @@ import uuid
 import requests
 
 from insights.authentication.authentication import User
-from insights.authentication.tests.decorators import with_project_auth
+from insights.authentication.tests.decorators import (
+    with_internal_auth,
+    with_project_auth,
+)
 from insights.projects.models import Project
 from insights.authentication.authentication import StaticTokenAuthentication
 from insights.authentication.permissions import IsServiceAuthentication
 
 
 class BaseProjectViewSetTestCase(APITestCase):
-    def get_project(self, uuid: str) -> Response:
-        url = reverse("project-detail", kwargs={"pk": uuid})
+    def get_project(self, project_uuid: str) -> Response:
+        url = reverse("project-detail", kwargs={"pk": project_uuid})
 
         return self.client.get(url)
+
+    def set_project_as_secondary(self, project_uuid: str, data: dict) -> Response:
+        url = reverse("project-set-as-secondary", kwargs={"pk": project_uuid})
+        return self.client.post(url, data, format="json")
 
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
@@ -56,6 +63,13 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
         url = reverse("project-get-allowed-projects")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_set_project_as_secondary_as_anonymous_user(self):
+        response = self.set_project_as_secondary(
+            "123e4567-e89b-12d3-a456-426614174000",
+            {"main_project": "123e4567-e89b-12d3-a456-426614174000"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
@@ -334,3 +348,28 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             # Verify project was reverted to original state
             project.refresh_from_db()
             self.assertFalse(project.is_allowed)
+
+    def test_cannot_set_project_as_secondary_without_permission(self):
+        main_project = Project.objects.create(name="Main Project")
+
+        response = self.set_project_as_secondary(
+            self.project.uuid,
+            {"main_project": str(main_project.uuid)},
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_internal_auth
+    def test_set_project_as_secondary_with_internal_auth(self):
+        main_project = Project.objects.create(name="Main Project")
+
+        response = self.set_project_as_secondary(
+            self.project.uuid,
+            {"main_project": str(main_project.uuid)},
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.project.refresh_from_db()
+        self.assertIn("is_secondary", self.project.config)
+        self.assertIn("main_project", self.project.config)
+        self.assertTrue(self.project.config["is_secondary"])
+        self.assertEqual(self.project.config["main_project"], str(main_project.uuid))
