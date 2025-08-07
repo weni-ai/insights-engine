@@ -127,6 +127,58 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
         )
 
     @with_internal_auth
+    def test_receive_integration_from_secondary_project(self):
+        project = Project.objects.create(
+            name="Secondary Project",
+            config={"is_secondary_project": True},
+            org_uuid=uuid.uuid4(),
+        )
+        waba_id = "1234567890"
+
+        project_2 = Project.objects.create(
+            name="Main Project",
+            org_uuid=project.org_uuid,
+            config={"is_main_project": True},
+        )
+
+        self.assertFalse(
+            Dashboard.objects.filter(
+                project=project, config={"is_whatsapp_integration": True}
+            ).exists()
+        )
+
+        payload = {
+            "project_uuid": project.uuid,
+            "app_uuid": str(uuid.uuid4()),
+            "waba_id": waba_id,
+            "phone_number": {
+                "id": "445303688657575",
+                "display_phone_number": "+55 82 98877 6655",
+            },
+        }
+
+        response = self.receive_integration_data(payload)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        dashboard = Dashboard.objects.filter(
+            project=project, config__is_whatsapp_integration=True
+        ).first()
+
+        self.assertIsNotNone(dashboard)
+        self.assertEqual(dashboard.config["waba_id"], waba_id)
+        self.assertEqual(dashboard.config["app_uuid"], payload["app_uuid"])
+        self.assertTrue(dashboard.name.startswith("Meta "))
+
+        copy_dashboard = Dashboard.objects.filter(
+            project=project_2, config__is_whatsapp_integration=True
+        ).first()
+        self.assertIsNotNone(copy_dashboard)
+        self.assertEqual(copy_dashboard.config["waba_id"], waba_id)
+        self.assertEqual(copy_dashboard.config["app_uuid"], payload["app_uuid"])
+        self.assertTrue(copy_dashboard.name.startswith(project.name))
+
+    @with_internal_auth
     def test_cannot_receive_integration_when_missing_required_fields(self):
         response = self.receive_integration_data({})
 

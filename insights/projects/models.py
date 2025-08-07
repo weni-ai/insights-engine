@@ -15,6 +15,7 @@ class Project(BaseModel, ConfigurableModel, SoftDeleteModel):
     is_active = models.BooleanField(default=True)
     vtex_account = models.CharField(max_length=100, null=True)
     is_allowed = models.BooleanField(default=False)
+    org_uuid = models.UUIDField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.uuid} - Project: {self.name}"

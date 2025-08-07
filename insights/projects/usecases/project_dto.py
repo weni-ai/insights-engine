@@ -9,6 +9,7 @@ class ProjectCreationDTO:
     timezone: str = ""
     date_format: str = ""
     vtex_account: str | None = None
+    org_uuid: str | None = None
 
 
 @dataclass
