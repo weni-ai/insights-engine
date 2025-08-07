@@ -34,7 +34,7 @@ class ProjectsUseCase:
                 "main_project_uuid": str(main_project.uuid),
             }
         else:
-            config = {}
+            config = None
 
         project = Project.objects.create(
             uuid=project_dto.uuid,
