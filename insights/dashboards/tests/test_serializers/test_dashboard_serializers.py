@@ -33,6 +33,17 @@ class TestDashboardSerializer(TestCase):
         self.assertEqual(data["is_default"], self.dashboard.is_default)
         self.assertEqual(data["uuid"], str(self.dashboard.uuid))
 
+    def test_add_whatsapp_integration_in_dashboard_config(self):
+        data = {
+            "name": "Test Dashboard",
+            "config": {"is_whatsapp_integration": True, "waba_id": "123"},
+        }
+        serializer = DashboardSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["config"][0].code, "whatsapp_integration_cannot_be_added"
+        )
+
 
 class TestDashboardIsDefaultSerializer(TestCase):
     def setUp(self):
@@ -272,3 +283,14 @@ class TestDashboardEditSerializer(TestCase):
         self.dashboard.refresh_from_db()
         self.assertEqual(self.dashboard.name, "New Name")
         self.assertEqual(self.dashboard.config, {"new": "config"})
+
+    def test_edit_dashboard_with_whatsapp_integration(self):
+        data = {
+            "name": "New Name",
+            "config": {"is_whatsapp_integration": True, "waba_id": "123"},
+        }
+        serializer = DashboardEditSerializer(instance=self.dashboard, data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["config"][0].code, "whatsapp_integration_cannot_be_edited"
+        )

@@ -20,6 +20,15 @@ class DashboardSerializer(serializers.ModelSerializer):
             "config",
         ]
 
+    def validate_config(self, value: dict) -> dict:
+        if value.get("is_whatsapp_integration") or value.get("waba_id"):
+            raise serializers.ValidationError(
+                "Cannot add WhatsApp integration in dashboard config",
+                code="whatsapp_integration_cannot_be_added",
+            )
+
+        return value
+
 
 class DashboardIsDefaultSerializer(serializers.ModelSerializer):
     class Meta:
@@ -113,3 +122,12 @@ class DashboardEditSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dashboard
         fields = ["name", "config"]
+
+    def validate_config(self, value: dict) -> dict:
+        if value.get("is_whatsapp_integration") or value.get("waba_id"):
+            raise serializers.ValidationError(
+                "WhatsApp integration cannot be edited in dashboard config",
+                code="whatsapp_integration_cannot_be_edited",
+            )
+
+        return value
