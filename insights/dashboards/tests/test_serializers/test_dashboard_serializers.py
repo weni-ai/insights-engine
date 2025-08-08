@@ -272,3 +272,14 @@ class TestDashboardEditSerializer(TestCase):
         self.dashboard.refresh_from_db()
         self.assertEqual(self.dashboard.name, "New Name")
         self.assertEqual(self.dashboard.config, {"new": "config"})
+
+    def test_edit_dashboard_with_whatsapp_integration(self):
+        data = {
+            "name": "New Name",
+            "config": {"is_whatsapp_integration": True, "waba_id": "123"},
+        }
+        serializer = DashboardEditSerializer(instance=self.dashboard, data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["config"][0].code, "whatsapp_integration_cannot_be_edited"
+        )
