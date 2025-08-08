@@ -49,7 +49,7 @@ class ProjectDashboardWABAPermission(BasePermission):
             return False
 
         return Dashboard.objects.filter(
-            project_uuid=project_uuid,
+            project__uuid=project_uuid,
             config__is_whatsapp_integration=True,
-            config__contains={"waba_id": waba_id},
+            config__waba_id=waba_id,
         ).exists()
