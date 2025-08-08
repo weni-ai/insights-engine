@@ -1,11 +1,17 @@
 from uuid import UUID
 import amqp
+import logging
+
+from sentry_sdk import capture_exception
+
 
 from insights.event_driven.consumers import EDAConsumer
 from insights.event_driven.parsers.json_parser import JSONParser
 from insights.projects.usecases.auth_creation import ProjectAuthCreationUseCase
 from insights.projects.usecases.create import ProjectsUseCase
 from insights.projects.usecases.project_dto import ProjectCreationDTO
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectConsumer(EDAConsumer):
@@ -19,7 +25,12 @@ class ProjectConsumer(EDAConsumer):
             if body.get("organization_uuid"):
                 try:
                     org_uuid = UUID(body.get("organization_uuid"))
-                except ValueError:
+                except ValueError as e:
+                    logger.error(
+                        "[ProjectConsumer] - Invalid organization uuid: %s. Saving as None",
+                        body.get("organization_uuid"),
+                    )
+                    capture_exception(e)
                     org_uuid = None
             else:
                 org_uuid = None

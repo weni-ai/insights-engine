@@ -23,7 +23,7 @@ from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesLanguages,
 )
 from insights.metrics.meta.models import FavoriteTemplate
-from insights.metrics.meta.permissions import ProjectWABAPermission
+from insights.metrics.meta.permissions import ProjectDashboardWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
     WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS,
@@ -58,7 +58,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
     permission_classes = [
         IsAuthenticated,
         ProjectAuthQueryParamPermission,
-        ProjectWABAPermission,
+        ProjectDashboardWABAPermission,
     ]
 
     @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS)

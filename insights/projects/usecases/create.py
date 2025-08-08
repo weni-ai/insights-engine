@@ -31,10 +31,9 @@ class ProjectsUseCase:
         if main_project:
             config = {
                 "is_secondary_project": True,
-                "main_project_uuid": str(main_project.uuid),
             }
         else:
-            config = {}
+            config = None
 
         project = Project.objects.create(
             uuid=project_dto.uuid,
