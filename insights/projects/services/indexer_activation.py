@@ -1,5 +1,8 @@
 import logging
 
+import requests
+from sentry_sdk import capture_exception
+
 from django.conf import settings
 
 from insights.projects.choices import ProjectIndexerActivationStatus
@@ -49,3 +52,38 @@ class ProjectIndexerActivationService:
             project.uuid,
         )
         return True
+
+    def activate_project_on_indexer(self, activation: ProjectIndexerActivation) -> bool:
+        """
+        This method is used to activate the project on the indexer.
+        """
+        url = settings.WEBHOOK_URL
+        payload = {
+            "project_uuid": activation.project.uuid,
+        }
+        headers = {"Authorization": f"Bearer {settings.STATIC_TOKEN}"}
+
+        for _ in range(settings.INDEXER_AUTOMATIC_ACTIVATION_RETRIES):
+            try:
+                response = requests.post(url, json=payload, headers=headers, timeout=60)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as error:
+                logger.error(
+                    "[ activate_project_on_indexer ] Failed to call webhook: %s",
+                    error,
+                    exc_info=True,
+                )
+                capture_exception(error)
+                continue
+            else:
+                activation.project.is_allowed = True
+                activation.project.save(update_fields=["is_allowed"])
+                activation.status = ProjectIndexerActivationStatus.SUCCESS
+                activation.save(update_fields=["status"])
+                logger.info(
+                    "[ activate_project_on_indexer ] Project %s activated on indexer",
+                    activation.project.uuid,
+                )
+                return True
+
+        return False

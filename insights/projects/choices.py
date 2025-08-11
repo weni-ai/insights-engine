@@ -8,5 +8,5 @@ class ProjectIndexerActivationStatus(models.TextChoices):
     """
 
     PENDING = "PENDING", _("Pending")
-    FINISHED = "FINISHED", _("Finished")
+    SUCCESS = "SUCCESS", _("Success")
     FAILED = "FAILED", _("Failed")
