@@ -305,6 +305,14 @@ CACHES = {
     }
 }
 
+# Celery configuration
+CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default=REDIS_URL)
+CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", default="django-db")
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
 PROJECTS_VTEX = json.loads(os.getenv("PROJECTS_VTEX", "[]"))
 PROJECT_TOKENS_VTEX = json.loads(os.getenv("PROJECT_TOKENS_VTEX", "{}"))
 
