@@ -52,7 +52,7 @@ def activate_indexer():
             "[ activate_indexer task ] Activating project %s",
             activation.project.uuid,
         )
-        # service.activate_project_on_indexer(activation)
+        service.activate_project_on_indexer(activation)
 
     logger.info("[ activate_indexer task ] Finished task")
 
