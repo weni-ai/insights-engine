@@ -32,6 +32,9 @@ lint:
 dev_up:
 	@docker compose -f docker/docker-compose.yaml up -d postgres redis
 
+dev_up_with_celery:
+	@docker compose -f docker/docker-compose.yaml up -d postgres redis celery_worker celery_beat
+
 dev_down:
 	@docker compose -f docker/docker-compose.yaml down
 
