@@ -55,3 +55,8 @@ def activate_indexer(project_uuid: str):
         service.activate_project_on_indexer(activation)
 
     logger.info("[ activate_indexer task ] Finished task")
+
+
+@app.task
+def test():
+    print("test")
