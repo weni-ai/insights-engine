@@ -1,4 +1,5 @@
 import logging
+import time
 
 import requests
 from sentry_sdk import capture_exception
@@ -16,6 +17,14 @@ class ProjectIndexerActivationService:
     """
     This service is used to activate the indexer for a project.
     """
+
+    def __init__(
+        self,
+        retries: int = settings.INDEXER_AUTOMATIC_ACTIVATION_RETRIES,
+        retry_delay: int = 10,
+    ):
+        self.retries = retries
+        self.retry_delay = retry_delay
 
     def is_project_active_on_indexer(self, project: Project):
         """
@@ -63,7 +72,7 @@ class ProjectIndexerActivationService:
         }
         headers = {"Authorization": f"Bearer {settings.STATIC_TOKEN}"}
 
-        for _ in range(settings.INDEXER_AUTOMATIC_ACTIVATION_RETRIES):
+        for _ in range(self.retries):
             try:
                 response = requests.post(url, json=payload, headers=headers, timeout=60)
                 response.raise_for_status()
@@ -74,6 +83,9 @@ class ProjectIndexerActivationService:
                     exc_info=True,
                 )
                 capture_exception(error)
+                activation.status = ProjectIndexerActivationStatus.FAILED
+                activation.save(update_fields=["status"])
+                time.sleep(self.retry_delay)
                 continue
             else:
                 activation.project.is_allowed = True
