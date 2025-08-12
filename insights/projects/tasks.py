@@ -16,7 +16,7 @@ LIMIT = settings.INDEXER_AUTOMATIC_ACTIVATION_LIMIT
 
 
 @app.task
-def activate_indexer(project_uuid: str):
+def activate_indexer():
     """
     Scheduled task to activate the indexer for queued projects.
     """
@@ -52,7 +52,7 @@ def activate_indexer(project_uuid: str):
             "[ activate_indexer task ] Activating project %s",
             activation.project.uuid,
         )
-        service.activate_project_on_indexer(activation)
+        # service.activate_project_on_indexer(activation)
 
     logger.info("[ activate_indexer task ] Finished task")
 
