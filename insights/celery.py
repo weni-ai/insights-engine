@@ -24,3 +24,10 @@ app.autodiscover_tasks()
 logger.info("Task discovery completed")
 
 logger.info("Discovered tasks: %s", list(app.tasks.keys()))
+
+app.conf.beat_schedule = {
+    "activate-indexer": {
+        "task": "insights.projects.tasks.activate_indexer",
+        "schedule": (60 * 60),  # 1 hour
+    },
+}
