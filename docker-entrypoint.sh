@@ -49,14 +49,14 @@ elif [[ "celery-worker" == "$1" ]]; then
         celery_queue="${2}"
     fi
     do_gosu "${PROJECT_USER}:${PROJECT_GROUP}" exec celery \
-        -A temba --workdir="${PROJECT_PATH}" worker \
+        -A insights --workdir="${PROJECT_PATH}" worker \
         -Q "${celery_queue}" \
         -O fair \
         -l "${LOG_LEVEL}" \
         --autoscale="${CELERY_MAX_WORKERS},1"
 elif [[ "celery-beat" == "$1" ]]; then
     do_gosu "${PROJECT_USER}:${PROJECT_GROUP}" exec celery \
-        -A temba --workdir="${PROJECT_PATH}" beat \
+        -A insights --workdir="${PROJECT_PATH}" beat \
         --loglevel="${LOG_LEVEL}" \
         -s "${CELERY_BEAT_DATABASE_FILE}"
 fi
