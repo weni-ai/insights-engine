@@ -22,3 +22,11 @@ app.autodiscover_tasks()
 logger.info("Task discovery completed")
 
 logger.info("Discovered tasks: %s", list(app.tasks.keys()))
+
+app.conf.beat_schedule = {
+    "test": {
+        "task": "insights.projects.tasks.test",
+        "schedule": (10),  # 10 seconds
+        "args": ("Test task",),
+    },
+}
