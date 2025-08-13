@@ -1,5 +1,3 @@
-version: '3.6'
-
 services:
   postgres:
     image: postgres:16.2
@@ -12,10 +10,12 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-insights}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-insights}
       - POSTGRES_DB=${POSTGRES_DB:-insights}
+
   redis:
     image: redis:6.2
     ports:
       - 6379:6379
+
   insights:
     image: ${DOCKER_IMAGE_NAME:-ilha/insights}:${TAG:-latest}
     build:
@@ -31,6 +31,7 @@ services:
       - DEBUG=${DEBUG:-true}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
       - DEFAULT_DATABASE=${DEFAULT_DATABASE:-postgres://insights:insights@postgres:5432/insights}
+
   rabbitmq:
     image: rabbitmq:3.9.7-management
     ports:
@@ -39,6 +40,47 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
+
+  celery_worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    entrypoint: []
+    command: celery -A insights worker --loglevel=info
+    volumes:
+      - ../insights:/app/insights
+      - ../manage.py:/app/manage.py
+      - ../pyproject.toml:/app/pyproject.toml
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-SK}
+      - DEBUG=${DEBUG:-true}
+      - DJANGO_SETTINGS_MODULE=insights.settings
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+    depends_on:
+      - redis
+      - postgres
+
+  celery_beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    entrypoint: []
+    command: celery -A insights beat --loglevel=info
+    volumes:
+      - ../insights:/app/insights
+      - ../manage.py:/app/manage.py
+      - ../pyproject.toml:/app/pyproject.toml
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-SK}
+      - DEBUG=${DEBUG:-true}
+      - DJANGO_SETTINGS_MODULE=insights.settings
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+    depends_on:
+      - redis
+      - postgres
+
 networks:
   insights:
     external: true
