@@ -71,6 +71,18 @@ class BaseConversationsMetricsService(ABC):
         Get conversations totals from Datalake.
         """
 
+    @abstractmethod
+    def get_generic_metrics_grouped_by_value(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get generic metrics grouped by value from Datalake.
+        """
+
 
 class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
     """
@@ -622,3 +634,16 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             )
 
         return results
+
+    @abstractmethod
+    def get_generic_metrics_grouped_by_value(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get generic metrics grouped by value from Datalake.
+        """
+        return {}  # TODO
