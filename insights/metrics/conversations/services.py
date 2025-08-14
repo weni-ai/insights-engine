@@ -625,3 +625,29 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         return self._get_nps_metrics_from_datalake(
             project_uuid, agent_uuid, start_date, end_date
         )
+
+    def get_generic_metrics_by_key(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ):
+        """
+        Get generic metrics by key
+        """
+        agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+
+        if not agent_uuid:
+            raise ConversationsMetricsError(
+                "Agent UUID is required in the widget config"
+            )
+
+        key = widget.config.get("datalake_config", {}).get("key")
+
+        if not key:
+            raise ConversationsMetricsError("Key is required in the widget config")
+
+        return self.datalake_service.get_generic_metrics_by_key(
+            project_uuid, agent_uuid, start_date, end_date, key
+        )
