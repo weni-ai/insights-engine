@@ -221,3 +221,29 @@ class NpsMetricsSerializer(serializers.Serializer):
     passives = serializers.IntegerField()
     detractors = serializers.IntegerField()
     score = serializers.IntegerField()
+
+
+class CustomMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for custom metrics query params
+    """
+
+    widget_uuid = serializers.UUIDField(required=True)
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        widget = Widget.objects.filter(
+            uuid=attrs["widget_uuid"], dashboard__project=attrs["project"]
+        ).first()
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"widget_uuid": "Widget not found"}, code="widget_not_found"
+            )
+
+        attrs["widget"] = widget
+        return attrs
