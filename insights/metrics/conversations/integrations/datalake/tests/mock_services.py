@@ -85,3 +85,13 @@ class MockDatalakeConversationsMetricsService(BaseConversationsMetricsService):
             unresolved=ConversationsTotalsMetric(value=40, percentage=40),
             transferred_to_human=ConversationsTotalsMetric(value=0, percentage=0),
         )
+
+    def get_generic_metrics_by_key(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+    ) -> dict:
+        return {str(i): 10 for i in range(0, 11)}
