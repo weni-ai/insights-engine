@@ -788,6 +788,25 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         if not key:
             raise ConversationsMetricsError("Key is required in the widget config")
 
-        return self.datalake_service.get_generic_metrics_by_key(
+        metrics = self.datalake_service.get_generic_metrics_by_key(
             project_uuid, agent_uuid, start_date, end_date, key
         )
+
+        total_count = sum(metrics.values())
+
+        results = {
+            "results": [
+                {
+                    "label": score,
+                    "value": (
+                        round((score_count / total_count) * 100, 2)
+                        if total_count
+                        else 0
+                    ),
+                    "full_value": score_count,
+                }
+                for score, score_count in metrics.items()
+            ]
+        }
+
+        return results
