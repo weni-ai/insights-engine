@@ -18,6 +18,7 @@ from insights.metrics.conversations.enums import (
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
 )
+from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import Project
 from insights.sources.flowruns.tests.mock_query_executor import (
@@ -261,3 +262,70 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertIsInstance(totals, ConversationsTotalsMetrics)
+
+    def test_get_generic_metrics_by_key(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            config={
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                    "key": "test_key",
+                },
+            },
+        )
+        metrics = self.service.get_generic_metrics_by_key(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(metrics, dict)
+
+    def test_cannot_get_generic_metrics_by_key_without_agent_uuid(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            config={
+                "datalake_config": {
+                    "key": "test_key",
+                },
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError):
+            self.service.get_generic_metrics_by_key(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+    def test_cannot_get_generic_metrics_by_key_without_key(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            config={
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError):
+            self.service.get_generic_metrics_by_key(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )

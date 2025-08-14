@@ -635,7 +635,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         return results
 
-    @abstractmethod
     def get_generic_metrics_by_key(
         self,
         project_uuid: UUID,
