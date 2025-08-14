@@ -135,6 +135,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
+    def get_custom_metrics(self, query_params: dict) -> Response:
+        url = reverse("conversations-custom")
+
+        return self.client.get(url, query_params, format="json")
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -216,6 +221,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_nps_metrics_when_unauthenticated(self):
         response = self.get_nps_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_custom_metrics_when_unauthenticated(self):
+        response = self.get_custom_metrics({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -947,6 +957,60 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                 "start_date": "2024-01-01",
                 "end_date": "2024-01-31",
                 "type": NpsMetricsType.AI,
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_cannot_get_custom_metrics_without_permission(self):
+        response = self.get_custom_metrics(
+            {
+                "project_uuid": self.project.uuid,
+                "widget_uuid": uuid.uuid4(),
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_get_custom_metrics_without_project_uuid(self):
+        response = self.get_custom_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    @with_project_auth
+    def test_cannot_get_custom_metrics_without_required_params(self):
+        response = self.get_custom_metrics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["widget_uuid"][0].code, "required")
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+
+    @with_project_auth
+    def test_get_custom_metrics(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            config={
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                    "key": "test_key",
+                },
+            },
+        )
+
+        response = self.get_custom_metrics(
+            {
+                "project_uuid": self.project.uuid,
+                "widget_uuid": widget.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
             }
         )
 

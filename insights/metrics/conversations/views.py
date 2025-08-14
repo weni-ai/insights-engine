@@ -14,6 +14,7 @@ from insights.metrics.conversations.serializers import (
     ConversationTotalsMetricsSerializer,
     CreateTopicSerializer,
     CsatMetricsQueryParamsSerializer,
+    CustomMetricsQueryParamsSerializer,
     DeleteTopicSerializer,
     GetTopicsQueryParamsSerializer,
     NpsMetricsQueryParamsSerializer,
@@ -428,3 +429,31 @@ class ConversationsMetricsViewSet(GenericViewSet):
         return Response(
             NpsMetricsSerializer(nps_metrics).data, status=status.HTTP_200_OK
         )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="custom",
+        url_name="custom",
+    )
+    def custom_metrics(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get custom metrics
+        """
+        serializer = CustomMetricsQueryParamsSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            metrics = self.service.get_generic_metrics_by_key(
+                project_uuid=serializer.validated_data["project_uuid"],
+                widget=serializer.validated_data["widget"],
+                start_date=serializer.validated_data["start_date"],
+                end_date=serializer.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(metrics, status=status.HTTP_200_OK)

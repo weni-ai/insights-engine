@@ -73,6 +73,18 @@ class BaseConversationsMetricsService(ABC):
         Get conversations totals from Datalake.
         """
 
+    @abstractmethod
+    def get_generic_metrics_by_key(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get generic metrics grouped by value from Datalake.
+        """
+
 
 class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
     """
@@ -654,3 +666,69 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             )
 
         return results
+
+    def get_generic_metrics_by_key(
+        self,
+        project_uuid: UUID,
+        agent_uuid: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+    ) -> dict:
+        """
+        Get generic metrics grouped by value from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="get_generic_metrics_by_key",
+            project_uuid=project_uuid,
+            agent_uuid=agent_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+        )
+
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
+
+                return cached_results
+
+        try:
+            events = self.events_client.get_events_count_by_group(
+                key=key,
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                metadata_key="agent_uuid",
+                metadata_value=agent_uuid,
+            )
+        except Exception as e:
+            logger.error("Failed to get generic metrics by key: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        values = {}
+
+        for count in events:
+            payload_value = count.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            if payload_value in values:
+                values[payload_value] += count.get("count", 0)
+            else:
+                values[payload_value] = count.get("count", 0)
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, values)
+
+        return values
