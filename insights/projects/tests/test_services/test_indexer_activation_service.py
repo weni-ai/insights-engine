@@ -32,7 +32,7 @@ class TestIndexerActivationService(TestCase):
         self.project.save(update_fields=["is_allowed"])
         self.assertTrue(self.service.is_project_active_on_indexer(self.project))
 
-    @override_settings(PROJECT_ALLOW_LIST=[PROJECT_UUID])
+    @override_settings(PROJECT_ALLOW_LIST=[str(PROJECT_UUID)])
     def test_is_project_active_on_indexer_when_project_is_not_allowed_and_in_allow_list(
         self,
     ):
