@@ -68,7 +68,7 @@ class ProjectIndexerActivationService:
         """
         url = settings.WEBHOOK_URL
         payload = {
-            "project_uuid": activation.project.uuid,
+            "project_uuid": str(activation.project.uuid),
         }
         headers = {"Authorization": f"Bearer {settings.STATIC_TOKEN}"}
 
