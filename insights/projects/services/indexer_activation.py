@@ -30,7 +30,7 @@ class ProjectIndexerActivationService:
         """
         This method is used to check if the project is active on the indexer.
         """
-        return project.is_allowed or project.uuid in settings.PROJECT_ALLOW_LIST
+        return project.is_allowed or str(project.uuid) in settings.PROJECT_ALLOW_LIST
 
     def add_project_to_queue(self, project: Project):
         """
@@ -68,7 +68,7 @@ class ProjectIndexerActivationService:
         """
         url = settings.WEBHOOK_URL
         payload = {
-            "project_uuid": activation.project.uuid,
+            "project_uuid": str(activation.project.uuid),
         }
         headers = {"Authorization": f"Bearer {settings.STATIC_TOKEN}"}
 

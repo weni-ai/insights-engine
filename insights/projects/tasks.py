@@ -52,6 +52,15 @@ def activate_indexer():
             "[ activate_indexer task ] Activating project %s",
             activation.project.uuid,
         )
-        service.activate_project_on_indexer(activation)
+        try:
+            service.activate_project_on_indexer(activation)
+        except Exception as e:
+            logger.error(
+                "[ activate_indexer task ] Error activating project %s: %s",
+                activation.project.uuid,
+                e,
+            )
+            activation.status = ProjectIndexerActivationStatus.FAILED
+            activation.save(update_fields=["status"])
 
     logger.info("[ activate_indexer task ] Finished task")
