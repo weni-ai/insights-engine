@@ -81,7 +81,7 @@ class TestIndexerActivationService(TestCase):
 
         mock_post.assert_called_once_with(
             settings.WEBHOOK_URL,
-            json={"project_uuid": self.project.uuid},
+            json={"project_uuid": str(self.project.uuid)},
             headers={"Authorization": f"Bearer {settings.STATIC_TOKEN}"},
             timeout=60,
         )
