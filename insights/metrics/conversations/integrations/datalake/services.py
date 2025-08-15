@@ -678,6 +678,25 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         """
         Get generic metrics grouped by value from Datalake.
         """
+        # ONLY FOR STAGING
+        if key == "test_custom":
+            return {
+                "Gol": 450,
+                "Corolla": 327,
+                "Hilux": 223,
+                "HB20": 150,
+                "Onix": 100,
+                "Tracker": 179,
+                "Monza": 100,
+                "Corsa": 100,
+                "Celta": 85,
+                "Golf": 100,
+                "Civic": 100,
+                "Focus": 100,
+                "Prisma": 100,
+                "Fusca": 442,
+            }
+
         cache_key = self._get_cache_key(
             data_type="get_generic_metrics_by_key",
             project_uuid=project_uuid,
