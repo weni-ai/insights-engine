@@ -145,12 +145,12 @@ class MetaGraphAPIClient:
             template_id = ",".join(template_id)
 
         start = (
-            start_date.timestamp()
+            int(start_date.timestamp())
             if isinstance(start_date, datetime)
             else convert_date_to_unix_timestamp(start_date, tz_name=tz_name)
         )
         end = (
-            end_date.timestamp()
+            int(end_date.timestamp())
             if isinstance(end_date, datetime)
             else convert_date_to_unix_timestamp(
                 end_date, use_max_time=True, tz_name=tz_name
@@ -230,9 +230,17 @@ class MetaGraphAPIClient:
             MetricsTypes.CLICKED.value,
         ]
 
-        start = convert_date_to_unix_timestamp(start_date, tz_name=tz_name)
-        end = convert_date_to_unix_timestamp(
-            end_date, use_max_time=True, tz_name=tz_name
+        start = (
+            int(start_date.timestamp())
+            if isinstance(start_date, datetime)
+            else convert_date_to_unix_timestamp(start_date, tz_name=tz_name)
+        )
+        end = (
+            int(end_date.timestamp())
+            if isinstance(end_date, datetime)
+            else convert_date_to_unix_timestamp(
+                end_date, use_max_time=True, tz_name=tz_name
+            )
         )
 
         now = int(datetime.now().timestamp())
