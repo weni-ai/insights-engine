@@ -526,19 +526,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             topics=topics_metrics,
         )
 
-    def get_totals(
-        self, project: "Project", start_date: datetime, end_date: datetime
-    ) -> ConversationsTotalsMetrics:
-        """
-        Get conversations metrics totals
-        """
-
-        return self.datalake_service.get_conversations_totals(
-            project_uuid=project.uuid,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
     def _get_csat_metrics_from_flowruns(
         self,
         flow_uuid: UUID,
