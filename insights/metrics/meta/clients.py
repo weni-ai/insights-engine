@@ -171,6 +171,8 @@ class MetaGraphAPIClient:
             "limit": 9999,
         }
 
+        print("Params: ", params)
+
         cache_key = self.get_analytics_cache_key(
             waba_id=waba_id, template_id=template_id, params=params
         )
