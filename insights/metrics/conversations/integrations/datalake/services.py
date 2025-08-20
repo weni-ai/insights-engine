@@ -541,6 +541,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         Get conversations totals from Datalake.
         """
 
+        print("get conversations totals (datalake service)")
         print("start_date", start_date)
         print("end_date", end_date)
 

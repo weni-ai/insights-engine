@@ -87,6 +87,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         Get conversations metrics totals
         """
 
+        print("get totals (metrics service)")
         print("start_date", start_date)
         print("end_date", end_date)
 

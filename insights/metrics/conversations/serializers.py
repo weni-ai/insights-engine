@@ -53,6 +53,7 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         end_datetime = datetime.combine(attrs["end_date"].date(), time(23, 59, 59))
         attrs["end_date"] = timezone.localize(end_datetime)
 
+        print("serializer validation")
         print("start_date", attrs["start_date"])
         print("end_date", attrs["end_date"])
 
