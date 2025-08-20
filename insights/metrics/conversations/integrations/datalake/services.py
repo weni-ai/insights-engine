@@ -541,6 +541,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         Get conversations totals from Datalake.
         """
 
+        print("start_date", start_date)
+        print("end_date", end_date)
+
         cache_key = self._get_cache_key(
             data_type="conversations_totals",
             project_uuid=project_uuid,
