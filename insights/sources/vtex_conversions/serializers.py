@@ -20,8 +20,8 @@ class OrdersConversionsFiltersSerializer(serializers.Serializer):
     ended_at__gte = serializers.DateTimeField(required=True, write_only=True)
     ended_at__lte = serializers.DateTimeField(required=True, write_only=True)
 
-    start_date = serializers.DateField(read_only=True)
-    end_date = serializers.DateField(read_only=True)
+    start_date = serializers.DateTimeField(read_only=True)
+    end_date = serializers.DateTimeField(read_only=True)
 
     def validate(self, attrs):
         start_date = attrs.get("ended_at__gte")
