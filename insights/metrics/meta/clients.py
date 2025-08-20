@@ -144,6 +144,9 @@ class MetaGraphAPIClient:
         if isinstance(template_id, list):
             template_id = ",".join(template_id)
 
+        print("Start date: ", start_date)
+        print("End date: ", end_date)
+
         start = (
             start_date.timestamp()
             if isinstance(start_date, datetime)
