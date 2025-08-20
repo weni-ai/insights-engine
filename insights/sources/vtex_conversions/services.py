@@ -121,6 +121,8 @@ class VTEXOrdersConversionsService:
         serializer = OrdersConversionsFiltersSerializer(data=filters)
         serializer.is_valid(raise_exception=True)
 
+        print("Serializer: ", serializer.validated_data)
+
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
             serializer.validated_data["template_id"],
