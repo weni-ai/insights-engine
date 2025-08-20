@@ -345,8 +345,8 @@ class ConversationsMetricsViewSet(GenericViewSet):
         try:
             totals = self.service.get_totals(
                 project=query_params_serializer.validated_data["project"],
-                start_date=request.query_params.get("start_date"),
-                end_date=request.query_params.get("end_date"),
+                start_date=query_params_serializer.validated_data["start_date"],
+                end_date=query_params_serializer.validated_data["end_date"],
             )
         except Exception:
             return Response(
