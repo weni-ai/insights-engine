@@ -19,11 +19,17 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 logger.info("Starting task discovery...")
 app.autodiscover_tasks()
+
+
 logger.info("Task discovery completed")
 
 logger.info("Discovered tasks: %s", list(app.tasks.keys()))
 
 app.conf.beat_schedule = {
+    "activate-indexer": {
+        "task": "insights.projects.tasks.activate_indexer",
+        "schedule": (60 * 60),  # 1 hour
+    },
     "test": {
         "task": "insights.projects.tasks.test",
         "schedule": (10),  # 10 seconds

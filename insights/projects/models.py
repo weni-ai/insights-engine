@@ -1,5 +1,6 @@
 from django.db import models
 
+from insights.projects.choices import ProjectIndexerActivationStatus
 from insights.shared.models import (
     BaseModel,
     ConfigurableModel,
@@ -42,3 +43,18 @@ class ProjectAuth(BaseModel):
 
     def __str__(self):
         return f"[{self.role}] {self.project.name} - {self.user.email}"
+
+
+class ProjectIndexerActivation(BaseModel):
+    """
+    This model is used to activate the indexer for a project.
+    """
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    status = models.CharField(
+        max_length=255, choices=ProjectIndexerActivationStatus.choices
+    )
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.project.name} - {self.status}"
