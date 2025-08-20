@@ -87,6 +87,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         Get conversations metrics totals
         """
 
+        print("start_date", start_date)
+        print("end_date", end_date)
+
         return self.datalake_service.get_conversations_totals(
             project_uuid=project.uuid,
             start_date=start_date,
