@@ -56,8 +56,8 @@ class ConversationsMetricsViewSet(GenericViewSet):
             csat_metrics = self.service.get_csat_metrics(
                 project_uuid=query_params.validated_data["project_uuid"],
                 widget=query_params.validated_data["widget"],
-                start_date=query_params.validated_data["start_date"],
-                end_date=query_params.validated_data["end_date"],
+                start_date=query_params.validated_data["start_date"].isoformat(),
+                end_date=query_params.validated_data["end_date"].isoformat(),
                 metric_type=query_params.validated_data["type"],
             )
         except ConversationsMetricsError as e:
@@ -85,8 +85,8 @@ class ConversationsMetricsViewSet(GenericViewSet):
             nps_metrics = self.service.get_nps_metrics(
                 project_uuid=query_params.validated_data["project_uuid"],
                 widget=query_params.validated_data["widget"],
-                start_date=query_params.validated_data["start_date"],
-                end_date=query_params.validated_data["end_date"],
+                start_date=query_params.validated_data["start_date"].isoformat(),
+                end_date=query_params.validated_data["end_date"].isoformat(),
                 metric_type=query_params.validated_data["type"],
             )
         except ConversationsMetricsError as e:
@@ -121,8 +121,8 @@ class ConversationsMetricsViewSet(GenericViewSet):
         try:
             metrics = self.service.get_topics_distribution(
                 serializer.validated_data["project"],
-                serializer.validated_data["start_date"],
-                serializer.validated_data["end_date"],
+                serializer.validated_data["start_date"].isoformat(),
+                serializer.validated_data["end_date"].isoformat(),
                 serializer.validated_data["type"],
             )
         except ConversationsMetricsError as e:
@@ -345,8 +345,10 @@ class ConversationsMetricsViewSet(GenericViewSet):
         try:
             totals = self.service.get_totals(
                 project=query_params_serializer.validated_data["project"],
-                start_date=request.query_params.get("start_date"),
-                end_date=request.query_params.get("end_date"),
+                start_date=query_params_serializer.validated_data[
+                    "start_date"
+                ].isoformat(),
+                end_date=query_params_serializer.validated_data["end_date"].isoformat(),
             )
         except Exception:
             return Response(

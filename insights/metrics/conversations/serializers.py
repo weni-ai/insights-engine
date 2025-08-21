@@ -16,8 +16,8 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
     Serializer for conversation base query params
     """
 
-    start_date = serializers.DateField()
-    end_date = serializers.DateField()
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
     project_uuid = serializers.UUIDField()
 
     def validate(self, attrs: dict) -> dict:
@@ -42,11 +42,11 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         timezone = pytz.timezone(project.timezone) if project.timezone else pytz.UTC
 
         # Convert start_date to datetime at midnight (00:00:00) in project timezone
-        start_datetime = datetime.combine(attrs["start_date"], time.min)
+        start_datetime = datetime.combine(attrs["start_date"].date(), time.min)
         attrs["start_date"] = timezone.localize(start_datetime)
 
         # Convert end_date to datetime at 23:59:59 in project timezone
-        end_datetime = datetime.combine(attrs["end_date"], time(23, 59, 59))
+        end_datetime = datetime.combine(attrs["end_date"].date(), time(23, 59, 59))
         attrs["end_date"] = timezone.localize(end_datetime)
 
         return attrs
