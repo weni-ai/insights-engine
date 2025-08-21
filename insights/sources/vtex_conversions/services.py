@@ -1,3 +1,4 @@
+import pytz
 from datetime import date
 from logging import getLogger
 
@@ -20,7 +21,6 @@ from insights.sources.vtex_conversions.serializers import (
     OrdersConversionsFiltersSerializer,
     OrdersConversionsMetricsSerializer,
 )
-from insights.utils import convert_dt_to_localized_dt
 
 logger = getLogger(__name__)
 
@@ -87,12 +87,9 @@ class VTEXOrdersConversionsService:
         project = Project.objects.filter(uuid=self.project.uuid).first()
         tz_name = project.timezone if project else get_current_timezone_name()
 
-        start_date = convert_dt_to_localized_dt(start_date, tz_name).date()
-        end_date = convert_dt_to_localized_dt(end_date, tz_name).date()
-
         metrics_data = (
             self.meta_api_client.get_messages_analytics(
-                waba_id, template_id, start_date, end_date
+                waba_id, template_id, start_date, end_date, tz_name=tz_name
             )
             .get("data", {})
             .get("status_count")
@@ -123,11 +120,30 @@ class VTEXOrdersConversionsService:
         serializer = OrdersConversionsFiltersSerializer(data=filters)
         serializer.is_valid(raise_exception=True)
 
+        tz_name = self.project.timezone
+
+        start_date = serializer.validated_data["start_date"]
+        end_date = serializer.validated_data["end_date"]
+
+        if tz_name:
+            project_tz = pytz.timezone(tz_name)
+
+            # Convert start_date to project timezone
+            if start_date and start_date.tzinfo is None:
+                start_date = project_tz.localize(start_date)
+            elif start_date and start_date.tzinfo:
+                start_date = start_date.astimezone(project_tz)
+
+            if end_date and end_date.tzinfo is None:
+                end_date = project_tz.localize(end_date)
+            elif end_date and end_date.tzinfo:
+                end_date = end_date.astimezone(project_tz)
+
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
             serializer.validated_data["template_id"],
-            serializer.validated_data["start_date"],
-            serializer.validated_data["end_date"],
+            start_date,
+            end_date,
         )
 
         graph_data_fields = {}
@@ -139,8 +155,8 @@ class VTEXOrdersConversionsService:
             )
 
         orders_data = self.get_orders_metrics(
-            serializer.validated_data["start_date"],
-            serializer.validated_data["end_date"],
+            start_date,
+            end_date,
             serializer.validated_data["utm_source"],
         )
 
