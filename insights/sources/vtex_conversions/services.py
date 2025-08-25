@@ -126,20 +126,20 @@ class VTEXOrdersConversionsService:
 
             # Convert start_date to project timezone
             if start_date and start_date.tzinfo is None:
-                local_start_date = project_tz.localize(start_date)
+                start_date = project_tz.localize(start_date)
             elif start_date and start_date.tzinfo:
-                local_start_date = start_date.astimezone(project_tz)
+                start_date = start_date.astimezone(project_tz)
 
             if end_date and end_date.tzinfo is None:
-                local_end_date = project_tz.localize(end_date)
+                end_date = project_tz.localize(end_date)
             elif end_date and end_date.tzinfo:
-                local_end_date = end_date.astimezone(project_tz)
+                end_date = end_date.astimezone(project_tz)
 
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
             serializer.validated_data["template_id"],
-            start_date,
-            end_date,
+            start_date.date(),
+            end_date.date(),
         )
 
         graph_data_fields = {}
@@ -151,8 +151,8 @@ class VTEXOrdersConversionsService:
             )
 
         orders_data = self.get_orders_metrics(
-            local_start_date,
-            local_end_date,
+            start_date,
+            end_date,
             serializer.validated_data["utm_source"],
         )
 
