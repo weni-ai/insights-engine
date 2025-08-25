@@ -18,6 +18,8 @@ def set_live_day(default_filters):
 
 
 def apply_timezone_to_filters(default_filters, project_timezone_str):
+    print("Apply timezone to filters [before]")
+    print(default_filters)
     project_timezone = pytz.timezone(project_timezone_str)
     for key in default_filters.keys():
         if key.endswith("__gte") or key.endswith("__lte"):
@@ -33,6 +35,9 @@ def apply_timezone_to_filters(default_filters, project_timezone_str):
                 )
 
             default_filters[key] = project_timezone.localize(date_obj)
+
+    print("Apply timezone to filters [after]")
+    print(default_filters)
 
 
 def format_date(default_filters):
