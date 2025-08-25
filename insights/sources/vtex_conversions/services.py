@@ -1,3 +1,4 @@
+import pytz
 from datetime import date
 
 from django.conf import settings
@@ -117,14 +118,30 @@ class VTEXOrdersConversionsService:
         serializer = OrdersConversionsFiltersSerializer(data=filters)
         serializer.is_valid(raise_exception=True)
 
+        tz_name = "UTC"
+
         start_date = serializer.validated_data["start_date"]
         end_date = serializer.validated_data["end_date"]
+
+        if tz_name:
+            project_tz = pytz.timezone(tz_name)
+
+            # Convert start_date to project timezone
+            if start_date and start_date.tzinfo is None:
+                start_date = project_tz.localize(start_date)
+            elif start_date and start_date.tzinfo:
+                start_date = start_date.astimezone(project_tz)
+
+            if end_date and end_date.tzinfo is None:
+                end_date = project_tz.localize(end_date)
+            elif end_date and end_date.tzinfo:
+                end_date = end_date.astimezone(project_tz)
 
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
             serializer.validated_data["template_id"],
-            start_date.date(),
-            end_date.date(),
+            start_date,
+            end_date,
         )
 
         graph_data_fields = {}
