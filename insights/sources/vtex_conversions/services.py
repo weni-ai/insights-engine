@@ -1,4 +1,3 @@
-import pytz
 from datetime import date
 
 from django.conf import settings
