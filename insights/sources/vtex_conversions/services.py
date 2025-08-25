@@ -137,6 +137,10 @@ class VTEXOrdersConversionsService:
             elif end_date and end_date.tzinfo:
                 end_date = end_date.astimezone(project_tz)
 
+        print("VTEX Orders Conversions Service")
+        print("Start date: ", start_date)
+        print("End date: ", end_date)
+
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
             serializer.validated_data["template_id"],
