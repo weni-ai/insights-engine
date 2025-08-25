@@ -1,3 +1,4 @@
+import pytz
 from datetime import date
 from logging import getLogger
 
@@ -115,8 +116,24 @@ class VTEXOrdersConversionsService:
         serializer = OrdersConversionsFiltersSerializer(data=filters)
         serializer.is_valid(raise_exception=True)
 
+        tz_name = "UTC"
+
         start_date = serializer.validated_data["start_date"]
         end_date = serializer.validated_data["end_date"]
+
+        if tz_name:
+            project_tz = pytz.timezone(tz_name)
+
+            # Convert start_date to project timezone
+            if start_date and start_date.tzinfo is None:
+                local_start_date = project_tz.localize(start_date)
+            elif start_date and start_date.tzinfo:
+                local_start_date = start_date.astimezone(project_tz)
+
+            if end_date and end_date.tzinfo is None:
+                local_end_date = project_tz.localize(end_date)
+            elif end_date and end_date.tzinfo:
+                local_end_date = end_date.astimezone(project_tz)
 
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
@@ -134,8 +151,8 @@ class VTEXOrdersConversionsService:
             )
 
         orders_data = self.get_orders_metrics(
-            start_date,
-            end_date,
+            local_start_date,
+            local_end_date,
             serializer.validated_data["utm_source"],
         )
 
