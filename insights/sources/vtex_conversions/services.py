@@ -144,8 +144,8 @@ class VTEXOrdersConversionsService:
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
             serializer.validated_data["template_id"],
-            start_date,
-            end_date,
+            start_date.date(),
+            end_date.date(),
         )
 
         graph_data_fields = {}
