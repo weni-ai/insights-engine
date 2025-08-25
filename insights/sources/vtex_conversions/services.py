@@ -128,16 +128,16 @@ class VTEXOrdersConversionsService:
         if tz_name:
             project_tz = pytz.timezone(tz_name)
 
-            # Convert start_date to project timezone
+            # Set timezone to UTC without converting the time
             if start_date and start_date.tzinfo is None:
                 start_date = project_tz.localize(start_date)
             elif start_date and start_date.tzinfo:
-                start_date = start_date.astimezone(project_tz)
+                start_date = start_date.replace(tzinfo=project_tz)
 
             if end_date and end_date.tzinfo is None:
                 end_date = project_tz.localize(end_date)
             elif end_date and end_date.tzinfo:
-                end_date = end_date.astimezone(project_tz)
+                end_date = end_date.replace(tzinfo=project_tz)
 
         print("VTEX Orders Conversions Service")
         print("Start date: ", start_date)
