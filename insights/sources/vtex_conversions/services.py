@@ -1,5 +1,5 @@
 import pytz
-from datetime import date
+from datetime import date, datetime
 from logging import getLogger
 
 from django.conf import settings
@@ -112,28 +112,30 @@ class VTEXOrdersConversionsService:
         """
         Get metrics from Meta Graph API and VTEX API.
         """
+        tz_name = "UTC"
+        tz = pytz.timezone(tz_name)
+
+        start_date = datetime.fromisoformat(filters["start_date"])
+        end_date = datetime.fromisoformat(filters["end_date"])
+
+        if start_date and start_date.tzinfo is None:
+            start_date = tz.localize(start_date)
+        elif start_date and start_date.tzinfo:
+            start_date = start_date.replace(tzinfo=tz)
+
+        if end_date and end_date.tzinfo is None:
+            end_date = tz.localize(end_date)
+        elif end_date and end_date.tzinfo:
+            end_date = end_date.replace(tzinfo=tz)
+
+        filters["start_date"] = start_date
+        filters["end_date"] = end_date
 
         serializer = OrdersConversionsFiltersSerializer(data=filters)
         serializer.is_valid(raise_exception=True)
 
-        tz_name = "UTC"
-
         start_date = serializer.validated_data["start_date"]
         end_date = serializer.validated_data["end_date"]
-
-        if tz_name:
-            project_tz = pytz.timezone(tz_name)
-
-            # Set timezone to UTC without converting the time
-            if start_date and start_date.tzinfo is None:
-                start_date = project_tz.localize(start_date)
-            elif start_date and start_date.tzinfo:
-                start_date = start_date.replace(tzinfo=project_tz)
-
-            if end_date and end_date.tzinfo is None:
-                end_date = project_tz.localize(end_date)
-            elif end_date and end_date.tzinfo:
-                end_date = end_date.replace(tzinfo=project_tz)
 
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
