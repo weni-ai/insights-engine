@@ -115,6 +115,8 @@ class VTEXOrdersConversionsService:
         Get metrics from Meta Graph API and VTEX API.
         """
 
+        print("VTEX Orders Conversions Service all filters: ", filters)
+
         serializer = OrdersConversionsFiltersSerializer(data=filters)
         serializer.is_valid(raise_exception=True)
 
