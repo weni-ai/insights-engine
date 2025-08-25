@@ -3,8 +3,6 @@ from datetime import date, datetime
 
 import pytz
 
-from django.utils.timezone import get_current_timezone_name
-
 from insights.authentication.authentication import FlowsInternalAuthentication
 
 logger = logging.getLogger(__name__)
@@ -31,14 +29,12 @@ def format_to_iso_utc(date_str, end_of_day=False):
 
 
 def convert_date_to_unix_timestamp(
-    dt: date, use_max_time=False, tz_name: str | None = None
+    dt: date,
+    use_max_time=False,
 ) -> int:
     t = datetime.max.time() if use_max_time else datetime.min.time()
 
-    if not tz_name:
-        tz_name = get_current_timezone_name()
-
-    return int(datetime.combine(dt, t, tzinfo=pytz.timezone(tz_name)).timestamp())
+    return int(datetime.combine(dt, t).timestamp())
 
 
 def convert_date_str_to_datetime_date(date_str: str) -> date:

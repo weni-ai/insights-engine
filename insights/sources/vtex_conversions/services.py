@@ -5,7 +5,6 @@ from django.conf import settings
 from logging import getLogger
 
 from django.conf import settings
-from django.utils.timezone import get_current_timezone_name
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 
@@ -86,12 +85,9 @@ class VTEXOrdersConversionsService:
                 code="project_without_waba_permission",
             )
 
-        project = Project.objects.filter(uuid=self.project.uuid).first()
-        tz_name = project.timezone if project else get_current_timezone_name()
-
         metrics_data = (
             self.meta_api_client.get_messages_analytics(
-                waba_id, template_id, start_date, end_date, tz_name=tz_name
+                waba_id, template_id, start_date, end_date
             )
             .get("data", {})
             .get("status_count")
