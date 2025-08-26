@@ -115,8 +115,8 @@ class VTEXOrdersConversionsService:
         tz_name = "UTC"
         tz = pytz.timezone(tz_name)
 
-        start_date = datetime.fromisoformat(filters["start_date"])
-        end_date = datetime.fromisoformat(filters["end_date"])
+        start_date = datetime.fromisoformat(filters["ended_at__gte"])
+        end_date = datetime.fromisoformat(filters["ended_at__lte"])
 
         if start_date and start_date.tzinfo is None:
             start_date = tz.localize(start_date)
@@ -128,8 +128,8 @@ class VTEXOrdersConversionsService:
         elif end_date and end_date.tzinfo:
             end_date = end_date.replace(tzinfo=tz)
 
-        filters["start_date"] = start_date
-        filters["end_date"] = end_date
+        filters["ended_at__gte"] = start_date
+        filters["ended_at__lte"] = end_date
 
         print("VTEX Orders Conversions Service all filters: ", filters)
 
