@@ -115,21 +115,25 @@ class VTEXOrdersConversionsService:
         tz_name = "UTC"
         tz = pytz.timezone(tz_name)
 
-        start_date = datetime.fromisoformat(filters["ended_at__gte"])
-        end_date = datetime.fromisoformat(filters["ended_at__lte"])
+        if "ended_at__gte" in filters:
+            start_date = datetime.fromisoformat(filters["ended_at__gte"])
 
-        if start_date and start_date.tzinfo is None:
-            start_date = tz.localize(start_date)
-        elif start_date and start_date.tzinfo:
-            start_date = start_date.replace(tzinfo=tz)
+            if start_date and start_date.tzinfo is None:
+                start_date = tz.localize(start_date)
+            elif start_date and start_date.tzinfo:
+                start_date = start_date.replace(tzinfo=tz)
 
-        if end_date and end_date.tzinfo is None:
-            end_date = tz.localize(end_date)
-        elif end_date and end_date.tzinfo:
-            end_date = end_date.replace(tzinfo=tz)
+            filters["ended_at__gte"] = start_date
 
-        filters["ended_at__gte"] = start_date
-        filters["ended_at__lte"] = end_date
+        if "ended_at__lte" in filters:
+            end_date = datetime.fromisoformat(filters["ended_at__lte"])
+
+            if end_date and end_date.tzinfo is None:
+                end_date = tz.localize(end_date)
+            elif end_date and end_date.tzinfo:
+                end_date = end_date.replace(tzinfo=tz)
+
+            filters["ended_at__lte"] = end_date
 
         serializer = OrdersConversionsFiltersSerializer(data=filters)
         serializer.is_valid(raise_exception=True)
