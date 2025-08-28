@@ -31,12 +31,6 @@ class TestCreateProjectUseCase(TestCase):
             ).count(),
             1,
         )
-        self.assertEqual(
-            Dashboard.objects.filter(
-                project=project, name=CONVERSATION_DASHBOARD_NAME
-            ).count(),
-            1,
-        )
 
     def test_create_project_with_vtex_account(self):
         project_dto = ProjectCreationDTO(
@@ -55,12 +49,6 @@ class TestCreateProjectUseCase(TestCase):
         self.assertEqual(
             Dashboard.objects.filter(
                 project=project, name=HUMAN_SERVICE_DASHBOARD_NAME
-            ).count(),
-            1,
-        )
-        self.assertEqual(
-            Dashboard.objects.filter(
-                project=project, name=CONVERSATION_DASHBOARD_NAME
             ).count(),
             1,
         )

@@ -49,5 +49,4 @@ class ProjectsUseCase:
             config=config,
         )
         CreateHumanService().create_dashboard(project)
-        ConversationsDashboardCreation().create_for_project(project)
         return project
