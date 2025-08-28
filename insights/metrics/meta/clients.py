@@ -130,7 +130,6 @@ class MetaGraphAPIClient:
         end_date: date,
         include_data_points: bool = True,
         return_exceptions: bool = False,
-        tz_name: str | None = None,
     ):
         url = f"{self.base_host_url}/{waba_id}/template_analytics?"
 
@@ -147,14 +146,12 @@ class MetaGraphAPIClient:
         start = (
             int(start_date.timestamp())
             if isinstance(start_date, datetime)
-            else convert_date_to_unix_timestamp(start_date, tz_name=tz_name)
+            else convert_date_to_unix_timestamp(start_date)
         )
         end = (
             int(end_date.timestamp())
             if isinstance(end_date, datetime)
-            else convert_date_to_unix_timestamp(
-                end_date, use_max_time=True, tz_name=tz_name
-            )
+            else convert_date_to_unix_timestamp(end_date, use_max_time=True)
         )
 
         now = int(datetime.now().timestamp())
@@ -223,7 +220,6 @@ class MetaGraphAPIClient:
         template_id: str,
         start_date: date,
         end_date: date,
-        tz_name: str | None = None,
     ):
         metrics_types = [
             MetricsTypes.SENT.value,
@@ -233,14 +229,12 @@ class MetaGraphAPIClient:
         start = (
             int(start_date.timestamp())
             if isinstance(start_date, datetime)
-            else convert_date_to_unix_timestamp(start_date, tz_name=tz_name)
+            else convert_date_to_unix_timestamp(start_date)
         )
         end = (
             int(end_date.timestamp())
             if isinstance(end_date, datetime)
-            else convert_date_to_unix_timestamp(
-                end_date, use_max_time=True, tz_name=tz_name
-            )
+            else convert_date_to_unix_timestamp(end_date, use_max_time=True)
         )
 
         now = int(datetime.now().timestamp())
