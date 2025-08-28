@@ -6,6 +6,7 @@ from datetime import date, datetime
 
 from django.conf import settings
 from rest_framework.exceptions import ValidationError, NotFound
+from sentry_sdk import capture_exception
 
 from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
 from insights.metrics.meta.utils import (
@@ -74,9 +75,11 @@ class MetaGraphAPIClient:
                 err,
                 exc_info=True,
             )
+            event_id = capture_exception(err)
 
             raise ValidationError(
-                {"error": "An error has occurred"}, code="meta_api_error"
+                {"error": f"An error has occurred. Event ID: {event_id}"},
+                code="meta_api_error",
             ) from err
 
         return response.json()
@@ -102,9 +105,11 @@ class MetaGraphAPIClient:
                 err,
                 exc_info=True,
             )
+            event_id = capture_exception(err)
 
             raise ValidationError(
-                {"error": "An error has occurred"}, code="meta_api_error"
+                {"error": f"An error has occurred. Event ID: {event_id}"},
+                code="meta_api_error",
             ) from err
 
         response = response.json()
@@ -124,6 +129,8 @@ class MetaGraphAPIClient:
         start_date: date,
         end_date: date,
         include_data_points: bool = True,
+        return_exceptions: bool = False,
+        tz_name: str | None = None,
     ):
         url = f"{self.base_host_url}/{waba_id}/template_analytics?"
 
@@ -138,14 +145,16 @@ class MetaGraphAPIClient:
             template_id = ",".join(template_id)
 
         start = (
-            start_date.timestamp()
+            int(start_date.timestamp())
             if isinstance(start_date, datetime)
-            else convert_date_to_unix_timestamp(start_date)
+            else convert_date_to_unix_timestamp(start_date, tz_name=tz_name)
         )
         end = (
-            end_date.timestamp()
+            int(end_date.timestamp())
             if isinstance(end_date, datetime)
-            else convert_date_to_unix_timestamp(end_date, use_max_time=True)
+            else convert_date_to_unix_timestamp(
+                end_date, use_max_time=True, tz_name=tz_name
+            )
         )
 
         now = int(datetime.now().timestamp())
@@ -182,9 +191,14 @@ class MetaGraphAPIClient:
                 err,
                 exc_info=True,
             )
+            event_id = capture_exception(err)
+
+            if return_exceptions:
+                raise err
 
             raise ValidationError(
-                {"error": "An error has occurred"}, code="meta_api_error"
+                {"error": f"An error has occurred. Event ID: {event_id}"},
+                code="meta_api_error",
             ) from err
 
         meta_response = response.json()
@@ -209,14 +223,25 @@ class MetaGraphAPIClient:
         template_id: str,
         start_date: date,
         end_date: date,
+        tz_name: str | None = None,
     ):
         metrics_types = [
             MetricsTypes.SENT.value,
             MetricsTypes.CLICKED.value,
         ]
 
-        start = convert_date_to_unix_timestamp(start_date)
-        end = convert_date_to_unix_timestamp(end_date, use_max_time=True)
+        start = (
+            int(start_date.timestamp())
+            if isinstance(start_date, datetime)
+            else convert_date_to_unix_timestamp(start_date, tz_name=tz_name)
+        )
+        end = (
+            int(end_date.timestamp())
+            if isinstance(end_date, datetime)
+            else convert_date_to_unix_timestamp(
+                end_date, use_max_time=True, tz_name=tz_name
+            )
+        )
 
         now = int(datetime.now().timestamp())
 
@@ -272,9 +297,11 @@ class MetaGraphAPIClient:
                 err,
                 exc_info=True,
             )
+            event_id = capture_exception(err)
 
             raise ValidationError(
-                {"error": "An error has occurred"}, code="meta_api_error"
+                {"error": f"An error has occurred. Event ID: {event_id}"},
+                code="meta_api_error",
             ) from err
 
         meta_response = response.json()

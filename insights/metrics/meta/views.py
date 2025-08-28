@@ -21,7 +21,7 @@ from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesLanguages,
 )
 from insights.metrics.meta.models import FavoriteTemplate
-from insights.metrics.meta.permissions import ProjectWABAPermission
+from insights.metrics.meta.permissions import ProjectDashboardWABAPermission
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
     WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS,
@@ -53,7 +53,11 @@ logger = logging.getLogger(__name__)
 
 class WhatsAppMessageTemplatesView(GenericViewSet):
     service = MetaMessageTemplatesService()
-    permission_classes = [ProjectAuthQueryParamPermission, ProjectWABAPermission]
+    permission_classes = [
+        IsAuthenticated,
+        ProjectAuthQueryParamPermission,
+        ProjectDashboardWABAPermission,
+    ]
 
     @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS)
     @action(
@@ -322,11 +326,28 @@ class WhatsappIntegrationWebhookView(APIView):
             else:
                 name = f"Meta {serializer.validated_data['phone_number']['display_phone_number']}"
 
-                Dashboard.objects.create(
+                existing_dashboard = Dashboard.objects.create(
                     project=project,
                     config=config,
                     name=name,
                 )
+
+            current_project = existing_dashboard.project
+
+            main_project = Project.objects.filter(
+                org_uuid=current_project.org_uuid,
+                config__is_main_project=True,
+            ).first()
+
+            if main_project:
+                # Create a copy of this dashboard in the main project
+                name = f"{current_project.name} {serializer.validated_data['phone_number']['display_phone_number']}"
+                Dashboard.objects.create(
+                    project=main_project,
+                    config=config,
+                    name=name,
+                )
+
         except Exception as e:
             logger.exception(f"Database error in WhatsApp integration: {e}")
             return Response(
@@ -344,9 +365,23 @@ class WhatsappIntegrationWebhookView(APIView):
         serializer = WhatsappIntegrationWebhookRemoveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        current_project = Project.objects.filter(
+            uuid=serializer.validated_data["project_uuid"],
+        ).first()
+
+        projects = [current_project]
+
+        main_project = Project.objects.filter(
+            org_uuid=current_project.org_uuid,
+            config__is_main_project=True,
+        ).first()
+
+        if main_project:
+            projects.append(main_project)
+
         try:
             Dashboard.objects.filter(
-                project__uuid=serializer.validated_data["project_uuid"],
+                project__in=projects,
                 config__waba_id=serializer.validated_data["waba_id"],
             ).delete()
         except Exception as e:
@@ -400,6 +435,8 @@ class InternalWhatsAppMessageTemplatesView(GenericViewSet):
             filters=filters,
             skip_kwargs_validation=True,
             include_data_points=False,
+            # Returning the original exceptions because this is an internal endpoint
+            return_exceptions=True,
         )
 
         return Response(data, status=status.HTTP_200_OK)

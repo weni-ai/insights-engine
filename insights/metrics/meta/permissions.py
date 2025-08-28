@@ -1,5 +1,6 @@
 from rest_framework.permissions import BasePermission
 
+from insights.dashboards.models import Dashboard
 from insights.sources.integrations.clients import WeniIntegrationsClient
 
 
@@ -28,3 +29,27 @@ class ProjectWABAPermission(BasePermission):
         wabas_ids = {waba.get("waba_id") for waba in wabas_data}
 
         return waba_id in wabas_ids
+
+
+class ProjectDashboardWABAPermission(BasePermission):
+    """
+    Check if the user has access to the waba_id
+    by checking the dashboard config
+    """
+
+    def has_permission(self, request, view):
+        """
+        Check if the user has access to the waba_id by checking the dashboard
+        config
+        """
+        project_uuid = request.query_params.get("project_uuid")
+        waba_id = request.query_params.get("waba_id")
+
+        if not project_uuid or not waba_id:
+            return False
+
+        return Dashboard.objects.filter(
+            project__uuid=project_uuid,
+            config__is_whatsapp_integration=True,
+            config__waba_id=waba_id,
+        ).exists()
