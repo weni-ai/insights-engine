@@ -72,7 +72,7 @@ def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
         buttons_data[button.get("text")] = {"type": button.get("type"), "clicked": 0}
 
     for data in data_points:
-        sent += data.get("sent")
+        sent += data.get("sent", 0)
 
         if not (clicked_buttons := data.get("clicked", None)):
             continue
