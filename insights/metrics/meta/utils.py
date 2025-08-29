@@ -12,9 +12,9 @@ def format_message_metrics_data(data: dict):
 
     return {
         "date": dt,
-        "sent": data.get("sent"),
-        "delivered": data.get("delivered"),
-        "read": data.get("read"),
+        "sent": data.get("sent", 0),
+        "delivered": data.get("delivered", 0),
+        "read": data.get("read", 0),
         "clicked": sum([btn.get("count", 0) for btn in data.get("clicked", [])]),
     }
 
