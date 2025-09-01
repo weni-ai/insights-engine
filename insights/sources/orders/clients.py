@@ -4,6 +4,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from urllib.parse import urlencode
 
+from rest_framework import status
+
 import requests
 from sentry_sdk import capture_message
 
@@ -168,6 +170,14 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         response = self.get_orders_list(query_filters, 1)
         data = response.json()
+
+        if not status.is_success(response.status_code):
+            logger.error(
+                "Error fetching orders. URL: %s. Status code: %s. Response: %s",
+                response.url,
+                response.status_code,
+                response.text,
+            )
 
         if "list" not in data:
             return response.status_code, data

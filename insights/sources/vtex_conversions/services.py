@@ -5,6 +5,7 @@ from logging import getLogger
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
+from sentry_sdk import capture_message
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.projects.models import Project
@@ -161,6 +162,18 @@ class VTEXOrdersConversionsService:
             end_date,
             serializer.validated_data["utm_source"],
         )
+
+        if not isinstance(orders_data, dict):
+            error_msg = "Error fetching orders. Orders data is not a dictionary. Orders data: %s"
+            logger.error(
+                error_msg,
+                orders_data,
+            )
+            capture_message(
+                error_msg,
+                orders_data,
+            )
+            raise Exception("Error fetching orders.")
 
         utm_data = OrdersConversionsUTMData(
             count_sell=orders_data.get("countSell", 0),
