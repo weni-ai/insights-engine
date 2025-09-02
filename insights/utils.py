@@ -69,3 +69,16 @@ def convert_dt_to_localized_dt(dt: datetime, timezone_name: str) -> datetime:
     dt_utc = localized_dt.astimezone(pytz.utc)
 
     return dt_utc
+
+
+def redact_headers(headers: dict, keys: list) -> dict:
+    """
+    Redact the headers for the given keys.
+    """
+    headers_copy = headers.copy()
+
+    for key in keys:
+        if key in headers_copy:
+            headers_copy[key] = "*" * len(str(headers_copy[key]))
+
+    return headers_copy
