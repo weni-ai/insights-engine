@@ -4,13 +4,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from urllib.parse import urlencode
 
-from rest_framework import status
 
 import requests
 from sentry_sdk import capture_message
 
 from insights.internals.base import VtexAuthentication
 from insights.sources.cache import CacheClient
+from insights.utils import redact_headers
 
 logger = logging.getLogger(__name__)
 
@@ -103,14 +103,27 @@ class VtexOrdersRestClient(VtexAuthentication):
         """
         endpoint = self.get_vtex_endpoint(query_filters, page_number)
 
+        request_details = {
+            "url": endpoint,
+            "headers": redact_headers(
+                self.headers,
+                ["X-VTEX-API-AppToken", "X-VTEX-API-AppKey", "X-Weni-Auth"],
+            ),
+        }
+
         if self.use_io_proxy:
+            body = self.get_request_body(query_filters, page_number)
+            request_details["method"] = "POST"
+            request_details["json"] = body
+
             response = requests.post(
                 endpoint,
                 headers=self.headers,
-                json=self.get_request_body(query_filters, page_number),
+                json=body,
                 timeout=timeout,
             )
         else:
+            request_details["method"] = "GET"
             response = requests.get(endpoint, headers=self.headers, timeout=timeout)
 
         if not response.ok:
@@ -118,11 +131,22 @@ class VtexOrdersRestClient(VtexAuthentication):
                 f"Error fetching orders. URL: {endpoint}. Status code: {response.status_code}. Response: {response.text}",
                 level="error",
             )
+
+            response_details = {
+                "status_code": response.status_code,
+                "text": response.text,
+                "url": response.url,
+                "headers": response.headers,
+            }
+
             logger.error(
-                "Error fetching orders. URL: %s. Status code: %s. Response: %s",
-                endpoint,
-                response.status_code,
-                response.text,
+                "[VTEX Orders] Response (%s): Error on request URL: %s"
+                % (response_details["status_code"], response_details["url"]),
+                stack_info=False,
+                extra={
+                    "response_details": response_details,
+                    "request_details": request_details,
+                },
             )
 
         return response
@@ -170,14 +194,6 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         response = self.get_orders_list(query_filters, 1)
         data = response.json()
-
-        if not status.is_success(response.status_code):
-            logger.error(
-                "Error fetching orders. URL: %s. Status code: %s. Response: %s",
-                response.url,
-                response.status_code,
-                response.text,
-            )
 
         if "list" not in data:
             return response.status_code, data
