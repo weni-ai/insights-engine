@@ -79,6 +79,6 @@ def redact_headers(headers: dict, keys: list) -> dict:
 
     for key in keys:
         if key in headers_copy:
-            headers_copy[key] = "*" * len(headers_copy[key])
+            headers_copy[key] = "*" * len(str(headers_copy[key]))
 
     return headers_copy
