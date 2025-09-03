@@ -11,6 +11,17 @@ class BaseReportService(ABC):
     Base class for report services.
     """
 
+    @abstractmethod
+    def request_generation(
+        self,
+        source: ReportSource,
+        source_config: dict,
+        filters: dict,
+        format: ReportFormat,
+        requested_by: User,
+    ) -> Report:
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ReportService(BaseReportService):
     """
