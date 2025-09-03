@@ -23,6 +23,7 @@ class Report(BaseModel):
     requested_by = models.ForeignKey(
         User, verbose_name=_("Requested by"), on_delete=models.SET_NULL, null=True
     )
+    started_at = models.DateTimeField(_("Started at"), null=True, blank=True)
     completed_at = models.DateTimeField(_("Completed at"), null=True, blank=True)
     errors = models.JSONField(_("Errors"), null=True, blank=True)
 

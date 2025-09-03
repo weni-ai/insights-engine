@@ -69,7 +69,7 @@ class ReportService(BaseReportService):
         Request the generation of a report.
         """
         logger.info(
-            "Requesting generation of report for source %s by user %s",
+            "[REPORT SERVICE] Requesting generation of report for source %s by user %s",
             source,
             requested_by.email,
         )
@@ -85,7 +85,7 @@ class ReportService(BaseReportService):
         )
 
         logger.info(
-            "Report created with uuid %s, requested by %s",
+            "[REPORT SERVICE] Report created with uuid %s, requested by %s",
             report.uuid,
             requested_by.email,
         )
