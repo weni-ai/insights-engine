@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "insights.metrics.skills",
     "insights.metrics.meta",
     "insights.metrics.conversations",
+    "insights.reports",
     # 3rd party apps
     "django_filters",
     "corsheaders",
