@@ -30,7 +30,7 @@ class MockConversationsReportService(BaseConversationsReportService):
     ) -> None:
         pass
 
-    def start_generation(self, report: Report) -> None:
+    def generate(self, report: Report) -> None:
         pass
 
     def project_can_receive_new_reports_generation(self, project: Project) -> bool:

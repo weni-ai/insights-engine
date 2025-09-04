@@ -1,11 +1,10 @@
-from datetime import timezone
 import logging
 from abc import ABC, abstractmethod
 
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
-from django.utils import translation
+from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
 from insights.reports.models import Report
@@ -58,7 +57,7 @@ class BaseConversationsReportService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
-    def start_generation(self, report: Report) -> None:
+    def generate(self, report: Report) -> None:
         """
         Start the generation of a conversations report.
         """
@@ -137,6 +136,35 @@ class ConversationsReportService(BaseConversationsReportService):
             project.uuid,
         )
 
+        if not source_config:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] source_config is empty for project %s",
+                project.uuid,
+            )
+            raise ValueError(
+                "source_config cannot be empty when requesting generation of conversations report"
+            )
+
+        if not filters:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] filters is empty for project %s",
+                project.uuid,
+            )
+            raise ValueError(
+                "filters cannot be empty when requesting generation of conversations report"
+            )
+
+        sections = source_config.get("sections", [])
+
+        if len(sections) == 0:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] sections is empty for project %s",
+                project.uuid,
+            )
+            raise ValueError(
+                "sections cannot be empty when requesting generation of conversations report"
+            )
+
         report = Report.objects.create(
             project=project,
             source=self.source,
@@ -144,6 +172,7 @@ class ConversationsReportService(BaseConversationsReportService):
             filters=filters,
             format=report_format,
             requested_by=requested_by,
+            status=ReportStatus.PENDING,
         )
 
         logger.info(
@@ -153,7 +182,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return report
 
-    def start_generation(self, report: Report) -> None:
+    def generate(self, report: Report) -> None:
         """
         Start the generation of a conversations report.
         """
@@ -162,38 +191,11 @@ class ConversationsReportService(BaseConversationsReportService):
             report.uuid,
         )
 
-        source_config = report.source_config or {}
+        # source_config = report.source_config or {}
 
-        if not source_config:
-            logger.error(
-                "[CONVERSATIONS REPORT SERVICE] source_config is empty for report %s",
-                report.uuid,
-            )
-            raise ValueError(
-                "source_config cannot be empty when generating conversations report"
-            )
+        # filters = report.filters or {}
 
-        filters = report.filters or {}
-
-        if not filters:
-            logger.error(
-                "[CONVERSATIONS REPORT SERVICE] filters is empty for report %s",
-                report.uuid,
-            )
-            raise ValueError(
-                "filters cannot be empty when generating conversations report"
-            )
-
-        sections = source_config.get("sections", [])
-
-        if len(sections) == 0:
-            logger.error(
-                "[CONVERSATIONS REPORT SERVICE] sections is empty for report %s",
-                report.uuid,
-            )
-            raise ValueError(
-                "sections cannot be empty when generating conversations report"
-            )
+        # sections = source_config.get("sections", [])
 
         # custom_widgets = source_config.get("custom_widgets", [])
 
@@ -215,7 +217,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email({})
+            self.send_email(report, "TODO")
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -235,7 +237,7 @@ class ConversationsReportService(BaseConversationsReportService):
             report.requested_by.email,
         )
 
-        report.status = ReportStatus.COMPLETED
+        report.status = ReportStatus.READY
         report.completed_at = timezone.now()
         report.save(update_fields=["status", "completed_at"])
 

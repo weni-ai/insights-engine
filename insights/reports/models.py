@@ -19,7 +19,12 @@ class Report(BaseModel):
     source_config = models.JSONField(_("Source config"), null=True, blank=True)
     filters = models.JSONField(_("Filters"), null=True, blank=True)
     format = models.CharField(_("Format"), max_length=255, choices=ReportFormat.choices)
-    status = models.CharField(_("Status"), max_length=255, choices=ReportStatus.choices)
+    status = models.CharField(
+        _("Status"),
+        max_length=255,
+        choices=ReportStatus.choices,
+        default=ReportStatus.PENDING,
+    )
     requested_by = models.ForeignKey(
         User, verbose_name=_("Requested by"), on_delete=models.SET_NULL, null=True
     )
