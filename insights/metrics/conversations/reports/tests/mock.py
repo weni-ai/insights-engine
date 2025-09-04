@@ -1,0 +1,46 @@
+from unittest.mock import MagicMock
+
+from insights.metrics.conversations.reports.services import (
+    BaseConversationsReportService,
+)
+from insights.reports.choices import ReportSource
+from insights.reports.models import Report
+from insights.projects.models import Project
+from insights.users.models import User
+from insights.reports.choices import ReportFormat
+
+
+class MockConversationsReportService(BaseConversationsReportService):
+    def process_csv(self, report: Report) -> None:
+        pass
+
+    def process_xlsx(self, report: Report) -> None:
+        pass
+
+    def send_email(self, report: Report, file_content: str) -> None:
+        pass
+
+    def request_generation(
+        self,
+        project: Project,
+        source_config: dict,
+        filters: dict,
+        report_format: ReportFormat,
+        requested_by: User,
+    ) -> None:
+        pass
+
+    def start_generation(self, report: Report) -> None:
+        pass
+
+    def project_can_receive_new_reports_generation(self, project: Project) -> bool:
+        pass
+
+    def __init__(self):
+        self.source = ReportSource.CONVERSATIONS_DASHBOARD
+        self.process_csv = MagicMock()
+        self.process_xlsx = MagicMock()
+        self.send_email = MagicMock()
+        self.request_generation = MagicMock()
+        self.start_generation = MagicMock()
+        self.project_can_receive_new_reports_generation = MagicMock()
