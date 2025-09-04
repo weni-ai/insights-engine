@@ -6,7 +6,7 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.utils import translation
-
+from sentry_sdk import capture_exception
 
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
@@ -94,11 +94,6 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Send the email for the conversations report.
         """
-        logger.info(
-            "[CONVERSATIONS REPORT SERVICE] Sending email for conversations report to %s",
-            report.requested_by.email,
-        )
-
         with translation.override(report.requested_by.language):
             subject = _("Conversations dashboard report")
             body = _("Please find the conversations report attached.")
@@ -112,25 +107,19 @@ class ConversationsReportService(BaseConversationsReportService):
 
             if report.format == ReportFormat.CSV:
                 file_name = f"conversations_report_{report.uuid}.csv"
+                file_format = "text/csv"
             elif report.format == ReportFormat.XLSX:
                 file_name = f"conversations_report_{report.uuid}.xlsx"
+                file_format = (
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
             email.attach(
                 file_name,
                 file_content,
-                (
-                    "text/csv"
-                    if report.format == ReportFormat.CSV
-                    else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                ),
+                file_format,
             )
-            email.send()
-
-        logger.info(
-            "[CONVERSATIONS REPORT SERVICE] Email for conversations report %s sent to %s",
-            report.uuid,
-            report.requested_by.email,
-        )
+            email.send(fail_silently=False)
 
     def request_generation(
         self,
@@ -219,8 +208,32 @@ class ConversationsReportService(BaseConversationsReportService):
         elif report.format == ReportFormat.XLSX:
             self.process_xlsx(report)
 
-        # TODO: Implement the email sending logic
-        self.send_email({})
+        logger.info(
+            "[CONVERSATIONS REPORT SERVICE] Sending email for conversations report %s to %s",
+            report.uuid,
+            report.requested_by.email,
+        )
+
+        try:
+            self.send_email({})
+        except Exception as e:
+            event_id = capture_exception(e)
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Failed to send email for conversations report %s. Event_id: %s",
+                report.uuid,
+                event_id,
+            )
+            report.status = ReportStatus.FAILED
+            report.completed_at = timezone.now()
+            report.errors = {"send_email": str(e), "event_id": event_id}
+            report.save(update_fields=["status", "completed_at"])
+            raise e
+
+        logger.info(
+            "[CONVERSATIONS REPORT SERVICE] Email for conversations report %s sent to %s",
+            report.uuid,
+            report.requested_by.email,
+        )
 
         report.status = ReportStatus.COMPLETED
         report.completed_at = timezone.now()
