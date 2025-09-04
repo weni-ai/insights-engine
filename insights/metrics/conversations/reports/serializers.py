@@ -8,8 +8,36 @@ from insights.projects.models import Project
 from insights.widgets.models import Widget
 
 
-class ConversationsReportQueryParamsSerializer(serializers.Serializer):
+class BaseConversationsReportParamsSerializer(serializers.Serializer):
     project_uuid = serializers.UUIDField(required=True)
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        project = Project.objects.filter(uuid=attrs["project_uuid"]).first()
+
+        if not project:
+            raise serializers.ValidationError(
+                {"project_uuid": [_("Project not found")]}, code="project_not_found"
+            )
+
+        attrs["project"] = project
+
+        return attrs
+
+
+class GetConversationsReportStatusQueryParamsSerializer(
+    BaseConversationsReportParamsSerializer
+):
+    pass
+
+
+class RequestConversationsReportGenerationSerializer(
+    BaseConversationsReportParamsSerializer
+):
     type = serializers.ChoiceField(required=True, choices=ReportFormat.choices)
     start_date = serializers.DateField(required=True)
     end_date = serializers.DateField(required=True)
@@ -45,18 +73,9 @@ class ConversationsReportQueryParamsSerializer(serializers.Serializer):
                 code="sections_or_custom_widgets_required",
             )
 
-        project = Project.objects.filter(uuid=attrs["project_uuid"]).first()
-
-        if not project:
-            raise serializers.ValidationError(
-                {"project_uuid": [_("Project not found")]}, code="project_not_found"
-            )
-
-        attrs["project"] = project
-
-        project_widgets = Widget.objects.filter(dashboard__project=project).values_list(
-            "uuid", flat=True
-        )
+        project_widgets = Widget.objects.filter(
+            dashboard__project=attrs["project"]
+        ).values_list("uuid", flat=True)
 
         if "custom_widgets" in attrs and attrs["custom_widgets"]:
             not_found_widgets = set(attrs["custom_widgets"]) - set(project_widgets)

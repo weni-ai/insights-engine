@@ -3,7 +3,7 @@ import datetime
 import uuid
 
 from insights.metrics.conversations.reports.serializers import (
-    ConversationsReportQueryParamsSerializer,
+    RequestConversationsReportGenerationSerializer,
 )
 from insights.projects.models import Project
 from insights.reports.choices import ReportFormat
@@ -12,7 +12,7 @@ from insights.widgets.models import Widget
 from insights.dashboards.models import Dashboard
 
 
-class TestConversationsReportQueryParamsSerializer(TestCase):
+class TestRequestConversationsReportGenerationSerializer(TestCase):
     def setUp(self):
         self.project = Project.objects.create(
             name="Test Project",
@@ -36,7 +36,7 @@ class TestConversationsReportQueryParamsSerializer(TestCase):
         )
 
     def test_serializer(self):
-        serializer = ConversationsReportQueryParamsSerializer(
+        serializer = RequestConversationsReportGenerationSerializer(
             data={
                 "project_uuid": self.project.uuid,
                 "type": ReportFormat.CSV,
@@ -60,7 +60,7 @@ class TestConversationsReportQueryParamsSerializer(TestCase):
         )
 
     def test_serializer_with_custom_widgets_and_without_sections(self):
-        serializer = ConversationsReportQueryParamsSerializer(
+        serializer = RequestConversationsReportGenerationSerializer(
             data={
                 "project_uuid": self.project.uuid,
                 "type": ReportFormat.CSV,
@@ -84,7 +84,7 @@ class TestConversationsReportQueryParamsSerializer(TestCase):
         )
 
     def test_serializer_without_custom_widgets_and_with_sections(self):
-        serializer = ConversationsReportQueryParamsSerializer(
+        serializer = RequestConversationsReportGenerationSerializer(
             data={
                 "project_uuid": self.project.uuid,
                 "type": ReportFormat.CSV,
@@ -103,7 +103,7 @@ class TestConversationsReportQueryParamsSerializer(TestCase):
         )
 
     def test_serializer_with_non_existent_project(self):
-        serializer = ConversationsReportQueryParamsSerializer(
+        serializer = RequestConversationsReportGenerationSerializer(
             data={
                 "project_uuid": uuid.uuid4(),
                 "type": ReportFormat.CSV,
@@ -116,7 +116,7 @@ class TestConversationsReportQueryParamsSerializer(TestCase):
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
 
     def test_serializer_with_non_existent_custom_widgets(self):
-        serializer = ConversationsReportQueryParamsSerializer(
+        serializer = RequestConversationsReportGenerationSerializer(
             data={
                 "project_uuid": self.project.uuid,
                 "type": ReportFormat.CSV,
@@ -148,7 +148,7 @@ class TestConversationsReportQueryParamsSerializer(TestCase):
                 },
             },
         )
-        serializer = ConversationsReportQueryParamsSerializer(
+        serializer = RequestConversationsReportGenerationSerializer(
             data={
                 "project_uuid": self.project.uuid,
                 "type": ReportFormat.CSV,
@@ -167,7 +167,7 @@ class TestConversationsReportQueryParamsSerializer(TestCase):
         )
 
     def test_serializer_with_start_date_after_end_date(self):
-        serializer = ConversationsReportQueryParamsSerializer(
+        serializer = RequestConversationsReportGenerationSerializer(
             data={
                 "project_uuid": self.project.uuid,
                 "type": ReportFormat.CSV,
@@ -182,7 +182,7 @@ class TestConversationsReportQueryParamsSerializer(TestCase):
         )
 
     def test_serializer_with_invalid_type(self):
-        serializer = ConversationsReportQueryParamsSerializer(
+        serializer = RequestConversationsReportGenerationSerializer(
             data={
                 "project_uuid": self.project.uuid,
                 "type": "PDF",
@@ -195,7 +195,7 @@ class TestConversationsReportQueryParamsSerializer(TestCase):
         self.assertEqual(serializer.errors["type"][0].code, "invalid_choice")
 
     def test_serializer_with_invalid_sections(self):
-        serializer = ConversationsReportQueryParamsSerializer(
+        serializer = RequestConversationsReportGenerationSerializer(
             data={
                 "project_uuid": self.project.uuid,
                 "type": ReportFormat.CSV,
