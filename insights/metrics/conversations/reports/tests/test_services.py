@@ -71,11 +71,13 @@ class TestConversationsReportService(TestCase):
             "filters cannot be empty when requesting generation of conversations report",
         )
 
-    def test_cannot_request_generation_without_sections_in_source_config(self):
+    def test_cannot_request_generation_without_sections_or_custom_widgets_in_source_config(
+        self,
+    ):
         with self.assertRaises(ValueError) as context:
             self.service.request_generation(
                 project=self.project,
-                source_config={"sections": []},
+                source_config={"sections": [], "custom_widgets": []},
                 filters={"start": "2025-01-01", "end": "2025-01-02"},
                 report_format=ReportFormat.CSV,
                 requested_by=self.user,
@@ -83,7 +85,7 @@ class TestConversationsReportService(TestCase):
 
         self.assertEqual(
             str(context.exception),
-            "sections cannot be empty when requesting generation of conversations report",
+            "sections or custom_widgets cannot be empty when requesting generation of conversations report",
         )
 
     def test_request_generation(self):
