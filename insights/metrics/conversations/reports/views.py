@@ -1,21 +1,39 @@
-from rest_framework.views import APIView
+from django.utils.translation import gettext_lazy as _
 
+
+from rest_framework.views import APIView
+from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.authentication.permissions import (
+    ProjectAuthQueryParamPermission,
+    ProjectAuthBodyPermission,
+)
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.reports.serializers import (
     GetConversationsReportStatusQueryParamsSerializer,
     GetConversationsReportStatusResponseSerializer,
+    RequestConversationsReportGenerationSerializer,
 )
 from insights.reports.choices import ReportStatus
 
 
 class ConversationsReportsViewSet(APIView):
-    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
     service = ConversationsReportService()
+
+    @property
+    def permission_classes(self):
+        permissions = [IsAuthenticated]
+
+        if self.request.method == "GET":
+            permissions.append(ProjectAuthQueryParamPermission)
+
+        if self.request.method == "POST":
+            permissions.append(ProjectAuthBodyPermission)
+
+        return permissions
 
     def get(self, request: Request) -> Response:
         query_params = GetConversationsReportStatusQueryParamsSerializer(
@@ -34,3 +52,38 @@ class ConversationsReportsViewSet(APIView):
         )
 
         return Response(response_body)
+
+    def post(self, request: Request) -> Response:
+        serializer = RequestConversationsReportGenerationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if self.service.get_current_report_for_project(
+            serializer.validated_data["project"]
+        ):
+            return Response(
+                {"error": _("A report is already being generated for this project")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        source_config = {
+            "sections": serializer.validated_data.get("sections", []),
+            "custom_widgets": serializer.validated_data.get("custom_widgets", []),
+        }
+
+        filters = {
+            "start": serializer.validated_data["start_date"],
+            "end": serializer.validated_data["end_date"],
+        }
+
+        report = self.service.request_generation(
+            project=serializer.validated_data["project"],
+            source_config=source_config,
+            filters=filters,
+            report_format=serializer.validated_data["type"],
+            requested_by=request.user,
+        )
+
+        return Response(
+            GetConversationsReportStatusResponseSerializer(instance=report).data,
+            status=status.HTTP_202_ACCEPTED,
+        )

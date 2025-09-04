@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 from insights.authentication.authentication import User
 from insights.projects.models import Project
 from insights.authentication.tests.decorators import with_project_auth
-from insights.reports.choices import ReportStatus, ReportSource
+from insights.reports.choices import ReportStatus, ReportSource, ReportFormat
 from insights.reports.models import Report
 
 
@@ -18,6 +18,11 @@ class BaseTestConversationsReportsViewSet(APITestCase):
 
         return self.client.get(url, query_params)
 
+    def request_generation(self, data: dict) -> Response:
+        url = "/v1/metrics/conversations/report/"
+
+        return self.client.post(url, data)
+
 
 class TestConversationsReportsViewSetAsAnonymousUser(
     BaseTestConversationsReportsViewSet
@@ -25,6 +30,10 @@ class TestConversationsReportsViewSetAsAnonymousUser(
     def test_get_status_when_user_is_anonymous(self):
         response = self.get_status({})
 
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_request_generation_when_user_is_anonymous(self):
+        response = self.request_generation({})
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
@@ -80,3 +89,50 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["report_uuid"], str(report.uuid))
 
         mock_get_current_report_for_project.assert_called_once_with(self.project)
+
+    def test_request_generation_without_project_uuid(self):
+        response = self.request_generation({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_request_generation_without_permission(self):
+        response = self.request_generation({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_current_report_for_project"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.request_generation"
+    )
+    def test_request_generation(
+        self, mock_request_generation, mock_get_current_report_for_project
+    ):
+        report = Report(
+            project=self.project,
+            source=ReportSource.CONVERSATIONS_DASHBOARD,
+            status=ReportStatus.PENDING,
+            requested_by=self.user,
+        )
+        mock_request_generation.return_value = report
+        mock_get_current_report_for_project.return_value = None
+
+        response = self.request_generation(
+            {
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-02",
+                "sections": ["RESOLUTIONS"],
+                "custom_widgets": [],
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        self.assertEqual(response.data["status"], ReportStatus.PENDING)
+        self.assertEqual(response.data["email"], self.user.email)
+        self.assertEqual(response.data["report_uuid"], str(report.uuid))
