@@ -3,6 +3,7 @@ from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 
 from insights.reports.choices import ReportFormat
+from insights.reports.models import Report
 from insights.metrics.conversations.reports.choices import ConversationsReportSections
 from insights.projects.models import Project
 from insights.widgets.models import Widget
@@ -94,3 +95,12 @@ class RequestConversationsReportGenerationSerializer(
                 )
 
         return attrs
+
+
+class GetConversationsReportStatusResponseSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="requested_by.email", allow_null=True)
+    report_uuid = serializers.UUIDField(source="uuid")
+
+    class Meta:
+        model = Report
+        fields = ["email", "report_uuid", "status"]

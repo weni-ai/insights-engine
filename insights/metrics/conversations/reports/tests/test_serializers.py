@@ -4,12 +4,38 @@ import uuid
 
 from insights.metrics.conversations.reports.serializers import (
     RequestConversationsReportGenerationSerializer,
+    GetConversationsReportStatusQueryParamsSerializer,
 )
 from insights.projects.models import Project
 from insights.reports.choices import ReportFormat
 from insights.metrics.conversations.reports.choices import ConversationsReportSections
 from insights.widgets.models import Widget
 from insights.dashboards.models import Dashboard
+
+
+class TestGetConversationsReportStatusQueryParamsSerializer(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+        )
+
+    def test_serializer(self):
+        serializer = GetConversationsReportStatusQueryParamsSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["project"], self.project)
+
+    def test_serializer_with_non_existent_project(self):
+        serializer = GetConversationsReportStatusQueryParamsSerializer(
+            data={
+                "project_uuid": uuid.uuid4(),
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
 
 
 class TestRequestConversationsReportGenerationSerializer(TestCase):
