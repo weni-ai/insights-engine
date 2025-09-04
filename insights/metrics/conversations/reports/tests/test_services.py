@@ -130,15 +130,13 @@ class TestConversationsReportService(TestCase):
         mock_process_csv.assert_called_once_with(report)
         mock_send_email.assert_called_once()
 
-    def test_project_can_receive_new_reports_generation_when_no_reports_exist(self):
-        self.assertTrue(
-            self.service.project_can_receive_new_reports_generation(self.project)
-        )
+    def test_get_current_report_for_project_when_no_reports_exist(self):
+        self.assertIsNone(self.service.get_current_report_for_project(self.project))
 
-    def test_project_can_receive_new_reports_generation_when_pending_report_exists(
+    def test_get_current_report_for_project_when_pending_report_exists(
         self,
     ):
-        Report.objects.create(
+        report = Report.objects.create(
             project=self.project,
             source=self.service.source,
             source_config={"sections": ["RESOLUTIONS"]},
@@ -148,14 +146,14 @@ class TestConversationsReportService(TestCase):
             status=ReportStatus.PENDING,
         )
 
-        self.assertFalse(
-            self.service.project_can_receive_new_reports_generation(self.project)
-        )
+        result = self.service.get_current_report_for_project(self.project)
 
-    def test_project_can_receive_new_reports_generation_when_in_progress_report_exists(
+        self.assertEqual(result, report)
+
+    def test_get_current_report_for_project_when_in_progress_report_exists(
         self,
     ):
-        Report.objects.create(
+        report = Report.objects.create(
             project=self.project,
             source=self.service.source,
             source_config={"sections": ["RESOLUTIONS"]},
@@ -165,11 +163,11 @@ class TestConversationsReportService(TestCase):
             status=ReportStatus.IN_PROGRESS,
         )
 
-        self.assertFalse(
-            self.service.project_can_receive_new_reports_generation(self.project)
-        )
+        result = self.service.get_current_report_for_project(self.project)
 
-    def test_project_cannot_receive_new_reports_generation_when_ready_report_exists(
+        self.assertEqual(result, report)
+
+    def test_get_current_report_for_project_when_ready_report_exists(
         self,
     ):
         Report.objects.create(
@@ -182,9 +180,9 @@ class TestConversationsReportService(TestCase):
             status=ReportStatus.READY,
         )
 
-        self.assertTrue(
-            self.service.project_can_receive_new_reports_generation(self.project)
-        )
+        result = self.service.get_current_report_for_project(self.project)
+
+        self.assertIsNone(result)
 
     def test_get_next_report_to_generate_when_no_reports_exist(self):
         self.assertIsNone(self.service.get_next_report_to_generate())
