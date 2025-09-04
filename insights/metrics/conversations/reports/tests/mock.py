@@ -36,11 +36,15 @@ class MockConversationsReportService(BaseConversationsReportService):
     def project_can_receive_new_reports_generation(self, project: Project) -> bool:
         pass
 
+    def get_next_report_to_generate(self) -> Report | None:
+        pass
+
     def __init__(self):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.process_csv = MagicMock()
         self.process_xlsx = MagicMock()
         self.send_email = MagicMock()
         self.request_generation = MagicMock()
-        self.start_generation = MagicMock()
+        self.generate = MagicMock()
+        self.get_next_report_to_generate = MagicMock()
         self.project_can_receive_new_reports_generation = MagicMock()

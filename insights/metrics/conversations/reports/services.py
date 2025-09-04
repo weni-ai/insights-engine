@@ -70,6 +70,13 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_next_report_to_generate(self) -> Report | None:
+        """
+        Get the next report to generate.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -255,3 +262,16 @@ class ConversationsReportService(BaseConversationsReportService):
             source=self.source,
             status__in=[ReportStatus.PENDING, ReportStatus.IN_PROGRESS],
         ).exists()
+
+    def get_next_report_to_generate(self) -> Report | None:
+        """
+        Get the next report to generate.
+        """
+        return (
+            Report.objects.filter(
+                source=self.source,
+                status=ReportStatus.PENDING,
+            )
+            .order_by("created_on")
+            .first()
+        )

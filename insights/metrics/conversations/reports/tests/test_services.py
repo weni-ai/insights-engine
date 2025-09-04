@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
 from django.test import TestCase
+from django.utils import timezone
+from django.utils.timezone import timedelta
 
 from insights.users.models import User
 from insights.reports.models import Report
@@ -181,3 +183,31 @@ class TestConversationsReportService(TestCase):
         self.assertTrue(
             self.service.project_can_receive_new_reports_generation(self.project)
         )
+
+    def test_get_next_report_to_generate_when_no_reports_exist(self):
+        self.assertIsNone(self.service.get_next_report_to_generate())
+
+    def test_get_next_report_to_generate_when_pending_report_exists(self):
+        def create_report(created_on):
+            with patch("django.utils.timezone.now") as mock_now:
+                mock_now.return_value = created_on
+
+                return Report.objects.create(
+                    project=self.project,
+                    source=self.service.source,
+                    source_config={"sections": ["RESOLUTIONS"]},
+                    filters={"start": "2025-01-01", "end": "2025-01-02"},
+                    format=ReportFormat.CSV,
+                    requested_by=self.user,
+                    status=ReportStatus.PENDING,
+                )
+
+        first_report = create_report(timezone.now() - timedelta(hours=1))
+        second_report = create_report(timezone.now() - timedelta(hours=2))
+
+        self.assertEqual(self.service.get_next_report_to_generate(), second_report)
+
+        second_report.status = ReportStatus.IN_PROGRESS
+        second_report.save(update_fields=["status"])
+
+        self.assertEqual(self.service.get_next_report_to_generate(), first_report)
