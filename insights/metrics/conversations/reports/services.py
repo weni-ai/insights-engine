@@ -64,7 +64,7 @@ class BaseConversationsReportService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
-    def project_can_receive_new_reports_generation(self, project: Project) -> bool:
+    def get_current_report_for_project(self, project: Project) -> bool:
         """
         Check if the project can receive new reports generation.
         """
@@ -254,15 +254,19 @@ class ConversationsReportService(BaseConversationsReportService):
             report.uuid,
         )
 
-    def project_can_receive_new_reports_generation(self, project: Project) -> bool:
+    def get_current_report_for_project(self, project: Project) -> Report | None:
         """
         Check if the project can receive new reports generation.
         """
-        return not Report.objects.filter(
-            project=project,
-            source=self.source,
-            status__in=[ReportStatus.PENDING, ReportStatus.IN_PROGRESS],
-        ).exists()
+        return (
+            Report.objects.filter(
+                project=project,
+                source=self.source,
+                status__in=[ReportStatus.PENDING, ReportStatus.IN_PROGRESS],
+            )
+            .order_by("created_on")
+            .first()
+        )
 
     def get_next_report_to_generate(self) -> Report | None:
         """
