@@ -162,14 +162,15 @@ class ConversationsReportService(BaseConversationsReportService):
             )
 
         sections = source_config.get("sections", [])
+        custom_widgets = source_config.get("custom_widgets", [])
 
-        if len(sections) == 0:
+        if len(sections) == 0 and len(custom_widgets) == 0:
             logger.error(
-                "[CONVERSATIONS REPORT SERVICE] sections is empty for project %s",
+                "[CONVERSATIONS REPORT SERVICE] sections or custom_widgets is empty for project %s",
                 project.uuid,
             )
             raise ValueError(
-                "sections cannot be empty when requesting generation of conversations report"
+                "sections or custom_widgets cannot be empty when requesting generation of conversations report"
             )
 
         report = Report.objects.create(
