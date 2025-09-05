@@ -312,16 +312,28 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         # the client will see other topics listed as "OTHER"
         current_topics_data = self.get_topics(project.uuid)
 
-        subtopics = [
-            SubtopicTopicRelation(
-                subtopic_uuid=subtopic.get("uuid"),
-                subtopic_name=subtopic.get("name"),
-                topic_uuid=topic.get("uuid"),
-                topic_name=topic.get("name"),
-            )
-            for topic in current_topics_data
-            for subtopic in topic["subtopic"]
-        ]
+        subtopics = []
+
+        for topic_data in current_topics_data:
+            if subtopics_data := topic_data.get("subtopic"):
+                for subtopic_data in subtopics_data:
+                    subtopics.append(
+                        SubtopicTopicRelation(
+                            subtopic_uuid=subtopic_data.get("uuid"),
+                            subtopic_name=subtopic_data.get("name"),
+                            topic_uuid=topic_data.get("uuid"),
+                            topic_name=topic_data.get("name"),
+                        )
+                    )
+            else:
+                subtopics.append(
+                    SubtopicTopicRelation(
+                        subtopic_uuid="OTHER",
+                        subtopic_name="Other",
+                        topic_uuid=topic_data.get("uuid"),
+                        topic_name=topic_data.get("name"),
+                    )
+                )
 
         try:
             topics = self.datalake_service.get_topics_distribution(
