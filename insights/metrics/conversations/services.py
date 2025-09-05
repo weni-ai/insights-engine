@@ -369,7 +369,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                         name=subtopic_data.get("name"),
                         quantity=subtopic_data.get("count"),
                         percentage=(
-                            ((subtopic_data.get("count") / topic_count) * 100)
+                            round(((subtopic_data.get("count") / topic_count) * 100), 2)
                             if topic_count
                             else 0
                         ),
@@ -382,7 +382,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                     name=topic_data.get("name"),
                     quantity=topic_data.get("count"),
                     percentage=(
-                        ((topic_data.get("count") / total_count) * 100)
+                        round(((topic_data.get("count") / total_count) * 100), 2)
                         if total_count
                         else 0
                     ),
