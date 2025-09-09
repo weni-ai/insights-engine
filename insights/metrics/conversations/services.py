@@ -304,6 +304,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
+        output_language: str = "en",
     ) -> TopicsDistributionMetrics:
         """
         Get topics distribution
@@ -342,6 +343,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 end_date=end_date,
                 conversation_type=conversation_type,
                 subtopics=subtopics,
+                output_language=output_language,
             )
         except Exception as e:
             logger.error("Failed to get topics distribution", exc_info=True)
