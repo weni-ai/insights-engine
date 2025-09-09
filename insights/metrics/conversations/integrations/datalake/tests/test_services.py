@@ -30,7 +30,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         label = self.service._get_unclassified_label("en")
         self.assertEqual(label, "Unclassified")
 
-        label = self.service._get_unclassified_label("pt_BR")
+        label = self.service._get_unclassified_label("pt-br")
         self.assertEqual(label, "Não classificadas")
 
         label = self.service._get_unclassified_label("es")
