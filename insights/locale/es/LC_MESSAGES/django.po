@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-04-24 20:22+0000\n"
+"POT-Creation-Date: 2025-09-09 10:22-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,13 +18,18 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
 "1 : 2;\n"
-#: insights/dashboards/serializers.py:37
+
+#: insights/dashboards/serializers.py:46
 msgid "Cannot set a default dashboard as non-default"
 msgstr "No se puede establecer un panel predeterminado como no predeterminado"
 
 #: insights/internals/api/users/serializers.py:16
 msgid "User does not exist"
 msgstr "El usuario no existe"
+
+#: insights/metrics/conversations/integrations/datalake/services.py:351
+msgid "Unclassified"
+msgstr "No clasificadas"
 
 #: insights/metrics/meta/choices.py:7
 msgid "Account Update"
@@ -362,29 +367,41 @@ msgstr "Vietnamita"
 msgid "Zulu"
 msgstr "Zulu"
 
-#: insights/metrics/meta/serializers.py:116
+#: insights/metrics/meta/serializers.py:117
 msgid "Favorite template limit reached"
 msgstr "Límite de plantillas favoritas alcanzado"
 
-#: insights/metrics/meta/serializers.py:128
+#: insights/metrics/meta/serializers.py:129
 msgid "Template already in favorites"
 msgstr "Plantilla ya en favoritos"
 
-#: insights/metrics/meta/serializers.py:151
+#: insights/metrics/meta/serializers.py:152
 msgid "Template not in favorites"
 msgstr "Plantilla no en favoritos"
 
-#: insights/metrics/meta/validators.py:68
+#: insights/metrics/meta/validators.py:74
 msgid "WABA id is required"
 msgstr "El ID de WABA es requerido"
 
-#: insights/metrics/vtex/views.py:30
+#: insights/metrics/vtex/views.py:28
 msgid "Required"
 msgstr "Requerido"
 
-#: insights/metrics/vtex/views.py:47
+#: insights/metrics/vtex/views.py:45
 msgid "Invalid date format. Use YYYY-MM-DD."
 msgstr "Formato de fecha inválido. Use YYYY-MM-DD."
+
+#: insights/projects/choices.py:10
+msgid "Pending"
+msgstr "Pendiente"
+
+#: insights/projects/choices.py:11
+msgid "Success"
+msgstr "Exitoso"
+
+#: insights/projects/choices.py:12
+msgid "Failed"
+msgstr "Fallido"
 
 #: insights/shared/models.py:16
 msgid "Created on"
@@ -398,7 +415,7 @@ msgstr "Modificado el"
 msgid "config"
 msgstr "configuración"
 
-#: insights/sources/vtex_conversions/services.py:77
+#: insights/sources/vtex_conversions/services.py:83
 msgid "Project does not have permission to access WABA"
 msgstr "El proyecto no tiene permisos para acceder a WABA"
 
