@@ -12,9 +12,9 @@ def format_message_metrics_data(data: dict):
 
     return {
         "date": dt,
-        "sent": data.get("sent"),
-        "delivered": data.get("delivered"),
-        "read": data.get("read"),
+        "sent": data.get("sent", 0),
+        "delivered": data.get("delivered", 0),
+        "read": data.get("read", 0),
         "clicked": sum([btn.get("count", 0) for btn in data.get("clicked", [])]),
     }
 
@@ -72,7 +72,7 @@ def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
         buttons_data[button.get("text")] = {"type": button.get("type"), "clicked": 0}
 
     for data in data_points:
-        sent += data.get("sent")
+        sent += data.get("sent", 0)
 
         if not (clicked_buttons := data.get("clicked", None)):
             continue

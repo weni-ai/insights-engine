@@ -5,6 +5,7 @@ from logging import getLogger
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
+from sentry_sdk import capture_message
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.projects.models import Project
@@ -115,21 +116,25 @@ class VTEXOrdersConversionsService:
         tz_name = "UTC"
         tz = pytz.timezone(tz_name)
 
-        start_date = datetime.fromisoformat(filters["ended_at__gte"])
-        end_date = datetime.fromisoformat(filters["ended_at__lte"])
+        if "ended_at__gte" in filters:
+            start_date = datetime.fromisoformat(filters["ended_at__gte"])
 
-        if start_date and start_date.tzinfo is None:
-            start_date = tz.localize(start_date)
-        elif start_date and start_date.tzinfo:
-            start_date = start_date.replace(tzinfo=tz)
+            if start_date and start_date.tzinfo is None:
+                start_date = tz.localize(start_date)
+            elif start_date and start_date.tzinfo:
+                start_date = start_date.replace(tzinfo=tz)
 
-        if end_date and end_date.tzinfo is None:
-            end_date = tz.localize(end_date)
-        elif end_date and end_date.tzinfo:
-            end_date = end_date.replace(tzinfo=tz)
+            filters["ended_at__gte"] = start_date
 
-        filters["ended_at__gte"] = start_date
-        filters["ended_at__lte"] = end_date
+        if "ended_at__lte" in filters:
+            end_date = datetime.fromisoformat(filters["ended_at__lte"])
+
+            if end_date and end_date.tzinfo is None:
+                end_date = tz.localize(end_date)
+            elif end_date and end_date.tzinfo:
+                end_date = end_date.replace(tzinfo=tz)
+
+            filters["ended_at__lte"] = end_date
 
         print("VTEX Orders Conversions Service all filters: ", filters)
 
@@ -159,6 +164,18 @@ class VTEXOrdersConversionsService:
             end_date,
             serializer.validated_data["utm_source"],
         )
+
+        if not isinstance(orders_data, dict):
+            error_msg = "Error fetching orders. Orders data is not a dictionary. Orders data: %s"
+            logger.error(
+                error_msg,
+                orders_data,
+            )
+            capture_message(
+                error_msg,
+                orders_data,
+            )
+            raise Exception("Error fetching orders.")
 
         utm_data = OrdersConversionsUTMData(
             count_sell=orders_data.get("countSell", 0),

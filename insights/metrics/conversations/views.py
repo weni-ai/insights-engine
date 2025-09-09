@@ -1,4 +1,6 @@
 from typing import TYPE_CHECKING
+import logging
+
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -32,6 +34,9 @@ from insights.metrics.conversations.serializers import (
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
+
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -129,11 +134,23 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:
+            try:
+                output_language = request.user.language
+            except Exception as e:
+                logger.error(
+                    "[ConversationsMetricsViewSet] Error getting user language: %s",
+                    e,
+                    exc_info=True,
+                )
+
+                output_language = "en"
+
             metrics = self.service.get_topics_distribution(
                 serializer.validated_data["project"],
                 serializer.validated_data["start_date"].isoformat(),
                 serializer.validated_data["end_date"].isoformat(),
                 serializer.validated_data["type"],
+                output_language,
             )
         except ConversationsMetricsError as e:
             return Response(

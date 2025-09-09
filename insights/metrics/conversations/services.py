@@ -446,6 +446,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
+        output_language: str = "en",
     ) -> TopicsDistributionMetrics:
         """
         Get topics distribution
@@ -454,16 +455,28 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         # the client will see other topics listed as "OTHER"
         current_topics_data = self.get_topics(project.uuid)
 
-        subtopics = [
-            SubtopicTopicRelation(
-                subtopic_uuid=subtopic.get("uuid"),
-                subtopic_name=subtopic.get("name"),
-                topic_uuid=topic.get("uuid"),
-                topic_name=topic.get("name"),
-            )
-            for topic in current_topics_data
-            for subtopic in topic["subtopic"]
-        ]
+        subtopics = []
+
+        for topic_data in current_topics_data:
+            if subtopics_data := topic_data.get("subtopic"):
+                for subtopic_data in subtopics_data:
+                    subtopics.append(
+                        SubtopicTopicRelation(
+                            subtopic_uuid=subtopic_data.get("uuid"),
+                            subtopic_name=subtopic_data.get("name"),
+                            topic_uuid=topic_data.get("uuid"),
+                            topic_name=topic_data.get("name"),
+                        )
+                    )
+            else:
+                subtopics.append(
+                    SubtopicTopicRelation(
+                        subtopic_uuid="OTHER",
+                        subtopic_name="Other",
+                        topic_uuid=topic_data.get("uuid"),
+                        topic_name=topic_data.get("name"),
+                    )
+                )
 
         try:
             topics = self.datalake_service.get_topics_distribution(
@@ -472,6 +485,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 end_date=end_date,
                 conversation_type=conversation_type,
                 subtopics=subtopics,
+                output_language=output_language,
             )
         except Exception as e:
             logger.error("Failed to get topics distribution", exc_info=True)
@@ -501,7 +515,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                         name=subtopic_data.get("name"),
                         quantity=subtopic_data.get("count"),
                         percentage=(
-                            ((subtopic_data.get("count") / topic_count) * 100)
+                            round(((subtopic_data.get("count") / topic_count) * 100), 2)
                             if topic_count
                             else 0
                         ),
@@ -514,7 +528,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                     name=topic_data.get("name"),
                     quantity=topic_data.get("count"),
                     percentage=(
-                        ((topic_data.get("count") / total_count) * 100)
+                        round(((topic_data.get("count") / total_count) * 100), 2)
                         if total_count
                         else 0
                     ),
