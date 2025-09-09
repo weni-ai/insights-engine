@@ -288,6 +288,16 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         return scores
 
+    def _get_unclassified_label(self, output_language: str) -> str:
+        """
+        Get unclassified label with the correct language translation.
+        """
+        with override(output_language):
+            # DO NOT change gettext to gettext_lazy
+            # because we need the translation to be applied
+            # immediately inside this block
+            return gettext("Unclassified")
+
     def get_topics_distribution(
         self,
         project_uuid: UUID,
@@ -347,8 +357,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
-        with override(output_language):
-            unclassified_label = gettext("Unclassified")
+        unclassified_label = self._get_unclassified_label(output_language)
 
         topics_data = {
             "OTHER": {
