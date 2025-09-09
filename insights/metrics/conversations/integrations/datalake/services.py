@@ -6,6 +6,7 @@ from datetime import datetime
 from uuid import UUID
 
 from django.conf import settings
+from django.utils.translation import override, gettext
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.dataclass import (
@@ -60,6 +61,8 @@ class BaseConversationsMetricsService(ABC):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
+        subtopics: list[SubtopicTopicRelation],
+        output_language: str = "en",
     ) -> TopicsDistributionMetrics:
         pass
 
@@ -292,6 +295,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         conversation_type: ConversationType,
         subtopics: list[SubtopicTopicRelation],
+        output_language: str = "en",
     ) -> dict:
         """
         Get topics distribution from Datalake.
@@ -343,8 +347,16 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
+        with override(output_language):
+            unclassified_label = gettext("Unclassified")
+
         topics_data = {
-            "OTHER": {"name": "Other", "uuid": None, "count": 0, "subtopics": {}}
+            "OTHER": {
+                "name": unclassified_label,
+                "uuid": None,
+                "count": 0,
+                "subtopics": {},
+            }
         }
 
         topics_from_subtopics = {
@@ -375,7 +387,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
                 topic_subtopics["OTHER"] = {
                     "count": 0,
-                    "name": "Other",
+                    "name": unclassified_label,
                     "uuid": None,
                 }
 
