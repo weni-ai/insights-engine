@@ -392,6 +392,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     topic_subtopics[subtopic_uuid] = {
                         "name": subtopic_data.get("name"),
                         "uuid": subtopic_uuid,
+                        "count": 0,
                     }
 
                 topic_subtopics["OTHER"] = {
@@ -485,6 +486,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                     "uuid": subtopic_uuid,
                 }
 
+            # TODO
             topics_data[topic_uuid]["subtopics"][subtopic_uuid][
                 "count"
             ] += subtopic_event.get("count", 0)
