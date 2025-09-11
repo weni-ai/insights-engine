@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
 
+from insights.metrics.conversations.reports.dataclass import ConversationsReportFile
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
 )
@@ -42,7 +43,9 @@ class TestConversationsReportService(TestCase):
             requested_by=self.user,
         )
 
-        self.service.send_email(report, "test")
+        self.service.send_email(
+            report, [ConversationsReportFile(name="test", content="test")]
+        )
 
         mock_send_email.assert_called_once_with(
             fail_silently=False,

@@ -11,6 +11,7 @@ from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportFile,
     ConversationsReportWorksheet,
 )
 from insights.reports.models import Report
@@ -31,7 +32,7 @@ class BaseConversationsReportService(ABC):
     @abstractmethod
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the csv for the conversations report.
         """
@@ -40,7 +41,7 @@ class BaseConversationsReportService(ABC):
     @abstractmethod
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the xlsx for the conversations report.
         """
@@ -114,11 +115,11 @@ class ConversationsReportService(BaseConversationsReportService):
 
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the csv for the conversations report.
         """
-        files = []
+        files: list[ConversationsReportFile] = []
 
         for worksheet in worksheets:
             with io.StringIO() as csv_buffer:
@@ -127,7 +128,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 writer.writerows(worksheet.data)
                 file_content = csv_buffer.getvalue()
 
-            files.append(file_content)
+            files.append(
+                ConversationsReportFile(name=worksheet.name, content=file_content)
+            )
 
         return files
 
@@ -150,9 +153,9 @@ class ConversationsReportService(BaseConversationsReportService):
         workbook.close()
         output.seek(0)
 
-        return [output.getvalue()]
+        return [ConversationsReportFile(name=worksheet.name, content=output.getvalue())]
 
-    def send_email(self, report: Report, file_content: str) -> None:
+    def send_email(self, report: Report, files: list[ConversationsReportFile]) -> None:
         """
         Send the email for the conversations report.
         """
@@ -177,11 +180,17 @@ class ConversationsReportService(BaseConversationsReportService):
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-            email.attach(
-                file_name,
-                file_content,
-                file_format,
-            )
+            for file in files:
+                email.attach(
+                    file.name,
+                    file.content,
+                    (
+                        "application/csv"
+                        if report.format == ReportFormat.CSV
+                        else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    ),
+                )
+
             email.send(fail_silently=False)
 
     def request_generation(
@@ -282,7 +291,9 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(report, "TODO")
+            self.send_email(
+                report, [ConversationsReportFile(name="TODO", content="TODO")]
+            )
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -393,3 +404,11 @@ class ConversationsReportService(BaseConversationsReportService):
             current_page += 1
 
         return events
+
+    def _format_date(self, date: str) -> str:
+        """
+        Format the date.
+        """
+        return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
+            "%d/%m/%Y %H:%M:%S"
+        )
