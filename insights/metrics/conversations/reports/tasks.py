@@ -1,6 +1,8 @@
 import logging
+from datetime import timedelta
 
 from django.db.models.query import QuerySet
+from django.conf import settings
 from django.utils import timezone
 
 from insights.celery import app
@@ -39,7 +41,7 @@ def generate_conversations_report():
     try:
         ConversationsReportService().generate(oldest_report)
     except Exception as e:
-        logger.error("[ generate_conversations_report task ] Error generating report %s", oldest_report.uuid, exc_info=True)
+        logger.error("[ generate_conversations_report task ] Error generating report %s: %s", oldest_report.uuid, str(e), exc_info=True)
 
     end_time = timezone.now()
 
@@ -49,3 +51,34 @@ def generate_conversations_report():
         oldest_report.uuid,
         (end_time - start_time).total_seconds(),
     )
+
+
+@app.task
+def timeout_reports():
+    """
+    Timeout reports that are in progress for more than REPORT_GENERATION_TIMEOUT seconds.
+
+    This is a safety mechanism to avoid reports being stuck in progress indefinitely,
+    preventing other reports from being generated.
+
+    This should NOT happen, but if it does, the system should be able to fix it by itself
+    without human intervention.
+    """
+    logger.info("[ timeout_reports task ] Starting task")
+
+    in_progress_reports: QuerySet[Report] = Report.objects.filter(status=ReportStatus.IN_PROGRESS, started_at__lt=timezone.now() - timedelta(seconds=settings.REPORT_GENERATION_TIMEOUT))
+
+    if not in_progress_reports.exists():
+        logger.info("[ timeout_reports task ] No in progress reports found. Finishing task")
+        return
+
+    logger.info("[ timeout_reports task ] Found %s in progress reports", in_progress_reports.count())
+
+    for report in in_progress_reports:
+        report.status = ReportStatus.FAILED
+        report.completed_at = timezone.now()
+        report.errors = {"timeout": "Report generation timed out"}
+        report.save(update_fields=["status", "completed_at", "errors"])
+
+    logger.info("[ timeout_reports task ] Timed out %s reports", in_progress_reports.count())
+    
