@@ -20,9 +20,13 @@ logger = logging.getLogger(__name__)
 def generate_conversations_report():
     logger.info("[ generate_conversations_report task ] Starting task")
 
-    if Report.objects.filter(status=ReportStatus.IN_PROGRESS).exists():
+    if (
+        Report.objects.filter(status=ReportStatus.IN_PROGRESS).count()
+        >= settings.REPORT_GENERATION_MAX_CONCURRENT_REPORTS
+    ):
         logger.info(
-            "[ generate_conversations_report task ] A report is already being generated. Finishing task"
+            "[ generate_conversations_report task ] Maximum number (%s) of concurrent reports being generated reached. Finishing task",
+            settings.REPORT_GENERATION_MAX_CONCURRENT_REPORTS,
         )
         return
 
