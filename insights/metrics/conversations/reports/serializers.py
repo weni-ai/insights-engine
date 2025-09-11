@@ -1,3 +1,7 @@
+from datetime import datetime, time
+import pytz
+
+
 from rest_framework import serializers
 
 from django.utils.translation import gettext_lazy as _
@@ -50,6 +54,8 @@ class RequestConversationsReportGenerationSerializer(
         required=False,
         child=serializers.UUIDField(),
     )
+    start = serializers.DateTimeField(read_only=True)
+    end = serializers.DateTimeField(read_only=True)
 
     def validate(self, attrs: dict) -> dict:
         """
@@ -93,6 +99,18 @@ class RequestConversationsReportGenerationSerializer(
                     },
                     code="widgets_not_found",
                 )
+
+        timezone = (
+            pytz.timezone(attrs["project"].timezone)
+            if attrs["project"].timezone
+            else pytz.UTC
+        )
+
+        start_datetime = datetime.combine(attrs["start_date"], time.min)
+        attrs["start"] = timezone.localize(start_datetime)
+
+        end_datetime = datetime.combine(attrs["end_date"], time(23, 59, 59))
+        attrs["end"] = timezone.localize(end_datetime)
 
         return attrs
 
