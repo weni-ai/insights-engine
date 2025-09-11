@@ -1,6 +1,5 @@
 from datetime import datetime
 from unittest.mock import MagicMock
-from uuid import UUID
 
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportFile,
