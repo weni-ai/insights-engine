@@ -1,6 +1,9 @@
+from datetime import datetime
 from unittest.mock import MagicMock
+from uuid import UUID
 
 from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportFile,
     ConversationsReportWorksheet,
 )
 from insights.metrics.conversations.reports.services import (
@@ -16,12 +19,12 @@ from insights.reports.choices import ReportFormat
 class MockConversationsReportService(BaseConversationsReportService):
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> None:
+    ) -> list[ConversationsReportFile]:
         pass
 
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> None:
+    ) -> list[ConversationsReportFile]:
         pass
 
     def send_email(self, report: Report, file_content: str) -> None:
@@ -49,6 +52,16 @@ class MockConversationsReportService(BaseConversationsReportService):
     def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
         pass
 
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        language: str,
+    ) -> ConversationsReportWorksheet:
+        pass
+
     def __init__(self):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.process_csv = MagicMock()
@@ -59,3 +72,4 @@ class MockConversationsReportService(BaseConversationsReportService):
         self.get_next_report_to_generate = MagicMock()
         self.project_can_receive_new_reports_generation = MagicMock()
         self.get_datalake_events = MagicMock()
+        self.get_resolutions_worksheet = MagicMock()

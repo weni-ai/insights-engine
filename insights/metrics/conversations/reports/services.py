@@ -1,5 +1,7 @@
+from datetime import datetime
 import io
 import csv
+from uuid import UUID
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
@@ -7,10 +9,12 @@ from abc import ABC, abstractmethod
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportFile,
     ConversationsReportWorksheet,
 )
 from insights.reports.models import Report
@@ -31,7 +35,7 @@ class BaseConversationsReportService(ABC):
     @abstractmethod
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the csv for the conversations report.
         """
@@ -40,7 +44,7 @@ class BaseConversationsReportService(ABC):
     @abstractmethod
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the xlsx for the conversations report.
         """
@@ -95,6 +99,20 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        language: str,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -114,11 +132,11 @@ class ConversationsReportService(BaseConversationsReportService):
 
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the csv for the conversations report.
         """
-        files = []
+        files: list[ConversationsReportFile] = []
 
         for worksheet in worksheets:
             with io.StringIO() as csv_buffer:
@@ -127,7 +145,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 writer.writerows(worksheet.data)
                 file_content = csv_buffer.getvalue()
 
-            files.append(file_content)
+            files.append(
+                ConversationsReportFile(name=worksheet.name, content=file_content)
+            )
 
         return files
 
@@ -150,9 +170,9 @@ class ConversationsReportService(BaseConversationsReportService):
         workbook.close()
         output.seek(0)
 
-        return [output.getvalue()]
+        return [ConversationsReportFile(name=worksheet.name, content=output.getvalue())]
 
-    def send_email(self, report: Report, file_content: str) -> None:
+    def send_email(self, report: Report, files: list[ConversationsReportFile]) -> None:
         """
         Send the email for the conversations report.
         """
@@ -177,11 +197,17 @@ class ConversationsReportService(BaseConversationsReportService):
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-            email.attach(
-                file_name,
-                file_content,
-                file_format,
-            )
+            for file in files:
+                email.attach(
+                    file.name,
+                    file.content,
+                    (
+                        "application/csv"
+                        if report.format == ReportFormat.CSV
+                        else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    ),
+                )
+
             email.send(fail_silently=False)
 
     def request_generation(
@@ -268,12 +294,27 @@ class ConversationsReportService(BaseConversationsReportService):
         report.started_at = timezone.now()
         report.save(update_fields=["status", "started_at"])
 
-        # TODO: Implement the specific generation logic
+        sections = report.source_config.get("sections", [])
 
-        if report.format == ReportFormat.CSV:
-            self.process_csv(report)
-        elif report.format == ReportFormat.XLSX:
-            self.process_xlsx(report)
+        worksheets = []
+
+        if "RESOLUTIONS" in sections:
+            resolutions_worksheet = self.get_resolutions_worksheet(
+                report,
+                report.project.uuid,
+                report.filters.get("start"),
+                report.filters.get("end"),
+                report.requested_by.language,
+            )
+            worksheets.append(resolutions_worksheet)
+
+        files: list[ConversationsReportFile] = []
+
+        for worksheet in worksheets:
+            if report.format == ReportFormat.CSV:
+                files.append(self.process_csv(report, [worksheet]))
+            elif report.format == ReportFormat.XLSX:
+                files.append(self.process_xlsx(report, [worksheet]))
 
         logger.info(
             "[CONVERSATIONS REPORT SERVICE] Sending email for conversations report %s to %s",
@@ -282,7 +323,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(report, "TODO")
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -393,3 +434,70 @@ class ConversationsReportService(BaseConversationsReportService):
             current_page += 1
 
         return events
+
+    def _format_date(self, date: str) -> str:
+        """
+        Format the date.
+        """
+        return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
+            "%d/%m/%Y %H:%M:%S"
+        )
+
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        language: str,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        events = self.get_datalake_events(
+            report=report,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="conversation_classification",
+        )
+
+        with override(language):
+            worksheet_name = _("Resolutions")
+
+            resolutions_label = _("Resolution")
+            date_label = _("Date")
+
+            resolved_label = _("Optimized Resolutions")
+            unresolved_label = _("Other conclusions")
+
+        if len(events) == 0:
+            return ConversationsReportWorksheet(
+                name=worksheet_name,
+                data=[],
+            )
+
+        data = []
+
+        for event in events:
+            data.append(
+                {
+                    "URN": event.get("contact_urn", ""),
+                    resolutions_label: (
+                        resolved_label
+                        if event.get("value") == "resolved"
+                        else unresolved_label
+                    ),
+                    date_label: (
+                        self._format_date(event.get("date", ""))
+                        if event.get("date")
+                        else ""
+                    ),
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
