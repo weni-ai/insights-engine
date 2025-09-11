@@ -9,7 +9,7 @@ from insights.celery import app
 
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus
-
+from insights.sources.dl_events.clients import DataLakeEventsClient
 from insights.metrics.conversations.reports.services import ConversationsReportService
 
 
@@ -55,7 +55,9 @@ def generate_conversations_report():
     start_time = timezone.now()
 
     try:
-        ConversationsReportService().generate(oldest_report)
+        ConversationsReportService(
+            datalake_events_client=DataLakeEventsClient()
+        ).generate(oldest_report)
     except Exception as e:
         logger.error(
             "[ generate_conversations_report task ] Error generating report %s: %s",
