@@ -308,10 +308,13 @@ class ConversationsReportService(BaseConversationsReportService):
             )
             worksheets.append(resolutions_worksheet)
 
-        if report.format == ReportFormat.CSV:
-            self.process_csv(report, worksheets)
-        elif report.format == ReportFormat.XLSX:
-            self.process_xlsx(report, worksheets)
+        files: list[ConversationsReportFile] = []
+
+        for worksheet in worksheets:
+            if report.format == ReportFormat.CSV:
+                files.append(self.process_csv(report, [worksheet]))
+            elif report.format == ReportFormat.XLSX:
+                files.append(self.process_xlsx(report, [worksheet]))
 
         logger.info(
             "[CONVERSATIONS REPORT SERVICE] Sending email for conversations report %s to %s",
@@ -320,9 +323,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(
-                report, [ConversationsReportFile(name="TODO", content="TODO")]
-            )
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
