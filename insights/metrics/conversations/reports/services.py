@@ -4,12 +4,14 @@ import csv
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext, override
 from django.utils import translation, timezone
+from django.core.serializers.json import DjangoJSONEncoder
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.reports.dataclass import (
@@ -24,6 +26,39 @@ from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_filters_for_json(filters: dict) -> dict:
+    """
+    Serialize datetime objects in filters dictionary to JSON-compatible format.
+    This ensures that filters containing datetime objects can be stored in JSONField.
+    """
+    if not filters:
+        return filters
+
+    serialized_filters = {}
+    for key, value in filters.items():
+        if isinstance(value, datetime):
+            # Convert datetime to ISO format string
+            serialized_filters[key] = value.isoformat()
+        elif isinstance(value, dict):
+            # Recursively handle nested dictionaries
+            serialized_filters[key] = serialize_filters_for_json(value)
+        elif isinstance(value, list):
+            # Handle lists that might contain datetime objects
+            serialized_list = []
+            for item in value:
+                if isinstance(item, datetime):
+                    serialized_list.append(item.isoformat())
+                elif isinstance(item, dict):
+                    serialized_list.append(serialize_filters_for_json(item))
+                else:
+                    serialized_list.append(item)
+            serialized_filters[key] = serialized_list
+        else:
+            serialized_filters[key] = value
+
+    return serialized_filters
 
 
 class BaseConversationsReportService(ABC):
@@ -244,11 +279,14 @@ class ConversationsReportService(BaseConversationsReportService):
                 "sections or custom_widgets cannot be empty when requesting generation of conversations report"
             )
 
+        # Serialize datetime objects in filters to make them JSON-compatible
+        serialized_filters = serialize_filters_for_json(filters)
+
         report = Report.objects.create(
             project=project,
             source=self.source,
             source_config=source_config,
-            filters=filters,
+            filters=serialized_filters,
             format=report_format,
             requested_by=requested_by,
             status=ReportStatus.PENDING,
@@ -270,9 +308,46 @@ class ConversationsReportService(BaseConversationsReportService):
             report.uuid,
         )
 
-        # source_config = report.source_config or {}
+        filters = report.filters or {}
 
-        # filters = report.filters or {}
+        start_date = filters.get("start_date")
+        end_date = filters.get("end_date")
+
+        if not start_date or not end_date:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Start date or end date is missing for report %s",
+                report.uuid,
+            )
+            raise ValueError(
+                "Start date or end date is missing for report %s" % report.uuid
+            )
+
+        try:
+
+            start_date = datetime.fromisoformat(start_date)
+            end_date = datetime.fromisoformat(end_date)
+
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Start date: %s, End date: %s",
+                start_date,
+                end_date,
+            )
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Failed to convert start date or end date to datetime for report %s. Error: %s",
+                report.uuid,
+                e,
+            )
+            report.status = ReportStatus.FAILED
+            report.completed_at = timezone.now()
+            errors = report.errors or {}
+            errors["convert_date"] = str(e)
+            errors["event_id"] = capture_exception(e)
+            report.errors = errors
+            report.save(update_fields=["status", "completed_at", "errors"])
+            raise e
+
+        # source_config = report.source_config or {}
 
         # sections = source_config.get("sections", [])
 
