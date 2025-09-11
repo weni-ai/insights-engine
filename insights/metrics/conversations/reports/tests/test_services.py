@@ -16,6 +16,7 @@ from insights.reports.models import Report
 from insights.reports.choices import ReportFormat, ReportStatus
 from insights.metrics.conversations.reports.services import (
     ConversationsReportService,
+    serialize_filters_for_json,
 )
 from insights.projects.models import Project
 
@@ -142,7 +143,7 @@ class TestConversationsReportService(TestCase):
             project=self.project,
             source=self.service.source,
             source_config={"sections": ["RESOLUTIONS"]},
-            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            filters={"start_date": "2025-01-01", "end_date": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
         )
@@ -389,4 +390,95 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(
             str(context.exception),
             "Report %s is not in progress" % report.uuid,
+        )
+
+
+class TestSerializeFiltersForJson(TestCase):
+    """Test cases for the serialize_filters_for_json utility function."""
+
+    def test_serialize_empty_filters(self):
+        """Test serialization of empty filters."""
+        result = serialize_filters_for_json({})
+        self.assertEqual(result, {})
+
+    def test_serialize_none_filters(self):
+        """Test serialization of None filters."""
+        result = serialize_filters_for_json(None)
+        self.assertEqual(result, None)
+
+    def test_serialize_datetime_filters(self):
+        """Test serialization of filters containing datetime objects."""
+        now = timezone.now()
+        filters = {
+            "start_date": now,
+            "end_date": now + timedelta(days=1),
+            "string_field": "test",
+            "number_field": 123,
+        }
+
+        result = serialize_filters_for_json(filters)
+
+        self.assertEqual(result["start_date"], now.isoformat())
+        self.assertEqual(result["end_date"], (now + timedelta(days=1)).isoformat())
+        self.assertEqual(result["string_field"], "test")
+        self.assertEqual(result["number_field"], 123)
+
+    def test_serialize_nested_dict_filters(self):
+        """Test serialization of filters with nested dictionaries containing datetime objects."""
+        now = timezone.now()
+        filters = {
+            "date_range": {
+                "start": now,
+                "end": now + timedelta(days=1),
+            },
+            "other_field": "test",
+        }
+
+        result = serialize_filters_for_json(filters)
+
+        self.assertEqual(result["date_range"]["start"], now.isoformat())
+        self.assertEqual(
+            result["date_range"]["end"], (now + timedelta(days=1)).isoformat()
+        )
+        self.assertEqual(result["other_field"], "test")
+
+    def test_serialize_list_filters(self):
+        """Test serialization of filters with lists containing datetime objects."""
+        now = timezone.now()
+        filters = {
+            "dates": [now, now + timedelta(days=1)],
+            "mixed_list": [now, "string", 123],
+        }
+
+        result = serialize_filters_for_json(filters)
+
+        self.assertEqual(
+            result["dates"], [now.isoformat(), (now + timedelta(days=1)).isoformat()]
+        )
+        self.assertEqual(result["mixed_list"], [now.isoformat(), "string", 123])
+
+    def test_serialize_complex_nested_filters(self):
+        """Test serialization of complex nested filters with datetime objects."""
+        now = timezone.now()
+        filters = {
+            "level1": {
+                "level2": {
+                    "datetime_field": now,
+                    "list_with_datetime": [now, now + timedelta(hours=1)],
+                },
+                "simple_field": "test",
+            },
+            "top_level_datetime": now + timedelta(days=1),
+        }
+
+        result = serialize_filters_for_json(filters)
+
+        self.assertEqual(result["level1"]["level2"]["datetime_field"], now.isoformat())
+        self.assertEqual(
+            result["level1"]["level2"]["list_with_datetime"],
+            [now.isoformat(), (now + timedelta(hours=1)).isoformat()],
+        )
+        self.assertEqual(result["level1"]["simple_field"], "test")
+        self.assertEqual(
+            result["top_level_datetime"], (now + timedelta(days=1)).isoformat()
         )
