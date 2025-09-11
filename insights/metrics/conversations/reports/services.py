@@ -464,13 +464,13 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         with override(language):
-            worksheet_name = _("Resolutions")
+            worksheet_name = gettext("Resolutions")
 
-            resolutions_label = _("Resolution")
-            date_label = _("Date")
+            resolutions_label = gettext("Resolution")
+            date_label = gettext("Date")
 
-            resolved_label = _("Optimized Resolutions")
-            unresolved_label = _("Other conclusions")
+            resolved_label = gettext("Optimized Resolutions")
+            unresolved_label = gettext("Other conclusions")
 
         if len(events) == 0:
             return ConversationsReportWorksheet(
