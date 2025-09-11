@@ -55,10 +55,8 @@ class MockConversationsReportService(BaseConversationsReportService):
     def get_resolutions_worksheet(
         self,
         report: Report,
-        project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-        language: str,
     ) -> ConversationsReportWorksheet:
         pass
 

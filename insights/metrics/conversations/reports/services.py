@@ -103,10 +103,8 @@ class BaseConversationsReportService(ABC):
     def get_resolutions_worksheet(
         self,
         report: Report,
-        project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-        language: str,
     ) -> ConversationsReportWorksheet:
         """
         Get the resolutions worksheet.
@@ -301,10 +299,8 @@ class ConversationsReportService(BaseConversationsReportService):
         if "RESOLUTIONS" in sections:
             resolutions_worksheet = self.get_resolutions_worksheet(
                 report,
-                report.project.uuid,
                 report.filters.get("start"),
                 report.filters.get("end"),
-                report.requested_by.language,
             )
             worksheets.append(resolutions_worksheet)
 
@@ -446,24 +442,22 @@ class ConversationsReportService(BaseConversationsReportService):
     def get_resolutions_worksheet(
         self,
         report: Report,
-        project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-        language: str,
     ) -> ConversationsReportWorksheet:
         """
         Get the resolutions worksheet.
         """
         events = self.get_datalake_events(
             report=report,
-            project=project_uuid,
+            project=report.project.uuid,
             date_start=start_date,
             date_end=end_date,
             event_name="weni_nexus_data",
             key="conversation_classification",
         )
 
-        with override(language):
+        with override(report.requested_by.language):
             worksheet_name = gettext("Resolutions")
 
             resolutions_label = gettext("Resolution")
