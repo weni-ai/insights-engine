@@ -1,7 +1,6 @@
 from datetime import datetime
 import io
 import csv
-from uuid import UUID
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
