@@ -296,8 +296,8 @@ class ConversationsReportService(BaseConversationsReportService):
 
         filters = report.filters or {}
 
-        start_date = filters.get("start_date")
-        end_date = filters.get("end_date")
+        start_date = filters.get("start")
+        end_date = filters.get("end")
 
         if not start_date or not end_date:
             logger.error(
