@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "insights.metrics.skills",
     "insights.metrics.meta",
     "insights.metrics.conversations",
+    "insights.reports",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -360,3 +361,7 @@ INDEXER_AUTOMATIC_ACTIVATION_LIMIT = env.int(
 INDEXER_AUTOMATIC_ACTIVATION_RETRIES = env.int(
     "INDEXER_AUTOMATIC_ACTIVATION_RETRIES", default=5
 )
+
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="")
+
+REPORT_GENERATION_TIMEOUT = env.int("REPORT_GENERATION_TIMEOUT", default=60 * 60) # 1 hour
