@@ -21,27 +21,44 @@ def generate_conversations_report():
     logger.info("[ generate_conversations_report task ] Starting task")
 
     if Report.objects.filter(status=ReportStatus.IN_PROGRESS).exists():
-        logger.info("[ generate_conversations_report task ] A report is already being generated. Finishing task")
+        logger.info(
+            "[ generate_conversations_report task ] A report is already being generated. Finishing task"
+        )
         return
 
-    pending_reports: QuerySet[Report] = Report.objects.filter(status=ReportStatus.PENDING).order_by("created_on")
+    pending_reports: QuerySet[Report] = Report.objects.filter(
+        status=ReportStatus.PENDING
+    ).order_by("created_on")
 
     if not pending_reports.exists():
-        logger.info("[ generate_conversations_report task ] No pending reports found. Finishing task")
+        logger.info(
+            "[ generate_conversations_report task ] No pending reports found. Finishing task"
+        )
         return
 
-    logger.info("[ generate_conversations_report task ] Found %s pending reports", pending_reports.count())
+    logger.info(
+        "[ generate_conversations_report task ] Found %s pending reports",
+        pending_reports.count(),
+    )
 
     oldest_report: Report = pending_reports.first()
 
-    logger.info("[ generate_conversations_report task ] Starting generation of oldest report %s", oldest_report.uuid)
+    logger.info(
+        "[ generate_conversations_report task ] Starting generation of oldest report %s",
+        oldest_report.uuid,
+    )
 
     start_time = timezone.now()
 
     try:
         ConversationsReportService().generate(oldest_report)
     except Exception as e:
-        logger.error("[ generate_conversations_report task ] Error generating report %s: %s", oldest_report.uuid, str(e), exc_info=True)
+        logger.error(
+            "[ generate_conversations_report task ] Error generating report %s: %s",
+            oldest_report.uuid,
+            str(e),
+            exc_info=True,
+        )
 
     end_time = timezone.now()
 
@@ -66,13 +83,22 @@ def timeout_reports():
     """
     logger.info("[ timeout_reports task ] Starting task")
 
-    in_progress_reports: QuerySet[Report] = Report.objects.filter(status=ReportStatus.IN_PROGRESS, started_at__lt=timezone.now() - timedelta(seconds=settings.REPORT_GENERATION_TIMEOUT))
+    in_progress_reports: QuerySet[Report] = Report.objects.filter(
+        status=ReportStatus.IN_PROGRESS,
+        started_at__lt=timezone.now()
+        - timedelta(seconds=settings.REPORT_GENERATION_TIMEOUT),
+    )
 
     if not in_progress_reports.exists():
-        logger.info("[ timeout_reports task ] No in progress reports found. Finishing task")
+        logger.info(
+            "[ timeout_reports task ] No in progress reports found. Finishing task"
+        )
         return
 
-    logger.info("[ timeout_reports task ] Found %s in progress reports", in_progress_reports.count())
+    logger.info(
+        "[ timeout_reports task ] Found %s in progress reports",
+        in_progress_reports.count(),
+    )
 
     for report in in_progress_reports:
         report.status = ReportStatus.FAILED
@@ -80,5 +106,6 @@ def timeout_reports():
         report.errors = {"timeout": "Report generation timed out"}
         report.save(update_fields=["status", "completed_at", "errors"])
 
-    logger.info("[ timeout_reports task ] Timed out %s reports", in_progress_reports.count())
-    
+    logger.info(
+        "[ timeout_reports task ] Timed out %s reports", in_progress_reports.count()
+    )
