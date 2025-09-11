@@ -185,15 +185,6 @@ class ConversationsReportService(BaseConversationsReportService):
                 to=[report.requested_by.email],
             )
 
-            if report.format == ReportFormat.CSV:
-                file_name = f"conversations_report_{report.uuid}.csv"
-                file_format = "text/csv"
-            elif report.format == ReportFormat.XLSX:
-                file_name = f"conversations_report_{report.uuid}.xlsx"
-                file_format = (
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-
             for file in files:
                 email.attach(
                     file.name,
