@@ -4,6 +4,9 @@ from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
 
+from insights.sources.dl_events.tests.mock_client import (
+    ClassificationMockDataLakeEventsClient,
+)
 from insights.users.models import User
 from insights.reports.models import Report
 from insights.reports.choices import ReportFormat, ReportStatus
@@ -15,7 +18,11 @@ from insights.projects.models import Project
 
 class TestConversationsReportService(TestCase):
     def setUp(self):
-        self.service = ConversationsReportService()
+        self.service = ConversationsReportService(
+            events_limit_per_page=5,
+            page_limit=5,
+            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+        )
         self.project = Project.objects.create(name="Test")
         self.user = User.objects.create(
             email="test@test.com",
@@ -211,3 +218,150 @@ class TestConversationsReportService(TestCase):
         second_report.save(update_fields=["status"])
 
         self.assertEqual(self.service.get_next_report_to_generate(), first_report)
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    def test_get_datalake_events_when_no_events_exist(self, mock_get_datalake_events):
+        mock_get_datalake_events.return_value = []
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        events = self.service.get_datalake_events(report)
+
+        self.assertEqual(events, [])
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    def test_get_datalake_events_when_events_exist(self, mock_get_datalake_events):
+        mock_events = [{"id": "1"}, {"id": "2"}]
+
+        def get_datalake_events(**kwargs):
+            if kwargs.get("offset") == 0:
+                return mock_events
+            return []
+
+        mock_get_datalake_events.side_effect = get_datalake_events
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        events = self.service.get_datalake_events(report)
+
+        self.assertEqual(events, mock_events)
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    def test_get_datalake_events_when_events_exist_with_multiple_pages(
+        self, mock_get_datalake_events
+    ):
+        mock_events = [{"id": "1"}, {"id": "2"}]
+
+        def get_datalake_events(**kwargs):
+            if kwargs.get("offset") < self.service.events_limit_per_page * 2:
+                return mock_events
+            return []
+
+        mock_get_datalake_events.side_effect = get_datalake_events
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        events = self.service.get_datalake_events(report)
+
+        self.assertEqual(events, mock_events * 2)
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    def test_get_datalake_events_when_page_limit_is_reached(
+        self, mock_get_datalake_events
+    ):
+        mock_events = [{"id": "1"}, {"id": "2"}]
+
+        def get_datalake_events(**kwargs):
+            if (
+                kwargs.get("offset")
+                < self.service.events_limit_per_page * self.service.page_limit + 1
+            ):
+                return mock_events
+            return []
+
+        mock_get_datalake_events.side_effect = get_datalake_events
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_datalake_events(report)
+
+        self.assertEqual(
+            str(context.exception),
+            "Report has more than 5 pages",
+        )
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    def test_get_datalake_events_when_report_is_failed(self, mock_get_datalake_events):
+        mock_events = [{"id": "1"}, {"id": "2"}]
+
+        def get_datalake_events(**kwargs):
+            if (
+                kwargs.get("offset")
+                < self.service.events_limit_per_page * self.service.page_limit + 1
+            ):
+                return mock_events
+            return []
+
+        mock_get_datalake_events.side_effect = get_datalake_events
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.FAILED,
+            errors={"send_email": "test", "event_id": "test"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_datalake_events(report)
+
+        self.assertEqual(
+            str(context.exception),
+            "Report %s is not in progress" % report.uuid,
+        )

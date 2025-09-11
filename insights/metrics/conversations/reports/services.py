@@ -1,3 +1,6 @@
+import io
+import csv
+import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
 
@@ -7,10 +10,14 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
+from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportWorksheet,
+)
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
 from insights.projects.models import Project
+from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 
 
 logger = logging.getLogger(__name__)
@@ -22,14 +29,18 @@ class BaseConversationsReportService(ABC):
     """
 
     @abstractmethod
-    def process_csv(self, report: Report) -> None:
+    def process_csv(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> list[str]:
         """
         Process the csv for the conversations report.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
-    def process_xlsx(self, report: Report) -> None:
+    def process_xlsx(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> list[str]:
         """
         Process the xlsx for the conversations report.
         """
@@ -77,29 +88,75 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
+        """
+        Get datalake events.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
     Service to generate conversations reports.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        events_limit_per_page: int,
+        page_limit: int,
+        datalake_events_client: BaseDataLakeEventsClient,
+    ):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
+        self.datalake_events_client = datalake_events_client
+        self.events_limit_per_page = events_limit_per_page
+        self.page_limit = page_limit
 
-    def process_csv(self, report: Report) -> None:
+    def process_csv(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> list[str]:
         """
         Process the csv for the conversations report.
         """
+        files = []
 
-    def process_xlsx(self, report: Report) -> None:
+        for worksheet in worksheets:
+            with io.StringIO() as csv_buffer:
+                writer = csv.DictWriter(csv_buffer, fieldnames=worksheet.data.keys())
+                writer.writeheader()
+                writer.writerows(worksheet.data)
+                file_content = csv_buffer.getvalue()
+
+            files.append(file_content)
+
+        return files
+
+    def process_xlsx(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> list[str]:
         """
         Process the xlsx for the conversations report.
         """
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
+
+        for worksheet in worksheets:
+            worksheet_name = worksheet.name
+            worksheet_data = worksheet.data
+            worksheet = workbook.add_worksheet(worksheet_name)
+            worksheet.write_row(0, 0, worksheet_data[0].keys())
+            worksheet.write_rows(1, 0, worksheet_data)
+
+        workbook.close()
+        output.seek(0)
+
+        return [output.getvalue()]
 
     def send_email(self, report: Report, file_content: str) -> None:
         """
         Send the email for the conversations report.
         """
+        # TODO: Send multiple files if report type is CSV
         with translation.override(report.requested_by.language):
             subject = _("Conversations dashboard report")
             body = _("Please find the conversations report attached.")
@@ -235,8 +292,11 @@ class ConversationsReportService(BaseConversationsReportService):
             )
             report.status = ReportStatus.FAILED
             report.completed_at = timezone.now()
-            report.errors = {"send_email": str(e), "event_id": event_id}
-            report.save(update_fields=["status", "completed_at"])
+            errors = report.errors or {}
+            errors["send_email"] = str(e)
+            errors["event_id"] = event_id
+            report.errors = errors
+            report.save(update_fields=["status", "completed_at", "errors"])
             raise e
 
         logger.info(
@@ -280,3 +340,56 @@ class ConversationsReportService(BaseConversationsReportService):
             .order_by("created_on")
             .first()
         )
+
+    def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
+        """
+        Get datalake events.
+        """
+        limit = self.events_limit_per_page
+        offset = 0
+
+        events = []
+
+        current_page = 1
+        page_limit = self.page_limit
+
+        while True:
+            if current_page >= page_limit:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s has more than %s pages. Finishing datalake events retrieval"
+                    % (
+                        report.uuid,
+                        page_limit,
+                    ),
+                )
+                raise ValueError("Report has more than %s pages" % page_limit)
+
+            report.refresh_from_db(fields=["status"])
+
+            if report.status != ReportStatus.IN_PROGRESS:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress. Finishing datalake events retrieval",
+                    report.uuid,
+                )
+                raise ValueError("Report %s is not in progress" % report.uuid)
+
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Retrieving datalake events for page %s for report %s",
+                current_page,
+                report.uuid,
+            )
+
+            paginated_events = self.datalake_events_client.get_events(
+                **kwargs,
+                limit=limit,
+                offset=offset,
+            )
+
+            if len(paginated_events) == 0:
+                break
+
+            events.extend(paginated_events)
+            offset += limit
+            current_page += 1
+
+        return events
