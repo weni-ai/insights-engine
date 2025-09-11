@@ -1,5 +1,7 @@
+from datetime import datetime
 import io
 import csv
+from uuid import UUID
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
@@ -7,6 +9,7 @@ from abc import ABC, abstractmethod
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
@@ -92,6 +95,20 @@ class BaseConversationsReportService(ABC):
     def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
         """
         Get datalake events.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        language: str,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -268,12 +285,24 @@ class ConversationsReportService(BaseConversationsReportService):
         report.started_at = timezone.now()
         report.save(update_fields=["status", "started_at"])
 
-        # TODO: Implement the specific generation logic
+        sections = report.source_config.get("sections", [])
+
+        worksheets = []
+
+        if "RESOLUTIONS" in sections:
+            resolutions_worksheet = self.get_resolutions_worksheet(
+                report,
+                report.project.uuid,
+                report.filters.get("start"),
+                report.filters.get("end"),
+                report.requested_by.language,
+            )
+            worksheets.append(resolutions_worksheet)
 
         if report.format == ReportFormat.CSV:
-            self.process_csv(report)
+            self.process_csv(report, worksheets)
         elif report.format == ReportFormat.XLSX:
-            self.process_xlsx(report)
+            self.process_xlsx(report, worksheets)
 
         logger.info(
             "[CONVERSATIONS REPORT SERVICE] Sending email for conversations report %s to %s",
@@ -393,3 +422,70 @@ class ConversationsReportService(BaseConversationsReportService):
             current_page += 1
 
         return events
+
+    def _format_date(self, date: str) -> str:
+        """
+        Format the date.
+        """
+        return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
+            "%d/%m/%Y %H:%M:%S"
+        )
+
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        language: str,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        events = self.get_datalake_events(
+            report=report,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="conversation_classification",
+        )
+
+        with override(language):
+            worksheet_name = _("Resolutions")
+
+            resolutions_label = _("Resolution")
+            date_label = _("Date")
+
+            resolved_label = _("Optimized Resolutions")
+            unresolved_label = _("Other conclusions")
+
+        if len(events) == 0:
+            return ConversationsReportWorksheet(
+                name=worksheet_name,
+                data=[],
+            )
+
+        data = []
+
+        for event in events:
+            data.append(
+                {
+                    "URN": event.get("contact_urn", ""),
+                    resolutions_label: (
+                        resolved_label
+                        if event.get("value") == "resolved"
+                        else unresolved_label
+                    ),
+                    date_label: (
+                        self._format_date(event.get("date", ""))
+                        if event.get("date")
+                        else ""
+                    ),
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
