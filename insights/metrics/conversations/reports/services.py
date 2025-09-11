@@ -1,7 +1,6 @@
 from datetime import datetime
 import io
 import csv
-from uuid import UUID
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
@@ -185,15 +184,6 @@ class ConversationsReportService(BaseConversationsReportService):
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[report.requested_by.email],
             )
-
-            if report.format == ReportFormat.CSV:
-                file_name = f"conversations_report_{report.uuid}.csv"
-                file_format = "text/csv"
-            elif report.format == ReportFormat.XLSX:
-                file_name = f"conversations_report_{report.uuid}.xlsx"
-                file_format = (
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
 
             for file in files:
                 email.attach(
