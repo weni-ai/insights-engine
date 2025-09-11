@@ -1,5 +1,8 @@
 from unittest.mock import MagicMock
 
+from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportWorksheet,
+)
 from insights.metrics.conversations.reports.services import (
     BaseConversationsReportService,
 )
@@ -11,10 +14,14 @@ from insights.reports.choices import ReportFormat
 
 
 class MockConversationsReportService(BaseConversationsReportService):
-    def process_csv(self, report: Report) -> None:
+    def process_csv(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> None:
         pass
 
-    def process_xlsx(self, report: Report) -> None:
+    def process_xlsx(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> None:
         pass
 
     def send_email(self, report: Report, file_content: str) -> None:

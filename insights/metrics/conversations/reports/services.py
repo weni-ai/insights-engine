@@ -1,3 +1,6 @@
+import io
+import csv
+import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
 
@@ -7,6 +10,9 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
+from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportWorksheet,
+)
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
@@ -23,14 +29,18 @@ class BaseConversationsReportService(ABC):
     """
 
     @abstractmethod
-    def process_csv(self, report: Report) -> None:
+    def process_csv(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> list[str]:
         """
         Process the csv for the conversations report.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
-    def process_xlsx(self, report: Report) -> None:
+    def process_xlsx(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> list[str]:
         """
         Process the xlsx for the conversations report.
         """
@@ -102,20 +112,51 @@ class ConversationsReportService(BaseConversationsReportService):
         self.events_limit_per_page = events_limit_per_page
         self.page_limit = page_limit
 
-    def process_csv(self, report: Report) -> None:
+    def process_csv(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> list[str]:
         """
         Process the csv for the conversations report.
         """
+        files = []
 
-    def process_xlsx(self, report: Report) -> None:
+        for worksheet in worksheets:
+            with io.StringIO() as csv_buffer:
+                writer = csv.DictWriter(csv_buffer, fieldnames=worksheet.data.keys())
+                writer.writeheader()
+                writer.writerows(worksheet.data)
+                file_content = csv_buffer.getvalue()
+
+            files.append(file_content)
+
+        return files
+
+    def process_xlsx(
+        self, report: Report, worksheets: list[ConversationsReportWorksheet]
+    ) -> list[str]:
         """
         Process the xlsx for the conversations report.
         """
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
+
+        for worksheet in worksheets:
+            worksheet_name = worksheet.name
+            worksheet_data = worksheet.data
+            worksheet = workbook.add_worksheet(worksheet_name)
+            worksheet.write_row(0, 0, worksheet_data[0].keys())
+            worksheet.write_rows(1, 0, worksheet_data)
+
+        workbook.close()
+        output.seek(0)
+
+        return [output.getvalue()]
 
     def send_email(self, report: Report, file_content: str) -> None:
         """
         Send the email for the conversations report.
         """
+        # TODO: Send multiple files if report type is CSV
         with translation.override(report.requested_by.language):
             subject = _("Conversations dashboard report")
             body = _("Please find the conversations report attached.")

@@ -33,6 +33,7 @@ weni-datalake-sdk = "0.3.0"
 celery = "^5.5.3"
 django-celery-beat = "^2.8.1"
 pendulum = "^3.1.0"
+xlsxwriter = "^3.2.5"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.22.2"
