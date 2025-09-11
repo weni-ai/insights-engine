@@ -9,3 +9,13 @@ class ConversationsReportWorksheet:
 
     name: str
     data: list[dict]
+
+
+@dataclass(frozen=True)
+class ConversationsReportFile:
+    """
+    File for the conversations report.
+    """
+
+    name: str
+    content: str
