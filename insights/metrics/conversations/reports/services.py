@@ -103,9 +103,9 @@ class ConversationsReportService(BaseConversationsReportService):
 
     def __init__(
         self,
-        events_limit_per_page: int,
-        page_limit: int,
         datalake_events_client: BaseDataLakeEventsClient,
+        events_limit_per_page: int = 100,
+        page_limit: int = 10,
     ):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.datalake_events_client = datalake_events_client
