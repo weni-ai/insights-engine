@@ -18,10 +18,11 @@ from insights.metrics.conversations.reports.serializers import (
     RequestConversationsReportGenerationSerializer,
 )
 from insights.reports.choices import ReportStatus
+from insights.sources.dl_events.clients import DataLakeEventsClient
 
 
 class ConversationsReportsViewSet(APIView):
-    service = ConversationsReportService()
+    service = ConversationsReportService(datalake_events_client=DataLakeEventsClient())
 
     @property
     def permission_classes(self):
