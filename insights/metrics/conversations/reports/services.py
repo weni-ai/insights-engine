@@ -202,7 +202,7 @@ class ConversationsReportService(BaseConversationsReportService):
             xlsx_worksheet.write_row(0, 0, worksheet_data[0].keys())
 
             for row_num, row_data in enumerate(worksheet_data, start=1):
-                xlsx_worksheet.write_row(row_num, 0, row_data)
+                xlsx_worksheet.write_row(row_num, 0, row_data.values())
 
         workbook.close()
         output.seek(0)
