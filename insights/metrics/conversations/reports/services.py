@@ -461,7 +461,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 offset=offset,
             )
 
-            if len(paginated_events) == 0:
+            if len(paginated_events) == 0 or paginated_events == [{}]:
                 break
 
             events.extend(paginated_events)
