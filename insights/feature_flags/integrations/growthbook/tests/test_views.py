@@ -1,106 +1,54 @@
-from django.test import TestCase
+import json
+from unittest.mock import patch
 
-from insights.feature_flags.service import FeatureFlagService
-from insights.feature_flags.integrations.growthbook.tests.mock import (
-    MockGrowthbookClient,
-)
-from insights.users.models import User
-from insights.projects.models import Project
+from django.urls import reverse
+
+from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.test import APITestCase
+from rest_framework.response import Response
 
 
-class TestFeatureFlagService(TestCase):
-    def setUp(self):
-        self.service = FeatureFlagService(growthbook_client=MockGrowthbookClient())
-        self.user = User.objects.create(email="test@test.com")
-        self.project = Project.objects.create()
+class TestGrowthbookWebhook(APITestCase):
+    def receive_webhook(self, body: str) -> Response:
+        url = reverse("growthbook_webhook-list")
 
-    def test_get_feature_flags_list_for_user_and_project(self):
-        self.service.get_feature_flags_list_for_user_and_project(
-            user=self.user,
-            project=self.project,
-        )
+        return self.client.post(url, body, format="json")
 
-        self.service.growthbook_client.get_active_feature_flags_for_attributes.assert_called_once_with(
-            {
-                "userEmail": "test@test.com",
-                "projectUUID": str(self.project.uuid),
-            }
-        )
+    @patch(
+        "insights.feature_flags.integrations.growthbook.auth."
+        "GrowthbookWebhookSecretAuthentication.authenticate"
+    )
+    @patch(
+        "insights.feature_flags.integrations.growthbook.tasks.update_growthbook_feature_flags.delay"
+    )
+    def test_cannot_receive_webhook_when_authentication_fails(
+        self, mock_update_growthbook_feature_flags, mock_authenticate
+    ):
+        mock_authenticate.side_effect = AuthenticationFailed("Authentication failed")
+        mock_update_growthbook_feature_flags.return_value = None
 
-    def test_cannot_evaluate_feature_flag_without_attributes(self):
-        with self.assertRaises(ValueError):
-            self.service.evaluate_feature_flag(
-                key="example",
-            )
+        body = json.dumps({"test": "test"})
 
-    def test_evaluate_feature_flag_for_project(self):
-        self.service.evaluate_feature_flag(
-            key="example",
-            project=self.project,
-        )
+        response = self.receive_webhook(body)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        mock_update_growthbook_feature_flags.assert_not_called()
 
-        self.service.growthbook_client.evaluate_feature_flag_by_attributes.assert_called_once_with(
-            "example",
-            {
-                "projectUUID": str(self.project.uuid),
-            },
-        )
+    @patch(
+        "insights.feature_flags.integrations.growthbook.auth."
+        "GrowthbookWebhookSecretAuthentication.authenticate"
+    )
+    @patch(
+        "insights.feature_flags.integrations.growthbook.tasks.update_growthbook_feature_flags.delay"
+    )
+    def test_can_receive_webhook_when_authentication_succeeds(
+        self, mock_update_growthbook_feature_flags, mock_authenticate
+    ):
+        mock_authenticate.return_value = (None, None)
+        mock_update_growthbook_feature_flags.return_value = None
 
-    def test_evaluate_feature_flag_for_user(self):
-        self.service.evaluate_feature_flag(
-            key="example",
-            user=self.user,
-        )
+        body = json.dumps({"test": "test"})
 
-        self.service.growthbook_client.evaluate_feature_flag_by_attributes.assert_called_once_with(
-            "example",
-            {
-                "userEmail": "test@test.com",
-            },
-        )
-
-    def test_evaluate_feature_flag_for_user_and_project(self):
-        self.service.evaluate_feature_flag(
-            key="example",
-            user=self.user,
-            project=self.project,
-        )
-
-        self.service.growthbook_client.evaluate_feature_flag_by_attributes.assert_called_once_with(
-            "example",
-            {
-                "userEmail": "test@test.com",
-                "projectUUID": str(self.project.uuid),
-            },
-        )
-
-    def test_get_feature_flag_rules(self):
-        self.service.growthbook_client.get_feature_flags.return_value = {
-            "exampleEmail": {
-                "defaultValue": False,
-                "rules": [
-                    {
-                        "id": "fr_40644z1tmdrec3rs",
-                        "condition": {"userEmail": {"$nin": ["test@test.com"]}},
-                        "force": True,
-                    }
-                ],
-            },
-        }
-
-        rules = self.service.get_feature_flag_rules(
-            key="exampleEmail",
-        )
-
-        self.service.growthbook_client.get_feature_flags.assert_called_once_with()
-
-        self.assertEqual(
-            rules,
-            [
-                {
-                    "id": "fr_40644z1tmdrec3rs",
-                    "condition": {"userEmail": {"$nin": ["test@test.com"]}},
-                    "force": True,
-                }
-            ],
-        )
+        response = self.receive_webhook(body)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        mock_update_growthbook_feature_flags.assert_called_once()
