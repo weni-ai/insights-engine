@@ -350,9 +350,9 @@ class ConversationsReportService(BaseConversationsReportService):
 
             for worksheet in worksheets:
                 if report.format == ReportFormat.CSV:
-                    files.append(self.process_csv(report, [worksheet]))
+                    files.extend(self.process_csv(report, [worksheet]))
                 elif report.format == ReportFormat.XLSX:
-                    files.append(self.process_xlsx(report, [worksheet]))
+                    files.extend(self.process_xlsx(report, [worksheet]))
 
         except Exception as e:
             logger.error(
