@@ -1,0 +1,75 @@
+import logging
+
+from django.conf import settings
+
+from insights.celery import app
+from insights.projects.choices import ProjectIndexerActivationStatus
+from insights.projects.models import ProjectIndexerActivation
+from insights.projects.services.indexer_activation import (
+    ProjectIndexerActivationService,
+)
+
+
+logger = logging.getLogger(__name__)
+
+
+@app.task
+def test(arg):
+    print(arg)
+    logger.info(arg)
+
+
+LIMIT = settings.INDEXER_AUTOMATIC_ACTIVATION_LIMIT
+
+
+@app.task
+def activate_indexer():
+    """
+    Scheduled task to activate the indexer for queued projects.
+    """
+    logger.info("[ activate_indexer task ] Not starting task")
+    return
+    logger.info("[ activate_indexer task ] Starting task")
+
+    pending_activations = ProjectIndexerActivation.objects.filter(
+        status=ProjectIndexerActivationStatus.PENDING
+    )
+
+    if not pending_activations.exists():
+        logger.info("[ activate_indexer task ] No pending activations found")
+        return
+
+    qty = pending_activations.count()
+
+    logger.info(
+        "[ activate_indexer task ] Found %s pending activations",
+        qty,
+    )
+
+    if qty > LIMIT:
+        logger.info(
+            "[ activate_indexer task ] Found more than %s pending activations, limiting to %s",
+            qty,
+            LIMIT,
+        )
+        pending_activations = pending_activations[:LIMIT]
+
+    service = ProjectIndexerActivationService()
+
+    for activation in pending_activations:
+        logger.info(
+            "[ activate_indexer task ] Activating project %s",
+            activation.project.uuid,
+        )
+        try:
+            service.activate_project_on_indexer(activation)
+        except Exception as e:
+            logger.error(
+                "[ activate_indexer task ] Error activating project %s: %s",
+                activation.project.uuid,
+                e,
+            )
+            activation.status = ProjectIndexerActivationStatus.FAILED
+            activation.save(update_fields=["status"])
+
+    logger.info("[ activate_indexer task ] Finished task")

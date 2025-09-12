@@ -1,6 +1,11 @@
+import logging
 from datetime import date, datetime
+
 import pytz
+
 from insights.authentication.authentication import FlowsInternalAuthentication
+
+logger = logging.getLogger(__name__)
 
 
 def format_to_iso_utc(date_str, end_of_day=False):
@@ -18,10 +23,16 @@ def format_to_iso_utc(date_str, end_of_day=False):
 
     except ValueError:
         return None
+    except Exception as e:
+        logger.error(f"Unexpected error in date formatting: {e}")
+        return None
 
 
-def convert_date_to_unix_timestamp(dt: date, use_max_date=False) -> int:
-    t = datetime.max.time() if use_max_date else datetime.min.time()
+def convert_date_to_unix_timestamp(
+    dt: date,
+    use_max_time=False,
+) -> int:
+    t = datetime.max.time() if use_max_time else datetime.min.time()
 
     return int(datetime.combine(dt, t).timestamp())
 
@@ -58,3 +69,16 @@ def convert_dt_to_localized_dt(dt: datetime, timezone_name: str) -> datetime:
     dt_utc = localized_dt.astimezone(pytz.utc)
 
     return dt_utc
+
+
+def redact_headers(headers: dict, keys: list) -> dict:
+    """
+    Redact the headers for the given keys.
+    """
+    headers_copy = headers.copy()
+
+    for key in keys:
+        if key in headers_copy:
+            headers_copy[key] = "*" * len(str(headers_copy[key]))
+
+    return headers_copy

@@ -20,15 +20,12 @@ class OrdersConversionsFiltersSerializer(serializers.Serializer):
     ended_at__gte = serializers.DateTimeField(required=True, write_only=True)
     ended_at__lte = serializers.DateTimeField(required=True, write_only=True)
 
-    start_date = serializers.DateField(read_only=True)
-    end_date = serializers.DateField(read_only=True)
+    start_date = serializers.DateTimeField(read_only=True)
+    end_date = serializers.DateTimeField(read_only=True)
 
     def validate(self, attrs):
-        ended_at__gte = attrs.get("ended_at__gte")
-        ended_at__lte = attrs.get("ended_at__lte")
-
-        start_date = ended_at__gte.date()
-        end_date = ended_at__lte.date()
+        start_date = attrs.get("ended_at__gte")
+        end_date = attrs.get("ended_at__lte")
 
         if start_date > end_date:
             raise serializers.ValidationError(
@@ -36,7 +33,9 @@ class OrdersConversionsFiltersSerializer(serializers.Serializer):
                 code="end_date_before_start_date",
             )
 
-        validate_analytics_selected_period(start_date, field_name="ended_at__gte")
+        validate_analytics_selected_period(
+            start_date.date(), field_name="ended_at__gte"
+        )
 
         attrs["start_date"] = start_date
         attrs["end_date"] = end_date

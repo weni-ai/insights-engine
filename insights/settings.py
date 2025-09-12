@@ -40,7 +40,7 @@ AUTH_USER_MODEL = "users.User"
 
 ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=True)
 
-INSIGHTS_DOMAIN = env.str("INSIGHTS_DOMAIN")
+INSIGHTS_DOMAIN = env.str("INSIGHTS_DOMAIN", default="localhost")
 
 # Application definition
 
@@ -62,6 +62,8 @@ INSTALLED_APPS = [
     "insights.metrics.vtex",
     "insights.metrics.skills",
     "insights.metrics.meta",
+    "insights.metrics.conversations",
+    "insights.reports",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -274,7 +276,7 @@ if USE_EDA:
     FLOWS_TICKETER_EXCHANGE = env("FLOWS_TICKETER_EXCHANGE", default="sectors.topic")
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
 
-CHATS_URL = env("CHATS_URL")
+CHATS_URL = env("CHATS_URL", default="")
 
 PROJECT_ALLOW_LIST = env("PROJECT_ALLOW_LIST", default=[])
 
@@ -282,7 +284,7 @@ GROQ_OPEN_AI_URL = env.str("GROQ_OPEN_AI_URL", default="")
 GROQ_CHATGPT_TOKEN = env.str("GROQ_CHATGPT_TOKEN", default="")
 GROQ_OPEN_AI_GPT_VERSION = env.str("GROQ_OPEN_AI_GPT_VERSION", default="")
 
-INTEGRATIONS_URL = env("INTEGRATIONS_URL")
+INTEGRATIONS_URL = env("INTEGRATIONS_URL", default="")
 
 REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
 STATIC_API_TOKEN = env.str("STATIC_API_TOKEN", default="")
@@ -304,6 +306,18 @@ CACHES = {
     }
 }
 
+# Celery configuration
+CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default=REDIS_URL)
+CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", default=REDIS_URL)
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_BEAT_SCHEDULER = "celery.beat:PersistentScheduler"
+CELERY_BEAT_MAX_LOOP_INTERVAL = 10
+
 PROJECTS_VTEX = json.loads(os.getenv("PROJECTS_VTEX", "[]"))
 PROJECT_TOKENS_VTEX = json.loads(os.getenv("PROJECT_TOKENS_VTEX", "{}"))
 
@@ -324,3 +338,49 @@ TEMP_TEST_TEMPLATES_DASH_PROJECT_UUID = env.str(
     "TEMP_TEST_TEMPLATES_DASH_PROJECT_UUID", default=""
 )
 PROJECT_WABAS_MOCK = env.str("PROJECT_WABAS_MOCK", default="")
+WEBHOOK_URL = env.str(
+    "WEBHOOK_URL", default="https://webhook.weni.ai/webhook/project/update"
+)
+STATIC_TOKEN = env.str("STATIC_TOKEN", default="")
+
+
+CACHE_DATALAKE_EVENTS_RESULTS = env.bool("CACHE_DATALAKE_EVENTS_RESULTS", default=True)
+CACHE_DATALAKE_EVENTS_RESULTS_TTL = env.int(
+    "CACHE_DATALAKE_EVENTS_RESULTS_TTL", default=60 * 60
+)
+NEXUS_BASE_URL = env.str("NEXUS_BASE_URL", default="")
+NEXUS_API_TOKEN = env.str("NEXUS_API_TOKEN", default="")
+LIMIT_TOPICS_DISTRIBUTION_BY_NEXUS_TOPICS = env.bool(
+    "LIMIT_TOPICS_DISTRIBUTION_BY_NEXUS_TOPICS", default=True
+)
+
+INDEXER_AUTOMATIC_ACTIVATION = env.bool("INDEXER_AUTOMATIC_ACTIVATION", default=False)
+INDEXER_AUTOMATIC_ACTIVATION_LIMIT = env.int(
+    "INDEXER_AUTOMATIC_ACTIVATION_LIMIT", default=5
+)
+INDEXER_AUTOMATIC_ACTIVATION_RETRIES = env.int(
+    "INDEXER_AUTOMATIC_ACTIVATION_RETRIES", default=5
+)
+
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="")
+
+REPORT_GENERATION_MAX_CONCURRENT_REPORTS = env.int(
+    "REPORT_GENERATION_MAX_CONCURRENT_REPORTS", default=1
+)
+REPORT_GENERATION_TIMEOUT = env.int(
+    "REPORT_GENERATION_TIMEOUT", default=60 * 60
+)  # 1 hour
+
+
+SEND_EMAILS = env.bool("SEND_EMAILS", default=False)
+
+if SEND_EMAILS:
+    EMAIL_HOST = env.str("EMAIL_HOST", default=None)
+    DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL")
+    SERVER_EMAIL = env.str("SERVER_EMAIL")
+
+    EMAIL_PORT = env.int("EMAIL_PORT")
+    EMAIL_HOST_USER = env.str("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD")
+    EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL")
+    EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")

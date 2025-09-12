@@ -6,15 +6,13 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.utils import translation
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
+from mozilla_django_oidc.contrib.drf import OIDCAuthentication
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
-from mozilla_django_oidc.contrib.drf import OIDCAuthentication
-from django.utils import translation
-
 from insights.users.usecases import CreateUserUseCase
-
 
 LOGGER = logging.getLogger("weni_django_oidc")
 
@@ -98,15 +96,16 @@ class StaticTokenAuthentication(BaseAuthentication):
     """
 
     def authenticate(self, request):
-        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        if not auth_header.startswith('Token '):
+        auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+        if not auth_header.startswith("Token "):
             return None
-            
-        token = auth_header.split(' ')[1]
+
+        token = auth_header.split(" ")[1]
         if not secrets.compare_digest(token, settings.STATIC_API_TOKEN):
-            raise AuthenticationFailed('Invalid Token')
-            
-        return (None, 'service')
+            raise AuthenticationFailed("Invalid Token")
+
+        return (None, "service")
+
 
 class WeniOIDCAuthentication(OIDCAuthentication):
     def authenticate(self, request):

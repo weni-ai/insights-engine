@@ -79,13 +79,18 @@ class FlowRunElasticSearchQueryBuilder:
                         },
                         "aggs": {
                             "agg_value": {
-                                "terms": {"size": limit, "field": "values.value"}
+                                "terms": {
+                                    "size": limit,
+                                    "field": "values.value",
+                                    "execution_hint": "map",
+                                }
                             }
                         },
                     }
                 },
             }
         }
+
         return ["_search", {"size": 0, "query": self.validated_query, "aggs": aggs}]
 
     def count_value(self, op_field: str, op_sub_field: str, *args, **kwargs):

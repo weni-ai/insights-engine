@@ -1,14 +1,11 @@
-from datetime import date
-
-from django.conf import settings
+import pytz
+from datetime import date, datetime
 from logging import getLogger
 
 from django.conf import settings
-from django.utils.timezone import get_current_timezone_name
-
-
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
+from sentry_sdk import capture_message
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.projects.models import Project
@@ -24,8 +21,6 @@ from insights.sources.vtex_conversions.serializers import (
     OrdersConversionsFiltersSerializer,
     OrdersConversionsMetricsSerializer,
 )
-from insights.utils import convert_dt_to_localized_dt
-
 
 logger = getLogger(__name__)
 
@@ -89,12 +84,6 @@ class VTEXOrdersConversionsService:
                 code="project_without_waba_permission",
             )
 
-        project = Project.objects.filter(uuid=self.project.uuid).first()
-        tz_name = project.timezone if project else get_current_timezone_name()
-
-        start_date = convert_dt_to_localized_dt(start_date, tz_name).date()
-        end_date = convert_dt_to_localized_dt(end_date, tz_name).date()
-
         metrics_data = (
             self.meta_api_client.get_messages_analytics(
                 waba_id, template_id, start_date, end_date
@@ -124,15 +113,42 @@ class VTEXOrdersConversionsService:
         """
         Get metrics from Meta Graph API and VTEX API.
         """
+        tz_name = "UTC"
+        tz = pytz.timezone(tz_name)
+
+        if "ended_at__gte" in filters:
+            start_date = datetime.fromisoformat(filters["ended_at__gte"])
+
+            if start_date and start_date.tzinfo is None:
+                start_date = tz.localize(start_date)
+            elif start_date and start_date.tzinfo:
+                start_date = start_date.replace(tzinfo=tz)
+
+            filters["ended_at__gte"] = start_date
+
+        if "ended_at__lte" in filters:
+            end_date = datetime.fromisoformat(filters["ended_at__lte"])
+
+            if end_date and end_date.tzinfo is None:
+                end_date = tz.localize(end_date)
+            elif end_date and end_date.tzinfo:
+                end_date = end_date.replace(tzinfo=tz)
+
+            filters["ended_at__lte"] = end_date
+
+        print("VTEX Orders Conversions Service all filters: ", filters)
 
         serializer = OrdersConversionsFiltersSerializer(data=filters)
         serializer.is_valid(raise_exception=True)
 
+        start_date = serializer.validated_data["start_date"]
+        end_date = serializer.validated_data["end_date"]
+
         metrics_data = self.get_message_metrics(
             serializer.validated_data["waba_id"],
             serializer.validated_data["template_id"],
-            serializer.validated_data["start_date"],
-            serializer.validated_data["end_date"],
+            start_date.date(),
+            end_date.date(),
         )
 
         graph_data_fields = {}
@@ -144,10 +160,22 @@ class VTEXOrdersConversionsService:
             )
 
         orders_data = self.get_orders_metrics(
-            serializer.validated_data["start_date"],
-            serializer.validated_data["end_date"],
+            start_date,
+            end_date,
             serializer.validated_data["utm_source"],
         )
+
+        if not isinstance(orders_data, dict):
+            error_msg = "Error fetching orders. Orders data is not a dictionary. Orders data: %s"
+            logger.error(
+                error_msg,
+                orders_data,
+            )
+            capture_message(
+                error_msg,
+                orders_data,
+            )
+            raise Exception("Error fetching orders.")
 
         utm_data = OrdersConversionsUTMData(
             count_sell=orders_data.get("countSell", 0),

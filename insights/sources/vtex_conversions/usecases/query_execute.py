@@ -59,4 +59,6 @@ class QueryExecutor:
             project, meta_api_client, integrations_client, orders_client
         )
 
+        print("Conversion filters: ", filters)
+
         return service.get_metrics(filters)

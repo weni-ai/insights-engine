@@ -1,54 +1,62 @@
+import logging
+
 from django.conf import settings
 from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from insights.authentication.permissions import ProjectAuthPermission
-from insights.projects.models import Project
+from insights.dashboards.filters import DashboardFilter
 from insights.dashboards.models import Dashboard
+from insights.dashboards.usecases.flows_dashboard_creation import (
+    CreateFlowsDashboard,
+)
 from insights.dashboards.utils import DefaultPagination
+from insights.projects.models import Project
+from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
+from insights.sources.contacts.clients import FlowsContactsRestClient
+from insights.sources.custom_status.client import CustomStatusRESTClient
 from insights.widgets.models import Report, Widget
 from insights.widgets.usecases.get_source_data import (
     get_source_data_from_widget,
 )
 
 from .serializers import (
+    DashboardEditSerializer,
     DashboardIsDefaultSerializer,
     DashboardSerializer,
     DashboardWidgetsSerializer,
     ReportSerializer,
-    DashboardEditSerializer,
 )
 from .usecases import dashboard_filters
 
-from insights.dashboards.usecases.flows_dashboard_creation import CreateFlowsDashboard
-from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
-
-from insights.sources.contacts.clients import FlowsContactsRestClient
-from insights.sources.custom_status.client import CustomStatusRESTClient
+logger = logging.getLogger(__name__)
 
 
 class DashboardViewSet(
     mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
-    permission_classes = [ProjectAuthPermission]
+    permission_classes = [IsAuthenticated, ProjectAuthPermission]
     serializer_class = DashboardSerializer
     pagination_class = DefaultPagination
 
-    def get_queryset(self):
-        project_id = self.request.query_params.get("project", None)  # do we need this?
-        if project_id is not None:
-            return (
-                Dashboard.objects.filter(project_id=project_id)
-                .exclude(
-                    Q(name="Resultados de fluxos")
-                    & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
-                )
-                .order_by("created_on")
-            )
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DashboardFilter
 
-        return Dashboard.objects.none()
+    def get_queryset(self):
+        queryset = (
+            Dashboard.objects.filter(project__authorizations__user=self.request.user)
+            .exclude(
+                Q(name="Resultados de fluxos")
+                & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
+            )
+            .order_by("created_on")
+        )
+
+        return queryset
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
@@ -118,21 +126,25 @@ class DashboardViewSet(
         detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/data"
     )
     def get_widget_data(self, request, pk=None, widget_uuid=None):
-        # try:
-        widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
-        filters = dict(request.data or request.query_params or {})
-        filters.pop("project", None)
-        is_live = filters.pop("is_live", False)
-        serialized_source = get_source_data_from_widget(
-            widget=widget,
-            is_report=False,
-            is_live=is_live,
-            filters=filters,
-            user_email=request.user.email,
-        )
-        return Response(serialized_source, status.HTTP_200_OK)
-        # except Exception as err:
-        #     return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+            filters = dict(request.data or request.query_params or {})
+            filters.pop("project", None)
+            is_live = filters.pop("is_live", False)
+            serialized_source = get_source_data_from_widget(
+                widget=widget,
+                is_report=False,
+                is_live=is_live,
+                filters=filters,
+                user_email=request.user.email,
+            )
+            return Response(serialized_source, status.HTTP_200_OK)
+        except Exception as error:
+            logger.exception(f"Error loading widget data: {error}")
+            return Response(
+                {"detail": "Failed to load widget data"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     @action(
         detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/report"
@@ -158,22 +170,25 @@ class DashboardViewSet(
         url_path="widgets/(?P<widget_uuid>[^/.]+)/report/data",
     )
     def get_report_data(self, request, pk=None, widget_uuid=None):
-        # try:
-        widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
-        filters = dict(request.data or request.query_params or {})
-        filters.pop("project", None)
-        is_live = filters.pop("is_live", False)
-        serialized_source = get_source_data_from_widget(
-            widget=widget,
-            is_report=True,
-            filters=filters,
-            user_email=request.user.email,
-            is_live=is_live,
-        )
-        return Response(serialized_source, status.HTTP_200_OK)
-
-        # except Exception as err:
-        #     return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+            filters = dict(request.data or request.query_params or {})
+            filters.pop("project", None)
+            is_live = filters.pop("is_live", False)
+            serialized_source = get_source_data_from_widget(
+                widget=widget,
+                is_report=True,
+                filters=filters,
+                user_email=request.user.email,
+                is_live=is_live,
+            )
+            return Response(serialized_source, status.HTTP_200_OK)
+        except Exception as error:
+            logger.exception(f"Error loading report data: {error}")
+            return Response(
+                {"detail": "Failed to load report data"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     @action(detail=True, methods=["get"])
     def list_sources(self, request, pk=None):
@@ -191,8 +206,12 @@ class DashboardViewSet(
     def create_flows_dashboard(self, request, pk=None):
         try:
             project = Project.objects.get(pk=request.query_params.get("project"))
-        except Exception as err:
-            return Response({"detail": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as error:
+            logger.exception(f"Error creating flows dashboard: {error}")
+            return Response(
+                {"detail": "Project not found or invalid"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         flow_dashboard = FlowsDashboardCreationDTO(
             project=project,
@@ -244,7 +263,13 @@ class DashboardViewSet(
         methods=["get"],
     )
     def get_custom_status(self, request, project=None):
-        project = Project.objects.get(pk=request.query_params.get("project"))
+        project = Project.objects.filter(pk=request.query_params.get("project")).first()
+
+        if not project:
+            return Response(
+                {"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
         custom_status_client = CustomStatusRESTClient(project)
 
         query_filters = dict(request.data or request.query_params or {})

@@ -2,11 +2,11 @@ import json
 import logging
 import requests
 
-from datetime import date, timedelta, datetime
+from datetime import date, datetime
 
 from django.conf import settings
-from django.utils import timezone
 from rest_framework.exceptions import ValidationError, NotFound
+from sentry_sdk import capture_exception
 
 from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
 from insights.metrics.meta.utils import (
@@ -75,9 +75,11 @@ class MetaGraphAPIClient:
                 err,
                 exc_info=True,
             )
+            event_id = capture_exception(err)
 
             raise ValidationError(
-                {"error": "An error has occurred"}, code="meta_api_error"
+                {"error": f"An error has occurred. Event ID: {event_id}"},
+                code="meta_api_error",
             ) from err
 
         return response.json()
@@ -103,9 +105,11 @@ class MetaGraphAPIClient:
                 err,
                 exc_info=True,
             )
+            event_id = capture_exception(err)
 
             raise ValidationError(
-                {"error": "An error has occurred"}, code="meta_api_error"
+                {"error": f"An error has occurred. Event ID: {event_id}"},
+                code="meta_api_error",
             ) from err
 
         response = response.json()
@@ -124,6 +128,8 @@ class MetaGraphAPIClient:
         template_id: str | list[str],
         start_date: date,
         end_date: date,
+        include_data_points: bool = True,
+        return_exceptions: bool = False,
     ):
         url = f"{self.base_host_url}/{waba_id}/template_analytics?"
 
@@ -137,13 +143,24 @@ class MetaGraphAPIClient:
         if isinstance(template_id, list):
             template_id = ",".join(template_id)
 
-        start = convert_date_to_unix_timestamp(start_date)
-        end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
+        print("Start date: ", start_date)
+        print("End date: ", end_date)
 
-        now = datetime.now()
+        start = (
+            int(start_date.timestamp())
+            if isinstance(start_date, datetime)
+            else convert_date_to_unix_timestamp(start_date)
+        )
+        end = (
+            int(end_date.timestamp())
+            if isinstance(end_date, datetime)
+            else convert_date_to_unix_timestamp(end_date, use_max_time=True)
+        )
 
-        if end > datetime.now().timestamp():
-            end = now.timestamp()
+        now = int(datetime.now().timestamp())
+
+        if end > now:
+            end = now
 
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
@@ -153,6 +170,8 @@ class MetaGraphAPIClient:
             "template_ids": template_id,
             "limit": 9999,
         }
+
+        print("Params: ", params)
 
         cache_key = self.get_analytics_cache_key(
             waba_id=waba_id, template_id=template_id, params=params
@@ -174,13 +193,22 @@ class MetaGraphAPIClient:
                 err,
                 exc_info=True,
             )
+            event_id = capture_exception(err)
+
+            if return_exceptions:
+                raise err
 
             raise ValidationError(
-                {"error": "An error has occurred"}, code="meta_api_error"
+                {"error": f"An error has occurred. Event ID: {event_id}"},
+                code="meta_api_error",
             ) from err
 
         meta_response = response.json()
-        response = {"data": format_messages_metrics_data(meta_response.get("data")[0])}
+        response = {
+            "data": format_messages_metrics_data(
+                meta_response.get("data")[0], include_data_points=include_data_points
+            )
+        }
 
         self.cache.set(cache_key, json.dumps(response, default=str), self.cache_ttl)
 
@@ -203,13 +231,21 @@ class MetaGraphAPIClient:
             MetricsTypes.CLICKED.value,
         ]
 
-        start = convert_date_to_unix_timestamp(start_date)
-        end = convert_date_to_unix_timestamp(end_date, use_max_date=True)
+        start = (
+            int(start_date.timestamp())
+            if isinstance(start_date, datetime)
+            else convert_date_to_unix_timestamp(start_date)
+        )
+        end = (
+            int(end_date.timestamp())
+            if isinstance(end_date, datetime)
+            else convert_date_to_unix_timestamp(end_date, use_max_time=True)
+        )
 
-        now = datetime.now()
+        now = int(datetime.now().timestamp())
 
-        if end > datetime.now().timestamp():
-            end = now.timestamp()
+        if end > now:
+            end = now
 
         params = {
             "granularity": AnalyticsGranularity.DAILY.value,
@@ -260,9 +296,11 @@ class MetaGraphAPIClient:
                 err,
                 exc_info=True,
             )
+            event_id = capture_exception(err)
 
             raise ValidationError(
-                {"error": "An error has occurred"}, code="meta_api_error"
+                {"error": f"An error has occurred. Event ID: {event_id}"},
+                code="meta_api_error",
             ) from err
 
         meta_response = response.json()

@@ -12,14 +12,14 @@ def format_message_metrics_data(data: dict):
 
     return {
         "date": dt,
-        "sent": data.get("sent"),
-        "delivered": data.get("delivered"),
-        "read": data.get("read"),
+        "sent": data.get("sent", 0),
+        "delivered": data.get("delivered", 0),
+        "read": data.get("read", 0),
         "clicked": sum([btn.get("count", 0) for btn in data.get("clicked", [])]),
     }
 
 
-def format_messages_metrics_data(data: dict) -> dict:
+def format_messages_metrics_data(data: dict, include_data_points: bool = True) -> dict:
     data_points: dict = data.get("data_points", [])
 
     status_count = {
@@ -41,7 +41,8 @@ def format_messages_metrics_data(data: dict) -> dict:
     for data in data_points:
         result = format_message_metrics_data(data)
 
-        formatted_data_points.append(result)
+        if include_data_points:
+            formatted_data_points.append(result)
 
         for status in ("sent", "delivered", "read", "clicked"):
             status_count[status]["value"] += result.get(status)
@@ -55,7 +56,12 @@ def format_messages_metrics_data(data: dict) -> dict:
             else 0
         )
 
-    return {"status_count": status_count, "data_points": formatted_data_points}
+    response = {"status_count": status_count}
+
+    if include_data_points:
+        response["data_points"] = formatted_data_points
+
+    return response
 
 
 def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
@@ -66,7 +72,7 @@ def format_button_metrics_data(buttons: list, data_points: list[dict]) -> dict:
         buttons_data[button.get("text")] = {"type": button.get("type"), "clicked": 0}
 
     for data in data_points:
-        sent += data.get("sent")
+        sent += data.get("sent", 0)
 
         if not (clicked_buttons := data.get("clicked", None)):
             continue
@@ -136,10 +142,18 @@ def get_edit_template_url_from_template_data(
         )
         return None
 
+    if len(template_data) == 0:
+        logger.info(
+            "No template data found for project_uuid=%s, template_id=%s",
+            project_uuid,
+            template_id,
+        )
+        return None
+
     app_uuid = template_data[0].get("app_uuid")
     templates_uuid = template_data[0].get("templates_uuid", [])
 
-    if not app_uuid or len(templates_uuid) < 1:
+    if not app_uuid or not templates_uuid:
         logger.error(
             "No templates_uuid found for project_uuid=%s, template_id=%s",
             project_uuid,
