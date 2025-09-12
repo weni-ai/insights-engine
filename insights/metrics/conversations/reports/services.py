@@ -181,9 +181,12 @@ class ConversationsReportService(BaseConversationsReportService):
         for worksheet in worksheets:
             worksheet_name = worksheet.name
             worksheet_data = worksheet.data
-            worksheet = workbook.add_worksheet(worksheet_name)
-            worksheet.write_row(0, 0, worksheet_data[0].keys())
-            worksheet.write_rows(1, 0, worksheet_data)
+
+            xlsx_worksheet = workbook.add_worksheet(worksheet_name)
+            xlsx_worksheet.write_row(0, 0, worksheet_data[0].keys())
+
+            for row_num, row_data in enumerate(worksheet_data, start=1):
+                xlsx_worksheet.write_row(row_num, 0, row_data)
 
         workbook.close()
         output.seek(0)
