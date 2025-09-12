@@ -143,7 +143,7 @@ class TestConversationsReportService(TestCase):
             project=self.project,
             source=self.service.source,
             source_config={"sections": ["RESOLUTIONS"]},
-            filters={"start_date": "2025-01-01", "end_date": "2025-01-02"},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
         )
@@ -410,16 +410,16 @@ class TestSerializeFiltersForJson(TestCase):
         """Test serialization of filters containing datetime objects."""
         now = timezone.now()
         filters = {
-            "start_date": now,
-            "end_date": now + timedelta(days=1),
+            "start": now,
+            "end": now + timedelta(days=1),
             "string_field": "test",
             "number_field": 123,
         }
 
         result = serialize_filters_for_json(filters)
 
-        self.assertEqual(result["start_date"], now.isoformat())
-        self.assertEqual(result["end_date"], (now + timedelta(days=1)).isoformat())
+        self.assertEqual(result["start"], now.isoformat())
+        self.assertEqual(result["end"], (now + timedelta(days=1)).isoformat())
         self.assertEqual(result["string_field"], "test")
         self.assertEqual(result["number_field"], 123)
 
