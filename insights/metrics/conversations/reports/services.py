@@ -3,6 +3,7 @@ import csv
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -11,6 +12,7 @@ from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportFile,
     ConversationsReportWorksheet,
 )
 from insights.reports.models import Report
@@ -23,6 +25,39 @@ from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 logger = logging.getLogger(__name__)
 
 
+def serialize_filters_for_json(filters: dict) -> dict:
+    """
+    Serialize datetime objects in filters dictionary to JSON-compatible format.
+    This ensures that filters containing datetime objects can be stored in JSONField.
+    """
+    if not filters:
+        return filters
+
+    serialized_filters = {}
+    for key, value in filters.items():
+        if isinstance(value, datetime):
+            # Convert datetime to ISO format string
+            serialized_filters[key] = value.isoformat()
+        elif isinstance(value, dict):
+            # Recursively handle nested dictionaries
+            serialized_filters[key] = serialize_filters_for_json(value)
+        elif isinstance(value, list):
+            # Handle lists that might contain datetime objects
+            serialized_list = []
+            for item in value:
+                if isinstance(item, datetime):
+                    serialized_list.append(item.isoformat())
+                elif isinstance(item, dict):
+                    serialized_list.append(serialize_filters_for_json(item))
+                else:
+                    serialized_list.append(item)
+            serialized_filters[key] = serialized_list
+        else:
+            serialized_filters[key] = value
+
+    return serialized_filters
+
+
 class BaseConversationsReportService(ABC):
     """
     Base class for conversations report services.
@@ -31,7 +66,7 @@ class BaseConversationsReportService(ABC):
     @abstractmethod
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the csv for the conversations report.
         """
@@ -40,7 +75,7 @@ class BaseConversationsReportService(ABC):
     @abstractmethod
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the xlsx for the conversations report.
         """
@@ -114,11 +149,11 @@ class ConversationsReportService(BaseConversationsReportService):
 
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the csv for the conversations report.
         """
-        files = []
+        files: list[ConversationsReportFile] = []
 
         for worksheet in worksheets:
             with io.StringIO() as csv_buffer:
@@ -127,7 +162,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 writer.writerows(worksheet.data)
                 file_content = csv_buffer.getvalue()
 
-            files.append(file_content)
+            files.append(
+                ConversationsReportFile(name=worksheet.name, content=file_content)
+            )
 
         return files
 
@@ -150,9 +187,9 @@ class ConversationsReportService(BaseConversationsReportService):
         workbook.close()
         output.seek(0)
 
-        return [output.getvalue()]
+        return [ConversationsReportFile(name=worksheet.name, content=output.getvalue())]
 
-    def send_email(self, report: Report, file_content: str) -> None:
+    def send_email(self, report: Report, files: list[ConversationsReportFile]) -> None:
         """
         Send the email for the conversations report.
         """
@@ -168,20 +205,17 @@ class ConversationsReportService(BaseConversationsReportService):
                 to=[report.requested_by.email],
             )
 
-            if report.format == ReportFormat.CSV:
-                file_name = f"conversations_report_{report.uuid}.csv"
-                file_format = "text/csv"
-            elif report.format == ReportFormat.XLSX:
-                file_name = f"conversations_report_{report.uuid}.xlsx"
-                file_format = (
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            for file in files:
+                email.attach(
+                    file.name,
+                    file.content,
+                    (
+                        "application/csv"
+                        if report.format == ReportFormat.CSV
+                        else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    ),
                 )
 
-            email.attach(
-                file_name,
-                file_content,
-                file_format,
-            )
             email.send(fail_silently=False)
 
     def request_generation(
@@ -230,11 +264,14 @@ class ConversationsReportService(BaseConversationsReportService):
                 "sections or custom_widgets cannot be empty when requesting generation of conversations report"
             )
 
+        # Serialize datetime objects in filters to make them JSON-compatible
+        serialized_filters = serialize_filters_for_json(filters)
+
         report = Report.objects.create(
             project=project,
             source=self.source,
             source_config=source_config,
-            filters=filters,
+            filters=serialized_filters,
             format=report_format,
             requested_by=requested_by,
             status=ReportStatus.PENDING,
@@ -256,9 +293,46 @@ class ConversationsReportService(BaseConversationsReportService):
             report.uuid,
         )
 
-        # source_config = report.source_config or {}
+        filters = report.filters or {}
 
-        # filters = report.filters or {}
+        start_date = filters.get("start")
+        end_date = filters.get("end")
+
+        if not start_date or not end_date:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Start date or end date is missing for report %s",
+                report.uuid,
+            )
+            raise ValueError(
+                "Start date or end date is missing for report %s" % report.uuid
+            )
+
+        try:
+
+            start_date = datetime.fromisoformat(start_date)
+            end_date = datetime.fromisoformat(end_date)
+
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Start date: %s, End date: %s",
+                start_date,
+                end_date,
+            )
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Failed to convert start date or end date to datetime for report %s. Error: %s",
+                report.uuid,
+                e,
+            )
+            report.status = ReportStatus.FAILED
+            report.completed_at = timezone.now()
+            errors = report.errors or {}
+            errors["convert_date"] = str(e)
+            errors["event_id"] = capture_exception(e)
+            report.errors = errors
+            report.save(update_fields=["status", "completed_at", "errors"])
+            raise e
+
+        # source_config = report.source_config or {}
 
         # sections = source_config.get("sections", [])
 
@@ -282,7 +356,9 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(report, "TODO")
+            self.send_email(
+                report, [ConversationsReportFile(name="TODO", content="TODO")]
+            )
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -393,3 +469,11 @@ class ConversationsReportService(BaseConversationsReportService):
             current_page += 1
 
         return events
+
+    def _format_date(self, date: str) -> str:
+        """
+        Format the date.
+        """
+        return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
+            "%d/%m/%Y %H:%M:%S"
+        )
