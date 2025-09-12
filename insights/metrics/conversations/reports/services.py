@@ -157,7 +157,8 @@ class ConversationsReportService(BaseConversationsReportService):
 
         for worksheet in worksheets:
             with io.StringIO() as csv_buffer:
-                writer = csv.DictWriter(csv_buffer, fieldnames=worksheet.data.keys())
+                fieldnames = list(worksheet.data[0].keys()) if worksheet.data else []
+                writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(worksheet.data)
                 file_content = csv_buffer.getvalue()
