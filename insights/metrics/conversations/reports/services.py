@@ -194,6 +194,9 @@ class ConversationsReportService(BaseConversationsReportService):
         output = io.BytesIO()
         workbook = xlsxwriter.Workbook(output, {"in_memory": True})
 
+        with override(report.requested_by.language):
+            file_name = gettext("Conversations dashboard report")
+
         for worksheet in worksheets:
             worksheet_name = worksheet.name
             worksheet_data = worksheet.data
@@ -202,15 +205,13 @@ class ConversationsReportService(BaseConversationsReportService):
             xlsx_worksheet.write_row(0, 0, worksheet_data[0].keys())
 
             for row_num, row_data in enumerate(worksheet_data, start=1):
-                xlsx_worksheet.write_row(row_num, 0, row_data)
+                xlsx_worksheet.write_row(row_num, 0, row_data.values())
 
         workbook.close()
         output.seek(0)
 
         return [
-            ConversationsReportFile(
-                name=f"{worksheet.name}.xlsx", content=output.getvalue()
-            )
+            ConversationsReportFile(name=f"{file_name}.xlsx", content=output.getvalue())
         ]
 
     def send_email(self, report: Report, files: list[ConversationsReportFile]) -> None:
