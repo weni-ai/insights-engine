@@ -306,22 +306,24 @@ class ConversationsReportService(BaseConversationsReportService):
             "[CONVERSATIONS REPORT SERVICE] Starting generation of conversations report %s",
             report.uuid,
         )
-
-        filters = report.filters or {}
-
-        start_date = filters.get("start")
-        end_date = filters.get("end")
-
-        if not start_date or not end_date:
-            logger.error(
-                "[CONVERSATIONS REPORT SERVICE] Start date or end date is missing for report %s",
-                report.uuid,
-            )
-            raise ValueError(
-                "Start date or end date is missing for report %s" % report.uuid
-            )
+        report.status = ReportStatus.IN_PROGRESS
+        report.started_at = timezone.now()
+        report.save(update_fields=["status", "started_at"])
 
         try:
+            filters = report.filters or {}
+
+            start_date = filters.get("start")
+            end_date = filters.get("end")
+
+            if not start_date or not end_date:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Start date or end date is missing for report %s",
+                    report.uuid,
+                )
+                raise ValueError(
+                    "Start date or end date is missing for report %s" % report.uuid
+                )
 
             start_date = datetime.fromisoformat(start_date)
             end_date = datetime.fromisoformat(end_date)
@@ -331,50 +333,41 @@ class ConversationsReportService(BaseConversationsReportService):
                 start_date,
                 end_date,
             )
+
+            sections = report.source_config.get("sections", [])
+
+            worksheets = []
+
+            if "RESOLUTIONS" in sections:
+                resolutions_worksheet = self.get_resolutions_worksheet(
+                    report,
+                    report.filters.get("start"),
+                    report.filters.get("end"),
+                )
+                worksheets.append(resolutions_worksheet)
+
+            files: list[ConversationsReportFile] = []
+
+            for worksheet in worksheets:
+                if report.format == ReportFormat.CSV:
+                    files.append(self.process_csv(report, [worksheet]))
+                elif report.format == ReportFormat.XLSX:
+                    files.append(self.process_xlsx(report, [worksheet]))
+
         except Exception as e:
             logger.error(
-                "[CONVERSATIONS REPORT SERVICE] Failed to convert start date or end date to datetime for report %s. Error: %s",
+                "[CONVERSATIONS REPORT SERVICE] Failed to generate report %s. Error: %s",
                 report.uuid,
                 e,
             )
             report.status = ReportStatus.FAILED
             report.completed_at = timezone.now()
             errors = report.errors or {}
-            errors["convert_date"] = str(e)
+            errors["generate"] = str(e)
             errors["event_id"] = capture_exception(e)
             report.errors = errors
             report.save(update_fields=["status", "completed_at", "errors"])
             raise e
-
-        # source_config = report.source_config or {}
-
-        # sections = source_config.get("sections", [])
-
-        # custom_widgets = source_config.get("custom_widgets", [])
-
-        report.status = ReportStatus.IN_PROGRESS
-        report.started_at = timezone.now()
-        report.save(update_fields=["status", "started_at"])
-
-        sections = report.source_config.get("sections", [])
-
-        worksheets = []
-
-        if "RESOLUTIONS" in sections:
-            resolutions_worksheet = self.get_resolutions_worksheet(
-                report,
-                report.filters.get("start"),
-                report.filters.get("end"),
-            )
-            worksheets.append(resolutions_worksheet)
-
-        files: list[ConversationsReportFile] = []
-
-        for worksheet in worksheets:
-            if report.format == ReportFormat.CSV:
-                files.append(self.process_csv(report, [worksheet]))
-            elif report.format == ReportFormat.XLSX:
-                files.append(self.process_xlsx(report, [worksheet]))
 
         logger.info(
             "[CONVERSATIONS REPORT SERVICE] Sending email for conversations report %s to %s",

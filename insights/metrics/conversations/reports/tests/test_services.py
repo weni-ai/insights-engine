@@ -143,7 +143,7 @@ class TestConversationsReportService(TestCase):
             project=self.project,
             source=self.service.source,
             source_config={"sections": ["RESOLUTIONS"]},
-            filters={"start_date": "2025-01-01", "end_date": "2025-01-02"},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
         )
