@@ -164,14 +164,16 @@ class ConversationsReportService(BaseConversationsReportService):
                 file_content = csv_buffer.getvalue()
 
             files.append(
-                ConversationsReportFile(name=worksheet.name, content=file_content)
+                ConversationsReportFile(
+                    name=f"{worksheet.name}.csv", content=file_content
+                )
             )
 
         return files
 
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[str]:
+    ) -> list[ConversationsReportFile]:
         """
         Process the xlsx for the conversations report.
         """
@@ -191,7 +193,11 @@ class ConversationsReportService(BaseConversationsReportService):
         workbook.close()
         output.seek(0)
 
-        return [ConversationsReportFile(name=worksheet.name, content=output.getvalue())]
+        return [
+            ConversationsReportFile(
+                name=f"{worksheet.name}.xlsx", content=output.getvalue()
+            )
+        ]
 
     def send_email(self, report: Report, files: list[ConversationsReportFile]) -> None:
         """
