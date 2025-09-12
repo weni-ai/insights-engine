@@ -1,6 +1,7 @@
 from datetime import datetime
 import io
 import csv
+import json
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
@@ -355,6 +356,14 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
                 worksheets.append(resolutions_worksheet)
 
+            if "TRANSFERRED" in sections:
+                transferred_worksheet = self.get_transferred_to_human_worksheet(
+                    report,
+                    report.filters.get("start"),
+                    report.filters.get("end"),
+                )
+                worksheets.append(transferred_worksheet)
+
             files: list[ConversationsReportFile] = []
 
             if report.format == ReportFormat.CSV:
@@ -548,6 +557,66 @@ class ConversationsReportService(BaseConversationsReportService):
                         resolved_label
                         if event.get("value") == "resolved"
                         else unresolved_label
+                    ),
+                    date_label: (
+                        self._format_date(event.get("date", ""))
+                        if event.get("date")
+                        else ""
+                    ),
+                }
+            )
+
+        setattr(self, "_conversation_classification_events_cache", events)
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
+    def get_transferred_to_human_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the transferred to human worksheet.
+        """
+        if hasattr(self, "_conversation_classification_events_cache"):
+            events = getattr(self, "_conversation_classification_events_cache")
+        else:
+            events = self.get_datalake_events(
+                report=report,
+                project=report.project.uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name="weni_nexus_data",
+                key="conversation_classification",
+            )
+
+        with override(report.requested_by.language):
+            worksheet_name = gettext("Transferred to Human")
+
+            transferred_to_human_label = gettext("Transferred to Human")
+            yes_label = gettext("Yes")
+            no_label = gettext("No")
+            date_label = gettext("Conversation date")
+
+        if len(events) == 0:
+            return ConversationsReportWorksheet(
+                name=worksheet_name,
+                data=[],
+            )
+
+        data = []
+
+        for event in events:
+            metadata = json.loads(event.get("metadata"))
+            data.append(
+                {
+                    "URN": event.get("contact_urn", ""),
+                    transferred_to_human_label: (
+                        yes_label if metadata.get("human_support", False) else no_label
                     ),
                     date_label: (
                         self._format_date(event.get("date", ""))
