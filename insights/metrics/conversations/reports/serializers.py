@@ -111,6 +111,8 @@ class RequestConversationsReportGenerationSerializer(
 
         end_datetime = datetime.combine(attrs["end_date"], time(23, 59, 59))
         attrs["end"] = timezone.localize(end_datetime)
+        attrs.pop("start_date")
+        attrs.pop("end_date")
 
         return attrs
 
