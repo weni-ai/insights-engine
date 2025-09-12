@@ -72,8 +72,8 @@ class ConversationsReportsViewSet(APIView):
         }
 
         filters = {
-            "start": serializer.validated_data["start_date"],
-            "end": serializer.validated_data["end_date"],
+            "start": serializer.validated_data["start"],
+            "end": serializer.validated_data["end"],
         }
 
         report = self.service.request_generation(
