@@ -9,7 +9,6 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.utils import translation, timezone
-from django.core.serializers.json import DjangoJSONEncoder
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.reports.dataclass import (
