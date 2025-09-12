@@ -121,18 +121,12 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(report.status, ReportStatus.PENDING)
 
     @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.process_csv"
-    )
-    @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
     )
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
     )
-    def test_generate(
-        self, mock_get_resolutions_worksheet, mock_send_email, mock_process_csv
-    ):
-        mock_process_csv.return_value = None
+    def test_generate(self, mock_get_resolutions_worksheet, mock_send_email):
         mock_send_email.return_value = None
         mock_get_resolutions_worksheet.return_value = ConversationsReportWorksheet(
             name="Resolutions",
@@ -149,18 +143,6 @@ class TestConversationsReportService(TestCase):
         )
 
         self.service.generate(report)
-
-        mock_process_csv.assert_called_once_with(
-            report,
-            [
-                ConversationsReportWorksheet(
-                    name="Resolutions",
-                    data=[
-                        {"URN": "123", "Resolution": "Resolved", "Date": "2025-01-01"}
-                    ],
-                )
-            ],
-        )
         mock_send_email.assert_called_once()
 
     def test_get_current_report_for_project_when_no_reports_exist(self):

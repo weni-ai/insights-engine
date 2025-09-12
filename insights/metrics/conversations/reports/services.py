@@ -348,11 +348,10 @@ class ConversationsReportService(BaseConversationsReportService):
 
             files: list[ConversationsReportFile] = []
 
-            for worksheet in worksheets:
-                if report.format == ReportFormat.CSV:
-                    files.extend(self.process_csv(report, [worksheet]))
-                elif report.format == ReportFormat.XLSX:
-                    files.extend(self.process_xlsx(report, [worksheet]))
+            if report.format == ReportFormat.CSV:
+                files.extend(self.process_csv(report, worksheets))
+            elif report.format == ReportFormat.XLSX:
+                files.extend(self.process_xlsx(report, worksheets))
 
         except Exception as e:
             logger.error(
