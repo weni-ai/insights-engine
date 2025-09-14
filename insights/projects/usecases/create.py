@@ -1,3 +1,6 @@
+from insights.dashboards.usecases.conversations_dashboard_creation import (
+    ConversationsDashboardCreation,
+)
 from insights.projects.models import Project
 
 from .project_dto import ProjectCreationDTO
