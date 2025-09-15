@@ -148,7 +148,7 @@ class ConversationsTotalsMetrics:
 @dataclass(frozen=True)
 class NPSMetrics:
     total_responses: int
-    promoters: int
-    passives: int
-    detractors: int
-    score: int
+    promoters: float
+    passives: float
+    detractors: float
+    score: float

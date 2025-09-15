@@ -654,6 +654,16 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         passives = results.get("8", 0) + results.get("7", 0)
         detractors = sum(results.get(str(i), 0) for i in range(7))
 
+        promoters_percentage = (
+            round((promoters / total_responses) * 100, 2) if total_responses else 0
+        )
+        passives_percentage = (
+            round((passives / total_responses) * 100, 2) if total_responses else 0
+        )
+        detractors_percentage = (
+            round((detractors / total_responses) * 100, 2) if total_responses else 0
+        )
+
         score = round(
             (promoters - detractors) / total_responses * 100 if total_responses else 0,
             2,
@@ -661,9 +671,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return NPSMetrics(
             total_responses=total_responses,
-            promoters=promoters,
-            passives=passives,
-            detractors=detractors,
+            promoters=promoters_percentage,
+            passives=passives_percentage,
+            detractors=detractors_percentage,
             score=score,
         )
 

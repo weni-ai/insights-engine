@@ -331,10 +331,10 @@ class NpsMetricsSerializer(serializers.Serializer):
     """
 
     total_responses = serializers.IntegerField()
-    promoters = serializers.IntegerField()
-    passives = serializers.IntegerField()
-    detractors = serializers.IntegerField()
-    score = serializers.IntegerField()
+    promoters = serializers.FloatField()
+    passives = serializers.FloatField()
+    detractors = serializers.FloatField()
+    score = serializers.FloatField()
 
 
 class CustomMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
