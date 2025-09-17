@@ -770,4 +770,5 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
+            data=results_data,
         )
