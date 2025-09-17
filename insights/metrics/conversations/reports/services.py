@@ -730,7 +730,11 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         with override(report.requested_by.language or "en"):
-            worksheet_name = gettext("Topics Distribution")
+            worksheet_name = (
+                gettext("Topics Distribution AI")
+                if conversation_type == ConversationType.AI
+                else gettext("Topics Distribution Human")
+            )
             date_label = gettext("Date")
             topic_label = gettext("Topic")
             subtopic_label = gettext("Subtopic")
