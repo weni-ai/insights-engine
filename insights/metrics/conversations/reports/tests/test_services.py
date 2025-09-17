@@ -1,4 +1,5 @@
 from unittest.mock import patch
+import uuid
 
 from django.test import TestCase
 from django.utils import timezone
@@ -7,7 +8,10 @@ from django.utils.timezone import timedelta
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
 )
-from insights.metrics.conversations.reports.dataclass import ConversationsReportFile
+from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportFile,
+    ConversationsReportWorksheet,
+)
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
@@ -133,19 +137,31 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(report.status, ReportStatus.PENDING)
 
     @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.process_csv"
-    )
-    @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
     )
-    def test_generate(self, mock_send_email, mock_process_csv):
-        mock_process_csv.return_value = None
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_csat_ai_worksheet"
+    )
+    def test_generate(self, mock_get_csat_ai_worksheet, mock_send_email):
+        mock_get_csat_ai_worksheet.return_value = ConversationsReportWorksheet(
+            name="CSAT AI",
+            data=[
+                {
+                    "URN": "123",
+                    "Date": "14/09/2025 19:27:10",
+                    "Score": "5",
+                }
+            ],
+        )
         mock_send_email.return_value = None
 
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
+            source_config={
+                "sections": ["RESOLUTIONS", "CSAT_AI"],
+                "csat_ai_agent_uuid": str(uuid.uuid4()),
+            },
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
@@ -153,7 +169,6 @@ class TestConversationsReportService(TestCase):
 
         self.service.generate(report)
 
-        mock_process_csv.assert_called_once_with(report)
         mock_send_email.assert_called_once()
 
     def test_get_current_report_for_project_when_no_reports_exist(self):
@@ -383,6 +398,64 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(
             str(context.exception),
             "Report %s is not in progress" % report.uuid,
+        )
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_csat_ai_worksheet(self, mock_get_datalake_events):
+        mock_events = [
+            {
+                "contact_urn": "123",
+                "date": "2025-09-14T19:27:10.293700Z",
+                "value": "5",
+            }
+        ]
+
+        mock_get_datalake_events.return_value = mock_events
+
+        agent_uuid = str(uuid.uuid4())
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["CSAT_AI"], "csat_ai_agent_uuid": agent_uuid},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_csat_ai_worksheet(
+            report, "2025-01-01", "2025-01-02"
+        )
+
+        self.assertEqual(worksheet.name, "CSAT AI")
+        self.assertEqual(
+            worksheet.data,
+            [
+                {
+                    "URN": "123",
+                    "Date": "14/09/2025 19:27:10",
+                    "Score": "5",
+                }
+            ],
+        )
+
+    def test_get_csat_ai_worksheet_when_no_agent_uuid_is_provided(self):
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["CSAT_AI"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_csat_ai_worksheet(report, "2025-01-01", "2025-01-02")
+
+        self.assertEqual(
+            str(context.exception),
+            "Agent UUID is required in the report source config",
         )
 
 
