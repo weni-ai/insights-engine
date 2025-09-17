@@ -1,5 +1,6 @@
 import io
 import csv
+import json
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
@@ -12,6 +13,7 @@ from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
+from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportFile,
     ConversationsReportWorksheet,
@@ -129,6 +131,19 @@ class BaseConversationsReportService(ABC):
     def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
         """
         Get datalake events.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_topics_distribution_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the topics distribution worksheet.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -335,18 +350,34 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            # source_config = report.source_config or {}
+            sections = report.source_config.get("sections", [])
 
-            # sections = source_config.get("sections", [])
+            worksheets = []
 
-            # custom_widgets = source_config.get("custom_widgets", [])
+            if "TOPICS_AI" in sections:
+                topics_ai_worksheet = self.get_topics_distribution_worksheet(
+                    report=report,
+                    start_date=start_date,
+                    end_date=end_date,
+                    conversation_type=ConversationType.AI,
+                )
+                worksheets.append(topics_ai_worksheet)
 
-            # TODO: Implement the specific generation logic
+            if "TOPICS_HUMAN" in sections:
+                topics_human_worksheet = self.get_topics_distribution_worksheet(
+                    report=report,
+                    start_date=start_date,
+                    end_date=end_date,
+                    conversation_type=ConversationType.HUMAN,
+                )
+                worksheets.append(topics_human_worksheet)
+
+            files = []
 
             if report.format == ReportFormat.CSV:
-                self.process_csv(report)
+                files.extend(self.process_csv(report, worksheets))
             elif report.format == ReportFormat.XLSX:
-                self.process_xlsx(report)
+                files.extend(self.process_xlsx(report, worksheets))
 
         except Exception as e:
             logger.error(
@@ -370,9 +401,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(
-                report, [ConversationsReportFile(name="TODO", content="TODO")]
-            )
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -490,4 +519,115 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
             "%d/%m/%Y %H:%M:%S"
+        )
+
+    def get_topics_distribution_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the topics distribution worksheet.
+        """
+        nexus_topics_data = self.metrics_service.get_topics(report.project.uuid)
+
+        topics_data = {}
+
+        for topic_data in nexus_topics_data:
+            topic_uuid = str(topic_data.get("uuid"))
+            topics_data[topic_uuid] = {
+                "name": topic_data.get("name"),
+                "uuid": topic_uuid,
+                "subtopics": {},
+            }
+
+            if not topic_data.get("subtopic"):
+                continue
+
+            for subtopic_data in topic_data.get("subtopic", []):
+                subtopic_uuid = str(subtopic_data.get("uuid"))
+                topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
+                    "name": subtopic_data.get("name"),
+                    "uuid": subtopic_uuid,
+                }
+
+        human_support = (
+            "true" if conversation_type == ConversationType.HUMAN else "false"
+        )
+
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="topics",
+            metadata_key="human_support",
+            metadata_value=human_support,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = (
+                gettext("Topics Distribution AI")
+                if conversation_type == ConversationType.AI
+                else gettext("Topics Distribution Human")
+            )
+            date_label = gettext("Date")
+            topic_label = gettext("Topic")
+            subtopic_label = gettext("Subtopic")
+            unclassified_label = gettext("Unclassified")
+
+        results_data = []
+
+        for event in events:
+            try:
+                metadata = json.loads(event.get("metadata", "{}"))
+            except Exception as e:
+                logger.error(
+                    "Error parsing metadata for event %s: %s", event.get("id"), e
+                )
+                capture_exception(e)
+                continue
+
+            topic_name = event.get("value")
+            subtopic_name = metadata.get("subtopic")
+
+            topic_uuid = (
+                str(metadata.get("topic_uuid")) if metadata.get("topic_uuid") else None
+            )
+            subtopic_uuid = (
+                str(metadata.get("subtopic_uuid"))
+                if metadata.get("subtopic_uuid")
+                else None
+            )
+
+            if not topic_uuid or topic_uuid not in topics_data:
+                topic_name = unclassified_label
+
+            if (
+                topic_uuid
+                and topic_uuid in topics_data
+                and not subtopic_uuid
+                and subtopic_uuid not in topics_data[topic_uuid]["subtopics"]
+            ) or (not topic_uuid or topic_uuid not in topics_data):
+                subtopic_name = unclassified_label
+
+            results_data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    topic_label: topic_name,
+                    subtopic_label: subtopic_name,
+                    date_label: (
+                        self._format_date(event.get("date"))
+                        if event.get("date")
+                        else ""
+                    ),
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=results_data,
         )

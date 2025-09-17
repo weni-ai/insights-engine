@@ -1,13 +1,20 @@
+from datetime import datetime
+import json
 from unittest.mock import patch
+import uuid
 
 from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
 
+from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
 )
-from insights.metrics.conversations.reports.dataclass import ConversationsReportFile
+from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportFile,
+    ConversationsReportWorksheet,
+)
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
@@ -133,19 +140,31 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(report.status, ReportStatus.PENDING)
 
     @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.process_csv"
-    )
-    @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
     )
-    def test_generate(self, mock_send_email, mock_process_csv):
-        mock_process_csv.return_value = None
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_topics_distribution_worksheet"
+    )
+    def test_generate(self, mock_get_topics_distribution_worksheet, mock_send_email):
         mock_send_email.return_value = None
+        mock_get_topics_distribution_worksheet.return_value = (
+            ConversationsReportWorksheet(
+                name="Test",
+                data=[
+                    {
+                        "URN": "1",
+                        "Topic": "Test",
+                        "Subtopic": "Test",
+                        "Date": "2025-01-01T00:00:00.000000Z",
+                    }
+                ],
+            )
+        )
 
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
+            source_config={"sections": ["RESOLUTIONS", "TOPICS_AI", "TOPICS_HUMAN"]},
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
@@ -153,7 +172,6 @@ class TestConversationsReportService(TestCase):
 
         self.service.generate(report)
 
-        mock_process_csv.assert_called_once_with(report)
         mock_send_email.assert_called_once()
 
     def test_get_current_report_for_project_when_no_reports_exist(self):
@@ -349,6 +367,77 @@ class TestConversationsReportService(TestCase):
             str(context.exception),
             "Report has more than 5 pages",
         )
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_topics"
+    )
+    def test_get_topics_distribution_worksheet_for_ai(
+        self, mock_get_topics, mock_get_datalake_events
+    ):
+        nexus_topics_data = {
+            "name": "Test Topic",
+            "uuid": uuid.uuid4(),
+            "subtopic": [
+                {
+                    "name": "Test Subtopic",
+                    "uuid": uuid.uuid4(),
+                }
+            ],
+        }
+
+        mock_get_topics.return_value = [nexus_topics_data]
+
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "1",
+                "date": "2025-01-01T00:00:00.000000Z",
+                "metadata": json.dumps(
+                    {
+                        "topic_uuid": str(nexus_topics_data["uuid"]),
+                        "subtopic_uuid": str(nexus_topics_data["subtopic"][0]["uuid"]),
+                        "subtopic": nexus_topics_data["subtopic"][0]["name"],
+                    }
+                ),
+                "value": nexus_topics_data["name"],
+            },
+            {
+                "contact_urn": "2",
+                "date": "2025-01-01T00:00:00.000000Z",
+                "metadata": json.dumps(
+                    {
+                        "topic_uuid": str(uuid.uuid4()),
+                        "subtopic_uuid": str(uuid.uuid4()),
+                        "subtopic": "Test Subtopic 2",
+                    }
+                ),
+                "value": "Test Topic 2",
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOPICS_AI"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            requested_by=self.user,
+        )
+
+        worksheet = self.service.get_topics_distribution_worksheet(
+            report,
+            datetime(2025, 1, 1),
+            datetime(2025, 1, 2),
+            ConversationType.AI,
+        )
+
+        self.assertIsInstance(worksheet, ConversationsReportWorksheet)
+        self.assertEqual(len(worksheet.data), 2)
+        self.assertEqual(worksheet.data[0]["Topic"], "Test Topic")
+        self.assertEqual(worksheet.data[0]["Subtopic"], "Test Subtopic")
+        self.assertEqual(worksheet.data[1]["Topic"], "Unclassified")
+        self.assertEqual(worksheet.data[1]["Subtopic"], "Unclassified")
 
     @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
