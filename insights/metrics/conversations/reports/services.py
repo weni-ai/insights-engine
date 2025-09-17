@@ -345,18 +345,22 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            # source_config = report.source_config or {}
+            source_config = report.source_config or {}
 
-            # sections = source_config.get("sections", [])
+            sections = source_config.get("sections", [])
 
-            # custom_widgets = source_config.get("custom_widgets", [])
+            worksheets = []
 
-            # TODO: Implement the specific generation logic
+            if "CSAT_AI" in sections:
+                worksheet = self.get_csat_ai_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
+
+            files: list[ConversationsReportFile] = []
 
             if report.format == ReportFormat.CSV:
-                self.process_csv(report)
+                files.extend(self.process_csv(report, worksheets))
             elif report.format == ReportFormat.XLSX:
-                self.process_xlsx(report)
+                files.extend(self.process_xlsx(report, worksheets))
 
         except Exception as e:
             logger.error(
@@ -380,9 +384,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(
-                report, [ConversationsReportFile(name="TODO", content="TODO")]
-            )
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
