@@ -681,7 +681,11 @@ class ConversationsReportService(BaseConversationsReportService):
         mock_urns = ["55988776655", "55988776656", "55988776657"]
 
         return ConversationsReportWorksheet(
-            name=gettext("Topics Distribution"),
+            name=(
+                gettext("Topics Distribution AI")
+                if conversation_type == ConversationType.AI
+                else gettext("Topics Distribution Human")
+            ),
             data=[
                 {
                     "URN": mock_urn,
