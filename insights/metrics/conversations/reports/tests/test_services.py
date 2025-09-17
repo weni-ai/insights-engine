@@ -8,6 +8,7 @@ from insights.metrics.conversations.integrations.datalake.tests.mock_services im
     MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.reports.dataclass import ConversationsReportFile
+from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
 )
@@ -19,6 +20,11 @@ from insights.metrics.conversations.reports.services import (
     serialize_filters_for_json,
 )
 from insights.projects.models import Project
+from insights.sources.integrations.tests.mock_clients import MockNexusClient
+from insights.sources.flowruns.tests.mock_query_executor import (
+    MockFlowRunsQueryExecutor,
+)
+from insights.sources.tests.mock import MockCacheClient
 
 
 class TestConversationsReportService(TestCase):
@@ -27,7 +33,12 @@ class TestConversationsReportService(TestCase):
             events_limit_per_page=5,
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
-            metrics_service=MockDatalakeConversationsMetricsService(),
+            metrics_service=ConversationsMetricsService(
+                datalake_service=MockDatalakeConversationsMetricsService(),
+                nexus_client=MockNexusClient(),
+                cache_client=MockCacheClient(),
+                flowruns_query_executor=MockFlowRunsQueryExecutor(),
+            ),
         )
         self.project = Project.objects.create(name="Test")
         self.user = User.objects.create(
