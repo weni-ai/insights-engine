@@ -145,11 +145,32 @@ class TestConversationsReportService(TestCase):
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
     )
-    def test_generate(self, mock_get_resolutions_worksheet, mock_send_email):
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_topics_distribution_worksheet"
+    )
+    def test_generate(
+        self,
+        mock_get_topics_distribution_worksheet,
+        mock_get_resolutions_worksheet,
+        mock_send_email,
+    ):
         mock_send_email.return_value = None
         mock_get_resolutions_worksheet.return_value = ConversationsReportWorksheet(
             name="Resolutions",
             data=[{"URN": "123", "Resolution": "Resolved", "Date": "2025-01-01"}],
+        )
+        mock_get_topics_distribution_worksheet.return_value = (
+            ConversationsReportWorksheet(
+                name="Test",
+                data=[
+                    {
+                        "URN": "1",
+                        "Topic": "Test",
+                        "Subtopic": "Test",
+                        "Date": "2025-01-01T00:00:00.000000Z",
+                    }
+                ],
+            )
         )
 
         report = Report.objects.create(
