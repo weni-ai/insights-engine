@@ -22,6 +22,7 @@ from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
 from insights.projects.models import Project
 from insights.sources.dl_events.clients import BaseDataLakeEventsClient
+from insights.dashboards.models import Dashboard
 
 
 logger = logging.getLogger(__name__)
@@ -491,3 +492,10 @@ class ConversationsReportService(BaseConversationsReportService):
         return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
             "%d/%m/%Y %H:%M:%S"
         )
+
+    def get_csat_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the csat ai worksheet.
+        """
