@@ -1,4 +1,5 @@
 from unittest.mock import patch
+import uuid
 
 from django.test import TestCase
 from django.utils import timezone
@@ -383,6 +384,64 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(
             str(context.exception),
             "Report %s is not in progress" % report.uuid,
+        )
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_csat_ai_worksheet(self, mock_get_datalake_events):
+        mock_events = [
+            {
+                "contact_urn": "123",
+                "date": "2025-09-14T19:27:10.293700Z",
+                "value": "5",
+            }
+        ]
+
+        mock_get_datalake_events.return_value = mock_events
+
+        agent_uuid = str(uuid.uuid4())
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["CSAT_AI"], "csat_ai_agent_uuid": agent_uuid},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_csat_ai_worksheet(
+            report, "2025-01-01", "2025-01-02"
+        )
+
+        self.assertEqual(worksheet.name, "CSAT AI")
+        self.assertEqual(
+            worksheet.data,
+            [
+                {
+                    "URN": "123",
+                    "Date": "14/09/2025 19:27:10",
+                    "Score": "5",
+                }
+            ],
+        )
+
+    def test_get_csat_ai_worksheet_when_no_agent_uuid_is_provided(self):
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["CSAT_AI"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_csat_ai_worksheet(report, "2025-01-01", "2025-01-02")
+
+        self.assertEqual(
+            str(context.exception),
+            "Agent UUID is required in the report source config",
         )
 
 
