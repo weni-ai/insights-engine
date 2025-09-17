@@ -8,6 +8,9 @@ from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportWorksheet,
     ConversationsReportFile,
 )
+from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
+    MockDatalakeConversationsMetricsService,
+)
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
 )
@@ -27,6 +30,7 @@ class TestConversationsReportService(TestCase):
             events_limit_per_page=5,
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            metrics_service=MockDatalakeConversationsMetricsService(),
         )
         self.project = Project.objects.create(name="Test")
         self.user = User.objects.create(

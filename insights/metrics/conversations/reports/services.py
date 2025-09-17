@@ -13,6 +13,9 @@ from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseConversationsMetricsService,
+)
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportFile,
     ConversationsReportWorksheet,
@@ -153,11 +156,13 @@ class ConversationsReportService(BaseConversationsReportService):
     def __init__(
         self,
         datalake_events_client: BaseDataLakeEventsClient,
+        metrics_service: BaseConversationsMetricsService,
         events_limit_per_page: int = 5000,
         page_limit: int = 200,
     ):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.datalake_events_client = datalake_events_client
+        self.metrics_service = metrics_service
         self.events_limit_per_page = events_limit_per_page
         self.page_limit = page_limit
 
