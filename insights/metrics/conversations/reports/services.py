@@ -22,7 +22,6 @@ from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
 from insights.projects.models import Project
 from insights.sources.dl_events.clients import BaseDataLakeEventsClient
-from insights.dashboards.models import Dashboard
 
 
 logger = logging.getLogger(__name__)
