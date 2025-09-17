@@ -488,3 +488,23 @@ class ConversationsReportService(BaseConversationsReportService):
         return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
             "%d/%m/%Y %H:%M:%S"
         )
+
+    def get_topics_distribution_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the topics distribution worksheet.
+        """
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="topics",
+        )
+
+        return ConversationsReportWorksheet(
+            name="Topics Distribution",
+            data=[],
+        )
