@@ -350,18 +350,34 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            # source_config = report.source_config or {}
+            sections = report.source_config.get("sections", [])
 
-            # sections = source_config.get("sections", [])
+            worksheets = []
 
-            # custom_widgets = source_config.get("custom_widgets", [])
+            if "TOPICS_AI" in sections:
+                topics_ai_worksheet = self.get_topics_distribution_worksheet(
+                    report=report,
+                    start_date=start_date,
+                    end_date=end_date,
+                    conversation_type=ConversationType.AI,
+                )
+                worksheets.append(topics_ai_worksheet)
 
-            # TODO: Implement the specific generation logic
+            if "TOPICS_HUMAN" in sections:
+                topics_human_worksheet = self.get_topics_distribution_worksheet(
+                    report=report,
+                    start_date=start_date,
+                    end_date=end_date,
+                    conversation_type=ConversationType.HUMAN,
+                )
+                worksheets.append(topics_human_worksheet)
+
+            files = []
 
             if report.format == ReportFormat.CSV:
-                self.process_csv(report)
+                files.extend(self.process_csv(report, worksheets))
             elif report.format == ReportFormat.XLSX:
-                self.process_xlsx(report)
+                files.extend(self.process_xlsx(report, worksheets))
 
         except Exception as e:
             logger.error(
@@ -385,9 +401,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(
-                report, [ConversationsReportFile(name="TODO", content="TODO")]
-            )
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(

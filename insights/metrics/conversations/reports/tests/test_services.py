@@ -140,19 +140,31 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(report.status, ReportStatus.PENDING)
 
     @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.process_csv"
-    )
-    @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
     )
-    def test_generate(self, mock_send_email, mock_process_csv):
-        mock_process_csv.return_value = None
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_topics_distribution_worksheet"
+    )
+    def test_generate(self, mock_get_topics_distribution_worksheet, mock_send_email):
         mock_send_email.return_value = None
+        mock_get_topics_distribution_worksheet.return_value = (
+            ConversationsReportWorksheet(
+                name="Test",
+                data=[
+                    {
+                        "URN": "1",
+                        "Topic": "Test",
+                        "Subtopic": "Test",
+                        "Date": "2025-01-01T00:00:00.000000Z",
+                    }
+                ],
+            )
+        )
 
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
+            source_config={"sections": ["RESOLUTIONS", "TOPICS_AI", "TOPICS_HUMAN"]},
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
@@ -160,7 +172,6 @@ class TestConversationsReportService(TestCase):
 
         self.service.generate(report)
 
-        mock_process_csv.assert_called_once_with(report)
         mock_send_email.assert_called_once()
 
     def test_get_current_report_for_project_when_no_reports_exist(self):
