@@ -677,6 +677,22 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get the topics distribution worksheet.
         """
+        # Mock for the staging environment
+        mock_urns = ["55988776655", "55988776656", "55988776657"]
+
+        return ConversationsReportWorksheet(
+            name=gettext("Topics Distribution"),
+            data=[
+                {
+                    "URN": mock_urn,
+                    gettext("Topic"): "Test Topic",
+                    gettext("Subtopic"): "Test Subtopic",
+                    gettext("Date"): self._format_date("2025-01-01T00:00:00.000000Z"),
+                }
+                for mock_urn in mock_urns
+            ],
+        )
+
         nexus_topics_data = self.metrics_service.get_topics(report.project.uuid)
 
         topics_data = {}
