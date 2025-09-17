@@ -11,6 +11,7 @@ from insights.reports.models import Report
 from insights.reports.choices import ReportStatus
 from insights.sources.dl_events.clients import DataLakeEventsClient
 from insights.metrics.conversations.reports.services import ConversationsReportService
+from insights.metrics.conversations.services import ConversationsMetricsService
 
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,8 @@ def generate_conversations_report():
 
     try:
         ConversationsReportService(
-            datalake_events_client=DataLakeEventsClient()
+            datalake_events_client=DataLakeEventsClient(),
+            metrics_service=ConversationsMetricsService(),
         ).generate(oldest_report)
     except Exception as e:
         logger.error(
