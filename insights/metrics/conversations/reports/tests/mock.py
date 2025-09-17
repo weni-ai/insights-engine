@@ -1,3 +1,4 @@
+from datetime import datetime
 from unittest.mock import MagicMock
 
 from insights.metrics.conversations.reports.dataclass import (
@@ -50,6 +51,14 @@ class MockConversationsReportService(BaseConversationsReportService):
     def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
         pass
 
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        pass
+
     def __init__(self):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.process_csv = MagicMock()
@@ -60,3 +69,4 @@ class MockConversationsReportService(BaseConversationsReportService):
         self.get_next_report_to_generate = MagicMock()
         self.project_can_receive_new_reports_generation = MagicMock()
         self.get_datalake_events = MagicMock()
+        self.get_resolutions_worksheet = MagicMock()
