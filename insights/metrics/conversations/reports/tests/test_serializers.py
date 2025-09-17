@@ -1,6 +1,7 @@
 from django.test import TestCase
 import datetime
 import uuid
+import pytz
 
 from insights.metrics.conversations.reports.serializers import (
     RequestConversationsReportGenerationSerializer,
@@ -75,10 +76,36 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         self.assertEqual(serializer.validated_data["project"], self.project)
         self.assertEqual(serializer.validated_data["type"], ReportFormat.CSV)
         self.assertEqual(
-            serializer.validated_data["start_date"], datetime.date(2025, 1, 24)
+            serializer.validated_data["start"],
+            datetime.datetime(
+                2025,
+                1,
+                24,
+                0,
+                0,
+                0,
+                tzinfo=(
+                    pytz.timezone(self.project.timezone)
+                    if self.project.timezone
+                    else pytz.UTC
+                ),
+            ),
         )
         self.assertEqual(
-            serializer.validated_data["end_date"], datetime.date(2025, 1, 25)
+            serializer.validated_data["end"],
+            datetime.datetime(
+                2025,
+                1,
+                25,
+                23,
+                59,
+                59,
+                tzinfo=(
+                    pytz.timezone(self.project.timezone)
+                    if self.project.timezone
+                    else pytz.UTC
+                ),
+            ),
         )
         self.assertEqual(
             serializer.validated_data["sections"],
@@ -99,10 +126,36 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         self.assertEqual(serializer.validated_data["project"], self.project)
         self.assertEqual(serializer.validated_data["type"], ReportFormat.CSV)
         self.assertEqual(
-            serializer.validated_data["start_date"], datetime.date(2025, 1, 24)
+            serializer.validated_data["start"],
+            datetime.datetime(
+                2025,
+                1,
+                24,
+                0,
+                0,
+                0,
+                tzinfo=(
+                    pytz.timezone(self.project.timezone)
+                    if self.project.timezone
+                    else pytz.UTC
+                ),
+            ),
         )
         self.assertEqual(
-            serializer.validated_data["end_date"], datetime.date(2025, 1, 25)
+            serializer.validated_data["end"],
+            datetime.datetime(
+                2025,
+                1,
+                25,
+                23,
+                59,
+                59,
+                tzinfo=(
+                    pytz.timezone(self.project.timezone)
+                    if self.project.timezone
+                    else pytz.UTC
+                ),
+            ),
         )
         self.assertEqual(
             serializer.validated_data["custom_widgets"],

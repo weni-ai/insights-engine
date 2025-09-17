@@ -19,10 +19,14 @@ from insights.metrics.conversations.reports.serializers import (
 )
 from insights.reports.choices import ReportStatus
 from insights.sources.dl_events.clients import DataLakeEventsClient
+from insights.metrics.conversations.services import ConversationsMetricsService
 
 
 class ConversationsReportsViewSet(APIView):
-    service = ConversationsReportService(datalake_events_client=DataLakeEventsClient())
+    service = ConversationsReportService(
+        datalake_events_client=DataLakeEventsClient(),
+        metrics_service=ConversationsMetricsService(),
+    )
 
     @property
     def permission_classes(self):
@@ -72,8 +76,8 @@ class ConversationsReportsViewSet(APIView):
         }
 
         filters = {
-            "start": serializer.validated_data["start_date"],
-            "end": serializer.validated_data["end_date"],
+            "start": serializer.validated_data["start"],
+            "end": serializer.validated_data["end"],
         }
 
         report = self.service.request_generation(
