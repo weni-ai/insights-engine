@@ -117,7 +117,7 @@ class RequestConversationsReportGenerationSerializer(
         if sections and "CSAT_AI" in sections:
             widget = Widget.objects.filter(
                 dashboard__uuid=dashboards_uuids[0],
-                config__datalake_config__type="CSAT",
+                config__datalake_config__type__iexact="CSAT",
             ).first()
 
             if not widget:
