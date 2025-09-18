@@ -361,3 +361,46 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             serializer.validated_data["source_config"]["csat_ai_agent_uuid"],
             widget.config.get("datalake_config", {}).get("agent_uuid"),
         )
+
+    def test_serializer_with_nps_ai_section_and_nps_ai_widget(self):
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.NPS_AI],
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["sections"][0].code, "nps_ai_widget_not_found"
+        )
+
+    def test_serializer_with_nps_ai_section_and_nps_ai_widget_without_agent_uuid(self):
+        Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            config={
+                "datalake_config": {
+                    "type": "NPS",
+                },
+            },
+        )
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.NPS_AI],
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["sections"][0].code,
+            "agent_uuid_not_found_in_widget_config",
+        )
