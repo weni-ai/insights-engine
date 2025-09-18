@@ -1,4 +1,5 @@
 from unittest.mock import patch
+import uuid
 
 
 from rest_framework import status
@@ -6,10 +7,12 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from insights.authentication.authentication import User
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.projects.models import Project
 from insights.authentication.tests.decorators import with_project_auth
 from insights.reports.choices import ReportStatus, ReportSource, ReportFormat
 from insights.reports.models import Report
+from insights.widgets.models import Widget
 
 
 class BaseTestConversationsReportsViewSet(APITestCase):
@@ -43,6 +46,9 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
     def setUp(self):
         self.user = User.objects.create(email="test@test.com")
         self.project = Project.objects.create(name="Test Project")
+        self.dashboard = Dashboard.objects.create(
+            name=CONVERSATIONS_DASHBOARD_NAME, project=self.project
+        )
         self.client.force_authenticate(self.user)
 
     def test_get_status_without_project_uuid(self):
@@ -120,13 +126,27 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         mock_request_generation.return_value = report
         mock_get_current_report_for_project.return_value = None
 
+        Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            config={
+                "datalake_config": {
+                    "type": "CSAT",
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
         response = self.request_generation(
             {
                 "project_uuid": self.project.uuid,
                 "type": ReportFormat.CSV,
                 "start_date": "2025-01-01",
                 "end_date": "2025-01-02",
-                "sections": ["RESOLUTIONS"],
+                "sections": ["RESOLUTIONS", "CSAT_AI"],
                 "custom_widgets": [],
             }
         )

@@ -11,7 +11,7 @@ from insights.projects.models import Project
 from insights.reports.choices import ReportFormat
 from insights.metrics.conversations.reports.choices import ConversationsReportSections
 from insights.widgets.models import Widget
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 
 
 class TestGetConversationsReportStatusQueryParamsSerializer(TestCase):
@@ -45,8 +45,8 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             name="Test Project",
         )
         self.dashboard = Dashboard.objects.create(
-            name="Test Dashboard",
             project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
         )
         self.widget = Widget.objects.create(
             name="Test Widget",
@@ -285,3 +285,79 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertEqual(serializer.errors["sections"][0][0].code, "invalid_choice")
+
+    def test_serializer_with_csat_ai_section_and_csat_ai_widget(self):
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.CSAT_AI],
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["sections"][0].code, "csat_ai_widget_not_found"
+        )
+
+    def test_serializer_with_csat_ai_section_and_csat_ai_widget_without_agent_uuid(
+        self,
+    ):
+        Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            config={
+                "datalake_config": {
+                    "type": "CSAT",
+                },
+            },
+        )
+
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.CSAT_AI],
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["sections"][0].code,
+            "agent_uuid_not_found_in_widget_config",
+        )
+
+    def test_serializer_with_csat_ai_section_and_csat_ai_widget_with_agent_uuid(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            config={
+                "datalake_config": {
+                    "type": "CSAT",
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.CSAT_AI],
+            }
+        )
+
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(
+            serializer.validated_data["source_config"]["csat_ai_agent_uuid"],
+            widget.config.get("datalake_config", {}).get("agent_uuid"),
+        )
