@@ -884,7 +884,7 @@ class ConversationsReportService(BaseConversationsReportService):
             event_name="weni_nexus_data",
         )
 
-        with override(report.requested_by.language):
+        with override(report.requested_by.language or "en"):
             worksheet_name = gettext("NPS AI")
             date_label = gettext("Date")
             score_label = gettext("Score")
