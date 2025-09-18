@@ -126,7 +126,7 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         mock_request_generation.return_value = report
         mock_get_current_report_for_project.return_value = None
 
-        widget = Widget.objects.create(
+        Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
             source="conversations.custom",
