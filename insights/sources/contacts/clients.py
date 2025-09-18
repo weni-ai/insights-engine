@@ -102,3 +102,89 @@ class FlowsContactsRestClient(FlowsInternalAuthentication):
         }
 
         return result
+
+    def get_flowsrun_results_by_contacts(
+        self,
+        project_uuid: str,
+        start_date: str,
+        end_date: str,
+        flow_uuid: str,
+        op_field: str,
+        page_size: int,
+        page_number: int,
+    ):
+        page_number = int(page_number) if page_number else 1
+        page_size = int(page_size) if page_size else 100
+        page_from = (page_number - 1) * page_size
+
+        url = f"{settings.FLOWS_ES_DATABASE}/_search"
+
+        params = {
+            "_source": "project_uuid,contact_uuid,created_on,modified_on,contact_name,contact_urn,values",
+            "from": page_from,
+            "size": page_size,
+        }
+
+        end_date_gte = format_to_iso_utc(start_date, end_of_day=False)
+        end_date_lte = format_to_iso_utc(end_date, end_of_day=True)
+
+        query = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {"project_uuid": project_uuid}},
+                        {"term": {"flow_uuid": flow_uuid}},
+                        {
+                            "nested": {
+                                "path": "values",
+                                "query": {"term": {"values.name": op_field}},
+                            }
+                        },
+                        {
+                            "range": {
+                                "modified_on": {
+                                    "gte": end_date_gte,
+                                    "lte": end_date_lte,
+                                }
+                            }
+                        },
+                    ]
+                }
+            },
+            "sort": [{"created_on": {"order": "desc"}}],
+        }
+        response = requests.get(url, params=params, json=query).json()
+
+        total_items = response["hits"]["total"]["value"]
+        total_pages = math.ceil(total_items / page_size)
+
+        data = []
+
+        for hit in response["hits"]["hits"]:
+            op_field_value = None
+            values = hit["_source"].get("values", [])
+
+            for value in values:
+                if value.get("name") == op_field:
+                    op_field_value = value.get("value")
+                    break
+
+            formatted_hit = {
+                "contact": {"name": hit["_source"].get("contact_name", "")},
+                "urn": hit["_source"].get("contact_urn", ""),
+                "start": hit["_source"].get("created_on", ""),
+                "op_field_value": op_field_value,
+            }
+            data.append(formatted_hit)
+
+        result = {
+            "pagination": {
+                "current_page": page_number,
+                "total_pages": total_pages,
+                "page_size": page_size,
+                "total_items": total_items,
+            },
+            "contacts": data,
+        }
+
+        return result
