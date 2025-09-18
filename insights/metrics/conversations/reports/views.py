@@ -70,10 +70,14 @@ class ConversationsReportsViewSet(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        source_config = {
-            "sections": serializer.validated_data.get("sections", []),
-            "custom_widgets": serializer.validated_data.get("custom_widgets", []),
-        }
+        source_config = serializer.validated_data.get("source_config", {})
+
+        source_config.update(
+            {
+                "sections": serializer.validated_data.get("sections", []),
+                "custom_widgets": serializer.validated_data.get("custom_widgets", []),
+            }
+        )
 
         filters = {
             "start": serializer.validated_data["start"],
