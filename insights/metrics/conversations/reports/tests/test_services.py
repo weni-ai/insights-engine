@@ -151,8 +151,12 @@ class TestConversationsReportService(TestCase):
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_csat_ai_worksheet"
     )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_nps_ai_worksheet"
+    )
     def test_generate(
         self,
+        mock_get_nps_ai_worksheet,
         mock_get_csat_ai_worksheet,
         mock_get_topics_distribution_worksheet,
         mock_get_resolutions_worksheet,
@@ -186,13 +190,30 @@ class TestConversationsReportService(TestCase):
                 }
             ],
         )
+        mock_get_nps_ai_worksheet.return_value = ConversationsReportWorksheet(
+            name="NPS AI",
+            data=[
+                {
+                    "URN": "123",
+                    "Date": "14/09/2025 19:27:10",
+                    "Score": "5",
+                },
+            ],
+        )
 
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
             source_config={
-                "sections": ["RESOLUTIONS", "TOPICS_AI", "TOPICS_HUMAN", "CSAT_AI"],
+                "sections": [
+                    "RESOLUTIONS",
+                    "TOPICS_AI",
+                    "TOPICS_HUMAN",
+                    "CSAT_AI",
+                    "NPS_AI",
+                ],
                 "csat_ai_agent_uuid": str(uuid.uuid4()),
+                "nps_ai_agent_uuid": str(uuid.uuid4()),
             },
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
