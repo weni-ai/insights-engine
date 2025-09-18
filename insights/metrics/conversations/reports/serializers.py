@@ -114,27 +114,50 @@ class RequestConversationsReportGenerationSerializer(
                 code="conversations_dashboard_not_found",
             )
 
-        if sections and "CSAT_AI" in sections:
-            widget = Widget.objects.filter(
-                dashboard__uuid=dashboards_uuids[0],
-                config__datalake_config__type__iexact="CSAT",
-            ).first()
+        if sections:
+            if "CSAT_AI" in sections:
+                widget = Widget.objects.filter(
+                    dashboard__uuid=dashboards_uuids[0],
+                    config__datalake_config__type__iexact="CSAT",
+                ).first()
 
-            if not widget:
-                raise serializers.ValidationError(
-                    {"sections": [_("CSAT AI widget not found")]},
-                    code="csat_ai_widget_not_found",
-                )
+                if not widget:
+                    raise serializers.ValidationError(
+                        {"sections": [_("CSAT AI widget not found")]},
+                        code="csat_ai_widget_not_found",
+                    )
 
-            agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+                agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
 
-            if not agent_uuid:
-                raise serializers.ValidationError(
-                    {"sections": [_("Agent UUID not found in widget config")]},
-                    code="agent_uuid_not_found_in_widget_config",
-                )
+                if not agent_uuid:
+                    raise serializers.ValidationError(
+                        {"sections": [_("Agent UUID not found in widget config")]},
+                        code="agent_uuid_not_found_in_widget_config",
+                    )
 
-            attrs["source_config"]["csat_ai_agent_uuid"] = agent_uuid
+                attrs["source_config"]["csat_ai_agent_uuid"] = agent_uuid
+
+            if "NPS_AI" in sections:
+                widget = Widget.objects.filter(
+                    dashboard__uuid=dashboards_uuids[0],
+                    config__datalake_config__type__iexact="NPS",
+                ).first()
+
+                if not widget:
+                    raise serializers.ValidationError(
+                        {"sections": [_("NPS AI widget not found")]},
+                        code="nps_ai_widget_not_found",
+                    )
+
+                agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+
+                if not agent_uuid:
+                    raise serializers.ValidationError(
+                        {"sections": [_("Agent UUID not found in widget config")]},
+                        code="agent_uuid_not_found_in_widget_config",
+                    )
+
+                attrs["source_config"]["nps_ai_agent_uuid"] = agent_uuid
 
         timezone = (
             pytz.timezone(attrs["project"].timezone)
