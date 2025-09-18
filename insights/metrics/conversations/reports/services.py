@@ -335,18 +335,22 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            # source_config = report.source_config or {}
+            source_config = report.source_config or {}
 
-            # sections = source_config.get("sections", [])
+            sections = source_config.get("sections", [])
 
-            # custom_widgets = source_config.get("custom_widgets", [])
+            worksheets = []
 
-            # TODO: Implement the specific generation logic
+            if "NPS_AI" in sections:
+                worksheet = self.get_nps_ai_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
+
+            files: list[ConversationsReportFile] = []
 
             if report.format == ReportFormat.CSV:
-                self.process_csv(report)
+                files.extend(self.process_csv(report, worksheets))
             elif report.format == ReportFormat.XLSX:
-                self.process_xlsx(report)
+                files.extend(self.process_xlsx(report, worksheets))
 
         except Exception as e:
             logger.error(
@@ -370,9 +374,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(
-                report, [ConversationsReportFile(name="TODO", content="TODO")]
-            )
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -491,3 +493,55 @@ class ConversationsReportService(BaseConversationsReportService):
         return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
             "%d/%m/%Y %H:%M:%S"
         )
+
+    def get_nps_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps ai worksheet
+        """
+
+        agent_uuid = report.source_config.get("nps_ai_agent_uuid", None)
+
+        if not agent_uuid:
+            raise ValueError("Agent UUID is required in the report source config")
+
+        events = self.get_datalake_events(
+            report,
+            project=str(report.project.uuid),
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+            key="weni_nps",
+            event_name="weni_nexus_data",
+        )
+
+        with override(report.requested_by.language):
+            worksheet_name = gettext("NPS AI")
+            date_label = gettext("Date")
+            score_label = gettext("Score")
+
+        data = []
+
+        scores = {str(n): 0 for n in range(0, 11)}
+
+        for event in events:
+            if event.get("value") not in scores:
+                continue
+
+            data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    date_label: (
+                        self._format_date(event.get("date"))
+                        if event.get("date")
+                        else ""
+                    ),
+                    score_label: event.get("value"),
+                }
+            )
+
+            scores[event.get("value")] += event.get("count")
+
+        return ConversationsReportWorksheet(name=worksheet_name, data=data)
