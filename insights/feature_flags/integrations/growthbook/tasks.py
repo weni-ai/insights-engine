@@ -1,10 +1,13 @@
-from celery import shared_task
-from insights.feature_flags.integrations.growthbook.instance import GROWTHBOOK_CLIENT
+from insights.celery import app
 
 
-@shared_task
-def update_growthbook_feature_flags() -> None:
+@app.task
+def update_growthbook_feature_flags():
     """
-    Update GrowthBook feature flags definitions (curto e longo cache).
+    Update the growthbook feature flags definitions.
     """
+    from insights.feature_flags.integrations.growthbook.instance import (
+        GROWTHBOOK_CLIENT,
+    )
+
     GROWTHBOOK_CLIENT.update_feature_flags_definitions()

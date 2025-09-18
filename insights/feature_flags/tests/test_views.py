@@ -1,27 +1,106 @@
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
-from unittest.mock import patch
+from django.test import TestCase
 
-from insights.authentication.authentication import User
-from insights.authentication.tests.decorators import with_project_auth
+from insights.feature_flags.integrations.growthbook.tests.mock import (
+    MockGrowthbookClient,
+)
+from insights.feature_flags.service import FeatureFlagService
 from insights.projects.models import Project
+from insights.users.models import User
 
 
-class TestFeatureFlagCheck(APITestCase):
+class TestFeatureFlagService(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(email="test@test.com")
-        self.project = Project.objects.create(name="P1")
-        self.client.force_authenticate(user=self.user)
-        self.url = reverse("feature_flags:check")
+        self.service = FeatureFlagService(growthbook_client=MockGrowthbookClient())
+        self.user = User.objects.create(email="test@test.com")
+        self.project = Project.objects.create()
 
-    def test_requires_project_uuid(self):
-        response = self.client.get(self.url, {"feature": "flag"})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    def test_get_feature_flags_list_for_user_and_project(self):
+        self.service.get_feature_flags_list_for_user_and_project(
+            user=self.user,
+            project=self.project,
+        )
 
-    @with_project_auth
-    @patch("insights.feature_flags.views.FeatureFlagClient.is_on", return_value=True)
-    def test_ok(self, _mock_is_on):
-        resp = self.client.get(self.url, {"feature": "flag", "project_uuid": str(self.project.uuid)})
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(resp.data, {"feature": "flag", "on": True})
+        self.service.growthbook_client.get_active_feature_flags_for_attributes.assert_called_once_with(
+            {
+                "userEmail": "test@test.com",
+                "projectUUID": str(self.project.uuid),
+            }
+        )
+
+    def test_cannot_evaluate_feature_flag_without_attributes(self):
+        with self.assertRaises(ValueError):
+            self.service.evaluate_feature_flag(
+                key="example",
+            )
+
+    def test_evaluate_feature_flag_for_project(self):
+        self.service.evaluate_feature_flag(
+            key="example",
+            project=self.project,
+        )
+
+        self.service.growthbook_client.evaluate_feature_flag_by_attributes.assert_called_once_with(
+            "example",
+            {
+                "projectUUID": str(self.project.uuid),
+            },
+        )
+
+    def test_evaluate_feature_flag_for_user(self):
+        self.service.evaluate_feature_flag(
+            key="example",
+            user=self.user,
+        )
+
+        self.service.growthbook_client.evaluate_feature_flag_by_attributes.assert_called_once_with(
+            "example",
+            {
+                "userEmail": "test@test.com",
+            },
+        )
+
+    def test_evaluate_feature_flag_for_user_and_project(self):
+        self.service.evaluate_feature_flag(
+            key="example",
+            user=self.user,
+            project=self.project,
+        )
+
+        self.service.growthbook_client.evaluate_feature_flag_by_attributes.assert_called_once_with(
+            "example",
+            {
+                "userEmail": "test@test.com",
+                "projectUUID": str(self.project.uuid),
+            },
+        )
+
+    def test_get_feature_flag_rules(self):
+        self.service.growthbook_client.get_feature_flags.return_value = {
+            "exampleEmail": {
+                "defaultValue": False,
+                "rules": [
+                    {
+                        "id": "fr_40644z1tmdrec3rs",
+                        "condition": {"userEmail": {"$nin": ["test@test.com"]}},
+                        "force": True,
+                    }
+                ],
+            },
+        }
+
+        rules = self.service.get_feature_flag_rules(
+            key="exampleEmail",
+        )
+
+        self.service.growthbook_client.get_feature_flags.assert_called_once_with()
+
+        self.assertEqual(
+            rules,
+            [
+                {
+                    "id": "fr_40644z1tmdrec3rs",
+                    "condition": {"userEmail": {"$nin": ["test@test.com"]}},
+                    "force": True,
+                }
+            ],
+        )

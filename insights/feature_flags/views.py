@@ -1,20 +1,38 @@
-from rest_framework import status, views
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
-from insights.authentication.permissions import ProjectAuthQueryParamPermission
-from insights.feature_flags.client import FeatureFlagClient
-from insights.feature_flags.criteria import build_attributes
+from insights.authentication.permissions import ProjectQueryParamPermission
+from insights.feature_flags.integrations.growthbook.instance import (
+    GROWTHBOOK_CLIENT,
+)
+from insights.feature_flags.serializers import (
+    FeatureFlagsQueryParamsSerializer,
+)
+from insights.feature_flags.service import FeatureFlagService
 
 
-class FeatureFlagCheckView(views.APIView):
-    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+class FeatureFlagsViewSet(GenericViewSet):
+    """
+    View for getting the active features for a project.
+    """
 
-    def get(self, request: Request) -> Response:
-        feature = request.query_params.get("feature")
-        if not feature:
-            return Response({"detail": "feature is required"}, status=status.HTTP_400_BAD_REQUEST)
-        attributes = build_attributes(request)
-        is_on = FeatureFlagClient().is_on(feature_key=feature, attributes=attributes)
-        return Response({"feature": feature, "on": is_on}, status=status.HTTP_200_OK)
+    service = FeatureFlagService(growthbook_client=GROWTHBOOK_CLIENT)
+    permission_classes = [IsAuthenticated, ProjectQueryParamPermission]
+    serializer_class = FeatureFlagsQueryParamsSerializer
+
+    def list(self, request, *args, **kwargs) -> Response:
+        """
+        Get the active features for a project.
+        """
+
+        query_params = FeatureFlagsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        active_features = self.service.get_feature_flags_list_for_user_and_project(
+            user=request.user,
+            project=query_params.validated_data["project"],
+        )
+
+        return Response({"active_features": active_features}, status=status.HTTP_200_OK)

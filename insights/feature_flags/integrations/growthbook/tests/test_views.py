@@ -3,29 +3,51 @@ from unittest.mock import patch
 
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 
 class TestGrowthbookWebhook(APITestCase):
-    def url(self):
-        return reverse("growthbook_webhook-list")
+    def receive_webhook(self, body: str) -> Response:
+        url = reverse("growthbook_webhook-list")
 
-    def receive(self, body: str, secret: str | None = None):
-        headers = {}
-        if secret is not None:
-            headers["HTTP_SECRET"] = secret
-        return self.client.post(self.url(), data=body, content_type="application/json", **headers)
+        return self.client.post(url, body, format="json")
 
-    def test_unauthorized_without_secret(self):
-        response = self.receive(json.dumps({"ping": True}))
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
+    @patch(
+        "insights.feature_flags.integrations.growthbook.auth."
+        "GrowthbookWebhookSecretAuthentication.authenticate"
+    )
     @patch(
         "insights.feature_flags.integrations.growthbook.tasks.update_growthbook_feature_flags.delay"
     )
-    def test_ok_with_secret_triggers_task(self, mock_delay):
-        with patch("insights.feature_flags.integrations.growthbook.auth.settings") as mock_settings:
-            mock_settings.GROWTHBOOK_WEBHOOK_SECRET = "s3cr3t"
-            response = self.receive(json.dumps({"event": "test"}), secret="s3cr3t")
+    def test_cannot_receive_webhook_when_authentication_fails(
+        self, mock_update_growthbook_feature_flags, mock_authenticate
+    ):
+        mock_authenticate.side_effect = AuthenticationFailed("Authentication failed")
+        mock_update_growthbook_feature_flags.return_value = None
+
+        body = json.dumps({"test": "test"})
+
+        response = self.receive_webhook(body)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        mock_update_growthbook_feature_flags.assert_not_called()
+
+    @patch(
+        "insights.feature_flags.integrations.growthbook.auth."
+        "GrowthbookWebhookSecretAuthentication.authenticate"
+    )
+    @patch(
+        "insights.feature_flags.integrations.growthbook.tasks.update_growthbook_feature_flags.delay"
+    )
+    def test_can_receive_webhook_when_authentication_succeeds(
+        self, mock_update_growthbook_feature_flags, mock_authenticate
+    ):
+        mock_authenticate.return_value = (None, None)
+        mock_update_growthbook_feature_flags.return_value = None
+
+        body = json.dumps({"test": "test"})
+
+        response = self.receive_webhook(body)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        mock_delay.assert_called_once()
+        mock_update_growthbook_feature_flags.assert_called_once()
