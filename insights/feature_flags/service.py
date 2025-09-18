@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from insights.users.models import User
 from insights.projects.models import Project
-
+from insights.users.models import User
 
 if TYPE_CHECKING:
     from insights.feature_flags.integrations.growthbook.clients import (

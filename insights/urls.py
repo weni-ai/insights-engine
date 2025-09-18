@@ -25,6 +25,10 @@ from drf_spectacular.views import (
 from rest_framework.routers import DefaultRouter
 
 from insights.dashboards.viewsets import DashboardViewSet
+from insights.feature_flags.integrations.growthbook.views import (
+    GrowthbookWebhook,
+)
+from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
 from insights.widgets.viewsets import WidgetViewSet
 from insights.feature_flags.integrations.growthbook.views import GrowthbookWebhook
@@ -38,7 +42,7 @@ router.register(r"widgets", WidgetViewSet, basename="widget")
 router.register(r"dashboards", DashboardViewSet, basename="dashboard")
 router.register(r"projects", ProjectViewSet, basename="project")
 router.register(r"growthbook", GrowthbookWebhook, basename="growthbook_webhook")
-router.register(r"feature-flags", FeatureFlagsViewSet, basename="feature_flags")
+router.register(r"feature_flags", FeatureFlagsViewSet, basename="feature_flags")
 
 urlpatterns += [
     path("", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
