@@ -32,10 +32,10 @@ app.conf.beat_schedule = {
     },
     "generate-conversations-report": {
         "task": "insights.metrics.conversations.tasks.generate_conversations_report",
-        "schedule": 30,  # 30 seconds
+        "schedule": 10,  # 10 seconds
     },
     "timeout-reports": {
         "task": "insights.metrics.conversations.tasks.timeout_reports",
-        "schedule": (60 * 5),  # 5 minutes
+        "schedule": 30,  # 30 seconds
     },
 }
