@@ -11,6 +11,7 @@ from insights.reports.models import Report
 from insights.metrics.conversations.reports.choices import ConversationsReportSections
 from insights.projects.models import Project
 from insights.widgets.models import Widget
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 
 
 class BaseConversationsReportParamsSerializer(serializers.Serializer):
@@ -99,6 +100,41 @@ class RequestConversationsReportGenerationSerializer(
                     },
                     code="widgets_not_found",
                 )
+
+        sections = attrs.get("sections", [])
+        attrs["source_config"] = {}
+
+        dashboards_uuids = Dashboard.objects.filter(
+            project=attrs["project"], name=CONVERSATIONS_DASHBOARD_NAME
+        ).values_list("uuid", flat=True)
+
+        if not dashboards_uuids:
+            raise serializers.ValidationError(
+                {"sections": [_("Conversations dashboard not found")]},
+                code="conversations_dashboard_not_found",
+            )
+
+        if sections and "CSAT_AI" in sections:
+            widget = Widget.objects.filter(
+                dashboard__uuid=dashboards_uuids[0],
+                config__datalake_config__type="CSAT",
+            ).first()
+
+            if not widget:
+                raise serializers.ValidationError(
+                    {"sections": [_("CSAT AI widget not found")]},
+                    code="csat_ai_widget_not_found",
+                )
+
+            agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+
+            if not agent_uuid:
+                raise serializers.ValidationError(
+                    {"sections": [_("Agent UUID not found in widget config")]},
+                    code="agent_uuid_not_found_in_widget_config",
+                )
+
+            attrs["source_config"]["csat_ai_agent_uuid"] = agent_uuid
 
         timezone = (
             pytz.timezone(attrs["project"].timezone)
