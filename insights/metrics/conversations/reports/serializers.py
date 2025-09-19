@@ -172,15 +172,23 @@ class RequestConversationsReportGenerationSerializer(
                         code="csat_human_widget_not_found",
                     )
 
-                flow_uuid = widget.config.get("filter", {}).get("flow")
+                csat_human_flow_uuid = widget.config.get("filter", {}).get("flow")
+                csat_human_op_field = widget.config.get("op_field", None)
 
-                if not flow_uuid:
+                if not csat_human_flow_uuid:
                     raise serializers.ValidationError(
                         {"sections": [_("Flow UUID not found in widget config")]},
                         code="flow_uuid_not_found_in_widget_config",
                     )
 
-                attrs["source_config"]["csat_human_flow_uuid"] = flow_uuid
+                if not csat_human_op_field:
+                    raise serializers.ValidationError(
+                        {"sections": [_("Op field not found in widget config")]},
+                        code="op_field_not_found_in_widget_config",
+                    )
+
+                attrs["source_config"]["csat_human_flow_uuid"] = csat_human_flow_uuid
+                attrs["source_config"]["csat_human_op_field"] = csat_human_op_field
 
         timezone = (
             pytz.timezone(attrs["project"].timezone)
