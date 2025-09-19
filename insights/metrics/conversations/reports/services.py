@@ -135,6 +135,20 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_flowsrun_results_by_contacts(
+        self,
+        report: Report,
+        flow_uuid: str,
+        start_date: str,
+        end_date: str,
+        op_field: str,
+    ) -> list[dict]:
+        """
+        Get flowsrun results by contacts.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -499,7 +513,7 @@ class ConversationsReportService(BaseConversationsReportService):
             "%d/%m/%Y %H:%M:%S"
         )
 
-    def _get_flowsrun_results_by_contacts(
+    def get_flowsrun_results_by_contacts(
         self,
         report: Report,
         flow_uuid: str,
