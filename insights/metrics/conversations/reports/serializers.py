@@ -159,6 +159,29 @@ class RequestConversationsReportGenerationSerializer(
 
                 attrs["source_config"]["nps_ai_agent_uuid"] = agent_uuid
 
+            if "CSAT_HUMAN" in sections:
+                widget = Widget.objects.filter(
+                    dashboard__uuid=dashboards_uuids[0],
+                    source="conversations.csat",
+                    config__type="flow_result",
+                ).first()
+
+                if not widget:
+                    raise serializers.ValidationError(
+                        {"sections": [_("CSAT human widget not found")]},
+                        code="csat_human_widget_not_found",
+                    )
+
+                flow_uuid = widget.config.get("filter", {}).get("flow")
+
+                if not flow_uuid:
+                    raise serializers.ValidationError(
+                        {"sections": [_("Flow UUID not found in widget config")]},
+                        code="flow_uuid_not_found_in_widget_config",
+                    )
+
+                attrs["source_config"]["csat_human_flow_uuid"] = flow_uuid
+
         timezone = (
             pytz.timezone(attrs["project"].timezone)
             if attrs["project"].timezone
