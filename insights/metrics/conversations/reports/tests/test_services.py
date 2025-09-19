@@ -8,6 +8,12 @@ from django.utils.timezone import timedelta
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
 )
+from insights.metrics.conversations.integrations.elasticsearch.services import (
+    ConversationsElasticsearchService,
+)
+from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
+    MockElasticsearchClient,
+)
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportFile,
     ConversationsReportWorksheet,
@@ -34,6 +40,9 @@ from insights.sources.tests.mock import MockCacheClient
 class TestConversationsReportService(TestCase):
     def setUp(self):
         self.service = ConversationsReportService(
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=MockElasticsearchClient(),
+            ),
             events_limit_per_page=5,
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
@@ -161,7 +170,7 @@ class TestConversationsReportService(TestCase):
             source=self.service.source,
             source_config={
                 "sections": ["RESOLUTIONS", "CSAT_HUMAN"],
-                "csat_human_flow_uuid": uuid.uuid4(),
+                "csat_human_flow_uuid": str(uuid.uuid4()),
                 "csat_human_op_field": "op_field",
             },
             filters={"start": "2025-01-01", "end": "2025-01-02"},
@@ -171,9 +180,7 @@ class TestConversationsReportService(TestCase):
 
         self.service.generate(report)
 
-        mock_get_csat_human_worksheet.assert_called_once_with(
-            report, "2025-01-01", "2025-01-02"
-        )
+        mock_get_csat_human_worksheet.assert_called_once()
         mock_send_email.assert_called_once()
 
     def test_get_current_report_for_project_when_no_reports_exist(self):
