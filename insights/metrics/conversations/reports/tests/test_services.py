@@ -412,6 +412,130 @@ class TestConversationsReportService(TestCase):
             "Report %s is not in progress" % report.uuid,
         )
 
+    def test_get_flowsrun_results_by_contacts(self):
+        def get_side_effect(*args, **kwargs):
+            # First call: return hits
+            if not hasattr(get_side_effect, "called"):
+                get_side_effect.called = True
+
+                return {
+                    "hits": {
+                        "total": {"value": 10},
+                        "hits": [
+                            {
+                                "_source": {
+                                    "project_uuid": uuid.uuid4(),
+                                    "contact_uuid": uuid.uuid4(),
+                                    "created_on": "2025-01-01",
+                                    "modified_on": "2025-01-01",
+                                    "contact_name": "John Doe",
+                                    "contact_urn": "1234567890",
+                                    "values": [
+                                        {
+                                            "name": "user_feedback",
+                                            "value": "5",
+                                        }
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                }
+
+            # Second call: return no hits
+            return {"hits": {"total": {"value": 10}, "hits": []}}
+
+        self.service.elasticsearch_service.client.get.side_effect = get_side_effect
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        results = self.service.get_flowsrun_results_by_contacts(
+            report=report,
+            flow_uuid=uuid.uuid4(),
+            start_date="2025-01-01",
+            end_date="2025-01-02",
+            op_field="user_feedback",
+        )
+
+        self.assertEqual(
+            results,
+            [
+                {
+                    "contact": {"name": "John Doe"},
+                    "urn": "1234567890",
+                    "modified_on": "2025-01-01",
+                    "op_field_value": "5",
+                }
+            ],
+        )
+
+    def test_get_flowsrun_results_by_contacts_when_no_results_exist(self):
+        self.service.elasticsearch_service.client.get.return_value = {
+            "hits": {
+                "total": {"value": 0},
+                "hits": [],
+            }
+        }
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        results = self.service.get_flowsrun_results_by_contacts(
+            report=report,
+            flow_uuid=uuid.uuid4(),
+            start_date="2025-01-01",
+            end_date="2025-01-02",
+            op_field="user_feedback",
+        )
+
+        self.assertEqual(results, [])
+
+    def test_get_flowsrun_results_by_contacts_when_report_is_failed(self):
+        self.service.elasticsearch_service.client.get.return_value = {
+            "hits": {
+                "total": {"value": 0},
+                "hits": [],
+            }
+        }
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            status=ReportStatus.FAILED,
+            errors={"send_email": "test", "event_id": "test"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_flowsrun_results_by_contacts(
+                report=report,
+                flow_uuid=uuid.uuid4(),
+                start_date="2025-01-01",
+                end_date="2025-01-02",
+                op_field="user_feedback",
+            )
+
+        self.assertEqual(
+            str(context.exception),
+            "Report %s is not in progress" % report.uuid,
+        )
+
 
 class TestSerializeFiltersForJson(TestCase):
     """Test cases for the serialize_filters_for_json utility function."""
