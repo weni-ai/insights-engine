@@ -526,6 +526,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("CSAT AI")
             date_label = gettext("Date")
             score_label = gettext("Score")
 
@@ -546,6 +547,6 @@ class ConversationsReportService(BaseConversationsReportService):
             )
 
         return ConversationsReportWorksheet(
-            name="CSAT AI",
+            name=worksheet_name,
             data=data,
         )
