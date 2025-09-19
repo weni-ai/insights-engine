@@ -22,6 +22,9 @@ from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
 from insights.projects.models import Project
 from insights.sources.dl_events.clients import BaseDataLakeEventsClient
+from insights.metrics.conversations.integrations.elasticsearch.services import (
+    ConversationsElasticsearchService,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -132,6 +135,20 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_flowsrun_results_by_contacts(
+        self,
+        report: Report,
+        flow_uuid: str,
+        start_date: str,
+        end_date: str,
+        op_field: str,
+    ) -> list[dict]:
+        """
+        Get flowsrun results by contacts.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -142,14 +159,20 @@ class ConversationsReportService(BaseConversationsReportService):
         self,
         datalake_events_client: BaseDataLakeEventsClient,
         metrics_service: ConversationsMetricsService,
+        elasticsearch_service: ConversationsElasticsearchService,
         events_limit_per_page: int = 5000,
-        page_limit: int = 200,
+        page_limit: int = 100,
+        elastic_page_size: int = 1000,
+        elastic_page_limit: int = 100,
     ):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.datalake_events_client = datalake_events_client
         self.metrics_service = metrics_service
         self.events_limit_per_page = events_limit_per_page
         self.page_limit = page_limit
+        self.elasticsearch_service = elasticsearch_service
+        self.elastic_page_size = elastic_page_size
+        self.elastic_page_limit = elastic_page_limit
 
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
@@ -491,3 +514,66 @@ class ConversationsReportService(BaseConversationsReportService):
         return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
             "%d/%m/%Y %H:%M:%S"
         )
+
+    def get_flowsrun_results_by_contacts(
+        self,
+        report: Report,
+        flow_uuid: str,
+        start_date: str,
+        end_date: str,
+        op_field: str,
+    ) -> list[dict]:
+        """
+        Get flowsrun results by contacts.
+        """
+        data = []
+
+        current_page = 1
+        page_size = self.elastic_page_size
+        page_limit = self.elastic_page_limit
+
+        while True:
+            if current_page >= page_limit:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s has more than %s pages. Finishing flowsrun results by contacts retrieval",
+                    report.uuid,
+                    page_limit,
+                )
+                raise ValueError("Report has more than %s pages" % page_limit)
+
+            report.refresh_from_db(fields=["status"])
+
+            if report.status != ReportStatus.IN_PROGRESS:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress. Finishing flowsrun results by contacts retrieval",
+                    report.uuid,
+                )
+                raise ValueError("Report %s is not in progress" % report.uuid)
+
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Retrieving flowsrun results by contacts for page %s for report %s",
+                current_page,
+                report.uuid,
+            )
+
+            paginated_results = (
+                self.elasticsearch_service.get_flowsrun_results_by_contacts(
+                    project_uuid=report.project.uuid,
+                    flow_uuid=flow_uuid,
+                    start_date=start_date,
+                    end_date=end_date,
+                    op_field=op_field,
+                    page_size=page_size,
+                    page_number=current_page,
+                )
+            )
+
+            contacts = paginated_results.get("contacts", [])
+
+            if len(contacts) == 0 or contacts == [{}]:
+                break
+
+            data.extend(paginated_results["contacts"])
+            current_page += 1
+
+        return data
