@@ -149,6 +149,15 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_nps_human_worksheet(
+        self, report: Report, start_date: str, end_date: str
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps human worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -358,18 +367,22 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            # source_config = report.source_config or {}
+            source_config = report.source_config or {}
 
-            # sections = source_config.get("sections", [])
+            sections = source_config.get("sections", [])
 
-            # custom_widgets = source_config.get("custom_widgets", [])
+            worksheets = []
 
-            # TODO: Implement the specific generation logic
+            if "NPS_HUMAN" in sections:
+                worksheet = self.get_nps_human_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
+
+            files: list[ConversationsReportFile] = []
 
             if report.format == ReportFormat.CSV:
-                self.process_csv(report)
+                files.extend(self.process_csv(report, worksheets))
             elif report.format == ReportFormat.XLSX:
-                self.process_xlsx(report)
+                files.extend(self.process_xlsx(report, worksheets))
 
         except Exception as e:
             logger.error(
@@ -393,9 +406,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(
-                report, [ConversationsReportFile(name="TODO", content="TODO")]
-            )
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -577,3 +588,63 @@ class ConversationsReportService(BaseConversationsReportService):
             current_page += 1
 
         return data
+
+    def get_nps_human_worksheet(
+        self, report: Report, start_date: str, end_date: str
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps human worksheet.
+        """
+        flow_uuid = report.source_config.get("nps_human_flow_uuid", None)
+        op_field = report.source_config.get("nps_human_op_field", None)
+
+        missing_fields = []
+
+        if not flow_uuid:
+            missing_fields.append("flow_uuid")
+
+        if not op_field:
+            missing_fields.append("op_field")
+
+        if missing_fields:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Missing fields for report %s: %s",
+                report.uuid,
+                ", ".join(missing_fields),
+            )
+            raise ValueError(
+                "Missing fields for report %s: %s"
+                % (report.uuid, ", ".join(missing_fields))
+            )
+
+        docs = self.get_flowsrun_results_by_contacts(
+            report=report,
+            flow_uuid=flow_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            op_field=op_field,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("NPS Human")
+            date_label = gettext("Date")
+            score_label = gettext("Score")
+
+        data = []
+
+        for doc in docs:
+            if doc["op_field_value"] is None:
+                continue
+
+            data.append(
+                {
+                    "URN": doc["urn"],
+                    date_label: self._format_date(doc["modified_on"]),
+                    score_label: doc["op_field_value"],
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
