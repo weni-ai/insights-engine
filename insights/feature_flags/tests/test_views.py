@@ -1,11 +1,11 @@
 from django.test import TestCase
 
-from insights.feature_flags.service import FeatureFlagService
 from insights.feature_flags.integrations.growthbook.tests.mock import (
     MockGrowthbookClient,
 )
-from insights.users.models import User
+from insights.feature_flags.service import FeatureFlagService
 from insights.projects.models import Project
+from insights.users.models import User
 
 
 class TestFeatureFlagService(TestCase):

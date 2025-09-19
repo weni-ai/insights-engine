@@ -348,6 +348,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             start_date=start_date,
             end_date=end_date,
             conversation_type=conversation_type,
+            output_language=output_language,
         )
 
         if cached_results := self._get_cached_results(cache_key):
