@@ -1024,7 +1024,7 @@ class ConversationsReportService(BaseConversationsReportService):
             data.append(
                 {
                     "URN": mock_urn,
-                    "Date": self._format_date("2025-01-01"),
+                    "Date": self._format_date("2025-01-01T00:00:00.000000Z"),
                     "Score": "5",
                 }
             )
