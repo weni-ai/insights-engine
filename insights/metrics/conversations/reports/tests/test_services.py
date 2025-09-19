@@ -7,6 +7,12 @@ from django.utils.timezone import timedelta
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
 )
+from insights.metrics.conversations.integrations.elasticsearch.services import (
+    ConversationsElasticsearchService,
+)
+from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
+    MockElasticsearchClient,
+)
 from insights.metrics.conversations.reports.dataclass import ConversationsReportFile
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.sources.dl_events.tests.mock_client import (
@@ -30,6 +36,9 @@ from insights.sources.tests.mock import MockCacheClient
 class TestConversationsReportService(TestCase):
     def setUp(self):
         self.service = ConversationsReportService(
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=MockElasticsearchClient(),
+            ),
             events_limit_per_page=5,
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
