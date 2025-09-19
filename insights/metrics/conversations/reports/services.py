@@ -171,6 +171,8 @@ class ConversationsReportService(BaseConversationsReportService):
         self.events_limit_per_page = events_limit_per_page
         self.page_limit = page_limit
         self.elasticsearch_service = elasticsearch_service
+        self.elastic_page_size = elastic_page_size
+        self.elastic_page_limit = elastic_page_limit
 
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
@@ -566,7 +568,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
             )
 
-            if len(paginated_results) == 0 or paginated_results == [{}]:
+            contacts = paginated_results.get("contacts", [])
+
+            if len(contacts) == 0 or contacts == [{}]:
                 break
 
             data.extend(paginated_results["contacts"])
