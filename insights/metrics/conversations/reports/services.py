@@ -135,6 +135,15 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_csat_human_worksheet(
+        self, report: Report, start_date: str, end_date: str
+    ) -> ConversationsReportWorksheet:
+        """
+        Get csat human worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -559,3 +568,15 @@ class ConversationsReportService(BaseConversationsReportService):
             current_page += 1
 
         return data
+
+    def get_csat_human_worksheet(
+        self, report: Report, start_date: str, end_date: str
+    ) -> ConversationsReportWorksheet:
+        """
+        Get csat human worksheet.
+        """
+
+        return ConversationsReportWorksheet(
+            name="CSAT Human",
+            data=[],
+        )
