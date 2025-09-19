@@ -1107,6 +1107,24 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get nps human worksheet.
         """
+        # Mock for the staging environment
+        mock_urns = ["55988776655", "55988776656", "55988776657"]
+
+        data = []
+
+        for mock_urn in mock_urns:
+            data.append(
+                {
+                    "URN": mock_urn,
+                    "Date": self._format_date("2025-01-01T00:00:00.000000Z"),
+                    "Score": "10",
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name="NPS Human",
+            data=data,
+        )
         flow_uuid = report.source_config.get("nps_human_flow_uuid", None)
         op_field = report.source_config.get("nps_human_op_field", None)
 
