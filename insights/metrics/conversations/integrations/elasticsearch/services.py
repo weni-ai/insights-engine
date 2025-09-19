@@ -74,7 +74,7 @@ class ConversationsElasticsearchService:
             formatted_hit = {
                 "contact": {"name": hit["_source"].get("contact_name", "")},
                 "urn": hit["_source"].get("contact_urn", ""),
-                "start": hit["_source"].get("created_on", ""),
+                "modified_on": hit["_source"].get("modified_on", ""),
                 "op_field_value": op_field_value,
             }
             data.append(formatted_hit)
