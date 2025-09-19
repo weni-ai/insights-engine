@@ -21,6 +21,10 @@ from insights.metrics.conversations.integrations.elasticsearch.services import (
 from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
     MockElasticsearchClient,
 )
+from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportFile,
+    ConversationsReportWorksheet,
+)
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
@@ -166,8 +170,12 @@ class TestConversationsReportService(TestCase):
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_csat_human_worksheet"
     )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_nps_human_worksheet"
+    )
     def test_generate(
         self,
+        mock_get_nps_human_worksheet,
         mock_get_csat_human_worksheet,
         mock_get_nps_ai_worksheet,
         mock_get_csat_ai_worksheet,
@@ -224,6 +232,17 @@ class TestConversationsReportService(TestCase):
             ],
         )
 
+        mock_get_nps_human_worksheet.return_value = ConversationsReportWorksheet(
+            name="NPS Human",
+            data=[
+                {
+                    "Date": "2025-01-01 00:00:00",
+                    "Score": "5",
+                    "URN": "1234567890",
+                },
+            ],
+        )
+
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
@@ -235,11 +254,14 @@ class TestConversationsReportService(TestCase):
                     "CSAT_AI",
                     "NPS_AI",
                     "CSAT_HUMAN",
+                    "NPS_HUMAN",
                 ],
                 "csat_ai_agent_uuid": str(uuid.uuid4()),
                 "nps_ai_agent_uuid": str(uuid.uuid4()),
                 "csat_human_flow_uuid": str(uuid.uuid4()),
                 "csat_human_op_field": "op_field",
+                "nps_human_flow_uuid": str(uuid.uuid4()),
+                "nps_human_op_field": "op_field",
             },
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
@@ -249,6 +271,7 @@ class TestConversationsReportService(TestCase):
         self.service.generate(report)
 
         mock_get_csat_human_worksheet.assert_called_once()
+        mock_get_nps_human_worksheet.assert_called_once()
         mock_send_email.assert_called_once()
 
     def test_get_current_report_for_project_when_no_reports_exist(self):
