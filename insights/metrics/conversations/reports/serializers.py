@@ -118,6 +118,7 @@ class RequestConversationsReportGenerationSerializer(
             if "CSAT_AI" in sections:
                 widget = Widget.objects.filter(
                     dashboard__uuid=dashboards_uuids[0],
+                    source="conversations.csat",
                     config__datalake_config__type__iexact="CSAT",
                 ).first()
 
@@ -140,6 +141,7 @@ class RequestConversationsReportGenerationSerializer(
             if "NPS_AI" in sections:
                 widget = Widget.objects.filter(
                     dashboard__uuid=dashboards_uuids[0],
+                    source="conversations.nps",
                     config__datalake_config__type__iexact="NPS",
                 ).first()
 

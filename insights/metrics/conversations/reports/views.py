@@ -84,7 +84,12 @@ class ConversationsReportsViewSet(APIView):
         source_config.update(
             {
                 "sections": serializer.validated_data.get("sections", []),
-                "custom_widgets": serializer.validated_data.get("custom_widgets", []),
+                "custom_widgets": [
+                    str(widget_uuid)
+                    for widget_uuid in serializer.validated_data.get(
+                        "custom_widgets", []
+                    )
+                ],
             }
         )
 

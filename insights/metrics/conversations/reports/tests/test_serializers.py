@@ -307,7 +307,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversations.custom",
+            source="conversations.csat",
             type="custom",
             position=[1, 2],
             config={
@@ -336,7 +336,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversations.custom",
+            source="conversations.csat",
             type="custom",
             position=[1, 2],
             config={
@@ -381,7 +381,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversations.custom",
+            source="conversations.nps",
             type="custom",
             position=[1, 2],
             config={
