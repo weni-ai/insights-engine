@@ -1,3 +1,4 @@
+from unittest.mock import Mock
 from django.utils.translation import gettext_lazy as _
 
 
@@ -11,6 +12,9 @@ from insights.authentication.permissions import (
     ProjectAuthQueryParamPermission,
     ProjectAuthBodyPermission,
 )
+from insights.metrics.conversations.integrations.elasticsearch.services import (
+    ConversationsElasticsearchService,
+)
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.reports.serializers import (
     GetConversationsReportStatusQueryParamsSerializer,
@@ -20,10 +24,16 @@ from insights.metrics.conversations.reports.serializers import (
 from insights.reports.choices import ReportStatus
 from insights.sources.dl_events.clients import DataLakeEventsClient
 from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
+    MockElasticsearchClient,
+)
 
 
 class ConversationsReportsViewSet(APIView):
     service = ConversationsReportService(
+        elasticsearch_service=ConversationsElasticsearchService(
+            client=MockElasticsearchClient(),
+        ),
         datalake_events_client=DataLakeEventsClient(),
         metrics_service=ConversationsMetricsService(),
     )
