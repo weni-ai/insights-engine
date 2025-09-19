@@ -1,4 +1,3 @@
-from unittest.mock import Mock
 from django.utils.translation import gettext_lazy as _
 
 
