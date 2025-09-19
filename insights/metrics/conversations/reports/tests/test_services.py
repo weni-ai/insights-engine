@@ -460,6 +460,65 @@ class TestConversationsReportService(TestCase):
             ],
         )
 
+    def test_get_flowsrun_results_by_contacts_when_no_results_exist(self):
+        self.service.elasticsearch_service.client.get.return_value = {
+            "hits": {
+                "total": {"value": 0},
+                "hits": [],
+            }
+        }
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        results = self.service.get_flowsrun_results_by_contacts(
+            report=report,
+            flow_uuid=uuid.uuid4(),
+            start_date="2025-01-01",
+            end_date="2025-01-02",
+            op_field="user_feedback",
+        )
+
+        self.assertEqual(results, [])
+
+    def test_get_flowsrun_results_by_contacts_when_report_is_failed(self):
+        self.service.elasticsearch_service.client.get.return_value = {
+            "hits": {
+                "total": {"value": 0},
+                "hits": [],
+            }
+        }
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            status=ReportStatus.FAILED,
+            errors={"send_email": "test", "event_id": "test"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_flowsrun_results_by_contacts(
+                report=report,
+                flow_uuid=uuid.uuid4(),
+                start_date="2025-01-01",
+                end_date="2025-01-02",
+                op_field="user_feedback",
+            )
+
+        self.assertEqual(
+            str(context.exception),
+            "Report %s is not in progress" % report.uuid,
+        )
+
 
 class TestSerializeFiltersForJson(TestCase):
     """Test cases for the serialize_filters_for_json utility function."""
