@@ -404,3 +404,84 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             serializer.errors["sections"][0].code,
             "agent_uuid_not_found_in_widget_config",
         )
+
+    def test_serializer_with_csat_human_section_and_csat_human_widget(self):
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.CSAT_HUMAN],
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["sections"][0].code, "csat_human_widget_not_found"
+        )
+
+    def test_serializer_with_csat_human_section_and_csat_human_widget_without_flow_uuid(
+        self,
+    ):
+        Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.csat",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "type": "flow_result",
+                "filter": {
+                    "op_field": "csat",
+                },
+            },
+        )
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.CSAT_HUMAN],
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["sections"][0].code,
+            "flow_uuid_not_found_in_widget_config",
+        )
+
+    def test_serializer_with_csat_human_section_and_csat_human_widget_with_flow_uuid(
+        self,
+    ):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.csat",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "type": "flow_result",
+                "filter": {
+                    "flow": str(uuid.uuid4()),
+                    "op_field": "csat",
+                },
+            },
+        )
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.CSAT_HUMAN],
+            }
+        )
+
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(
+            serializer.validated_data["source_config"]["csat_human_flow_uuid"],
+            widget.config.get("filter", {}).get("flow"),
+        )
