@@ -129,7 +129,7 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversations.custom",
+            source="conversations.csat",
             type="custom",
             position=[1, 2],
             config={
