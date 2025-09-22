@@ -42,6 +42,8 @@ from insights.sources.flowruns.tests.mock_query_executor import (
     MockFlowRunsQueryExecutor,
 )
 from insights.sources.tests.mock import MockCacheClient
+from insights.widgets.models import Widget
+from insights.dashboards.models import Dashboard
 
 
 class TestConversationsReportService(TestCase):
@@ -61,9 +63,26 @@ class TestConversationsReportService(TestCase):
             ),
         )
         self.project = Project.objects.create(name="Test")
+        self.dashboard = Dashboard.objects.create(name="Test", project=self.project)
         self.user = User.objects.create(
             email="test@test.com",
             language="en",
+        )
+
+    def test_ensure_unique_worksheet_name(self):
+        used_names = set()
+        self.assertEqual(
+            self.service._ensure_unique_worksheet_name("Test", used_names), "Test"
+        )
+        self.assertEqual(
+            self.service._ensure_unique_worksheet_name("Test", used_names), "Test (1)"
+        )
+        self.assertEqual(
+            self.service._ensure_unique_worksheet_name("Test", used_names), "Test (2)"
+        )
+        self.assertEqual(
+            self.service._ensure_unique_worksheet_name("Test (1)", used_names),
+            "Test (1) (1)",
         )
 
     @patch("django.core.mail.EmailMessage.send")
@@ -630,6 +649,56 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(
             str(context.exception),
             "Agent UUID is required in the report source config",
+        )
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_custom_widget_worksheet(self, mock_get_datalake_events):
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "1234567890",
+                "date": "2025-09-14T19:27:10.293700Z",
+                "value": "5",
+            }
+        ]
+
+        widget = Widget.objects.create(
+            name="Test",
+            config={"datalake_config": {"key": "test", "agent_uuid": "test"}},
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"custom_widgets": [str(widget.uuid)]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_custom_widget_worksheet(
+            report=report,
+            widget=widget,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, widget.name)
+        self.assertEqual(
+            worksheet.data,
+            [
+                {
+                    "URN": "1234567890",
+                    "Date": "14/09/2025 19:27:10",
+                    "Value": "5",
+                }
+            ],
         )
 
 

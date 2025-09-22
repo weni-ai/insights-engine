@@ -27,6 +27,7 @@ from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
 )
+from insights.widgets.models import Widget
 
 
 logger = logging.getLogger(__name__)
@@ -252,6 +253,32 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return files
 
+    def _ensure_unique_worksheet_name(self, name: str, used_names: set[str]) -> str:
+        """
+        Ensure worksheet name is unique by appending a number if needed.
+
+        Args:
+            name: The original worksheet name
+            used_names: Set of already used worksheet names
+
+        Returns:
+            A unique worksheet name
+        """
+        if name not in used_names:
+            used_names.add(name)
+            return name
+
+        counter = 1
+        while f"{name} ({counter})" in used_names:
+            counter += 1
+
+            if counter > 20:
+                raise ValueError("Too many unique names found")
+
+        unique_name = f"{name} ({counter})"
+        used_names.add(unique_name)
+        return unique_name
+
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
     ) -> list[ConversationsReportFile]:
@@ -264,8 +291,11 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language):
             file_name = gettext("Conversations dashboard report")
 
+        used_worksheet_names = set()
         for worksheet in worksheets:
-            worksheet_name = worksheet.name
+            worksheet_name = self._ensure_unique_worksheet_name(
+                worksheet.name, used_worksheet_names
+            )
             worksheet_data = worksheet.data
 
             xlsx_worksheet = workbook.add_worksheet(worksheet_name)
@@ -413,6 +443,9 @@ class ConversationsReportService(BaseConversationsReportService):
             )
 
             sections = report.source_config.get("sections", [])
+            source_config = report.source_config or {}
+
+            custom_widgets = source_config.get("custom_widgets", [])
 
             worksheets = []
 
@@ -464,6 +497,21 @@ class ConversationsReportService(BaseConversationsReportService):
 
             if "NPS_HUMAN" in sections:
                 worksheet = self.get_nps_human_worksheet(report, start_date, end_date)
+
+            if custom_widgets:
+                widgets = Widget.objects.filter(
+                    id__in=custom_widgets, dashboard__project=report.project
+                )
+
+                for widget in widgets:
+                    worksheets.append(
+                        self.get_custom_widget_worksheet(
+                            report,
+                            widget,
+                            start_date,
+                            end_date,
+                        )
+                    )
 
             files: list[ConversationsReportFile] = []
 
@@ -1171,6 +1219,56 @@ class ConversationsReportService(BaseConversationsReportService):
                     "URN": doc["urn"],
                     date_label: self._format_date(doc["modified_on"]),
                     score_label: doc["op_field_value"],
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
+    def get_custom_widget_worksheet(
+        self,
+        report: Report,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get custom widgets results.
+        """
+        datalake_config = widget.config.get("datalake_config", {})
+        key = datalake_config.get("key", "")
+        agent_uuid = datalake_config.get("agent_uuid", "")
+
+        if not key or not agent_uuid:
+            raise ValueError("Key or agent_uuid is missing in the widget config")
+
+        events = self.get_datalake_events(
+            report,
+            key=key,
+            event_name="weni_nexus_data",
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+        )
+
+        worksheet_name = widget.name
+
+        with override(report.requested_by.language or "en"):
+            date_label = gettext("Date")
+            value_label = gettext("Value")
+
+        data = []
+
+        for event in events:
+            data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    date_label: self._format_date(event.get("date")),
+                    value_label: event.get("value"),
                 }
             )
 
