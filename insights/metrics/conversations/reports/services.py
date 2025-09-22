@@ -25,6 +25,7 @@ from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
 )
+from insights.widgets.models import Widget
 
 
 logger = logging.getLogger(__name__)
@@ -358,18 +359,33 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            # source_config = report.source_config or {}
+            source_config = report.source_config or {}
 
-            # sections = source_config.get("sections", [])
+            custom_widgets = source_config.get("custom_widgets", [])
 
-            # custom_widgets = source_config.get("custom_widgets", [])
+            worksheets = []
 
-            # TODO: Implement the specific generation logic
+            if custom_widgets:
+                widgets = Widget.objects.filter(
+                    id__in=custom_widgets, dashboard__project=report.project
+                )
+
+                for widget in widgets:
+                    worksheets.append(
+                        self.get_custom_widget_worksheet(
+                            report,
+                            widget,
+                            start_date,
+                            end_date,
+                        )
+                    )
+
+            files: list[ConversationsReportFile] = []
 
             if report.format == ReportFormat.CSV:
-                self.process_csv(report)
+                files.extend(self.process_csv(report))
             elif report.format == ReportFormat.XLSX:
-                self.process_xlsx(report)
+                files.extend(self.process_xlsx(report))
 
         except Exception as e:
             logger.error(
@@ -393,9 +409,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(
-                report, [ConversationsReportFile(name="TODO", content="TODO")]
-            )
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -577,3 +591,53 @@ class ConversationsReportService(BaseConversationsReportService):
             current_page += 1
 
         return data
+
+    def get_custom_widget_worksheet(
+        self,
+        report: Report,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get custom widgets results.
+        """
+        datalake_config = widget.config.get("datalake_config", {})
+        key = datalake_config.get("key", "")
+        agent_uuid = datalake_config.get("agent_uuid", "")
+
+        if not key or not agent_uuid:
+            raise ValueError("Key or agent_uuid is missing in the widget config")
+
+        events = self.get_datalake_events(
+            report,
+            key=key,
+            event_name=self.event_name,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+        )
+
+        worksheet_name = widget.name
+
+        with override(report.requested_by.language or "en"):
+            date_label = gettext("Date")
+            value_label = gettext("Value")
+
+        data = []
+
+        for event in events:
+            data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    date_label: self._format_date(event.get("date")),
+                    value_label: event.get("value"),
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
