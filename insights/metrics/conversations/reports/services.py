@@ -396,7 +396,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
             if custom_widgets:
                 widgets = Widget.objects.filter(
-                    id__in=custom_widgets, dashboard__project=report.project
+                    uuid__in=custom_widgets, dashboard__project=report.project
                 )
 
                 for widget in widgets:
