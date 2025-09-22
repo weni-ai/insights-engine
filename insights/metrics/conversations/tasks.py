@@ -1,5 +1,8 @@
+import json
 import logging
 from datetime import timedelta
+
+from celery.signals import worker_shutdown
 
 from django.db.models.query import QuerySet
 from django.conf import settings
@@ -9,6 +12,7 @@ from insights.celery import app
 
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus
+from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import DataLakeEventsClient
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.services import ConversationsMetricsService
@@ -25,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 @app.task
 def generate_conversations_report():
+    cache_client = CacheClient()
     logger.info("[ generate_conversations_report task ] Starting task")
 
     if (
@@ -61,7 +66,15 @@ def generate_conversations_report():
 
     start_time = timezone.now()
 
+    host = settings.HOSTNAME
+
+    cache_key = f"conversations_report:{oldest_report.uuid}"
+    data = {"host": host}
+
     try:
+        cache_client.set(
+            cache_key, json.dumps(data), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
         ConversationsReportService(
             datalake_events_client=DataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(),
@@ -126,3 +139,11 @@ def timeout_reports():
     logger.info(
         "[ timeout_reports task ] Timed out %s reports", in_progress_reports.count()
     )
+
+
+@worker_shutdown.connect
+def shutdown_handler(sender, **kwargs):
+    """
+    Shutdown handler for the celery worker.
+    """
+    logger.info("[ timeout_reports task ] Shutting down worker")

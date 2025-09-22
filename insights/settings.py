@@ -369,6 +369,8 @@ if SEND_EMAILS:
     EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL")
     EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
 
+HOSTNAME = env.str("HOSTNAME", default="")
+
 # Feature Flags (GrowthBook)
 FEATURE_FLAGS_ENABLED = env.bool("FEATURE_FLAGS_ENABLED", default=False)
 GROWTHBOOK_HOST_BASE_URL = env.str(
