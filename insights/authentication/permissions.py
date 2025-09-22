@@ -63,3 +63,20 @@ class IsServiceAuthentication(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.auth == "service"
+
+
+class ProjectQueryParamPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.user.is_anonymous:
+            return False
+
+        project_uuid = request.query_params.get("project_uuid")
+
+        if not project_uuid:
+            raise ValidationError(
+                {"project_uuid": ["This field is required"]}, code="required"
+            )
+
+        return ProjectAuth.objects.filter(
+            project__uuid=project_uuid, user=request.user
+        ).exists()

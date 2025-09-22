@@ -198,6 +198,32 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return files
 
+    def _ensure_unique_worksheet_name(self, name: str, used_names: set[str]) -> str:
+        """
+        Ensure worksheet name is unique by appending a number if needed.
+
+        Args:
+            name: The original worksheet name
+            used_names: Set of already used worksheet names
+
+        Returns:
+            A unique worksheet name
+        """
+        if name not in used_names:
+            used_names.add(name)
+            return name
+
+        counter = 1
+        while f"{name} ({counter})" in used_names:
+            counter += 1
+
+            if counter > 20:
+                raise ValueError("Too many unique names found")
+
+        unique_name = f"{name} ({counter})"
+        used_names.add(unique_name)
+        return unique_name
+
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
     ) -> list[ConversationsReportFile]:
@@ -210,8 +236,11 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language):
             file_name = gettext("Conversations dashboard report")
 
+        used_worksheet_names = set()
         for worksheet in worksheets:
-            worksheet_name = worksheet.name
+            worksheet_name = self._ensure_unique_worksheet_name(
+                worksheet.name, used_worksheet_names
+            )
             worksheet_data = worksheet.data
 
             xlsx_worksheet = workbook.add_worksheet(worksheet_name)
