@@ -412,9 +412,9 @@ class ConversationsReportService(BaseConversationsReportService):
             files: list[ConversationsReportFile] = []
 
             if report.format == ReportFormat.CSV:
-                files.extend(self.process_csv(report))
+                files.extend(self.process_csv(report, worksheets))
             elif report.format == ReportFormat.XLSX:
-                files.extend(self.process_xlsx(report))
+                files.extend(self.process_xlsx(report, worksheets))
 
         except Exception as e:
             logger.error(
