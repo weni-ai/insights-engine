@@ -641,7 +641,7 @@ class ConversationsReportService(BaseConversationsReportService):
         events = self.get_datalake_events(
             report,
             key=key,
-            event_name=self.event_name,
+            event_name="weni_nexus_data",
             project=report.project.uuid,
             date_start=start_date,
             date_end=end_date,
