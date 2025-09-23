@@ -2,6 +2,9 @@ import os
 import logging
 
 from celery import Celery
+from celery.signals import worker_shutdown
+
+CONVERSATIONS_REPORT_SCHEDULE = 10
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +19,25 @@ app = Celery("insights")
 #   should have a `CELERY_` prefix.
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
+# Set up graceful shutdown handling
+from insights.shutdown import graceful_shutdown_handler, setup_signal_handlers
+
+# Register signal handlers for graceful shutdown
+setup_signal_handlers()
+
+
+# Register Celery worker shutdown handler
+@worker_shutdown.connect
+def celery_shutdown_handler(sender, **kwargs):
+    """
+    Handle Celery worker shutdown signal.
+    """
+    logger.info("[ celery_shutdown_handler ] Celery worker shutdown signal received")
+    graceful_shutdown_handler()
+
 
 logger.info("Starting task discovery...")
 app.autodiscover_tasks()
-
 
 logger.info("Task discovery completed")
 
@@ -32,7 +50,7 @@ app.conf.beat_schedule = {
     },
     "generate-conversations-report": {
         "task": "insights.metrics.conversations.tasks.generate_conversations_report",
-        "schedule": 10,  # 10 seconds
+        "schedule": CONVERSATIONS_REPORT_SCHEDULE,
     },
     "timeout-reports": {
         "task": "insights.metrics.conversations.tasks.timeout_reports",
