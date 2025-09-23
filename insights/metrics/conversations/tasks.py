@@ -3,8 +3,6 @@ import logging
 from datetime import timedelta
 from uuid import UUID
 
-from celery.signals import worker_shutdown
-
 from django.db.models.query import QuerySet
 from django.conf import settings
 from django.utils import timezone
@@ -28,15 +26,21 @@ from insights.metrics.conversations.integrations.elasticsearch.clients import (
 logger = logging.getLogger(__name__)
 
 
+host_generates_reports = False
+
+
 def get_cache_key_for_report(report_uuid: UUID) -> str:
     return f"conversations_report_task_info:{report_uuid}"
 
 
 @app.task
 def generate_conversations_report():
+    cache_client = CacheClient()
     host = settings.HOSTNAME
 
-    cache_client = CacheClient()
+    if not host_generates_reports:
+        host_generates_reports = True
+
     logger.info("[ generate_conversations_report task ] Starting task in host %s", host)
 
     if (
@@ -146,47 +150,4 @@ def timeout_reports():
 
     logger.info(
         "[ timeout_reports task ] Timed out %s reports", in_progress_reports.count()
-    )
-
-
-@worker_shutdown.connect
-def shutdown_handler(sender, **kwargs):
-    """
-    Shutdown handler for the celery worker.
-    """
-    host = settings.HOSTNAME
-
-    cache_client = CacheClient()
-
-    logger.info("[ shutdown_handler ] Shutting down worker")
-
-    in_progress_reports_uuids = list(
-        Report.objects.filter(status=ReportStatus.IN_PROGRESS).values_list(
-            "uuid", flat=True
-        )
-    )
-
-    interrupted_reports_uuids = []
-
-    for in_progress_report_uuid in in_progress_reports_uuids:
-        key = get_cache_key_for_report(in_progress_report_uuid)
-        cached_info = cache_client.get(key)
-
-        if not cached_info:
-            continue
-
-        cached_info = json.loads(cached_info)
-
-        if cached_info.get("host") != host:
-            continue
-
-        interrupted_reports_uuids.append(in_progress_report_uuid)
-
-    Report.objects.filter(uuid__in=interrupted_reports_uuids).update(
-        status=ReportStatus.PENDING,
-    )
-
-    logger.info(
-        "[ shutdown_handler ] Interrupted %s reports",
-        len(interrupted_reports_uuids),
     )
