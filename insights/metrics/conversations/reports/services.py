@@ -1,4 +1,5 @@
 from datetime import datetime
+import time
 import io
 import csv
 import json
@@ -552,6 +553,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 files.extend(self.process_csv(report, worksheets))
             elif report.format == ReportFormat.XLSX:
                 files.extend(self.process_xlsx(report, worksheets))
+
+            # Just testing
+            time.sleep(60)
 
         except Exception as e:
             logger.error(
