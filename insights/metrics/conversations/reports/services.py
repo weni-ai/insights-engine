@@ -360,7 +360,11 @@ class ConversationsReportService(BaseConversationsReportService):
             report.uuid,
         )
         report.status = ReportStatus.IN_PROGRESS
-        report.started_at = timezone.now()
+        if not report.started_at:
+            # If the report generation was interrupted and restarted
+            # the field will be already set. Otherwise, we set it to the current time
+            report.started_at = timezone.now()
+
         report.save(update_fields=["status", "started_at"])
 
         try:
