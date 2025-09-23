@@ -184,3 +184,8 @@ def shutdown_handler(sender, **kwargs):
     Report.objects.filter(uuid__in=interrupted_reports_uuids).update(
         status=ReportStatus.PENDING,
     )
+
+    logger.info(
+        "[ shutdown_handler ] Interrupted %s reports",
+        len(interrupted_reports_uuids),
+    )
