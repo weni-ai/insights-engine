@@ -13,7 +13,7 @@ import threading
 from django.conf import settings
 
 from insights.sources.cache import CacheClient
-from insights.metrics.conversations.tasks import host_generates_reports
+from insights.metrics.conversations import tasks
 from insights.metrics.conversations.tasks import get_cache_key_for_report
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ def graceful_shutdown_handler(timeout_seconds=30):
     from insights.reports.models import Report
     from insights.reports.choices import ReportStatus
 
-    if not host_generates_reports:
+    if not tasks.host_generates_reports:
         logger.info("[ shutdown_handler ] Host is not generating reports, skipping")
         return
 
