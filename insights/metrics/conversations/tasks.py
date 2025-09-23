@@ -1,6 +1,7 @@
 import json
 import logging
 from datetime import timedelta
+from uuid import UUID
 
 from celery.signals import worker_shutdown
 
@@ -27,10 +28,16 @@ from insights.metrics.conversations.integrations.elasticsearch.clients import (
 logger = logging.getLogger(__name__)
 
 
+def get_cache_key_for_report(report_uuid: UUID) -> str:
+    return f"conversations_report_task_info:{report_uuid}"
+
+
 @app.task
 def generate_conversations_report():
+    host = settings.HOSTNAME
+
     cache_client = CacheClient()
-    logger.info("[ generate_conversations_report task ] Starting task")
+    logger.info("[ generate_conversations_report task ] Starting task in host %s", host)
 
     if (
         Report.objects.filter(status=ReportStatus.IN_PROGRESS).count()
@@ -66,9 +73,7 @@ def generate_conversations_report():
 
     start_time = timezone.now()
 
-    host = settings.HOSTNAME
-
-    cache_key = f"conversations_report:{oldest_report.uuid}"
+    cache_key = get_cache_key_for_report(oldest_report.uuid)
     data = {"host": host}
 
     try:
@@ -91,6 +96,8 @@ def generate_conversations_report():
         )
 
     end_time = timezone.now()
+
+    cache_client.delete(cache_key)
 
     logger.info(
         "[ generate_conversations_report task ] Finished generation of oldest report %s. "
@@ -146,4 +153,34 @@ def shutdown_handler(sender, **kwargs):
     """
     Shutdown handler for the celery worker.
     """
-    logger.info("[ timeout_reports task ] Shutting down worker")
+    host = settings.HOSTNAME
+
+    cache_client = CacheClient()
+
+    logger.info("[ shutdown_handler ] Shutting down worker")
+
+    in_progress_reports_uuids = list(
+        Report.objects.filter(status=ReportStatus.IN_PROGRESS).values_list(
+            "uuid", flat=True
+        )
+    )
+
+    interrupted_reports_uuids = []
+
+    for in_progress_report_uuid in in_progress_reports_uuids:
+        key = get_cache_key_for_report(in_progress_report_uuid)
+        cached_info = cache_client.get(key)
+
+        if not cached_info:
+            continue
+
+        cached_info = json.loads(cached_info)
+
+        if cached_info.get("host") != host:
+            continue
+
+        interrupted_reports_uuids.append(in_progress_report_uuid)
+
+    Report.objects.filter(uuid__in=interrupted_reports_uuids).update(
+        status=ReportStatus.PENDING,
+    )
