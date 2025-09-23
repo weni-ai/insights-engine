@@ -642,7 +642,7 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get datalake events.
         """
-        kwargs_str = json.dumps(kwargs, sort_keys=True)
+        kwargs_str = json.dumps(kwargs, sort_keys=True, default=str)
         cache_key = f"datalake_events:{report.uuid}:{kwargs_str}"
 
         if cached_events := self.cache_client.get(cache_key):
