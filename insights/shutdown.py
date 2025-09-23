@@ -12,8 +12,6 @@ import threading
 
 from django.conf import settings
 
-from insights.reports.models import Report
-from insights.reports.choices import ReportStatus
 from insights.sources.cache import CacheClient
 from insights.metrics.conversations.tasks import host_generates_reports
 
@@ -35,6 +33,10 @@ def graceful_shutdown_handler(timeout_seconds=30):
     Args:
         timeout_seconds: Maximum time to wait for graceful shutdown
     """
+    # Import Django models inside the function to avoid AppRegistryNotReady error
+    from insights.reports.models import Report
+    from insights.reports.choices import ReportStatus
+
     if not host_generates_reports:
         logger.info("[ shutdown_handler ] Host is not generating reports, skipping")
         return
