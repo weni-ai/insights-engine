@@ -35,6 +35,8 @@ def get_cache_key_for_report(report_uuid: UUID) -> str:
 
 @app.task
 def generate_conversations_report():
+    global host_generates_reports
+
     cache_client = CacheClient()
     host = settings.HOSTNAME
 
