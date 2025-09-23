@@ -86,6 +86,7 @@ def generate_conversations_report():
             elasticsearch_service=ConversationsElasticsearchService(
                 client=ElasticsearchClient(),
             ),
+            cache_client=CacheClient(),
         ).generate(oldest_report)
     except Exception as e:
         logger.error(

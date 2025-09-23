@@ -49,6 +49,7 @@ class TestConversationsReportService(TestCase):
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
             ),
+            cache_client=MockCacheClient(),
         )
         self.project = Project.objects.create(name="Test")
         self.user = User.objects.create(
