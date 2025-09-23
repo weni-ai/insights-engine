@@ -3,6 +3,7 @@ import json
 from unittest.mock import patch
 import uuid
 
+from django.conf import settings
 from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
@@ -61,6 +62,7 @@ class TestConversationsReportService(TestCase):
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
             ),
+            cache_client=MockCacheClient(),
         )
         self.project = Project.objects.create(name="Test")
         self.dashboard = Dashboard.objects.create(name="Test", project=self.project)
@@ -84,6 +86,29 @@ class TestConversationsReportService(TestCase):
             self.service._ensure_unique_worksheet_name("Test (1)", used_names),
             "Test (1) (1)",
         )
+
+    def test_add_cache_key(self):
+        report_uuid = uuid.uuid4()
+        cache_key = "test_cache_key"
+
+        self.assertEqual(self.service.cache_keys, {})
+
+        self.service._add_cache_key(report_uuid, cache_key)
+
+        self.assertIn(str(report_uuid), self.service.cache_keys)
+        self.assertEqual(self.service.cache_keys, {str(report_uuid): [cache_key]})
+
+    def test_clear_cache_keys(self):
+        report_uuid = uuid.uuid4()
+        cache_key = "test_cache_key"
+
+        self.service._add_cache_key(report_uuid, cache_key)
+        self.assertIn(str(report_uuid), self.service.cache_keys)
+        self.assertEqual(self.service.cache_keys[str(report_uuid)], [cache_key])
+
+        self.service._clear_cache_keys(report_uuid)
+        self.assertNotIn(str(report_uuid), self.service.cache_keys)
+        self.assertEqual(self.service.cache_keys, {})
 
     @patch("django.core.mail.EmailMessage.send")
     def test_send_email(self, mock_send_email):
@@ -378,8 +403,14 @@ class TestConversationsReportService(TestCase):
     @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
     )
-    def test_get_datalake_events_when_no_events_exist(self, mock_get_datalake_events):
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_get_datalake_events_when_no_events_exist(
+        self, mock_cache_get, mock_cache_set, mock_get_datalake_events
+    ):
         mock_get_datalake_events.return_value = []
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
 
         report = Report.objects.create(
             project=self.project,
@@ -391,14 +422,32 @@ class TestConversationsReportService(TestCase):
             status=ReportStatus.IN_PROGRESS,
         )
 
-        events = self.service.get_datalake_events(report)
+        kwargs = {"key": "example"}
+
+        events = self.service.get_datalake_events(report, **kwargs)
 
         self.assertEqual(events, [])
+
+        cache_key = (
+            f"datalake_events:{report.uuid}:{json.dumps(kwargs, sort_keys=True)}"
+        )
+
+        mock_cache_get.assert_called_once_with(cache_key)
+        mock_cache_set.assert_called_once_with(
+            cache_key, json.dumps(events), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
 
     @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
     )
-    def test_get_datalake_events_when_events_exist(self, mock_get_datalake_events):
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_get_datalake_events_when_events_exist(
+        self, mock_cache_get, mock_cache_set, mock_get_datalake_events
+    ):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
+
         mock_events = [{"id": "1"}, {"id": "2"}]
 
         def get_datalake_events(**kwargs):
@@ -418,16 +467,32 @@ class TestConversationsReportService(TestCase):
             status=ReportStatus.IN_PROGRESS,
         )
 
-        events = self.service.get_datalake_events(report)
+        kwargs = {"key": "example"}
+
+        events = self.service.get_datalake_events(report, **kwargs)
 
         self.assertEqual(events, mock_events)
+
+        cache_key = (
+            f"datalake_events:{report.uuid}:{json.dumps(kwargs, sort_keys=True)}"
+        )
+
+        mock_cache_get.assert_called_once_with(cache_key)
+        mock_cache_set.assert_called_once_with(
+            cache_key, json.dumps(events), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
 
     @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
     )
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
     def test_get_datalake_events_when_events_exist_with_multiple_pages(
-        self, mock_get_datalake_events
+        self, mock_cache_get, mock_cache_set, mock_get_datalake_events
     ):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
+
         mock_events = [{"id": "1"}, {"id": "2"}]
 
         def get_datalake_events(**kwargs):
@@ -447,9 +512,20 @@ class TestConversationsReportService(TestCase):
             status=ReportStatus.IN_PROGRESS,
         )
 
-        events = self.service.get_datalake_events(report)
+        kwargs = {"key": "example"}
+
+        events = self.service.get_datalake_events(report, **kwargs)
 
         self.assertEqual(events, mock_events * 2)
+
+        cache_key = (
+            f"datalake_events:{report.uuid}:{json.dumps(kwargs, sort_keys=True)}"
+        )
+
+        mock_cache_get.assert_called_once_with(cache_key)
+        mock_cache_set.assert_called_once_with(
+            cache_key, json.dumps(events), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
 
     @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
@@ -792,7 +868,12 @@ class TestSerializeFiltersForJson(TestCase):
             result["top_level_datetime"], (now + timedelta(days=1)).isoformat()
         )
 
-    def test_get_flowsrun_results_by_contacts(self):
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_get_flowsrun_results_by_contacts(self, mock_cache_get, mock_cache_set):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
+
         def get_side_effect(*args, **kwargs):
             # First call: return hits
             if not hasattr(get_side_effect, "called"):
@@ -836,9 +917,12 @@ class TestSerializeFiltersForJson(TestCase):
             requested_by=self.user,
             status=ReportStatus.IN_PROGRESS,
         )
+
+        flow_uuid = uuid.uuid4()
+
         results = self.service.get_flowsrun_results_by_contacts(
             report=report,
-            flow_uuid=uuid.uuid4(),
+            flow_uuid=flow_uuid,
             start_date="2025-01-01",
             end_date="2025-01-02",
             op_field="user_feedback",
@@ -856,7 +940,20 @@ class TestSerializeFiltersForJson(TestCase):
             ],
         )
 
-    def test_get_flowsrun_results_by_contacts_when_no_results_exist(self):
+        cache_key = f"flowsrun_results_by_contacts:{report.uuid}:{flow_uuid}:2025-01-01:2025-01-02:user_feedback"
+
+        mock_cache_get.assert_called_once_with(cache_key)
+        mock_cache_set.assert_called_once_with(
+            cache_key, json.dumps(results), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
+
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_get_flowsrun_results_by_contacts_when_no_results_exist(
+        self, mock_cache_get, mock_cache_set
+    ):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
         self.service.elasticsearch_service.client.get.return_value = {
             "hits": {
                 "total": {"value": 0},
@@ -874,15 +971,24 @@ class TestSerializeFiltersForJson(TestCase):
             status=ReportStatus.IN_PROGRESS,
         )
 
+        flow_uuid = uuid.uuid4()
+
         results = self.service.get_flowsrun_results_by_contacts(
             report=report,
-            flow_uuid=uuid.uuid4(),
+            flow_uuid=flow_uuid,
             start_date="2025-01-01",
             end_date="2025-01-02",
             op_field="user_feedback",
         )
 
         self.assertEqual(results, [])
+
+        cache_key = f"flowsrun_results_by_contacts:{report.uuid}:{flow_uuid}:2025-01-01:2025-01-02:user_feedback"
+
+        mock_cache_get.assert_called_once_with(cache_key)
+        mock_cache_set.assert_called_once_with(
+            cache_key, json.dumps(results), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
 
     def test_get_flowsrun_results_by_contacts_when_report_is_failed(self):
         self.service.elasticsearch_service.client.get.return_value = {

@@ -371,7 +371,6 @@ REPORT_GENERATION_TIMEOUT = env.int(
     "REPORT_GENERATION_TIMEOUT", default=60 * 60
 )  # 1 hour
 
-
 SEND_EMAILS = env.bool("SEND_EMAILS", default=False)
 
 if SEND_EMAILS:
@@ -384,6 +383,8 @@ if SEND_EMAILS:
     EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD")
     EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL")
     EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
+
+HOSTNAME = env.str("HOSTNAME", default="")
 
 # Feature Flags (GrowthBook)
 FEATURE_FLAGS_ENABLED = env.bool("FEATURE_FLAGS_ENABLED", default=False)
