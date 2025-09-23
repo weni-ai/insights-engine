@@ -4,8 +4,6 @@ import logging
 from celery import Celery
 from celery.signals import worker_shutdown
 
-CONVERSATIONS_REPORT_SCHEDULE = 10
-
 logger = logging.getLogger(__name__)
 
 # Set the default Django settings module for the "celery" program.
@@ -51,7 +49,7 @@ app.conf.beat_schedule = {
     },
     "generate-conversations-report": {
         "task": "insights.metrics.conversations.tasks.generate_conversations_report",
-        "schedule": CONVERSATIONS_REPORT_SCHEDULE,
+        "schedule": 10,  # 10 seconds
     },
     "timeout-reports": {
         "task": "insights.metrics.conversations.tasks.timeout_reports",
