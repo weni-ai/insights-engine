@@ -26,5 +26,5 @@ class CanGenerateConversationsReportPermission(BasePermission):
             return False
 
         return is_feature_active(
-            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY, None, project
+            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY, request.user, project
         )
