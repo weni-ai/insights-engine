@@ -554,9 +554,6 @@ class ConversationsReportService(BaseConversationsReportService):
             elif report.format == ReportFormat.XLSX:
                 files.extend(self.process_xlsx(report, worksheets))
 
-            # Just testing
-            time.sleep(60)
-
         except Exception as e:
             logger.error(
                 "[CONVERSATIONS REPORT SERVICE] Failed to generate report %s. Error: %s",
