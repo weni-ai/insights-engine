@@ -1,5 +1,6 @@
 from unittest.mock import patch, MagicMock
-from django.test import TestCase
+from django.test import TestCase, override_settings
+
 
 from insights.projects.services.update_nexus_multi_agents_status import (
     UpdateNexusMultiAgentsStatusService,
@@ -42,6 +43,7 @@ class TestUpdateNexusMultiAgentsService(TestCase):
             f"nexus_multi_agents_status:{self.project.uuid}"
         )
 
+    @override_settings(CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION=True)
     @patch.object(MockNexusClient, "get_project_multi_agents_status")
     @patch.object(MockCacheClient, "get")
     @patch.object(MockCacheClient, "set")
@@ -90,6 +92,7 @@ class TestUpdateNexusMultiAgentsService(TestCase):
             10,
         )
 
+    @override_settings(CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION=True)
     @patch.object(MockNexusClient, "get_project_multi_agents_status")
     def test_update_when_multi_agents_are_true_and_project_is_active_on_indexer(
         self, mock_get_status
@@ -112,6 +115,7 @@ class TestUpdateNexusMultiAgentsService(TestCase):
         self.service.indexer_activation_service.is_project_queued.assert_not_called()
         self.service.indexer_activation_service.add_project_to_queue.assert_not_called()
 
+    @override_settings(CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION=True)
     @patch.object(MockNexusClient, "get_project_multi_agents_status")
     def test_update_when_multi_agents_are_true_and_project_is_queued(
         self, mock_get_status
