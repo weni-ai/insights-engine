@@ -10,12 +10,13 @@ from rest_framework.response import Response
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.filters import DashboardFilter
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import CONVERSATION_DASHBOARD_NAME, Dashboard
 from insights.dashboards.usecases.flows_dashboard_creation import (
     CreateFlowsDashboard,
 )
 from insights.dashboards.utils import DefaultPagination
 from insights.projects.models import Project
+from insights.projects.tasks import check_nexus_multi_agents_status
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.sources.contacts.clients import FlowsContactsRestClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
@@ -53,10 +54,37 @@ class DashboardViewSet(
                 Q(name="Resultados de fluxos")
                 & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
             )
-            .order_by("created_on")
+            .exclude(
+                Q(name=CONVERSATION_DASHBOARD_NAME)
+                & Q(project__is_nexus_multi_agents_active=False),
+            )
         )
 
+        if settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION:
+            queryset = queryset.exclude(
+                Q(name=CONVERSATION_DASHBOARD_NAME)
+                & (
+                    Q(project__is_allowed=False)
+                    | ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
+                )
+            )
+
+        queryset = queryset.order_by("created_on")
+
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        if project_uuid := request.query_params.get("project"):
+            is_nexus_multi_agents_active = (
+                Project.objects.filter(uuid=project_uuid)
+                .values_list("is_nexus_multi_agents_active", flat=True)
+                .first()
+            )
+
+            if not is_nexus_multi_agents_active:
+                check_nexus_multi_agents_status.delay(project_uuid)
+
+        return super().list(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)

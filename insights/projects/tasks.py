@@ -1,13 +1,19 @@
 import logging
+from uuid import UUID
 
 from django.conf import settings
 
 from insights.celery import app
 from insights.projects.choices import ProjectIndexerActivationStatus
-from insights.projects.models import ProjectIndexerActivation
+from insights.projects.models import Project, ProjectIndexerActivation
 from insights.projects.services.indexer_activation import (
     ProjectIndexerActivationService,
 )
+from insights.projects.services.update_nexus_multi_agents_status import (
+    UpdateNexusMultiAgentsStatusService,
+)
+from insights.sources.cache import CacheClient
+from insights.sources.integrations.clients import NexusClient
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +36,12 @@ def activate_indexer():
     logger.info("[ activate_indexer task ] Not starting task")
     return
     logger.info("[ activate_indexer task ] Starting task")
+
+    if not settings.INDEXER_AUTOMATIC_ACTIVATION:
+        logger.info(
+            "[ activate_indexer task ] Indexer automatic activation is disabled"
+        )
+        return
 
     pending_activations = ProjectIndexerActivation.objects.filter(
         status=ProjectIndexerActivationStatus.PENDING
@@ -73,3 +85,24 @@ def activate_indexer():
             activation.save(update_fields=["status"])
 
     logger.info("[ activate_indexer task ] Finished task")
+
+
+@app.task
+def check_nexus_multi_agents_status(project_uuid: UUID):
+    """
+    Scheduled task to check the status of the multi agents for all projects.
+    """
+    logger.info("[ check_nexus_multi_agents_status task ] Starting task")
+
+    project = Project.objects.get(uuid=project_uuid)
+
+    if project.is_nexus_multi_agents_active:
+        return
+
+    service = UpdateNexusMultiAgentsStatusService(
+        nexus_client=NexusClient(),
+        cache_client=CacheClient(),
+        indexer_activation_service=ProjectIndexerActivationService(),
+    )
+
+    service.update(project)

@@ -1,11 +1,18 @@
 from contextlib import suppress
 from django.db import models, transaction
+from model_utils import FieldTracker
 
 from insights.shared.models import BaseModel, ConfigurableModel
 
 
 HUMAN_SERVICE_DASHBOARD_NAME = "Atendimento humano"
 CONVERSATIONS_DASHBOARD_NAME = "conversations_dashboard.title"
+CONVERSATION_DASHBOARD_NAME = "conversations_dashboard.title"
+
+PROTECTED_DASHBOARD_NAMES = [
+    CONVERSATION_DASHBOARD_NAME,
+    HUMAN_SERVICE_DASHBOARD_NAME,
+]
 
 
 class DashboardTemplate(BaseModel, ConfigurableModel):
@@ -42,6 +49,8 @@ class Dashboard(BaseModel, ConfigurableModel):
     is_deletable = models.BooleanField("Is detetable?", default=False)
     is_editable = models.BooleanField("Is editable?", default=False)
 
+    tracker = FieldTracker(fields=["name"])
+
     def __str__(self):
         return f"{self.project.name} - {self.name}"
 
@@ -53,6 +62,24 @@ class Dashboard(BaseModel, ConfigurableModel):
                 name="unique_default_dashboard_per_project",
             )
         ]
+
+    def save(self, *args, **kwargs):
+        if self._state.adding or self.tracker.has_changed("name"):
+            if self.name == CONVERSATION_DASHBOARD_NAME:
+                existing_dashboards = Dashboard.objects.filter(
+                    project=self.project,
+                    name=CONVERSATION_DASHBOARD_NAME,
+                )
+
+                if self._state.adding:
+                    existing_dashboards = existing_dashboards.exclude(pk=self.pk)
+
+                if existing_dashboards.exists():
+                    raise ValueError(
+                        "Conversation dashboard already exists for this project"
+                    )
+
+        return super().save(*args, **kwargs)
 
     def delete(self, using=None, keep_parents=False):
         if self.is_default:

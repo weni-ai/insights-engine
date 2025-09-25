@@ -17,6 +17,7 @@ class Project(BaseModel, ConfigurableModel, SoftDeleteModel):
     vtex_account = models.CharField(max_length=100, null=True)
     is_allowed = models.BooleanField(default=False)
     org_uuid = models.UUIDField(null=True, blank=True)
+    is_nexus_multi_agents_active = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.uuid} - Project: {self.name}"

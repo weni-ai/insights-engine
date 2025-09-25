@@ -409,3 +409,14 @@ GROWTHBOOK_WEBHOOK_SECRET = env.str("GROWTHBOOK_WEBHOOK_SECRET", default="")
 CONVERSATIONS_REPORT_FEATURE_FLAG_KEY = env.str(
     "CONVERSATIONS_REPORT_FEATURE_FLAG_KEY", default="insightsConversationsReport"
 )
+
+
+# Conversations dashboard
+
+# This is useful for the staging and development environments
+# that doesn't use the flowruns indexer
+# but needs to create the conversations dashboard
+# Should be set to True in production
+CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION = env.bool(
+    "CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION", default=False
+)
