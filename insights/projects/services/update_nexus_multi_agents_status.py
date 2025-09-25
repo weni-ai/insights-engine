@@ -6,7 +6,7 @@ from sentry_sdk import capture_exception
 
 from insights.dashboards.tasks import create_conversation_dashboard
 from insights.projects.services.indexer_activation import (
-    ProjectIndexerActivationService,
+    BaseProjectIndexerActivationService,
 )
 from insights.sources.integrations.clients import BaseNexusClient
 from insights.sources.cache import CacheClient
@@ -21,7 +21,7 @@ class UpdateNexusMultiAgentsStatusService:
         self,
         nexus_client: BaseNexusClient,
         cache_client: CacheClient,
-        indexer_activation_service: ProjectIndexerActivationService,
+        indexer_activation_service: BaseProjectIndexerActivationService,
     ):
         self.nexus_client = nexus_client
         self.cache_client = cache_client
