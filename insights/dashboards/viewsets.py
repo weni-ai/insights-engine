@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.filters import DashboardFilter
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import CONVERSATION_DASHBOARD_NAME, Dashboard
 from insights.dashboards.usecases.flows_dashboard_creation import (
     CreateFlowsDashboard,
 )
