@@ -16,6 +16,7 @@ from insights.dashboards.usecases.flows_dashboard_creation import (
 )
 from insights.dashboards.utils import DefaultPagination
 from insights.projects.models import Project
+from insights.projects.tasks import check_nexus_multi_agents_status
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.sources.contacts.clients import FlowsContactsRestClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
@@ -67,6 +68,19 @@ class DashboardViewSet(
         )
 
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        if project_uuid := request.query_params.get("project"):
+            is_nexus_multi_agents_active = (
+                Project.objects.filter(uuid=project_uuid)
+                .values_list("is_nexus_multi_agents_active", flat=True)
+                .first()
+            )
+
+            if not is_nexus_multi_agents_active:
+                check_nexus_multi_agents_status.delay(project_uuid)
+
+        return super().list(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
