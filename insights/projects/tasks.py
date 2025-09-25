@@ -64,3 +64,11 @@ def activate_indexer():
             activation.save(update_fields=["status"])
 
     logger.info("[ activate_indexer task ] Finished task")
+
+
+@app.task
+def check_nexus_multi_agents_status():
+    """
+    Scheduled task to check the status of the multi agents for all projects.
+    """
+    logger.info("[ check_nexus_multi_agents_status task ] Starting task")

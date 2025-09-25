@@ -106,6 +106,12 @@ class BaseNexusClient(ABC):
         Delete a conversation subtopic for a project.
         """
 
+    @abstractmethod
+    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
+        """
+        Get the status of the multi agents for a project.
+        """
+
 
 class NexusClient:
     """

@@ -53,6 +53,16 @@ class DashboardViewSet(
                 Q(name="Resultados de fluxos")
                 & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
             )
+            .exclude(
+                Q(name=CONVERSATION_DASHBOARD_NAME)
+                & (
+                    (
+                        ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
+                        | Q(project__is_allowed=False)
+                    )
+                    | Q(project__is_nexus_multi_agents_active=False)
+                )
+            )
             .order_by("created_on")
         )
 
