@@ -189,3 +189,12 @@ class NexusClient:
         url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
+
+    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
+        """
+        Get the status of the multi agents for a project.
+        """
+
+        url = f"{self.base_url}/project/{project_uuid}/multi-agents"
+
+        return requests.get(url=url, headers=self.headers, timeout=self.timeout)
