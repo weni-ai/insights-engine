@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.filters import DashboardFilter
-from insights.dashboards.models import CONVERSATION_DASHBOARD_NAME, Dashboard
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.dashboards.usecases.flows_dashboard_creation import (
     CreateFlowsDashboard,
 )
@@ -55,14 +55,14 @@ class DashboardViewSet(
                 & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
             )
             .exclude(
-                Q(name=CONVERSATION_DASHBOARD_NAME)
+                Q(name=CONVERSATIONS_DASHBOARD_NAME)
                 & Q(project__is_nexus_multi_agents_active=False),
             )
         )
 
         if settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION:
             queryset = queryset.exclude(
-                Q(name=CONVERSATION_DASHBOARD_NAME)
+                Q(name=CONVERSATIONS_DASHBOARD_NAME)
                 & (
                     Q(project__is_allowed=False)
                     | ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)

@@ -1,5 +1,5 @@
 from insights.celery import app
-from insights.dashboards.models import CONVERSATION_DASHBOARD_NAME, Dashboard
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.dashboards.usecases.conversations_dashboard_creation import (
     CreateConversationsDashboard,
 )
@@ -14,7 +14,7 @@ def create_conversation_dashboard(project_uuid: str):
     project = Project.objects.get(uuid=project_uuid)
 
     if Dashboard.objects.filter(
-        project=project, name=CONVERSATION_DASHBOARD_NAME
+        project=project, name=CONVERSATIONS_DASHBOARD_NAME
     ).exists():
         return
 
