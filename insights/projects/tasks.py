@@ -28,6 +28,12 @@ def activate_indexer():
     """
     logger.info("[ activate_indexer task ] Starting task")
 
+    if not settings.INDEXER_AUTOMATIC_ACTIVATION:
+        logger.info(
+            "[ activate_indexer task ] Indexer automatic activation is disabled"
+        )
+        return
+
     pending_activations = ProjectIndexerActivation.objects.filter(
         status=ProjectIndexerActivationStatus.PENDING
     )

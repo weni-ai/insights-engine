@@ -56,16 +56,20 @@ class DashboardViewSet(
             )
             .exclude(
                 Q(name=CONVERSATION_DASHBOARD_NAME)
+                & Q(project__is_nexus_multi_agents_active=False),
+            )
+        )
+
+        if settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION:
+            queryset = queryset.exclude(
+                Q(name=CONVERSATION_DASHBOARD_NAME)
                 & (
-                    (
-                        ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
-                        | Q(project__is_allowed=False)
-                    )
-                    | Q(project__is_nexus_multi_agents_active=False)
+                    Q(project__is_allowed=False)
+                    | ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
                 )
             )
-            .order_by("created_on")
-        )
+
+        queryset = queryset.order_by("created_on")
 
         return queryset
 

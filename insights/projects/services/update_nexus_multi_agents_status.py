@@ -1,6 +1,6 @@
 import logging
 
-
+from django.conf import settings
 from rest_framework import status
 from sentry_sdk import capture_exception
 
@@ -59,9 +59,13 @@ class UpdateNexusMultiAgentsStatusService:
             project.is_nexus_multi_agents_active = True
             project.save(update_fields=["is_nexus_multi_agents_active"])
 
-            if not self.indexer_activation_service.is_project_active_on_indexer(
-                project
-            ) and not self.indexer_activation_service.is_project_queued(project):
+            if (
+                settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION
+                and not self.indexer_activation_service.is_project_active_on_indexer(
+                    project
+                )
+                and not self.indexer_activation_service.is_project_queued(project)
+            ):
                 self.indexer_activation_service.add_project_to_queue(project)
 
             # The dashboard is created but should NOT be shown in the dashboard list
