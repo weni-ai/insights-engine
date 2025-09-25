@@ -6,10 +6,10 @@ from insights.shared.models import BaseModel, ConfigurableModel
 
 
 HUMAN_SERVICE_DASHBOARD_NAME = "Atendimento humano"
-CONVERSATION_DASHBOARD_NAME = "conversations_dashboard.title"
+CONVERSATIONS_DASHBOARD_NAME = "conversations_dashboard.title"
 
 PROTECTED_DASHBOARD_NAMES = [
-    CONVERSATION_DASHBOARD_NAME,
+    CONVERSATIONS_DASHBOARD_NAME,
     HUMAN_SERVICE_DASHBOARD_NAME,
 ]
 
@@ -64,10 +64,10 @@ class Dashboard(BaseModel, ConfigurableModel):
 
     def save(self, *args, **kwargs):
         if self._state.adding or self.tracker.has_changed("name"):
-            if self.name == CONVERSATION_DASHBOARD_NAME:
+            if self.name == CONVERSATIONS_DASHBOARD_NAME:
                 existing_dashboards = Dashboard.objects.filter(
                     project=self.project,
-                    name=CONVERSATION_DASHBOARD_NAME,
+                    name=CONVERSATIONS_DASHBOARD_NAME,
                 )
 
                 if self._state.adding:
