@@ -26,22 +26,14 @@ from insights.metrics.conversations.integrations.elasticsearch.clients import (
 logger = logging.getLogger(__name__)
 
 
-host_generates_reports = False
-
-
 def get_cache_key_for_report(report_uuid: UUID) -> str:
     return f"conversations_report_task_info:{report_uuid}"
 
 
 @app.task
 def generate_conversations_report():
-    global host_generates_reports
-
     cache_client = CacheClient()
     host = settings.HOSTNAME
-
-    if not host_generates_reports:
-        host_generates_reports = True
 
     logger.info("[ generate_conversations_report task ] Starting task in host %s", host)
 
