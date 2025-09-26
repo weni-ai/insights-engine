@@ -555,9 +555,6 @@ class ConversationsReportService(BaseConversationsReportService):
                         )
                     )
 
-            # [STAGING] Just for testing
-            time.sleep(120)
-
             files: list[ConversationsReportFile] = []
 
             if report.format == ReportFormat.CSV:
