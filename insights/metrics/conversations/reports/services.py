@@ -460,7 +460,8 @@ class ConversationsReportService(BaseConversationsReportService):
 
         report.refresh_from_db(fields=["config"])
 
-        if report.config.get("interrupted"):
+        config = report.config or {}
+        if config.get("interrupted"):
             logger.info(
                 "[CONVERSATIONS REPORT SERVICE] Report %s is interrupted. Finishing generation",
                 report.uuid,
