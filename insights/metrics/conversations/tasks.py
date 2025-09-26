@@ -88,7 +88,14 @@ def generate_conversations_report():
     try:
         config = oldest_report.config or {}
         config["task_host"] = host
+
+        if config.get("interrupted"):
+            config["interrupted"] = False
+            config["interrupted_at"] = None
+            config["interrupted_on_host"] = None
+
         oldest_report.config = config
+
         oldest_report.save(update_fields=["config"])
         ConversationsReportService(
             datalake_events_client=DataLakeEventsClient(),
