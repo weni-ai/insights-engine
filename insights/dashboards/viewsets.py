@@ -25,6 +25,7 @@ from insights.widgets.usecases.get_source_data import (
     get_source_data_from_widget,
 )
 
+from insights.human_support.services import HumanSupportDashboardService
 from .serializers import (
     DashboardEditSerializer,
     DashboardIsDefaultSerializer,
@@ -230,6 +231,34 @@ class DashboardViewSet(
 
         return paginator.get_paginated_response(paginated_sources)
 
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/list_status",
+    )
+    def monitoring_list_status(self, request, pk=None):
+        """
+        Returns active_rooms, closed_rooms, queue_rooms for the dashboard's project.
+        """
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        data = service.get_attendance_status(filters=request.query_params)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/average_time_metrics",
+    )
+    def monitoring_average_time_metrics(self, request, pk=None):
+        """
+        Returns average and max time metrics for the dashboard's project.
+        """
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        data = service.get_time_metrics(filters=request.query_params)
+        return Response(data, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=["post"])
     def create_flows_dashboard(self, request, pk=None):
         try:
@@ -304,3 +333,17 @@ class DashboardViewSet(
         custom_status = custom_status_client.list(query_filters)
 
         return Response(custom_status, status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/peaks_in_human_service",
+    )
+    def monitoring_peaks_in_human_service(self, request, pk=None):
+        """
+        Retorna a série de atendimentos por hora (mesmo cálculo do widget).
+        """
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        results = service.get_peaks_in_human_service(filters=request.query_params)
+        return Response({"results": results}, status=status.HTTP_200_OK)
