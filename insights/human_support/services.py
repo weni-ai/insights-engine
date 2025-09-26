@@ -70,6 +70,7 @@ class HumanSupportDashboardService:
 
         normalized = self._normalize_filters(filters)
 
+        # timezone e recorte "hoje" para finished
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
         today = dj_timezone.now().date()
@@ -84,19 +85,15 @@ class HumanSupportDashboardService:
         if normalized.get("tags"):
             base["tags"] = normalized["tags"]
 
-        waiting_params = {**base, "is_active": True, "user_id__isnull": True, "created_on__gte": start_of_day, "created_on__lte": now_iso}
-        active_params  = {**base, "is_active": True, "user_id__isnull": False, "created_on__gte": start_of_day, "created_on__lte": now_iso}
-        closed_params  = {**base, "is_active": False, "ended_at__gte": start_of_day, "ended_at__lte": now_iso}
-
-        waiting = RoomsQueryExecutor.execute(waiting_params, "count", lambda x: x, self.project).get("value") or 0
-        active  = RoomsQueryExecutor.execute(active_params,  "count", lambda x: x, self.project).get("value") or 0
-        closed  = RoomsQueryExecutor.execute(closed_params,  "count", lambda x: x, self.project).get("value") or 0
+        waiting = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": True}, "count", lambda x: x, self.project).get("value") or 0
+        in_progress = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": False}, "count", lambda x: x, self.project).get("value") or 0
+        finished = RoomsQueryExecutor.execute({**base, "is_active": False, "ended_at__gte": start_of_day, "ended_at__lte": now_iso}, "count", lambda x: x, self.project).get("value") or 0
 
         return {
-            "active_rooms": int(active),
-            "closed_rooms": int(closed),
-            "queue_rooms": int(waiting),
-        }
+                "is_waiting": int(active),
+                "is_waiting": int(waiting),
+                "finished": int(closed),
+            }
 
 
     def get_time_metrics(self, filters: dict | None = None) -> Dict[str, float]:
