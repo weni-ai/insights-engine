@@ -1,7 +1,5 @@
-import json
 import logging
 from datetime import timedelta
-from uuid import UUID
 
 from django.db.models import Q
 from django.db.models.query import QuerySet
@@ -25,10 +23,6 @@ from insights.metrics.conversations.integrations.elasticsearch.clients import (
 
 
 logger = logging.getLogger(__name__)
-
-
-def get_cache_key_for_report(report_uuid: UUID) -> str:
-    return f"conversations_report_task_info:{report_uuid}"
 
 
 @app.task
