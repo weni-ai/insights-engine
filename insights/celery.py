@@ -25,7 +25,7 @@ def celery_shutdown_handler(sender, **kwargs):
     Handle Celery worker shutdown signal.
     """
     # Import here to avoid AppRegistryNotReady error
-    from insights.shutdown import graceful_shutdown_handler
+    from insights.core.shutdown import graceful_shutdown_handler
 
     logger.info("[ celery_shutdown_handler ] Celery worker shutdown signal received")
     graceful_shutdown_handler()
