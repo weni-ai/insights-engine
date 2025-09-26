@@ -20,11 +20,12 @@ class CreateHumanService:
                     name=HUMAN_SERVICE_DASHBOARD_NAME,
                     description="Dashboard de atendimento humano",
                     is_default=True,
-                    grid=[18, 3],
+                    grid=[],
                     is_deletable=False,
                     is_editable=False,
                 )
-                self.create_widgets(atendimento_humano)
+                # TODO: Create widgets
+                # self.create_widgets(atendimento_humano)
 
         except Exception as exception:
             raise InvalidDashboardObject(f"Error creating dashboard: {exception}")
