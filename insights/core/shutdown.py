@@ -5,16 +5,12 @@ This module provides graceful shutdown handling for both Kubernetes pod terminat
 and Celery worker shutdown scenarios.
 """
 
-import json
 import logging
 import signal
 import threading
 
 from django.conf import settings
 from django.utils import timezone
-
-from insights.sources.cache import CacheClient
-from insights.metrics.conversations.tasks import get_cache_key_for_report
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +40,6 @@ def graceful_shutdown_handler(timeout_seconds=30):
         _shutdown_in_progress = True
 
     host = settings.HOSTNAME
-    cache_client = CacheClient()
 
     logger.info("[ shutdown_handler ] Starting graceful shutdown")
 
