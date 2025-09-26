@@ -84,7 +84,7 @@ class TestConversationsReportService(TestCase):
         self.service._add_cache_key(report_uuid, cache_key)
 
         self.assertIn(str(report_uuid), self.service.cache_keys)
-        self.assertEqual(self.service.cache_keys, {str(report_uuid): [cache_key]})
+        self.assertEqual(self.service.cache_keys, {str(report_uuid): {cache_key}})
 
     def test_clear_cache_keys(self):
         report_uuid = uuid.uuid4()
@@ -92,7 +92,7 @@ class TestConversationsReportService(TestCase):
 
         self.service._add_cache_key(report_uuid, cache_key)
         self.assertIn(str(report_uuid), self.service.cache_keys)
-        self.assertEqual(self.service.cache_keys[str(report_uuid)], [cache_key])
+        self.assertEqual(self.service.cache_keys[str(report_uuid)], {cache_key})
 
         self.service._clear_cache_keys(report_uuid)
         self.assertNotIn(str(report_uuid), self.service.cache_keys)
