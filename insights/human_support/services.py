@@ -67,15 +67,37 @@ class HumanSupportDashboardService:
         return cleaned_filters
 
     def get_attendance_status(self, filters: dict | None = None) -> Dict[str, int]:
-        request_params = self._normalize_filters(filters)
-        payload = self.client.retrieve(params=request_params)
-        raw = (payload or {}).get("raw_data") or []
-        first = raw[0] if raw else {}
+
+        normalized = self._normalize_filters(filters)
+
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+        today = dj_timezone.now().date()
+        start_of_day = project_tz.localize(datetime.combine(today, datetime.min.time())).isoformat()
+        now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base: dict = {"project": str(self.project.uuid)}
+        if normalized.get("sectors"):
+            base["sector"] = normalized["sectors"]
+        if normalized.get("queues"):
+            base["queue"] = normalized["queues"]
+        if normalized.get("tags"):
+            base["tags"] = normalized["tags"]
+
+        waiting_params = {**base, "is_active": True, "user_id__isnull": True, "created_on__gte": start_of_day, "created_on__lte": now_iso}
+        active_params  = {**base, "is_active": True, "user_id__isnull": False, "created_on__gte": start_of_day, "created_on__lte": now_iso}
+        closed_params  = {**base, "is_active": False, "ended_at__gte": start_of_day, "ended_at__lte": now_iso}
+
+        waiting = RoomsQueryExecutor.execute(waiting_params, "count", lambda x: x, self.project).get("value") or 0
+        active  = RoomsQueryExecutor.execute(active_params,  "count", lambda x: x, self.project).get("value") or 0
+        closed  = RoomsQueryExecutor.execute(closed_params,  "count", lambda x: x, self.project).get("value") or 0
+
         return {
-            "active_rooms": int(first.get("active_rooms", 0) or 0),
-            "closed_rooms": int(first.get("closed_rooms", 0) or 0),
-            "queue_rooms": int(first.get("queue_rooms", 0) or 0),
+            "active_rooms": int(active),
+            "closed_rooms": int(closed),
+            "queue_rooms": int(waiting),
         }
+
 
     def get_time_metrics(self, filters: dict | None = None) -> Dict[str, float]:
         request_params = self._normalize_filters(filters)
@@ -182,7 +204,6 @@ class HumanSupportDashboardService:
                 params["offset"] = filters.get("offset")
 
         return RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
-
 
     def get_detailed_monitoring_agents(self, filters: dict | None = None):
 
