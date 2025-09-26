@@ -3,6 +3,7 @@ import logging
 from datetime import timedelta
 from uuid import UUID
 
+from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.conf import settings
 from django.utils import timezone
@@ -47,22 +48,34 @@ def generate_conversations_report():
         )
         return
 
-    pending_reports: QuerySet[Report] = Report.objects.filter(
-        status=ReportStatus.PENDING
-    ).order_by("created_on")
-
-    if not pending_reports.exists():
-        logger.info(
-            "[ generate_conversations_report task ] No pending reports found. Finishing task"
-        )
-        return
-
-    logger.info(
-        "[ generate_conversations_report task ] Found %s pending reports",
-        pending_reports.count(),
+    interrupted_reports: QuerySet[Report] = Report.objects.filter(
+        Q(config__interrupted=True) & ~Q(config__interrupted_on_host=host)
     )
+    if interrupted_reports.exists():
+        logger.info(
+            "[ generate_conversations_report task ] Found %s interrupted reports",
+            interrupted_reports.count(),
+        )
 
-    oldest_report: Report = pending_reports.first()
+        oldest_report: Report = interrupted_reports.order_by("created_on").first()
+
+    else:
+        pending_reports: QuerySet[Report] = Report.objects.filter(
+            status=ReportStatus.PENDING
+        ).order_by("created_on")
+
+        if not pending_reports.exists():
+            logger.info(
+                "[ generate_conversations_report task ] No pending reports found. Finishing task"
+            )
+            return
+
+        logger.info(
+            "[ generate_conversations_report task ] Found %s pending reports",
+            pending_reports.count(),
+        )
+
+        oldest_report: Report = pending_reports.first()
 
     logger.info(
         "[ generate_conversations_report task ] Starting generation of oldest report %s",

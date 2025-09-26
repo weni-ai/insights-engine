@@ -11,6 +11,7 @@ import signal
 import threading
 
 from django.conf import settings
+from django.utils import timezone
 
 from insights.sources.cache import CacheClient
 from insights.metrics.conversations.tasks import get_cache_key_for_report
@@ -49,37 +50,32 @@ def graceful_shutdown_handler(timeout_seconds=30):
 
     try:
         # Get in-progress reports with timeout protection
-        in_progress_reports_uuids = []
+        in_progress_reports = []
         try:
-            in_progress_reports_uuids = list(
-                Report.objects.filter(status=ReportStatus.IN_PROGRESS).values_list(
-                    "uuid", flat=True
-                )
-            )
+            in_progress_reports = Report.objects.filter(status=ReportStatus.IN_PROGRESS)
         except Exception as e:
             logger.error(
                 "[ shutdown_handler ] Error fetching in-progress reports: %s", str(e)
             )
             return
 
-        if not in_progress_reports_uuids:
+        if not in_progress_reports:
             logger.info("[ shutdown_handler ] No in-progress reports found")
             return
 
-        interrupted_reports_uuids = []
+        interrupted_reports = []
 
         # Process each report with individual timeout protection
-        for in_progress_report_uuid in in_progress_reports_uuids:
+        for in_progress_report in in_progress_reports:
             try:
-                key = get_cache_key_for_report(in_progress_report_uuid)
+                key = get_cache_key_for_report(in_progress_report.uuid)
                 cached_info = cache_client.get(key)
 
                 if not cached_info:
                     logger.warning(
-                        "[ shutdown_handler ] No cache info for report %s, marking as interrupted",
-                        in_progress_report_uuid,
+                        "[ shutdown_handler ] No cache info for report %s, skipping report",
+                        in_progress_report.uuid,
                     )
-                    interrupted_reports_uuids.append(in_progress_report_uuid)
                     continue
 
                 cached_info = json.loads(cached_info)
@@ -87,31 +83,30 @@ def graceful_shutdown_handler(timeout_seconds=30):
                 if cached_info.get("host") != host:
                     continue
 
-                interrupted_reports_uuids.append(in_progress_report_uuid)
+                interrupted_reports.append(in_progress_report)
 
             except Exception as e:
                 logger.error(
                     "[ shutdown_handler ] Error processing report %s: %s",
-                    in_progress_report_uuid,
+                    in_progress_report.uuid,
                     str(e),
                 )
-                # Mark as interrupted to be safe
-                interrupted_reports_uuids.append(in_progress_report_uuid)
 
         # Update interrupted reports with timeout protection
-        if interrupted_reports_uuids:
+        if interrupted_reports:
             try:
-                Report.objects.filter(uuid__in=interrupted_reports_uuids).update(
-                    status=ReportStatus.PENDING,
-                )
+                for interrupted_report in interrupted_reports:
+                    interrupted_report.config["interrupted"] = True
+                    interrupted_report.config["interrupted_at"] = timezone.now()
+                    interrupted_report.config["interrupted_on_host"] = host
+                    interrupted_report.save(update_fields=["config"])
+
                 logger.info(
-                    "[ shutdown_handler ] Successfully reset %s reports to PENDING",
-                    len(interrupted_reports_uuids),
+                    "[ shutdown_handler ] Successfully updated %s reports",
+                    len(interrupted_reports),
                 )
             except Exception as e:
-                logger.error(
-                    "[ shutdown_handler ] Error updating reports to PENDING: %s", str(e)
-                )
+                logger.error("[ shutdown_handler ] Error updating reports: %s", str(e))
         else:
             logger.info(
                 "[ shutdown_handler ] No reports were interrupted by this worker"
