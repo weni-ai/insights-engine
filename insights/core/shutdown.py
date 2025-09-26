@@ -79,9 +79,11 @@ def graceful_shutdown_handler(timeout_seconds=30):
         if interrupted_reports:
             try:
                 for interrupted_report in interrupted_reports:
-                    interrupted_report.config["interrupted"] = True
-                    interrupted_report.config["interrupted_at"] = timezone.now()
-                    interrupted_report.config["interrupted_on_host"] = host
+                    config = interrupted_report.config or {}
+                    config["interrupted"] = True
+                    config["interrupted_at"] = timezone.now()
+                    config["interrupted_on_host"] = host
+                    interrupted_report.config = config
                     interrupted_report.save(update_fields=["config"])
 
                 logger.info(
