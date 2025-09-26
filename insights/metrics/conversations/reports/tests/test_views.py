@@ -1,7 +1,7 @@
 from unittest.mock import patch
 import uuid
 
-
+from django.conf import settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
@@ -56,7 +56,7 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["project_uuid"][0].code, "required")
 
-    def test_get_status_without_permission(self):
+    def test_get_status_without_project_permission(self):
         response = self.get_status({"project_uuid": self.project.uuid})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -102,10 +102,25 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["project_uuid"][0].code, "required")
 
-    def test_request_generation_without_permission(self):
+    def test_request_generation_without_project_permission(self):
         response = self.request_generation({"project_uuid": self.project.uuid})
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch("insights.metrics.conversations.reports.permissions.is_feature_active")
+    def test_request_generation_without_feature_flag_permission(
+        self, mock_is_feature_active
+    ):
+        mock_is_feature_active.return_value = False
+
+        response = self.request_generation({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        mock_is_feature_active.assert_called_once_with(
+            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY, self.user, self.project
+        )
 
     @with_project_auth
     @patch(
@@ -114,8 +129,12 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.request_generation"
     )
+    @patch("insights.metrics.conversations.reports.permissions.is_feature_active")
     def test_request_generation(
-        self, mock_request_generation, mock_get_current_report_for_project
+        self,
+        mock_is_feature_active,
+        mock_request_generation,
+        mock_get_current_report_for_project,
     ):
         report = Report(
             project=self.project,
@@ -123,13 +142,14 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
             status=ReportStatus.PENDING,
             requested_by=self.user,
         )
+        mock_is_feature_active.return_value = True
         mock_request_generation.return_value = report
         mock_get_current_report_for_project.return_value = None
 
         Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversations.custom",
+            source="conversations.csat",
             type="custom",
             position=[1, 2],
             config={
@@ -156,3 +176,7 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["status"], ReportStatus.PENDING)
         self.assertEqual(response.data["email"], self.user.email)
         self.assertEqual(response.data["report_uuid"], str(report.uuid))
+
+        mock_is_feature_active.assert_called_once_with(
+            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY, self.user, self.project
+        )

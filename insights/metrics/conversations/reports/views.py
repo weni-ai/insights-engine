@@ -9,7 +9,12 @@ from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import (
     ProjectAuthQueryParamPermission,
-    ProjectAuthBodyPermission,
+)
+from insights.metrics.conversations.integrations.elasticsearch.services import (
+    ConversationsElasticsearchService,
+)
+from insights.metrics.conversations.reports.permissions import (
+    CanGenerateConversationsReportPermission,
 )
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.reports.serializers import (
@@ -18,14 +23,22 @@ from insights.metrics.conversations.reports.serializers import (
     RequestConversationsReportGenerationSerializer,
 )
 from insights.reports.choices import ReportStatus
+from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import DataLakeEventsClient
 from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
+    MockElasticsearchClient,
+)
 
 
 class ConversationsReportsViewSet(APIView):
     service = ConversationsReportService(
+        elasticsearch_service=ConversationsElasticsearchService(
+            client=MockElasticsearchClient(),
+        ),
         datalake_events_client=DataLakeEventsClient(),
         metrics_service=ConversationsMetricsService(),
+        cache_client=CacheClient(),
     )
 
     @property
@@ -36,7 +49,7 @@ class ConversationsReportsViewSet(APIView):
             permissions.append(ProjectAuthQueryParamPermission)
 
         if self.request.method == "POST":
-            permissions.append(ProjectAuthBodyPermission)
+            permissions.append(CanGenerateConversationsReportPermission)
 
         return permissions
 
@@ -75,7 +88,12 @@ class ConversationsReportsViewSet(APIView):
         source_config.update(
             {
                 "sections": serializer.validated_data.get("sections", []),
-                "custom_widgets": serializer.validated_data.get("custom_widgets", []),
+                "custom_widgets": [
+                    str(widget_uuid)
+                    for widget_uuid in serializer.validated_data.get(
+                        "custom_widgets", []
+                    )
+                ],
             }
         )
 

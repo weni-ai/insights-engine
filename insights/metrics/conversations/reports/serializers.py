@@ -118,6 +118,7 @@ class RequestConversationsReportGenerationSerializer(
             if "CSAT_AI" in sections:
                 widget = Widget.objects.filter(
                     dashboard__uuid=dashboards_uuids[0],
+                    source="conversations.csat",
                     config__datalake_config__type__iexact="CSAT",
                 ).first()
 
@@ -140,6 +141,7 @@ class RequestConversationsReportGenerationSerializer(
             if "NPS_AI" in sections:
                 widget = Widget.objects.filter(
                     dashboard__uuid=dashboards_uuids[0],
+                    source="conversations.nps",
                     config__datalake_config__type__iexact="NPS",
                 ).first()
 
@@ -158,6 +160,68 @@ class RequestConversationsReportGenerationSerializer(
                     )
 
                 attrs["source_config"]["nps_ai_agent_uuid"] = agent_uuid
+
+            if "CSAT_HUMAN" in sections:
+                widget = Widget.objects.filter(
+                    dashboard__uuid=dashboards_uuids[0],
+                    source="conversations.csat",
+                    config__type="flow_result",
+                ).first()
+
+                if not widget:
+                    raise serializers.ValidationError(
+                        {"sections": [_("CSAT human widget not found")]},
+                        code="csat_human_widget_not_found",
+                    )
+
+                csat_human_flow_uuid = widget.config.get("filter", {}).get("flow")
+                csat_human_op_field = widget.config.get("op_field", None)
+
+                if not csat_human_flow_uuid:
+                    raise serializers.ValidationError(
+                        {"sections": [_("Flow UUID not found in widget config")]},
+                        code="flow_uuid_not_found_in_widget_config",
+                    )
+
+                if not csat_human_op_field:
+                    raise serializers.ValidationError(
+                        {"sections": [_("Op field not found in widget config")]},
+                        code="op_field_not_found_in_widget_config",
+                    )
+
+                attrs["source_config"]["csat_human_flow_uuid"] = csat_human_flow_uuid
+                attrs["source_config"]["csat_human_op_field"] = csat_human_op_field
+
+            if "NPS_HUMAN" in sections:
+                widget = Widget.objects.filter(
+                    dashboard__uuid=dashboards_uuids[0],
+                    source="conversations.nps",
+                    config__type="flow_result",
+                ).first()
+
+                if not widget:
+                    raise serializers.ValidationError(
+                        {"sections": [_("NPS human widget not found")]},
+                        code="nps_human_widget_not_found",
+                    )
+
+                nps_human_flow_uuid = widget.config.get("filter", {}).get("flow")
+                nps_human_op_field = widget.config.get("op_field", None)
+
+                if not nps_human_flow_uuid:
+                    raise serializers.ValidationError(
+                        {"sections": [_("Flow UUID not found in widget config")]},
+                        code="flow_uuid_not_found_in_widget_config",
+                    )
+
+                if not nps_human_op_field:
+                    raise serializers.ValidationError(
+                        {"sections": [_("Op field not found in widget config")]},
+                        code="op_field_not_found_in_widget_config",
+                    )
+
+                attrs["source_config"]["nps_human_flow_uuid"] = nps_human_flow_uuid
+                attrs["source_config"]["nps_human_op_field"] = nps_human_op_field
 
         timezone = (
             pytz.timezone(attrs["project"].timezone)

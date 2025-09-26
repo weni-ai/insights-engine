@@ -9,7 +9,9 @@ def build_attributes(request: HttpRequest) -> Dict[str, Any]:
     attrs: Dict[str, Any] = {"host": request.get_host(), "path": request.path}
     if getattr(request, "user", None) and request.user.is_authenticated:
         attrs["userEmail"] = getattr(request.user, "email", None)
-    project_uuid = request.GET.get("project_uuid") or getattr(request, "data", {}).get("project_uuid")
+    project_uuid = request.GET.get("project_uuid") or getattr(request, "data", {}).get(
+        "project_uuid"
+    )
     if project_uuid:
         attrs["projectUuid"] = str(project_uuid)
         try:

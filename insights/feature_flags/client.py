@@ -23,7 +23,10 @@ class FeatureFlagClient:
 
     def _get_definitions(self) -> Dict[str, Any]:
         try:
-            from insights.feature_flags.integrations.growthbook.instance import GROWTHBOOK_CLIENT
+            from insights.feature_flags.integrations.growthbook.instance import (
+                GROWTHBOOK_CLIENT,
+            )
+
             return GROWTHBOOK_CLIENT.get_feature_flags()
         except Exception as err:
             logger.error("Error getting GrowthBook features: %s", err, exc_info=True)
@@ -36,7 +39,11 @@ class FeatureFlagClient:
             on = bool(gb.is_on(feature_key))
             # best effort: salva último resultado para troubleshooting
             try:
-                self.cache.set(self._cache_key(), json.dumps({"feature": feature_key, "on": on}), ex=self.cache_ttl)
+                self.cache.set(
+                    self._cache_key(),
+                    json.dumps({"feature": feature_key, "on": on}),
+                    ex=self.cache_ttl,
+                )
             except Exception:
                 pass
             return on

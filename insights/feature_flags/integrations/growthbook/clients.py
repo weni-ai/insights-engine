@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 import json
 import logging
 import threading
@@ -7,16 +6,11 @@ from abc import ABC, abstractmethod
 import requests
 from growthbook import GrowthBook
 from sentry_sdk import capture_exception
-from growthbook import GrowthBook
 
 from insights.feature_flags.integrations.growthbook.tasks import (
     update_growthbook_feature_flags,
 )
 from insights.sources.cache import CacheClient
-from insights.feature_flags.integrations.growthbook.tasks import (
-    update_growthbook_feature_flags,
-)
-
 
 logger = logging.getLogger(__name__)
 

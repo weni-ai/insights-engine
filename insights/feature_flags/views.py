@@ -1,14 +1,15 @@
 from rest_framework import status
-from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from insights.authentication.permissions import ProjectQueryParamPermission
+from insights.feature_flags.integrations.growthbook.instance import (
+    GROWTHBOOK_CLIENT,
+)
 from insights.feature_flags.serializers import (
     FeatureFlagsQueryParamsSerializer,
 )
-from insights.feature_flags.integrations.growthbook.instance import GROWTHBOOK_CLIENT
 from insights.feature_flags.service import FeatureFlagService
 
 

@@ -1,5 +1,7 @@
+import json
 import logging
 from datetime import timedelta
+from uuid import UUID
 
 from django.db.models.query import QuerySet
 from django.conf import settings
@@ -9,17 +11,39 @@ from insights.celery import app
 
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus
+from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import DataLakeEventsClient
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.integrations.elasticsearch.services import (
+    ConversationsElasticsearchService,
+)
+from insights.metrics.conversations.integrations.elasticsearch.clients import (
+    ElasticsearchClient,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
+host_generates_reports = False
+
+
+def get_cache_key_for_report(report_uuid: UUID) -> str:
+    return f"conversations_report_task_info:{report_uuid}"
+
+
 @app.task
 def generate_conversations_report():
-    logger.info("[ generate_conversations_report task ] Starting task")
+    global host_generates_reports
+
+    cache_client = CacheClient()
+    host = settings.HOSTNAME
+
+    if not host_generates_reports:
+        host_generates_reports = True
+
+    logger.info("[ generate_conversations_report task ] Starting task in host %s", host)
 
     if (
         Report.objects.filter(status=ReportStatus.IN_PROGRESS).count()
@@ -55,10 +79,20 @@ def generate_conversations_report():
 
     start_time = timezone.now()
 
+    cache_key = get_cache_key_for_report(oldest_report.uuid)
+    data = {"host": host}
+
     try:
+        cache_client.set(
+            cache_key, json.dumps(data), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
         ConversationsReportService(
             datalake_events_client=DataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(),
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=ElasticsearchClient(),
+            ),
+            cache_client=CacheClient(),
         ).generate(oldest_report)
     except Exception as e:
         logger.error(
@@ -69,6 +103,8 @@ def generate_conversations_report():
         )
 
     end_time = timezone.now()
+
+    cache_client.delete(cache_key)
 
     logger.info(
         "[ generate_conversations_report task ] Finished generation of oldest report %s. "
