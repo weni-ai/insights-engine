@@ -52,7 +52,7 @@ class HumanSupportDashboardService:
 
     def _normalize_filters(self, incoming_filters: dict | None) -> dict:
         expanded = self._expand_all_tokens(incoming_filters)
-        filterset = HumanSupportFilterSet(data=expanded)
+        filterset = HumanSupportFilterSet(data=expanded,  queryset=Project.objects.none())
         filter_form = filterset.form
         filter_form.is_valid()
 
