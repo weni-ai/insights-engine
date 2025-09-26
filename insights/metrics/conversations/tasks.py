@@ -70,6 +70,12 @@ def generate_conversations_report():
 
         oldest_report: Report = pending_reports.first()
 
+    if not oldest_report:
+        logger.info(
+            "[ generate_conversations_report task ] No report to generate. Finishing task"
+        )
+        return
+
     logger.info(
         "[ generate_conversations_report task ] Starting generation of oldest report %s",
         oldest_report.uuid,
@@ -78,7 +84,9 @@ def generate_conversations_report():
     start_time = timezone.now()
 
     try:
-        oldest_report.config["task_host"] = host
+        config = oldest_report.config or {}
+        config["task_host"] = host
+        oldest_report.config = config
         oldest_report.save(update_fields=["config"])
         ConversationsReportService(
             datalake_events_client=DataLakeEventsClient(),
