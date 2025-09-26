@@ -32,7 +32,9 @@ def generate_conversations_report():
     logger.info("[ generate_conversations_report task ] Starting task in host %s", host)
 
     if (
-        Report.objects.filter(status=ReportStatus.IN_PROGRESS).count()
+        Report.objects.filter(
+            Q(status=ReportStatus.IN_PROGRESS) & ~Q(config__interrupted=True)
+        ).count()
         >= settings.REPORT_GENERATION_MAX_CONCURRENT_REPORTS
     ):
         logger.info(
