@@ -238,9 +238,9 @@ class ConversationsReportService(BaseConversationsReportService):
         report_uuid = str(report_uuid)
 
         if report_uuid not in self.cache_keys:
-            self.cache_keys[report_uuid] = []
+            self.cache_keys[report_uuid] = set()
 
-        self.cache_keys[report_uuid].append(cache_key)
+        self.cache_keys[report_uuid].add(cache_key)
 
     def _clear_cache_keys(self, report_uuid: UUID) -> None:
         """
@@ -549,6 +549,7 @@ class ConversationsReportService(BaseConversationsReportService):
         if cached_events := self.cache_client.get(cache_key):
             try:
                 cached_events = json.loads(cached_events)
+                self._add_cache_key(report.uuid, cache_key)
             except Exception as e:
                 logger.error(
                     "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached events for report %s. Error: %s",
@@ -634,6 +635,7 @@ class ConversationsReportService(BaseConversationsReportService):
         if cached_results := self.cache_client.get(cache_key):
             try:
                 cached_results = json.loads(cached_results)
+                self._add_cache_key(report.uuid, cache_key)
             except Exception as e:
                 logger.error(
                     "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached results for report %s. Error: %s",
