@@ -578,6 +578,15 @@ class ConversationsReportService(BaseConversationsReportService):
             self._clear_cache_keys(report.uuid)
             raise e
 
+        report.refresh_from_db(fields=["config"])
+
+        if report.config.get("interrupted"):
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Report %s is interrupted. Finishing generation",
+                report.uuid,
+            )
+            return
+
         logger.info(
             "[CONVERSATIONS REPORT SERVICE] Sending email for conversations report %s to %s",
             report.uuid,
