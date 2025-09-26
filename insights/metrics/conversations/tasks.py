@@ -33,7 +33,6 @@ def get_cache_key_for_report(report_uuid: UUID) -> str:
 
 @app.task
 def generate_conversations_report():
-    cache_client = CacheClient()
     host = settings.HOSTNAME
 
     logger.info("[ generate_conversations_report task ] Starting task in host %s", host)
@@ -84,13 +83,9 @@ def generate_conversations_report():
 
     start_time = timezone.now()
 
-    cache_key = get_cache_key_for_report(oldest_report.uuid)
-    data = {"host": host}
-
     try:
-        cache_client.set(
-            cache_key, json.dumps(data), ex=settings.REPORT_GENERATION_TIMEOUT
-        )
+        oldest_report.config["task_host"] = host
+        oldest_report.save(update_fields=["config"])
         ConversationsReportService(
             datalake_events_client=DataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(),
@@ -108,8 +103,6 @@ def generate_conversations_report():
         )
 
     end_time = timezone.now()
-
-    cache_client.delete(cache_key)
 
     logger.info(
         "[ generate_conversations_report task ] Finished generation of oldest report %s. "

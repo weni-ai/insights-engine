@@ -68,19 +68,7 @@ def graceful_shutdown_handler(timeout_seconds=30):
         # Process each report with individual timeout protection
         for in_progress_report in in_progress_reports:
             try:
-                key = get_cache_key_for_report(in_progress_report.uuid)
-                cached_info = cache_client.get(key)
-
-                if not cached_info:
-                    logger.warning(
-                        "[ shutdown_handler ] No cache info for report %s, skipping report",
-                        in_progress_report.uuid,
-                    )
-                    continue
-
-                cached_info = json.loads(cached_info)
-
-                if cached_info.get("host") != host:
+                if in_progress_report.config.get("task_host") != host:
                     continue
 
                 interrupted_reports.append(in_progress_report)
