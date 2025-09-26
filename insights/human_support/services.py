@@ -16,7 +16,6 @@ from insights.sources.queues.usecases.query_execute import QueryExecutor as Queu
 from insights.sources.tags.usecases.query_execute import QueryExecutor as TagsQueryExecutor
 from insights.sources.agents.clients import AgentsRESTClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
-logger = logging.getLogger(__name__)
 
 class HumanSupportDashboardService:
     def __init__(self, project: Project) -> None:
