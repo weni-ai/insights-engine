@@ -389,13 +389,21 @@ class ConversationsReportService(BaseConversationsReportService):
             "[CONVERSATIONS REPORT SERVICE] Starting generation of conversations report %s",
             report.uuid,
         )
-        report.status = ReportStatus.IN_PROGRESS
+
+        fields_to_update = []
+
+        if report.status == ReportStatus.PENDING:
+            report.status = ReportStatus.IN_PROGRESS
+            fields_to_update.append("status")
+
         if not report.started_at:
             # If the report generation was interrupted and restarted
             # the field will be already set. Otherwise, we set it to the current time
             report.started_at = timezone.now()
+            fields_to_update.append("started_at")
 
-        report.save(update_fields=["status", "started_at"])
+        if fields_to_update:
+            report.save(update_fields=fields_to_update)
 
         try:
             filters = report.filters or {}
