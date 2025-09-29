@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import logging
 import time
 
@@ -13,7 +14,41 @@ from insights.projects.models import Project, ProjectIndexerActivation
 logger = logging.getLogger(__name__)
 
 
-class ProjectIndexerActivationService:
+class BaseProjectIndexerActivationService(ABC):
+    """
+    This service is used to activate the indexer for a project.
+    """
+
+    @abstractmethod
+    def is_project_active_on_indexer(self, project: Project) -> bool:
+        """
+        This method is used to check if the project is active on the indexer.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_project_queued(self, project: Project) -> bool:
+        """
+        This method is used to check if the project is queued.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_project_to_queue(self, project: Project) -> bool:
+        """
+        This method is used to add a project to the queue.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def activate_project_on_indexer(self, project: Project) -> bool:
+        """
+        This method is used to activate the project on the indexer.
+        """
+        raise NotImplementedError
+
+
+class ProjectIndexerActivationService(BaseProjectIndexerActivationService):
     """
     This service is used to activate the indexer for a project.
     """
@@ -32,6 +67,14 @@ class ProjectIndexerActivationService:
         """
         return project.is_allowed or str(project.uuid) in settings.PROJECT_ALLOW_LIST
 
+    def is_project_queued(self, project: Project):
+        """
+        This method is used to check if the project is queued.
+        """
+        return ProjectIndexerActivation.objects.filter(
+            project=project, status=ProjectIndexerActivationStatus.PENDING
+        ).exists()
+
     def add_project_to_queue(self, project: Project):
         """
         This method is used to add a project to the queue.
@@ -44,9 +87,7 @@ class ProjectIndexerActivationService:
             )
             return False
 
-        if ProjectIndexerActivation.objects.filter(
-            project=project, status=ProjectIndexerActivationStatus.PENDING
-        ).exists():
+        if self.is_project_queued(project):
             logger.info(
                 "[ ProjectIndexerActivationService ] Project %s is already in queue",
                 project.uuid,
