@@ -5,7 +5,6 @@ import json
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
 import pytz
 
 from django.core.mail import EmailMessage
