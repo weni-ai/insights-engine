@@ -4,6 +4,7 @@ import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
+import pytz
 
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -22,6 +23,9 @@ from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
 from insights.projects.models import Project
 from insights.sources.dl_events.clients import BaseDataLakeEventsClient
+from insights.metrics.conversations.integrations.elasticsearch.services import (
+    ConversationsElasticsearchService,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -132,6 +136,20 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_flowsrun_results_by_contacts(
+        self,
+        report: Report,
+        flow_uuid: str,
+        start_date: str,
+        end_date: str,
+        op_field: str,
+    ) -> list[dict]:
+        """
+        Get flowsrun results by contacts.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -142,14 +160,20 @@ class ConversationsReportService(BaseConversationsReportService):
         self,
         datalake_events_client: BaseDataLakeEventsClient,
         metrics_service: ConversationsMetricsService,
+        elasticsearch_service: ConversationsElasticsearchService,
         events_limit_per_page: int = 5000,
-        page_limit: int = 200,
+        page_limit: int = 100,
+        elastic_page_size: int = 1000,
+        elastic_page_limit: int = 100,
     ):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.datalake_events_client = datalake_events_client
         self.metrics_service = metrics_service
         self.events_limit_per_page = events_limit_per_page
         self.page_limit = page_limit
+        self.elasticsearch_service = elasticsearch_service
+        self.elastic_page_size = elastic_page_size
+        self.elastic_page_limit = elastic_page_limit
 
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
@@ -175,6 +199,32 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return files
 
+    def _ensure_unique_worksheet_name(self, name: str, used_names: set[str]) -> str:
+        """
+        Ensure worksheet name is unique by appending a number if needed.
+
+        Args:
+            name: The original worksheet name
+            used_names: Set of already used worksheet names
+
+        Returns:
+            A unique worksheet name
+        """
+        if name not in used_names:
+            used_names.add(name)
+            return name
+
+        counter = 1
+        while f"{name} ({counter})" in used_names:
+            counter += 1
+
+            if counter > 20:
+                raise ValueError("Too many unique names found")
+
+        unique_name = f"{name} ({counter})"
+        used_names.add(unique_name)
+        return unique_name
+
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
     ) -> list[ConversationsReportFile]:
@@ -187,8 +237,11 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language):
             file_name = gettext("Conversations dashboard report")
 
+        used_worksheet_names = set()
         for worksheet in worksheets:
-            worksheet_name = worksheet.name
+            worksheet_name = self._ensure_unique_worksheet_name(
+                worksheet.name, used_worksheet_names
+            )
             worksheet_data = worksheet.data
 
             xlsx_worksheet = workbook.add_worksheet(worksheet_name)
@@ -486,13 +539,116 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def _format_date(self, date: str) -> str:
+    def _format_date(self, date_str: str, report: Report) -> str:
         """
         Format the date.
         """
-        return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
-            "%d/%m/%Y %H:%M:%S"
-        )
+
+        formats = ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%S"]
+
+        datetime_date = None
+
+        for _format in formats:
+            try:
+                datetime_date = datetime.strptime(date_str, _format)
+                break
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
+                    % (
+                        date_str,
+                        report.uuid,
+                        e,
+                    ),
+                )
+                capture_exception(e)
+                continue
+
+        if not datetime_date:
+            try:
+                datetime_date = datetime.fromisoformat(date_str)
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
+                    % (
+                        date_str,
+                        report.uuid,
+                        e,
+                    ),
+                )
+                capture_exception(e)
+                raise e
+
+        tz_name = report.project.timezone
+
+        if tz_name:
+            tz = pytz.timezone(tz_name)
+            datetime_date = datetime_date.astimezone(tz)
+
+        return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
+
+    def get_flowsrun_results_by_contacts(
+        self,
+        report: Report,
+        flow_uuid: str,
+        start_date: str,
+        end_date: str,
+        op_field: str,
+    ) -> list[dict]:
+        """
+        Get flowsrun results by contacts.
+        """
+        data = []
+
+        current_page = 1
+        page_size = self.elastic_page_size
+        page_limit = self.elastic_page_limit
+
+        while True:
+            if current_page >= page_limit:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s has more than %s pages. Finishing flowsrun results by contacts retrieval",
+                    report.uuid,
+                    page_limit,
+                )
+                raise ValueError("Report has more than %s pages" % page_limit)
+
+            report.refresh_from_db(fields=["status"])
+
+            if report.status != ReportStatus.IN_PROGRESS:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress. Finishing flowsrun results by contacts retrieval",
+                    report.uuid,
+                )
+                raise ValueError("Report %s is not in progress" % report.uuid)
+
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Retrieving flowsrun results by contacts for page %s for report %s",
+                current_page,
+                report.uuid,
+            )
+
+            paginated_results = (
+                self.elasticsearch_service.get_flowsrun_results_by_contacts(
+                    project_uuid=report.project.uuid,
+                    flow_uuid=flow_uuid,
+                    start_date=start_date,
+                    end_date=end_date,
+                    op_field=op_field,
+                    page_size=page_size,
+                    page_number=current_page,
+                )
+            )
+
+            contacts = paginated_results.get("contacts", [])
+
+            if len(contacts) == 0 or contacts == [{}]:
+                break
+
+            data.extend(paginated_results["contacts"])
+            current_page += 1
+
+        return data
 
     def get_nps_ai_worksheet(
         self, report: Report, start_date: datetime, end_date: datetime

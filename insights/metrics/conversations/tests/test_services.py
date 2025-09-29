@@ -189,9 +189,9 @@ class TestConversationsMetricsService(TestCase):
 
         expected_results = NPSMetrics(
             total_responses=200,
-            promoters=125,
-            passives=42,
-            detractors=33,
+            promoters=round(((125 / 200) * 100), 2),
+            passives=round(((42 / 200) * 100), 2),
+            detractors=round(((33 / 200) * 100), 2),
             score=46.0,
         )
 
