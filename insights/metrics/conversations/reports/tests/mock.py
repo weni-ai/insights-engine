@@ -50,6 +50,16 @@ class MockConversationsReportService(BaseConversationsReportService):
     def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
         pass
 
+    def get_flowsrun_results_by_contacts(
+        self,
+        report: Report,
+        flow_uuid: str,
+        start_date: str,
+        end_date: str,
+        op_field: str,
+    ) -> list[dict]:
+        pass
+
     def __init__(self):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.process_csv = MagicMock()
@@ -60,3 +70,4 @@ class MockConversationsReportService(BaseConversationsReportService):
         self.get_next_report_to_generate = MagicMock()
         self.project_can_receive_new_reports_generation = MagicMock()
         self.get_datalake_events = MagicMock()
+        self.get_flowsrun_results_by_contacts = MagicMock()
