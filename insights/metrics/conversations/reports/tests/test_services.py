@@ -22,10 +22,6 @@ from insights.metrics.conversations.integrations.elasticsearch.services import (
 from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
     MockElasticsearchClient,
 )
-from insights.metrics.conversations.reports.dataclass import (
-    ConversationsReportFile,
-    ConversationsReportWorksheet,
-)
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
