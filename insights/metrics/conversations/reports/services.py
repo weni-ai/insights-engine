@@ -7,6 +7,8 @@ from uuid import UUID
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
+from datetime import datetime
+import pytz
 
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -730,13 +732,53 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def _format_date(self, date: str) -> str:
+    def _format_date(self, date_str: str, report: Report) -> str:
         """
         Format the date.
         """
-        return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
-            "%d/%m/%Y %H:%M:%S"
-        )
+
+        formats = ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%S"]
+
+        datetime_date = None
+
+        for _format in formats:
+            try:
+                datetime_date = datetime.strptime(date_str, _format)
+                break
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
+                    % (
+                        date_str,
+                        report.uuid,
+                        e,
+                    ),
+                )
+                capture_exception(e)
+                continue
+
+        if not datetime_date:
+            try:
+                datetime_date = datetime.fromisoformat(date_str)
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
+                    % (
+                        date_str,
+                        report.uuid,
+                        e,
+                    ),
+                )
+                capture_exception(e)
+                raise e
+
+        tz_name = report.project.timezone
+
+        if tz_name:
+            tz = pytz.timezone(tz_name)
+            datetime_date = datetime_date.astimezone(tz)
+
+        return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
 
     def get_resolutions_worksheet(
         self,
