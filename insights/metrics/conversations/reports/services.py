@@ -1067,7 +1067,7 @@ class ConversationsReportService(BaseConversationsReportService):
             data.append(
                 {
                     "URN": event.get("contact_urn"),
-                    date_label: self._format_date(event.get("date")),
+                    date_label: self._format_date(event.get("date"), report),
                     score_label: event.get("value"),
                 }
             )
