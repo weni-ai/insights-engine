@@ -151,6 +151,7 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
     def get_flowsrun_results_by_contacts(
         self,
         report: Report,
