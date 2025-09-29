@@ -4,6 +4,7 @@ import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
+import pytz
 
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -207,6 +208,32 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return files
 
+    def _ensure_unique_worksheet_name(self, name: str, used_names: set[str]) -> str:
+        """
+        Ensure worksheet name is unique by appending a number if needed.
+
+        Args:
+            name: The original worksheet name
+            used_names: Set of already used worksheet names
+
+        Returns:
+            A unique worksheet name
+        """
+        if name not in used_names:
+            used_names.add(name)
+            return name
+
+        counter = 1
+        while f"{name} ({counter})" in used_names:
+            counter += 1
+
+            if counter > 20:
+                raise ValueError("Too many unique names found")
+
+        unique_name = f"{name} ({counter})"
+        used_names.add(unique_name)
+        return unique_name
+
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
     ) -> list[ConversationsReportFile]:
@@ -219,8 +246,11 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language):
             file_name = gettext("Conversations dashboard report")
 
+        used_worksheet_names = set()
         for worksheet in worksheets:
-            worksheet_name = worksheet.name
+            worksheet_name = self._ensure_unique_worksheet_name(
+                worksheet.name, used_worksheet_names
+            )
             worksheet_data = worksheet.data
 
             xlsx_worksheet = workbook.add_worksheet(worksheet_name)
@@ -518,13 +548,53 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def _format_date(self, date: str) -> str:
+    def _format_date(self, date_str: str, report: Report) -> str:
         """
         Format the date.
         """
-        return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
-            "%d/%m/%Y %H:%M:%S"
-        )
+
+        formats = ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%S"]
+
+        datetime_date = None
+
+        for _format in formats:
+            try:
+                datetime_date = datetime.strptime(date_str, _format)
+                break
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
+                    % (
+                        date_str,
+                        report.uuid,
+                        e,
+                    ),
+                )
+                capture_exception(e)
+                continue
+
+        if not datetime_date:
+            try:
+                datetime_date = datetime.fromisoformat(date_str)
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
+                    % (
+                        date_str,
+                        report.uuid,
+                        e,
+                    ),
+                )
+                capture_exception(e)
+                raise e
+
+        tz_name = report.project.timezone
+
+        if tz_name:
+            tz = pytz.timezone(tz_name)
+            datetime_date = datetime_date.astimezone(tz)
+
+        return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
 
     def get_flowsrun_results_by_contacts(
         self,

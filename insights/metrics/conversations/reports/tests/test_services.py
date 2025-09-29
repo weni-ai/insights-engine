@@ -59,6 +59,22 @@ class TestConversationsReportService(TestCase):
             language="en",
         )
 
+    def test_ensure_unique_worksheet_name(self):
+        used_names = set()
+        self.assertEqual(
+            self.service._ensure_unique_worksheet_name("Test", used_names), "Test"
+        )
+        self.assertEqual(
+            self.service._ensure_unique_worksheet_name("Test", used_names), "Test (1)"
+        )
+        self.assertEqual(
+            self.service._ensure_unique_worksheet_name("Test", used_names), "Test (2)"
+        )
+        self.assertEqual(
+            self.service._ensure_unique_worksheet_name("Test (1)", used_names),
+            "Test (1) (1)",
+        )
+
     @patch("django.core.mail.EmailMessage.send")
     def test_send_email(self, mock_send_email):
         mock_send_email.return_value = None
