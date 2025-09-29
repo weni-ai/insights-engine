@@ -1116,7 +1116,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": event.get("contact_urn"),
                     date_label: (
-                        self._format_date(event.get("date"))
+                        self._format_date(event.get("date"), report)
                         if event.get("date")
                         else ""
                     ),
