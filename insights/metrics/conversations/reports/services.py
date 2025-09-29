@@ -776,7 +776,7 @@ class ConversationsReportService(BaseConversationsReportService):
                         yes_label if metadata.get("human_support", False) else no_label
                     ),
                     date_label: (
-                        self._format_date(event.get("date", ""))
+                        self._format_date(event.get("date", ""), report)
                         if event.get("date")
                         else ""
                     ),
