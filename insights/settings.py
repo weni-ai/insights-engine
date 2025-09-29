@@ -361,3 +361,22 @@ if SEND_EMAILS:
     EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD")
     EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL")
     EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
+
+# Feature Flags (GrowthBook)
+FEATURE_FLAGS_ENABLED = env.bool("FEATURE_FLAGS_ENABLED", default=False)
+GROWTHBOOK_HOST_BASE_URL = env.str(
+    "GROWTHBOOK_HOST_BASE_URL",
+    default=env.str("GROWTHBOOK_API_HOST", default="https://cdn.growthbook.io"),
+)
+GROWTHBOOK_CLIENT_KEY = env.str("GROWTHBOOK_CLIENT_KEY", default="")
+GROWTHBOOK_SHORT_CACHE_KEY = env.str(
+    "GROWTHBOOK_SHORT_CACHE_KEY", default="growthbook:features:short"
+)
+GROWTHBOOK_SHORT_CACHE_TTL = env.int("GROWTHBOOK_SHORT_CACHE_TTL", default=300)
+GROWTHBOOK_LONG_CACHE_KEY = env.str(
+    "GROWTHBOOK_LONG_CACHE_KEY", default="growthbook:features:long"
+)
+GROWTHBOOK_LONG_CACHE_TTL = env.int(
+    "GROWTHBOOK_LONG_CACHE_TTL", default=60 * 60 * 24 * 30
+)
+GROWTHBOOK_WEBHOOK_SECRET = env.str("GROWTHBOOK_WEBHOOK_SECRET", default="")
