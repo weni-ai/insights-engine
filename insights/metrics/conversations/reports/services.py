@@ -1362,7 +1362,7 @@ class ConversationsReportService(BaseConversationsReportService):
             data.append(
                 {
                     "URN": doc["urn"],
-                    date_label: self._format_date(doc["modified_on"]),
+                    date_label: self._format_date(doc["modified_on"], report),
                     score_label: doc["op_field_value"],
                 }
             )
