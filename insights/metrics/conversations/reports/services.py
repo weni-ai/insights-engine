@@ -717,7 +717,7 @@ class ConversationsReportService(BaseConversationsReportService):
                         else unresolved_label
                     ),
                     date_label: (
-                        self._format_date(event.get("date", ""))
+                        self._format_date(event.get("date", ""), report)
                         if event.get("date")
                         else ""
                     ),
