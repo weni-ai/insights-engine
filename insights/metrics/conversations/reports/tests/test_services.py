@@ -415,7 +415,7 @@ class TestConversationsReportService(TestCase):
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
+            source_config={"sections": ["RESOLUTIONS", "TRANSFERRED"]},
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
@@ -460,7 +460,7 @@ class TestConversationsReportService(TestCase):
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
+            source_config={"sections": ["RESOLUTIONS", "TRANSFERRED"]},
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
@@ -505,7 +505,7 @@ class TestConversationsReportService(TestCase):
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
+            source_config={"sections": ["RESOLUTIONS", "TRANSFERRED"]},
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
@@ -548,7 +548,7 @@ class TestConversationsReportService(TestCase):
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
+            source_config={"sections": ["RESOLUTIONS", "TRANSFERRED"]},
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,
@@ -653,7 +653,7 @@ class TestConversationsReportService(TestCase):
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
+            source_config={"sections": ["RESOLUTIONS", "TRANSFERRED"]},
             filters={"start": "2025-01-01", "end": "2025-01-02"},
             format=ReportFormat.CSV,
             requested_by=self.user,

@@ -921,7 +921,9 @@ class ConversationsReportService(BaseConversationsReportService):
                     "URN": mock_urn,
                     gettext("Topic"): "Test Topic",
                     gettext("Subtopic"): "Test Subtopic",
-                    gettext("Date"): self._format_date("2025-01-01T00:00:00.000000Z"),
+                    gettext("Date"): self._format_date(
+                        "2025-01-01T00:00:00.000000Z", report
+                    ),
                 }
                 for mock_urn in mock_urns
             ],
@@ -1015,7 +1017,7 @@ class ConversationsReportService(BaseConversationsReportService):
                     topic_label: topic_name,
                     subtopic_label: subtopic_name,
                     date_label: (
-                        self._format_date(event.get("date"))
+                        self._format_date(event.get("date"), report)
                         if event.get("date")
                         else ""
                     ),
@@ -1402,7 +1404,7 @@ class ConversationsReportService(BaseConversationsReportService):
             data.append(
                 {
                     "URN": event.get("contact_urn"),
-                    date_label: self._format_date(event.get("date")),
+                    date_label: self._format_date(event.get("date"), report),
                     value_label: event.get("value"),
                 }
             )
