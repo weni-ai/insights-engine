@@ -150,6 +150,15 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_nps_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps ai worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
