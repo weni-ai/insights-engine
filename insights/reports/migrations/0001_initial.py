@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("projects", "0005_projectindexeractivation"),
+        ("projects", "0007_set_multi_agents_for_projects_with_conversations_dashboard"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

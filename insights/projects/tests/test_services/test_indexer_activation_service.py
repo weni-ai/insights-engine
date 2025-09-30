@@ -55,6 +55,16 @@ class TestIndexerActivationService(TestCase):
             ).exists()
         )
 
+    def test_is_project_queued_when_project_is_queued(self):
+        ProjectIndexerActivation.objects.create(
+            project=self.project,
+            status=ProjectIndexerActivationStatus.PENDING,
+        )
+        self.assertTrue(self.service.is_project_queued(self.project))
+
+    def test_is_project_queued_when_project_is_not_queued(self):
+        self.assertFalse(self.service.is_project_queued(self.project))
+
     def test_add_project_to_queue_when_project_is_allowed(self):
         self.project.is_allowed = True
         self.project.save(update_fields=["is_allowed"])
