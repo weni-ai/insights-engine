@@ -29,6 +29,7 @@ from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
 )
+from insights.widgets.models import Widget
 from insights.sources.cache import CacheClient
 
 
@@ -494,6 +495,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
             source_config = report.source_config or {}
             sections = source_config.get("sections", [])
+            custom_widgets = source_config.get("custom_widgets", [])
 
             worksheets = []
 
@@ -546,6 +548,21 @@ class ConversationsReportService(BaseConversationsReportService):
             if "NPS_HUMAN" in sections:
                 worksheet = self.get_nps_human_worksheet(report, start_date, end_date)
                 worksheets.append(worksheet)
+
+            if custom_widgets:
+                widgets = Widget.objects.filter(
+                    uuid__in=custom_widgets, dashboard__project=report.project
+                )
+
+                for widget in widgets:
+                    worksheets.append(
+                        self.get_custom_widget_worksheet(
+                            report,
+                            widget,
+                            start_date,
+                            end_date,
+                        )
+                    )
 
             files: list[ConversationsReportFile] = []
 
@@ -1286,6 +1303,56 @@ class ConversationsReportService(BaseConversationsReportService):
                     "URN": doc["urn"],
                     date_label: self._format_date(doc["modified_on"], report),
                     score_label: doc["op_field_value"],
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
+    def get_custom_widget_worksheet(
+        self,
+        report: Report,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get custom widgets results.
+        """
+        datalake_config = widget.config.get("datalake_config", {})
+        key = datalake_config.get("key", "")
+        agent_uuid = datalake_config.get("agent_uuid", "")
+
+        if not key or not agent_uuid:
+            raise ValueError("Key or agent_uuid is missing in the widget config")
+
+        events = self.get_datalake_events(
+            report,
+            key=key,
+            event_name="weni_nexus_data",
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+        )
+
+        worksheet_name = widget.name
+
+        with override(report.requested_by.language or "en"):
+            date_label = gettext("Date")
+            value_label = gettext("Value")
+
+        data = []
+
+        for event in events:
+            data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    date_label: self._format_date(event.get("date"), report),
+                    value_label: event.get("value"),
                 }
             )
 
