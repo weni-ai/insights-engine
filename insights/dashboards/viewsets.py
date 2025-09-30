@@ -60,7 +60,7 @@ class DashboardViewSet(
             )
         )
 
-        if settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION:
+        if settings.CONVERSATIONS_DASHBOARD_EXCLUDE_FROM_LIST_IF_INDEXER_IS_NOT_ACTIVE:
             queryset = queryset.exclude(
                 Q(name=CONVERSATIONS_DASHBOARD_NAME)
                 & (
