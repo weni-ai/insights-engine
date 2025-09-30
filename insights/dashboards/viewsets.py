@@ -65,7 +65,7 @@ class DashboardViewSet(
                 Q(name=CONVERSATIONS_DASHBOARD_NAME)
                 & (
                     Q(project__is_allowed=False)
-                    | ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
+                    & ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
                 )
             )
 
