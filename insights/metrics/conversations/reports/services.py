@@ -1,9 +1,12 @@
+from datetime import datetime
 import io
 import csv
+import json
+from uuid import UUID
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
+import pytz
 
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -12,6 +15,7 @@ from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
+from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportFile,
     ConversationsReportWorksheet,
@@ -25,6 +29,7 @@ from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
 )
+from insights.sources.cache import CacheClient
 
 
 logger = logging.getLogger(__name__)
@@ -136,6 +141,19 @@ class BaseConversationsReportService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_topics_distribution_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the topics distribution worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_flowsrun_results_by_contacts(
         self,
         report: Report,
@@ -146,6 +164,54 @@ class BaseConversationsReportService(ABC):
     ) -> list[dict]:
         """
         Get flowsrun results by contacts.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_csat_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the csat ai worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_nps_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps ai worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_csat_human_worksheet(
+        self, report: Report, start_date: str, end_date: str
+    ) -> ConversationsReportWorksheet:
+        """
+        Get csat human worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_nps_human_worksheet(
+        self, report: Report, start_date: str, end_date: str
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps human worksheet.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -160,6 +226,7 @@ class ConversationsReportService(BaseConversationsReportService):
         datalake_events_client: BaseDataLakeEventsClient,
         metrics_service: ConversationsMetricsService,
         elasticsearch_service: ConversationsElasticsearchService,
+        cache_client: CacheClient,
         events_limit_per_page: int = 5000,
         page_limit: int = 100,
         elastic_page_size: int = 1000,
@@ -171,8 +238,11 @@ class ConversationsReportService(BaseConversationsReportService):
         self.events_limit_per_page = events_limit_per_page
         self.page_limit = page_limit
         self.elasticsearch_service = elasticsearch_service
+        self.cache_client = cache_client
         self.elastic_page_size = elastic_page_size
         self.elastic_page_limit = elastic_page_limit
+
+        self.cache_keys = {}
 
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
@@ -223,6 +293,29 @@ class ConversationsReportService(BaseConversationsReportService):
         unique_name = f"{name} ({counter})"
         used_names.add(unique_name)
         return unique_name
+
+    def _add_cache_key(self, report_uuid: UUID, cache_key: str) -> None:
+        """
+        Add cache key to report.
+        """
+        report_uuid = str(report_uuid)
+
+        if report_uuid not in self.cache_keys:
+            self.cache_keys[report_uuid] = set()
+
+        self.cache_keys[report_uuid].add(cache_key)
+
+    def _clear_cache_keys(self, report_uuid: UUID) -> None:
+        """
+        Clear cache keys for report.
+        """
+        report_uuid = str(report_uuid)
+
+        if report_uuid in self.cache_keys:
+            for cache_key in self.cache_keys[report_uuid]:
+                self.cache_client.delete(cache_key)
+
+            del self.cache_keys[report_uuid]
 
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
@@ -359,9 +452,21 @@ class ConversationsReportService(BaseConversationsReportService):
             "[CONVERSATIONS REPORT SERVICE] Starting generation of conversations report %s",
             report.uuid,
         )
-        report.status = ReportStatus.IN_PROGRESS
-        report.started_at = timezone.now()
-        report.save(update_fields=["status", "started_at"])
+
+        fields_to_update = []
+
+        if report.status == ReportStatus.PENDING:
+            report.status = ReportStatus.IN_PROGRESS
+            fields_to_update.append("status")
+
+        if not report.started_at:
+            # If the report generation was interrupted and restarted
+            # the field will be already set. Otherwise, we set it to the current time
+            report.started_at = timezone.now()
+            fields_to_update.append("started_at")
+
+        if fields_to_update:
+            report.save(update_fields=fields_to_update)
 
         try:
             filters = report.filters or {}
@@ -387,18 +492,67 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            # source_config = report.source_config or {}
+            source_config = report.source_config or {}
+            sections = source_config.get("sections", [])
 
-            # sections = source_config.get("sections", [])
+            worksheets = []
 
-            # custom_widgets = source_config.get("custom_widgets", [])
+            if "RESOLUTIONS" in sections:
+                resolutions_worksheet = self.get_resolutions_worksheet(
+                    report,
+                    report.filters.get("start"),
+                    report.filters.get("end"),
+                )
+                worksheets.append(resolutions_worksheet)
 
-            # TODO: Implement the specific generation logic
+            if "TRANSFERRED" in sections:
+                transferred_worksheet = self.get_transferred_to_human_worksheet(
+                    report,
+                    report.filters.get("start"),
+                    report.filters.get("end"),
+                )
+                worksheets.append(transferred_worksheet)
+
+            if "TOPICS_AI" in sections:
+                topics_ai_worksheet = self.get_topics_distribution_worksheet(
+                    report=report,
+                    start_date=start_date,
+                    end_date=end_date,
+                    conversation_type=ConversationType.AI,
+                )
+                worksheets.append(topics_ai_worksheet)
+
+            if "TOPICS_HUMAN" in sections:
+                topics_human_worksheet = self.get_topics_distribution_worksheet(
+                    report=report,
+                    start_date=start_date,
+                    end_date=end_date,
+                    conversation_type=ConversationType.HUMAN,
+                )
+                worksheets.append(topics_human_worksheet)
+
+            if "CSAT_AI" in sections:
+                worksheet = self.get_csat_ai_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
+
+            if "NPS_AI" in sections:
+                worksheet = self.get_nps_ai_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
+
+            if "CSAT_HUMAN" in sections:
+                worksheet = self.get_csat_human_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
+
+            if "NPS_HUMAN" in sections:
+                worksheet = self.get_nps_human_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
+
+            files: list[ConversationsReportFile] = []
 
             if report.format == ReportFormat.CSV:
-                self.process_csv(report)
+                files.extend(self.process_csv(report, worksheets))
             elif report.format == ReportFormat.XLSX:
-                self.process_xlsx(report)
+                files.extend(self.process_xlsx(report, worksheets))
 
         except Exception as e:
             logger.error(
@@ -413,7 +567,18 @@ class ConversationsReportService(BaseConversationsReportService):
             errors["event_id"] = capture_exception(e)
             report.errors = errors
             report.save(update_fields=["status", "completed_at", "errors"])
+            self._clear_cache_keys(report.uuid)
             raise e
+
+        report.refresh_from_db(fields=["config"])
+
+        config = report.config or {}
+        if config.get("interrupted"):
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Report %s is interrupted. Finishing generation",
+                report.uuid,
+            )
+            return
 
         logger.info(
             "[CONVERSATIONS REPORT SERVICE] Sending email for conversations report %s to %s",
@@ -422,9 +587,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(
-                report, [ConversationsReportFile(name="TODO", content="TODO")]
-            )
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -439,6 +602,7 @@ class ConversationsReportService(BaseConversationsReportService):
             errors["event_id"] = event_id
             report.errors = errors
             report.save(update_fields=["status", "completed_at", "errors"])
+            self._clear_cache_keys(report.uuid)
             raise e
 
         logger.info(
@@ -450,6 +614,8 @@ class ConversationsReportService(BaseConversationsReportService):
         report.status = ReportStatus.READY
         report.completed_at = timezone.now()
         report.save(update_fields=["status", "completed_at"])
+
+        self._clear_cache_keys(report.uuid)
 
         logger.info(
             "[CONVERSATIONS REPORT SERVICE] Conversations report completed %s",
@@ -487,6 +653,20 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get datalake events.
         """
+        kwargs_str = json.dumps(kwargs, sort_keys=True, default=str)
+        cache_key = f"datalake_events:{report.uuid}:{kwargs_str}"
+
+        if cached_events := self.cache_client.get(cache_key):
+            try:
+                cached_events = json.loads(cached_events)
+                self._add_cache_key(report.uuid, cache_key)
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached events for report %s. Error: %s",
+                    report.uuid,
+                    e,
+                )
+
         limit = self.events_limit_per_page
         offset = 0
 
@@ -534,15 +714,59 @@ class ConversationsReportService(BaseConversationsReportService):
             offset += limit
             current_page += 1
 
+        self.cache_client.set(
+            cache_key, json.dumps(events), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
+        self._add_cache_key(report.uuid, cache_key)
+
         return events
 
-    def _format_date(self, date: str) -> str:
+    def _format_date(self, date_str: str, report: Report) -> str:
         """
         Format the date.
         """
-        return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime(
-            "%d/%m/%Y %H:%M:%S"
-        )
+        formats = ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%S"]
+
+        datetime_date = None
+
+        for _format in formats:
+            try:
+                datetime_date = datetime.strptime(date_str, _format)
+                break
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
+                    % (
+                        date_str,
+                        report.uuid,
+                        e,
+                    ),
+                )
+                capture_exception(e)
+                continue
+
+        if not datetime_date:
+            try:
+                datetime_date = datetime.fromisoformat(date_str)
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
+                    % (
+                        date_str,
+                        report.uuid,
+                        e,
+                    ),
+                )
+                capture_exception(e)
+                raise e
+
+        tz_name = report.project.timezone
+
+        if tz_name:
+            tz = pytz.timezone(tz_name)
+            datetime_date = datetime_date.astimezone(tz)
+
+        return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
 
     def get_flowsrun_results_by_contacts(
         self,
@@ -555,6 +779,19 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get flowsrun results by contacts.
         """
+        cache_key = f"flowsrun_results_by_contacts:{report.uuid}:{flow_uuid}:{start_date}:{end_date}:{op_field}"
+
+        if cached_results := self.cache_client.get(cache_key):
+            try:
+                cached_results = json.loads(cached_results)
+                self._add_cache_key(report.uuid, cache_key)
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached results for report %s. Error: %s",
+                    report.uuid,
+                    e,
+                )
+
         data = []
 
         current_page = 1
@@ -605,4 +842,454 @@ class ConversationsReportService(BaseConversationsReportService):
             data.extend(paginated_results["contacts"])
             current_page += 1
 
+        self.cache_client.set(
+            cache_key, json.dumps(data), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
+        self._add_cache_key(report.uuid, cache_key)
+
         return data
+
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="conversation_classification",
+        )
+
+        with override(report.requested_by.language):
+            worksheet_name = gettext("Resolutions")
+
+            resolutions_label = gettext("Resolution")
+            date_label = gettext("Date")
+
+            resolved_label = gettext("Optimized Resolutions")
+            unresolved_label = gettext("Other conclusions")
+
+        if len(events) == 0:
+            return ConversationsReportWorksheet(
+                name=worksheet_name,
+                data=[],
+            )
+
+        data = []
+
+        for event in events:
+            data.append(
+                {
+                    "URN": event.get("contact_urn", ""),
+                    resolutions_label: (
+                        resolved_label
+                        if event.get("value") == "resolved"
+                        else unresolved_label
+                    ),
+                    date_label: (
+                        self._format_date(event.get("date", ""), report)
+                        if event.get("date")
+                        else ""
+                    ),
+                }
+            )
+
+        setattr(self, "_conversation_classification_events_cache", events)
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
+    def get_transferred_to_human_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the transferred to human worksheet.
+        """
+        if hasattr(self, "_conversation_classification_events_cache"):
+            events = getattr(self, "_conversation_classification_events_cache")
+        else:
+            events = self.get_datalake_events(
+                report=report,
+                project=report.project.uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name="weni_nexus_data",
+                key="conversation_classification",
+            )
+
+        with override(report.requested_by.language):
+            worksheet_name = gettext("Transferred to Human")
+
+            transferred_to_human_label = gettext("Transferred to Human")
+            yes_label = gettext("Yes")
+            no_label = gettext("No")
+            date_label = gettext("Conversation date")
+
+        if len(events) == 0:
+            return ConversationsReportWorksheet(
+                name=worksheet_name,
+                data=[],
+            )
+
+        data = []
+
+        for event in events:
+            metadata = json.loads(event.get("metadata"))
+            data.append(
+                {
+                    "URN": event.get("contact_urn", ""),
+                    transferred_to_human_label: (
+                        yes_label if metadata.get("human_support", False) else no_label
+                    ),
+                    date_label: (
+                        self._format_date(event.get("date", ""), report)
+                        if event.get("date")
+                        else ""
+                    ),
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
+    def get_topics_distribution_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the topics distribution worksheet.
+        """
+        nexus_topics_data = self.metrics_service.get_topics(report.project.uuid)
+
+        topics_data = {}
+
+        for topic_data in nexus_topics_data:
+            topic_uuid = str(topic_data.get("uuid"))
+            topics_data[topic_uuid] = {
+                "name": topic_data.get("name"),
+                "uuid": topic_uuid,
+                "subtopics": {},
+            }
+
+            if not topic_data.get("subtopic"):
+                continue
+
+            for subtopic_data in topic_data.get("subtopic", []):
+                subtopic_uuid = str(subtopic_data.get("uuid"))
+                topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
+                    "name": subtopic_data.get("name"),
+                    "uuid": subtopic_uuid,
+                }
+
+        human_support = (
+            "true" if conversation_type == ConversationType.HUMAN else "false"
+        )
+
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="topics",
+            metadata_key="human_support",
+            metadata_value=human_support,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = (
+                gettext("Topics Distribution AI")
+                if conversation_type == ConversationType.AI
+                else gettext("Topics Distribution Human")
+            )
+            date_label = gettext("Date")
+            topic_label = gettext("Topic")
+            subtopic_label = gettext("Subtopic")
+            unclassified_label = gettext("Unclassified")
+
+        results_data = []
+
+        for event in events:
+            try:
+                metadata = json.loads(event.get("metadata", "{}"))
+            except Exception as e:
+                logger.error(
+                    "Error parsing metadata for event %s: %s", event.get("id"), e
+                )
+                capture_exception(e)
+                continue
+
+            topic_name = event.get("value")
+            subtopic_name = metadata.get("subtopic")
+
+            topic_uuid = (
+                str(metadata.get("topic_uuid")) if metadata.get("topic_uuid") else None
+            )
+            subtopic_uuid = (
+                str(metadata.get("subtopic_uuid"))
+                if metadata.get("subtopic_uuid")
+                else None
+            )
+
+            if not topic_uuid or topic_uuid not in topics_data:
+                topic_name = unclassified_label
+
+            if (
+                topic_uuid
+                and topic_uuid in topics_data
+                and not subtopic_uuid
+                and subtopic_uuid not in topics_data[topic_uuid]["subtopics"]
+            ) or (not topic_uuid or topic_uuid not in topics_data):
+                subtopic_name = unclassified_label
+
+            results_data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    topic_label: topic_name,
+                    subtopic_label: subtopic_name,
+                    date_label: (
+                        self._format_date(event.get("date"), report)
+                        if event.get("date")
+                        else ""
+                    ),
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=results_data,
+        )
+
+    def get_csat_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the csat ai worksheet.
+        """
+        agent_uuid = report.source_config.get("csat_ai_agent_uuid", None)
+
+        if not agent_uuid:
+            raise ValueError("Agent UUID is required in the report source config")
+
+        events = self.get_datalake_events(
+            report,
+            project=str(report.project.uuid),
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+            key="weni_csat",
+            event_name="weni_nexus_data",
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("CSAT AI")
+            date_label = gettext("Date")
+            score_label = gettext("Score")
+
+        data = []
+
+        scores = {"1", "2", "3", "4", "5"}
+
+        for event in events:
+            if event.get("value") not in scores:
+                continue
+
+            data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    date_label: self._format_date(event.get("date"), report),
+                    score_label: event.get("value"),
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
+    def get_nps_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps ai worksheet
+        """
+
+        agent_uuid = report.source_config.get("nps_ai_agent_uuid", None)
+
+        if not agent_uuid:
+            raise ValueError("Agent UUID is required in the report source config")
+
+        events = self.get_datalake_events(
+            report,
+            project=str(report.project.uuid),
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+            key="weni_nps",
+            event_name="weni_nexus_data",
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("NPS AI")
+            date_label = gettext("Date")
+            score_label = gettext("Score")
+
+        data = []
+        scores = {str(n): 0 for n in range(0, 11)}
+
+        for event in events:
+            if event.get("value") not in scores:
+                continue
+
+            data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    date_label: (
+                        self._format_date(event.get("date"), report)
+                        if event.get("date")
+                        else ""
+                    ),
+                    score_label: event.get("value"),
+                }
+            )
+
+        return ConversationsReportWorksheet(name=worksheet_name, data=data)
+
+    def get_csat_human_worksheet(
+        self, report: Report, start_date: str, end_date: str
+    ) -> ConversationsReportWorksheet:
+        """
+        Get csat human worksheet.
+        """
+        flow_uuid = report.source_config.get("csat_human_flow_uuid", None)
+        op_field = report.source_config.get("csat_human_op_field", None)
+
+        missing_fields = []
+
+        if not flow_uuid:
+            missing_fields.append("flow_uuid")
+
+        if not op_field:
+            missing_fields.append("op_field")
+
+        if missing_fields:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Missing fields for report %s: %s",
+                report.uuid,
+                ", ".join(missing_fields),
+            )
+            raise ValueError(
+                "Missing fields for report %s: %s"
+                % (report.uuid, ", ".join(missing_fields))
+            )
+
+        docs = self.get_flowsrun_results_by_contacts(
+            report=report,
+            flow_uuid=flow_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            op_field=op_field,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("CSAT Human")
+            date_label = gettext("Date")
+            score_label = gettext("Score")
+
+        data = []
+
+        for doc in docs:
+            if doc["op_field_value"] is None:
+                continue
+
+            data.append(
+                {
+                    "URN": doc["urn"],
+                    date_label: self._format_date(doc["modified_on"], report),
+                    score_label: doc["op_field_value"],
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
+    def get_nps_human_worksheet(
+        self, report: Report, start_date: str, end_date: str
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps human worksheet.
+        """
+        flow_uuid = report.source_config.get("nps_human_flow_uuid", None)
+        op_field = report.source_config.get("nps_human_op_field", None)
+
+        missing_fields = []
+
+        if not flow_uuid:
+            missing_fields.append("flow_uuid")
+
+        if not op_field:
+            missing_fields.append("op_field")
+
+        if missing_fields:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Missing fields for report %s: %s",
+                report.uuid,
+                ", ".join(missing_fields),
+            )
+            raise ValueError(
+                "Missing fields for report %s: %s"
+                % (report.uuid, ", ".join(missing_fields))
+            )
+
+        docs = self.get_flowsrun_results_by_contacts(
+            report=report,
+            flow_uuid=flow_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            op_field=op_field,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("NPS Human")
+            date_label = gettext("Date")
+            score_label = gettext("Score")
+
+        data = []
+
+        for doc in docs:
+            if doc["op_field_value"] is None:
+                continue
+
+            data.append(
+                {
+                    "URN": doc["urn"],
+                    date_label: self._format_date(doc["modified_on"], report),
+                    score_label: doc["op_field_value"],
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )

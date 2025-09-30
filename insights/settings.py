@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "insights.metrics.meta",
     "insights.metrics.conversations",
     "insights.reports",
+    "insights.core",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -349,6 +350,13 @@ INDEXER_AUTOMATIC_ACTIVATION_RETRIES = env.int(
 
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="")
 
+REPORT_GENERATION_MAX_CONCURRENT_REPORTS = env.int(
+    "REPORT_GENERATION_MAX_CONCURRENT_REPORTS", default=1
+)
+REPORT_GENERATION_TIMEOUT = env.int(
+    "REPORT_GENERATION_TIMEOUT", default=60 * 60
+)  # 1 hour
+
 SEND_EMAILS = env.bool("SEND_EMAILS", default=False)
 
 if SEND_EMAILS:
@@ -361,6 +369,8 @@ if SEND_EMAILS:
     EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD")
     EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL")
     EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
+
+HOSTNAME = env.str("HOSTNAME", default="")
 
 # Feature Flags (GrowthBook)
 FEATURE_FLAGS_ENABLED = env.bool("FEATURE_FLAGS_ENABLED", default=False)
@@ -384,4 +394,17 @@ GROWTHBOOK_WEBHOOK_SECRET = env.str("GROWTHBOOK_WEBHOOK_SECRET", default="")
 # Conversations Report
 CONVERSATIONS_REPORT_FEATURE_FLAG_KEY = env.str(
     "CONVERSATIONS_REPORT_FEATURE_FLAG_KEY", default="insightsConversationsReport"
+)
+
+# Conversations dashboard
+
+# This is useful for the staging and development environments
+# that doesn't use the flowruns indexer
+# but needs to create the conversations dashboard
+# Should be set to True in production
+CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION = env.bool(
+    "CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION", default=False
+)
+CONVERSATIONS_DASHBOARD_EXCLUDE_FROM_LIST_IF_INDEXER_IS_NOT_ACTIVE = env.bool(
+    "CONVERSATIONS_DASHBOARD_EXCLUDE_FROM_LIST_IF_INDEXER_IS_NOT_ACTIVE", default=False
 )

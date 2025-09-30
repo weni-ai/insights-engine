@@ -23,6 +23,7 @@ from insights.metrics.conversations.reports.serializers import (
     RequestConversationsReportGenerationSerializer,
 )
 from insights.reports.choices import ReportStatus
+from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import DataLakeEventsClient
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
@@ -37,6 +38,7 @@ class ConversationsReportsViewSet(APIView):
         ),
         datalake_events_client=DataLakeEventsClient(),
         metrics_service=ConversationsMetricsService(),
+        cache_client=CacheClient(),
     )
 
     @property
