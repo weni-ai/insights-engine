@@ -61,13 +61,14 @@ class DashboardViewSet(
             )
         )
 
-        queryset = queryset.exclude(
-            Q(name=CONVERSATIONS_DASHBOARD_NAME)
-            & (
-                Q(project__is_allowed=False)
-                | ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
+        if settings.CONVERSATIONS_DASHBOARD_EXCLUDE_FROM_LIST_IF_INDEXER_IS_NOT_ACTIVE:
+            queryset = queryset.exclude(
+                Q(name=CONVERSATIONS_DASHBOARD_NAME)
+                & (
+                    Q(project__is_allowed=False)
+                    & ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
+                )
             )
-        )
 
         queryset = queryset.order_by("created_on")
 
