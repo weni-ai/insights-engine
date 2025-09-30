@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "insights.metrics.meta",
     "insights.metrics.conversations",
     "insights.reports",
+    "insights.core",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -368,6 +369,8 @@ if SEND_EMAILS:
     EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD")
     EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL")
     EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
+
+HOSTNAME = env.str("HOSTNAME", default="")
 
 # Feature Flags (GrowthBook)
 FEATURE_FLAGS_ENABLED = env.bool("FEATURE_FLAGS_ENABLED", default=False)

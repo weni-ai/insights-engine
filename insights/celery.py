@@ -2,6 +2,7 @@ import os
 import logging
 
 from celery import Celery
+from celery.signals import worker_shutting_down
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,25 @@ app = Celery("insights")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
 
+# Register Celery worker shutdown handler
+@worker_shutting_down.connect
+def celery_shutdown_handler(sender, **kwargs):
+    """
+    Handle Celery worker shutdown signal.
+    """
+    # Import here to avoid AppRegistryNotReady error
+    from insights.core.shutdown import graceful_shutdown_handler
+
+    logger.info("[ celery_shutdown_handler ] Celery worker shutdown signal received")
+    graceful_shutdown_handler()
+
+
+# Note: Signal handlers are set up in the shutdown module when needed
+# We only set up the Celery worker shutdown handler here
+
+
 logger.info("Starting task discovery...")
 app.autodiscover_tasks()
-
 
 logger.info("Task discovery completed")
 

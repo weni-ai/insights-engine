@@ -1,13 +1,13 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from insights.shared.models import BaseModel
+from insights.shared.models import BaseModel, ConfigurableModel
 from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
 from insights.projects.models import Project
 
 
-class Report(BaseModel):
+class Report(BaseModel, ConfigurableModel):
     """
     This model is used to store the reports.
     """

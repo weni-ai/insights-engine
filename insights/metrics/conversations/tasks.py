@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 
+from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.conf import settings
 from django.utils import timezone
@@ -9,6 +10,7 @@ from insights.celery import app
 
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus
+from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import DataLakeEventsClient
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.services import ConversationsMetricsService
@@ -25,10 +27,14 @@ logger = logging.getLogger(__name__)
 
 @app.task
 def generate_conversations_report():
-    logger.info("[ generate_conversations_report task ] Starting task")
+    host = settings.HOSTNAME
+
+    logger.info("[ generate_conversations_report task ] Starting task in host %s", host)
 
     if (
-        Report.objects.filter(status=ReportStatus.IN_PROGRESS).count()
+        Report.objects.filter(
+            Q(status=ReportStatus.IN_PROGRESS) & ~Q(config__interrupted=True)
+        ).count()
         >= settings.REPORT_GENERATION_MAX_CONCURRENT_REPORTS
     ):
         logger.info(
@@ -37,22 +43,40 @@ def generate_conversations_report():
         )
         return
 
-    pending_reports: QuerySet[Report] = Report.objects.filter(
-        status=ReportStatus.PENDING
-    ).order_by("created_on")
-
-    if not pending_reports.exists():
+    interrupted_reports: QuerySet[Report] = Report.objects.filter(
+        Q(config__interrupted=True) & ~Q(config__interrupted_on_host=host)
+    )
+    if interrupted_reports.exists():
         logger.info(
-            "[ generate_conversations_report task ] No pending reports found. Finishing task"
+            "[ generate_conversations_report task ] Found %s interrupted reports",
+            interrupted_reports.count(),
+        )
+
+        oldest_report: Report = interrupted_reports.order_by("created_on").first()
+
+    else:
+        pending_reports: QuerySet[Report] = Report.objects.filter(
+            status=ReportStatus.PENDING
+        ).order_by("created_on")
+
+        if not pending_reports.exists():
+            logger.info(
+                "[ generate_conversations_report task ] No pending reports found. Finishing task"
+            )
+            return
+
+        logger.info(
+            "[ generate_conversations_report task ] Found %s pending reports",
+            pending_reports.count(),
+        )
+
+        oldest_report: Report = pending_reports.first()
+
+    if not oldest_report:
+        logger.info(
+            "[ generate_conversations_report task ] No report to generate. Finishing task"
         )
         return
-
-    logger.info(
-        "[ generate_conversations_report task ] Found %s pending reports",
-        pending_reports.count(),
-    )
-
-    oldest_report: Report = pending_reports.first()
 
     logger.info(
         "[ generate_conversations_report task ] Starting generation of oldest report %s",
@@ -62,12 +86,24 @@ def generate_conversations_report():
     start_time = timezone.now()
 
     try:
+        config = oldest_report.config or {}
+        config["task_host"] = host
+
+        if config.get("interrupted"):
+            config["interrupted"] = False
+            config["interrupted_at"] = None
+            config["interrupted_on_host"] = None
+
+        oldest_report.config = config
+
+        oldest_report.save(update_fields=["config"])
         ConversationsReportService(
             datalake_events_client=DataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(),
             elasticsearch_service=ConversationsElasticsearchService(
                 client=ElasticsearchClient(),
             ),
+            cache_client=CacheClient(),
         ).generate(oldest_report)
     except Exception as e:
         logger.error(
