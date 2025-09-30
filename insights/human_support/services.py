@@ -21,6 +21,7 @@ class HumanSupportDashboardService:
     def __init__(self, project: Project) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
+
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
         Expande '__all__' em sectors/queues/tags para listas de UUIDs do projeto.
@@ -52,7 +53,7 @@ class HumanSupportDashboardService:
 
     def _normalize_filters(self, incoming_filters: dict | None) -> dict:
         expanded = self._expand_all_tokens(incoming_filters)
-        filterset = HumanSupportFilterSet(data=expanded)
+        filterset = HumanSupportFilterSet(data=expanded,  queryset=Project.objects.none())
         filter_form = filterset.form
         filter_form.is_valid()
 
@@ -66,15 +67,34 @@ class HumanSupportDashboardService:
         return cleaned_filters
 
     def get_attendance_status(self, filters: dict | None = None) -> Dict[str, int]:
-        request_params = self._normalize_filters(filters)
-        payload = self.client.retrieve(params=request_params)
-        raw = (payload or {}).get("raw_data") or []
-        first = raw[0] if raw else {}
+
+        normalized = self._normalize_filters(filters)
+
+        # timezone e recorte "hoje" para finished
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+        today = dj_timezone.now().date()
+        start_of_day = project_tz.localize(datetime.combine(today, datetime.min.time())).isoformat()
+        now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base: dict = {"project": str(self.project.uuid)}
+        if normalized.get("sectors"):
+            base["sector"] = normalized["sectors"]
+        if normalized.get("queues"):
+            base["queue"] = normalized["queues"]
+        if normalized.get("tags"):
+            base["tags"] = normalized["tags"]
+
+        is_waiting = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": False}, "count", lambda x: x, self.project).get("value") or 0
+        in_progress = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": True}, "count", lambda x: x, self.project).get("value") or 0
+        finished = RoomsQueryExecutor.execute({**base, "is_active": False, "ended_at__gte": start_of_day, "ended_at__lte": now_iso}, "count", lambda x: x, self.project).get("value") or 0
+
         return {
-            "active_rooms": int(first.get("active_rooms", 0) or 0),
-            "closed_rooms": int(first.get("closed_rooms", 0) or 0),
-            "queue_rooms": int(first.get("queue_rooms", 0) or 0),
-        }
+                "is_waiting": int(is_waiting),
+                "in_progress": int(in_progress),
+                "finished": int(finished),
+            }
+
 
     def get_time_metrics(self, filters: dict | None = None) -> Dict[str, float]:
         request_params = self._normalize_filters(filters)
@@ -135,6 +155,7 @@ class HumanSupportDashboardService:
         params: dict = {
             "is_active": True,
             "user_id__isnull": False,
+            "attending": True,
         }
         filter_to_rooms = {"sectors": "sector", "queues": "queue", "tags": "tags"}
         for filter_key, rooms_field in filter_to_rooms.items():
@@ -163,6 +184,7 @@ class HumanSupportDashboardService:
         params: dict = {
             "is_active": True,
             "user_id__isnull": True,
+            "attending": False,
         }
         # mapeia nomes do FilterSet -> campos esperados pelo Rooms
         filter_to_rooms_field = {"sectors": "sector", "queues": "queue", "tags": "tags"}
@@ -180,53 +202,64 @@ class HumanSupportDashboardService:
 
         return RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
 
-
     def get_detailed_monitoring_agents(self, filters: dict | None = None):
 
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
-        if "sectors" in normalized:
-            params["sector"] = normalized["sectors"]
-        if "queues" in normalized:
-            params["queue"] = normalized["queues"]
-        if "tags" in normalized:
-            params["tags"] = normalized["tags"]
+        # sectors -> sector (um único UUID se fornecido)
+        sectors = normalized.get("sectors")
+        if isinstance(sectors, list) and len(sectors) == 1:
+            params["sector"] = sectors[0]
+        elif isinstance(sectors, str):
+            params["sector"] = sectors
+        # queues -> queue (um único UUID se fornecido)
+        queues = normalized.get("queues")
+        if isinstance(queues, list) and len(queues) == 1:
+            params["queue"] = queues[0]
+        elif isinstance(queues, str):
+            params["queue"] = queues
+        # tags pode ser lista
+        tags = normalized.get("tags")
+        if tags:
+            params["tags"] = tags
 
+        if filters and filters.get("user_request"):
+            params["user_request"] = filters.get("user_request")
+
+        # paginação opcional
         if filters:
-            limit = filters.get("limit")
-            if limit is not None:
-                params["limit"] = limit
-            offset = filters.get("offset")
-            if offset is not None:
-                params["offset"] = offset
+            if filters.get("limit") is not None:
+                params["limit"] = filters.get("limit")
+            if filters.get("offset") is not None:
+                params["offset"] = filters.get("offset")
 
         return AgentsRESTClient(self.project).list(params)
 
-def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
+    def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
 
-        normalized = self._normalize_filters(filters)
+            normalized = self._normalize_filters(filters)
 
-        params: dict = {}
-        if filters:
-            if filters.get("user_request") is not None:
-                params["user_request"] = filters.get("user_request")
-            if filters.get("start_date") is not None:
-                params["start_date"] = filters.get("start_date")
-            if filters.get("end_date") is not None:
-                params["end_date"] = filters.get("end_date")
-            # aliases also accepted by the client (mapped to start/end_date)
-            if filters.get("created_on__gte") is not None:
-                params["created_on__gte"] = filters.get("created_on__gte")
-            if filters.get("created_on__lte") is not None:
-                params["created_on__lte"] = filters.get("created_on__lte")
+            params: dict = {}
+            if filters:
+                if filters.get("user_request") is not None:
+                    params["user_request"] = filters.get("user_request")
+                if filters.get("start_date") is not None:
+                    params["start_date"] = filters.get("start_date")
+                if filters.get("end_date") is not None:
+                    params["end_date"] = filters.get("end_date")
+                # aliases also accepted by the client (mapped to start/end_date)
+                if filters.get("created_on__gte") is not None:
+                    params["created_on__gte"] = filters.get("created_on__gte")
+                if filters.get("created_on__lte") is not None:
+                    params["created_on__lte"] = filters.get("created_on__lte")
 
-        sectors = normalized.get("sectors") or []
-        if isinstance(sectors, list) and sectors:
-            params["sector"] = sectors[0]
-        queues = normalized.get("queues") or []
-        if isinstance(queues, list) and queues:
-            params["queue"] = queues[0]
+            sectors = normalized.get("sectors") or []
+            if isinstance(sectors, list) and sectors:
+                params["sector"] = sectors[0]
+            queues = normalized.get("queues") or []
+            if isinstance(queues, list) and queues:
+                params["queue"] = queues[0]
 
-        client = CustomStatusRESTClient(self.project)
-        return client.list(params)
+            client = CustomStatusRESTClient(self.project)
+            return client.list(params)
