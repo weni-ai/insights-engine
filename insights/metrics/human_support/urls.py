@@ -4,7 +4,7 @@ from .views import (
     DetailedMonitoringOnGoingView,
     DetailedMonitoringAwaitingView,
     DetailedMonitoringAgentsView,
-    DetailedMonitoringStatusView,
+    DetailedMonitoringStatusView
 )
 
 urlpatterns = [
