@@ -391,6 +391,11 @@ GROWTHBOOK_LONG_CACHE_TTL = env.int(
 )
 GROWTHBOOK_WEBHOOK_SECRET = env.str("GROWTHBOOK_WEBHOOK_SECRET", default="")
 
+# Conversations Report
+CONVERSATIONS_REPORT_FEATURE_FLAG_KEY = env.str(
+    "CONVERSATIONS_REPORT_FEATURE_FLAG_KEY", default="insightsConversationsReport"
+)
+
 # Conversations dashboard
 
 # This is useful for the staging and development environments
