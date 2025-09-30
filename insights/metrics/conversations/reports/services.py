@@ -188,6 +188,15 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_nps_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps ai worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -506,6 +515,10 @@ class ConversationsReportService(BaseConversationsReportService):
 
             if "CSAT_AI" in sections:
                 worksheet = self.get_csat_ai_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
+
+            if "NPS_AI" in sections:
+                worksheet = self.get_nps_ai_worksheet(report, start_date, end_date)
                 worksheets.append(worksheet)
 
             files: list[ConversationsReportFile] = []
@@ -1085,3 +1098,52 @@ class ConversationsReportService(BaseConversationsReportService):
             name=worksheet_name,
             data=data,
         )
+
+    def get_nps_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get nps ai worksheet
+        """
+
+        agent_uuid = report.source_config.get("nps_ai_agent_uuid", None)
+
+        if not agent_uuid:
+            raise ValueError("Agent UUID is required in the report source config")
+
+        events = self.get_datalake_events(
+            report,
+            project=str(report.project.uuid),
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+            key="weni_nps",
+            event_name="weni_nexus_data",
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("NPS AI")
+            date_label = gettext("Date")
+            score_label = gettext("Score")
+
+        data = []
+        scores = {str(n): 0 for n in range(0, 11)}
+
+        for event in events:
+            if event.get("value") not in scores:
+                continue
+
+            data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    date_label: (
+                        self._format_date(event.get("date"), report)
+                        if event.get("date")
+                        else ""
+                    ),
+                    score_label: event.get("value"),
+                }
+            )
+
+        return ConversationsReportWorksheet(name=worksheet_name, data=data)
