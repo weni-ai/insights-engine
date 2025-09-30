@@ -179,6 +179,15 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_csat_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the csat ai worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -456,7 +465,8 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            sections = report.source_config.get("sections", [])
+            source_config = report.source_config or {}
+            sections = source_config.get("sections", [])
 
             worksheets = []
 
@@ -493,6 +503,10 @@ class ConversationsReportService(BaseConversationsReportService):
                     conversation_type=ConversationType.HUMAN,
                 )
                 worksheets.append(topics_human_worksheet)
+
+            if "CSAT_AI" in sections:
+                worksheet = self.get_csat_ai_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
 
             files: list[ConversationsReportFile] = []
 
@@ -1022,4 +1036,52 @@ class ConversationsReportService(BaseConversationsReportService):
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=results_data,
+        )
+
+    def get_csat_ai_worksheet(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the csat ai worksheet.
+        """
+        agent_uuid = report.source_config.get("csat_ai_agent_uuid", None)
+
+        if not agent_uuid:
+            raise ValueError("Agent UUID is required in the report source config")
+
+        events = self.get_datalake_events(
+            report,
+            project=str(report.project.uuid),
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+            key="weni_csat",
+            event_name="weni_nexus_data",
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("CSAT AI")
+            date_label = gettext("Date")
+            score_label = gettext("Score")
+
+        data = []
+
+        scores = {"1", "2", "3", "4", "5"}
+
+        for event in events:
+            if event.get("value") not in scores:
+                continue
+
+            data.append(
+                {
+                    "URN": event.get("contact_urn"),
+                    date_label: self._format_date(event.get("date"), report),
+                    score_label: event.get("value"),
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
         )
