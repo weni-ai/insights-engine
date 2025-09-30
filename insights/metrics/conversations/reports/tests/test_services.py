@@ -7,6 +7,10 @@ from django.test import TestCase
 from django.utils import timezone
 from django.utils.timezone import timedelta
 
+from insights.metrics.conversations.reports.dataclass import (
+    ConversationsReportWorksheet,
+    ConversationsReportFile,
+)
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
 )
@@ -16,7 +20,6 @@ from insights.metrics.conversations.integrations.elasticsearch.services import (
 from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
     MockElasticsearchClient,
 )
-from insights.metrics.conversations.reports.dataclass import ConversationsReportFile
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
@@ -185,14 +188,17 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(report.status, ReportStatus.PENDING)
 
     @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.process_csv"
-    )
-    @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
     )
-    def test_generate(self, mock_send_email, mock_process_csv):
-        mock_process_csv.return_value = None
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
+    )
+    def test_generate(self, mock_get_resolutions_worksheet, mock_send_email):
         mock_send_email.return_value = None
+        mock_get_resolutions_worksheet.return_value = ConversationsReportWorksheet(
+            name="Resolutions",
+            data=[{"URN": "123", "Resolution": "Resolved", "Date": "2025-01-01"}],
+        )
 
         report = Report.objects.create(
             project=self.project,
@@ -204,8 +210,6 @@ class TestConversationsReportService(TestCase):
         )
 
         self.service.generate(report)
-
-        mock_process_csv.assert_called_once_with(report)
         mock_send_email.assert_called_once()
 
     def test_get_current_report_for_project_when_no_reports_exist(self):

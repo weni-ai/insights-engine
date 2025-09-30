@@ -1,3 +1,4 @@
+from datetime import datetime
 import io
 import csv
 import json
@@ -5,7 +6,6 @@ from uuid import UUID
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
 import pytz
 
 from django.core.mail import EmailMessage
@@ -140,6 +140,17 @@ class BaseConversationsReportService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
     def get_flowsrun_results_by_contacts(
         self,
         report: Report,
@@ -430,18 +441,24 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            # source_config = report.source_config or {}
+            sections = report.source_config.get("sections", [])
 
-            # sections = source_config.get("sections", [])
+            worksheets = []
 
-            # custom_widgets = source_config.get("custom_widgets", [])
+            if "RESOLUTIONS" in sections:
+                resolutions_worksheet = self.get_resolutions_worksheet(
+                    report,
+                    report.filters.get("start"),
+                    report.filters.get("end"),
+                )
+                worksheets.append(resolutions_worksheet)
 
-            # TODO: Implement the specific generation logic
+            files: list[ConversationsReportFile] = []
 
             if report.format == ReportFormat.CSV:
-                self.process_csv(report)
+                files.extend(self.process_csv(report, worksheets))
             elif report.format == ReportFormat.XLSX:
-                self.process_xlsx(report)
+                files.extend(self.process_xlsx(report, worksheets))
 
         except Exception as e:
             logger.error(
@@ -476,9 +493,7 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         try:
-            self.send_email(
-                report, [ConversationsReportFile(name="TODO", content="TODO")]
-            )
+            self.send_email(report, files)
         except Exception as e:
             event_id = capture_exception(e)
             logger.error(
@@ -616,7 +631,6 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Format the date.
         """
-
         formats = ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%S"]
 
         datetime_date = None
@@ -740,3 +754,60 @@ class ConversationsReportService(BaseConversationsReportService):
         self._add_cache_key(report.uuid, cache_key)
 
         return data
+
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="conversation_classification",
+        )
+
+        with override(report.requested_by.language):
+            worksheet_name = gettext("Resolutions")
+
+            resolutions_label = gettext("Resolution")
+            date_label = gettext("Date")
+
+            resolved_label = gettext("Optimized Resolutions")
+            unresolved_label = gettext("Other conclusions")
+
+        if len(events) == 0:
+            return ConversationsReportWorksheet(
+                name=worksheet_name,
+                data=[],
+            )
+
+        data = []
+
+        for event in events:
+            data.append(
+                {
+                    "URN": event.get("contact_urn", ""),
+                    resolutions_label: (
+                        resolved_label
+                        if event.get("value") == "resolved"
+                        else unresolved_label
+                    ),
+                    date_label: (
+                        self._format_date(event.get("date", ""))
+                        if event.get("date")
+                        else ""
+                    ),
+                }
+            )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
