@@ -2,6 +2,7 @@ from datetime import datetime
 import io
 import csv
 import json
+from uuid import UUID
 import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
@@ -27,6 +28,7 @@ from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
 )
+from insights.sources.cache import CacheClient
 
 
 logger = logging.getLogger(__name__)
@@ -173,6 +175,7 @@ class ConversationsReportService(BaseConversationsReportService):
         datalake_events_client: BaseDataLakeEventsClient,
         metrics_service: ConversationsMetricsService,
         elasticsearch_service: ConversationsElasticsearchService,
+        cache_client: CacheClient,
         events_limit_per_page: int = 5000,
         page_limit: int = 100,
         elastic_page_size: int = 1000,
@@ -184,8 +187,11 @@ class ConversationsReportService(BaseConversationsReportService):
         self.events_limit_per_page = events_limit_per_page
         self.page_limit = page_limit
         self.elasticsearch_service = elasticsearch_service
+        self.cache_client = cache_client
         self.elastic_page_size = elastic_page_size
         self.elastic_page_limit = elastic_page_limit
+
+        self.cache_keys = {}
 
     def process_csv(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
@@ -236,6 +242,29 @@ class ConversationsReportService(BaseConversationsReportService):
         unique_name = f"{name} ({counter})"
         used_names.add(unique_name)
         return unique_name
+
+    def _add_cache_key(self, report_uuid: UUID, cache_key: str) -> None:
+        """
+        Add cache key to report.
+        """
+        report_uuid = str(report_uuid)
+
+        if report_uuid not in self.cache_keys:
+            self.cache_keys[report_uuid] = set()
+
+        self.cache_keys[report_uuid].add(cache_key)
+
+    def _clear_cache_keys(self, report_uuid: UUID) -> None:
+        """
+        Clear cache keys for report.
+        """
+        report_uuid = str(report_uuid)
+
+        if report_uuid in self.cache_keys:
+            for cache_key in self.cache_keys[report_uuid]:
+                self.cache_client.delete(cache_key)
+
+            del self.cache_keys[report_uuid]
 
     def process_xlsx(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
@@ -372,9 +401,21 @@ class ConversationsReportService(BaseConversationsReportService):
             "[CONVERSATIONS REPORT SERVICE] Starting generation of conversations report %s",
             report.uuid,
         )
-        report.status = ReportStatus.IN_PROGRESS
-        report.started_at = timezone.now()
-        report.save(update_fields=["status", "started_at"])
+
+        fields_to_update = []
+
+        if report.status == ReportStatus.PENDING:
+            report.status = ReportStatus.IN_PROGRESS
+            fields_to_update.append("status")
+
+        if not report.started_at:
+            # If the report generation was interrupted and restarted
+            # the field will be already set. Otherwise, we set it to the current time
+            report.started_at = timezone.now()
+            fields_to_update.append("started_at")
+
+        if fields_to_update:
+            report.save(update_fields=fields_to_update)
 
         try:
             filters = report.filters or {}
@@ -440,7 +481,18 @@ class ConversationsReportService(BaseConversationsReportService):
             errors["event_id"] = capture_exception(e)
             report.errors = errors
             report.save(update_fields=["status", "completed_at", "errors"])
+            self._clear_cache_keys(report.uuid)
             raise e
+
+        report.refresh_from_db(fields=["config"])
+
+        config = report.config or {}
+        if config.get("interrupted"):
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Report %s is interrupted. Finishing generation",
+                report.uuid,
+            )
+            return
 
         logger.info(
             "[CONVERSATIONS REPORT SERVICE] Sending email for conversations report %s to %s",
@@ -464,6 +516,7 @@ class ConversationsReportService(BaseConversationsReportService):
             errors["event_id"] = event_id
             report.errors = errors
             report.save(update_fields=["status", "completed_at", "errors"])
+            self._clear_cache_keys(report.uuid)
             raise e
 
         logger.info(
@@ -475,6 +528,8 @@ class ConversationsReportService(BaseConversationsReportService):
         report.status = ReportStatus.READY
         report.completed_at = timezone.now()
         report.save(update_fields=["status", "completed_at"])
+
+        self._clear_cache_keys(report.uuid)
 
         logger.info(
             "[CONVERSATIONS REPORT SERVICE] Conversations report completed %s",
@@ -512,6 +567,20 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get datalake events.
         """
+        kwargs_str = json.dumps(kwargs, sort_keys=True, default=str)
+        cache_key = f"datalake_events:{report.uuid}:{kwargs_str}"
+
+        if cached_events := self.cache_client.get(cache_key):
+            try:
+                cached_events = json.loads(cached_events)
+                self._add_cache_key(report.uuid, cache_key)
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached events for report %s. Error: %s",
+                    report.uuid,
+                    e,
+                )
+
         limit = self.events_limit_per_page
         offset = 0
 
@@ -558,6 +627,11 @@ class ConversationsReportService(BaseConversationsReportService):
             events.extend(paginated_events)
             offset += limit
             current_page += 1
+
+        self.cache_client.set(
+            cache_key, json.dumps(events), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
+        self._add_cache_key(report.uuid, cache_key)
 
         return events
 
@@ -619,6 +693,19 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get flowsrun results by contacts.
         """
+        cache_key = f"flowsrun_results_by_contacts:{report.uuid}:{flow_uuid}:{start_date}:{end_date}:{op_field}"
+
+        if cached_results := self.cache_client.get(cache_key):
+            try:
+                cached_results = json.loads(cached_results)
+                self._add_cache_key(report.uuid, cache_key)
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached results for report %s. Error: %s",
+                    report.uuid,
+                    e,
+                )
+
         data = []
 
         current_page = 1
@@ -668,6 +755,11 @@ class ConversationsReportService(BaseConversationsReportService):
 
             data.extend(paginated_results["contacts"])
             current_page += 1
+
+        self.cache_client.set(
+            cache_key, json.dumps(data), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
+        self._add_cache_key(report.uuid, cache_key)
 
         return data
 

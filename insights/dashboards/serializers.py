@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import PROTECTED_DASHBOARD_NAMES, Dashboard
 from insights.widgets.models import Report, Widget
 
 
@@ -128,6 +128,15 @@ class DashboardEditSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "WhatsApp integration cannot be edited in dashboard config",
                 code="whatsapp_integration_cannot_be_edited",
+            )
+
+        return value
+
+    def validate_name(self, value: str) -> str:
+        if value != self.instance.name and value in PROTECTED_DASHBOARD_NAMES:
+            raise serializers.ValidationError(
+                "Dashboard name cannot be edited to this name.",
+                code="dashboard_name_cannot_be_edited",
             )
 
         return value
