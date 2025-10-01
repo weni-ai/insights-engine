@@ -101,8 +101,7 @@ class HumanSupportDashboardService:
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve(params=request_params)
         
-        raw_data = (response or {}).get("raw_data") or []
-        metrics = raw_data[0] if raw_data else {}
+        metrics = response or {}
         
         waiting_avg = float(metrics.get("avg_waiting_time", 0) or 0)
         waiting_max = float(metrics.get("max_waiting_time", 0) or 0)
