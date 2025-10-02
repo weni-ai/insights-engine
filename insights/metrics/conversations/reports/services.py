@@ -1306,7 +1306,7 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("CSAT Human")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         for mock_urn in mock_urns:
             data.append(
@@ -1315,7 +1315,7 @@ class ConversationsReportService(BaseConversationsReportService):
                     date_label: self._format_date(
                         "2025-01-01T00:00:00.000000Z", report
                     ),
-                    score_label: "5",
+                    rating_label: "5",
                 }
             )
 
@@ -1401,7 +1401,7 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("NPS Human")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         for mock_urn in mock_urns:
             data.append(
@@ -1410,7 +1410,7 @@ class ConversationsReportService(BaseConversationsReportService):
                     date_label: self._format_date(
                         "2025-01-01T00:00:00.000000Z", report
                     ),
-                    score_label: "10",
+                    rating_label: "10",
                 }
             )
 
