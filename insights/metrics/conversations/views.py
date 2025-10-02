@@ -417,6 +417,18 @@ class ConversationsMetricsViewSet(GenericViewSet):
         query_params = NpsMetricsQueryParamsSerializer(data=request.query_params)
         query_params.is_valid(raise_exception=True)
 
+        # [STAGING] Mock NPS metrics
+        project_uuid = query_params.validated_data["project_uuid"]
+        if project_uuid in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
+            mock_data = {
+                "total_responses": 242,
+                "promoters": 75.21,
+                "passives": 11.16,
+                "detractors": 13.64,
+                "score": 61.57,
+            }
+            return Response(mock_data, status=status.HTTP_200_OK)
+
         try:
             nps_metrics = self.service.get_nps_metrics(
                 project_uuid=query_params.validated_data["project_uuid"],
