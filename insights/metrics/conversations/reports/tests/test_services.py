@@ -9,12 +9,12 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 
 from insights.metrics.conversations.enums import ConversationType
-from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockDatalakeConversationsMetricsService,
-)
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportWorksheet,
     ConversationsReportFile,
+)
+from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
+    MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
@@ -199,6 +199,9 @@ class TestConversationsReportService(TestCase):
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
     )
     @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_transferred_to_human_worksheet"
+    )
+    @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_topics_distribution_worksheet"
     )
     @patch(
@@ -220,6 +223,7 @@ class TestConversationsReportService(TestCase):
         mock_get_nps_ai_worksheet,
         mock_get_csat_ai_worksheet,
         mock_get_topics_distribution_worksheet,
+        mock_get_transferred_to_human_worksheet,
         mock_get_resolutions_worksheet,
         mock_send_email,
     ):
@@ -227,6 +231,14 @@ class TestConversationsReportService(TestCase):
         mock_get_resolutions_worksheet.return_value = ConversationsReportWorksheet(
             name="Resolutions",
             data=[{"URN": "123", "Resolution": "Resolved", "Date": "2025-01-01"}],
+        )
+        mock_get_transferred_to_human_worksheet.return_value = (
+            ConversationsReportWorksheet(
+                name="Transferred to Human",
+                data=[
+                    {"URN": "123", "Transferred to Human": "Yes", "Date": "2025-01-01"}
+                ],
+            )
         )
         mock_get_topics_distribution_worksheet.return_value = (
             ConversationsReportWorksheet(
@@ -258,7 +270,7 @@ class TestConversationsReportService(TestCase):
                     "URN": "123",
                     "Date": "14/09/2025 19:27:10",
                     "Score": "5",
-                },
+                }
             ],
         )
         mock_get_csat_human_worksheet.return_value = ConversationsReportWorksheet(
@@ -289,6 +301,7 @@ class TestConversationsReportService(TestCase):
             source_config={
                 "sections": [
                     "RESOLUTIONS",
+                    "TRANSFERRED",
                     "TOPICS_AI",
                     "TOPICS_HUMAN",
                     "CSAT_AI",
@@ -296,8 +309,6 @@ class TestConversationsReportService(TestCase):
                     "CSAT_HUMAN",
                     "NPS_HUMAN",
                 ],
-                "csat_ai_agent_uuid": str(uuid.uuid4()),
-                "nps_ai_agent_uuid": str(uuid.uuid4()),
                 "csat_human_flow_uuid": str(uuid.uuid4()),
                 "csat_human_op_field": "op_field",
                 "nps_human_flow_uuid": str(uuid.uuid4()),
@@ -309,10 +320,9 @@ class TestConversationsReportService(TestCase):
         )
 
         self.service.generate(report)
-
+        mock_send_email.assert_called_once()
         mock_get_csat_human_worksheet.assert_called_once()
         mock_get_nps_human_worksheet.assert_called_once()
-        mock_send_email.assert_called_once()
 
     def test_get_current_report_for_project_when_no_reports_exist(self):
         self.assertIsNone(self.service.get_current_report_for_project(self.project))
@@ -665,6 +675,160 @@ class TestConversationsReportService(TestCase):
             "Report %s is not in progress" % report.uuid,
         )
 
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_get_flowsrun_results_by_contacts(self, mock_cache_get, mock_cache_set):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
+
+        def get_side_effect(*args, **kwargs):
+            # First call: return hits
+            if not hasattr(get_side_effect, "called"):
+                get_side_effect.called = True
+
+                return {
+                    "hits": {
+                        "total": {"value": 10},
+                        "hits": [
+                            {
+                                "_source": {
+                                    "project_uuid": uuid.uuid4(),
+                                    "contact_uuid": uuid.uuid4(),
+                                    "created_on": "2025-01-01",
+                                    "modified_on": "2025-01-01",
+                                    "contact_name": "John Doe",
+                                    "contact_urn": "1234567890",
+                                    "values": [
+                                        {
+                                            "name": "user_feedback",
+                                            "value": "5",
+                                        }
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                }
+
+            # Second call: return no hits
+            return {"hits": {"total": {"value": 10}, "hits": []}}
+
+        self.service.elasticsearch_service.client.get.side_effect = get_side_effect
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        flow_uuid = uuid.uuid4()
+
+        results = self.service.get_flowsrun_results_by_contacts(
+            report=report,
+            flow_uuid=flow_uuid,
+            start_date="2025-01-01",
+            end_date="2025-01-02",
+            op_field="user_feedback",
+        )
+
+        self.assertEqual(
+            results,
+            [
+                {
+                    "contact": {"name": "John Doe"},
+                    "urn": "1234567890",
+                    "modified_on": "2025-01-01",
+                    "op_field_value": "5",
+                }
+            ],
+        )
+
+        cache_key = f"flowsrun_results_by_contacts:{report.uuid}:{flow_uuid}:2025-01-01:2025-01-02:user_feedback"
+
+        mock_cache_get.assert_called_once_with(cache_key)
+        mock_cache_set.assert_called_once_with(
+            cache_key, json.dumps(results), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
+
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_get_flowsrun_results_by_contacts_when_no_results_exist(
+        self, mock_cache_get, mock_cache_set
+    ):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
+
+        self.service.elasticsearch_service.client.get.return_value = {
+            "hits": {
+                "total": {"value": 0},
+                "hits": [],
+            }
+        }
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        flow_uuid = uuid.uuid4()
+
+        results = self.service.get_flowsrun_results_by_contacts(
+            report=report,
+            flow_uuid=flow_uuid,
+            start_date="2025-01-01",
+            end_date="2025-01-02",
+            op_field="user_feedback",
+        )
+
+        self.assertEqual(results, [])
+
+        cache_key = f"flowsrun_results_by_contacts:{report.uuid}:{flow_uuid}:2025-01-01:2025-01-02:user_feedback"
+
+        mock_cache_get.assert_called_once_with(cache_key)
+        mock_cache_set.assert_called_once_with(
+            cache_key, json.dumps(results), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
+
+    def test_get_flowsrun_results_by_contacts_when_report_is_failed(self):
+        self.service.elasticsearch_service.client.get.return_value = {
+            "hits": {
+                "total": {"value": 0},
+                "hits": [],
+            }
+        }
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            status=ReportStatus.FAILED,
+            errors={"send_email": "test", "event_id": "test"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_flowsrun_results_by_contacts(
+                report=report,
+                flow_uuid=uuid.uuid4(),
+                start_date="2025-01-01",
+                end_date="2025-01-02",
+                op_field="user_feedback",
+            )
+
+        self.assertEqual(
+            str(context.exception),
+            "Report %s is not in progress" % report.uuid,
+        )
+
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
     )
@@ -753,7 +917,6 @@ class TestConversationsReportService(TestCase):
             requested_by=self.user,
             status=ReportStatus.IN_PROGRESS,
         )
-
         worksheet = self.service.get_custom_widget_worksheet(
             report=report,
             widget=widget,

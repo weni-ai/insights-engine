@@ -37,6 +37,11 @@ from insights.sources.cache import CacheClient
 logger = logging.getLogger(__name__)
 
 
+CSV_FILE_NAME_MAX_LENGTH = 31
+XLSX_FILE_NAME_MAX_LENGTH = 31
+XLSX_WORKSHEET_NAME_MAX_LENGTH = 31
+
+
 def serialize_filters_for_json(filters: dict) -> dict:
     """
     Serialize datetime objects in filters dictionary to JSON-compatible format.
@@ -186,8 +191,6 @@ class BaseConversationsReportService(ABC):
 
     @abstractmethod
     def get_flowsrun_results_by_contacts(
-        self,
-        report: Report,
         flow_uuid: str,
         start_date: str,
         end_date: str,
@@ -261,11 +264,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 writer.writerows(worksheet.data)
                 file_content = csv_buffer.getvalue()
 
-            files.append(
-                ConversationsReportFile(
-                    name=f"{worksheet.name}.csv", content=file_content
-                )
-            )
+            name = worksheet.name[: CSV_FILE_NAME_MAX_LENGTH - 4] + ".csv"
+
+            files.append(ConversationsReportFile(name=name, content=file_content))
 
         return files
 
@@ -280,6 +281,9 @@ class ConversationsReportService(BaseConversationsReportService):
         Returns:
             A unique worksheet name
         """
+
+        name = name[:XLSX_WORKSHEET_NAME_MAX_LENGTH]
+
         if name not in used_names:
             used_names.add(name)
             return name
@@ -292,6 +296,12 @@ class ConversationsReportService(BaseConversationsReportService):
                 raise ValueError("Too many unique names found")
 
         unique_name = f"{name} ({counter})"
+
+        if len(unique_name) > XLSX_WORKSHEET_NAME_MAX_LENGTH:
+            counter_length = len(f" ({counter})")
+            new_name = name[: XLSX_WORKSHEET_NAME_MAX_LENGTH - counter_length]
+            unique_name = f"{new_name} ({counter})"
+
         used_names.add(unique_name)
         return unique_name
 
@@ -493,9 +503,8 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            sections = report.source_config.get("sections", [])
             source_config = report.source_config or {}
-
+            sections = source_config.get("sections", [])
             custom_widgets = source_config.get("custom_widgets", [])
 
             worksheets = []
@@ -548,6 +557,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
             if "NPS_HUMAN" in sections:
                 worksheet = self.get_nps_human_worksheet(report, start_date, end_date)
+                worksheets.append(worksheet)
 
             if custom_widgets:
                 widgets = Widget.objects.filter(
