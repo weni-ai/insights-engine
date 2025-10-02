@@ -378,10 +378,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Send the email for the conversations report.
         """
-        # TODO: Send multiple files if report type is CSV
         with translation.override(report.requested_by.language):
             subject = _("Conversations dashboard report")
-            body = _("Please find the conversations report attached.")
+            body = _(
+                "Your conversations dashboard report is ready and attached to this email."
+            )
 
             email = EmailMessage(
                 subject=subject,
