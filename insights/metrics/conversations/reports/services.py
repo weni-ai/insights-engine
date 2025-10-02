@@ -36,6 +36,11 @@ from insights.sources.cache import CacheClient
 logger = logging.getLogger(__name__)
 
 
+CSV_FILE_NAME_MAX_LENGTH = 31
+XLSX_FILE_NAME_MAX_LENGTH = 31
+XLSX_WORKSHEET_NAME_MAX_LENGTH = 31
+
+
 def serialize_filters_for_json(filters: dict) -> dict:
     """
     Serialize datetime objects in filters dictionary to JSON-compatible format.
@@ -254,6 +259,13 @@ class ConversationsReportService(BaseConversationsReportService):
         files: list[ConversationsReportFile] = []
 
         for worksheet in worksheets:
+            if len(worksheet.data) == 0:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Worksheet %s has no data",
+                    worksheet.name,
+                )
+                continue
+
             with io.StringIO() as csv_buffer:
                 fieldnames = list(worksheet.data[0].keys()) if worksheet.data else []
                 writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
@@ -261,11 +273,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 writer.writerows(worksheet.data)
                 file_content = csv_buffer.getvalue()
 
-            files.append(
-                ConversationsReportFile(
-                    name=f"{worksheet.name}.csv", content=file_content
-                )
-            )
+            name = worksheet.name[: CSV_FILE_NAME_MAX_LENGTH - 4] + ".csv"
+
+            files.append(ConversationsReportFile(name=name, content=file_content))
 
         return files
 
@@ -280,6 +290,9 @@ class ConversationsReportService(BaseConversationsReportService):
         Returns:
             A unique worksheet name
         """
+
+        name = name[:XLSX_WORKSHEET_NAME_MAX_LENGTH]
+
         if name not in used_names:
             used_names.add(name)
             return name
@@ -292,6 +305,12 @@ class ConversationsReportService(BaseConversationsReportService):
                 raise ValueError("Too many unique names found")
 
         unique_name = f"{name} ({counter})"
+
+        if len(unique_name) > XLSX_WORKSHEET_NAME_MAX_LENGTH:
+            counter_length = len(f" ({counter})")
+            new_name = name[: XLSX_WORKSHEET_NAME_MAX_LENGTH - counter_length]
+            unique_name = f"{new_name} ({counter})"
+
         used_names.add(unique_name)
         return unique_name
 
@@ -332,6 +351,13 @@ class ConversationsReportService(BaseConversationsReportService):
 
         used_worksheet_names = set()
         for worksheet in worksheets:
+            if len(worksheet.data) == 0:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Worksheet %s has no data",
+                    worksheet.name,
+                )
+                continue
+
             worksheet_name = self._ensure_unique_worksheet_name(
                 worksheet.name, used_worksheet_names
             )
@@ -354,10 +380,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Send the email for the conversations report.
         """
-        # TODO: Send multiple files if report type is CSV
         with translation.override(report.requested_by.language):
             subject = _("Conversations dashboard report")
-            body = _("Please find the conversations report attached.")
+            body = _(
+                "Your conversations dashboard report is ready and attached to this email."
+            )
 
             email = EmailMessage(
                 subject=subject,
@@ -920,6 +947,15 @@ class ConversationsReportService(BaseConversationsReportService):
 
         setattr(self, "_conversation_classification_events_cache", events)
 
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    resolutions_label: "",
+                    date_label: "",
+                }
+            ]
+
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
@@ -952,7 +988,7 @@ class ConversationsReportService(BaseConversationsReportService):
             transferred_to_human_label = gettext("Transferred to Human")
             yes_label = gettext("Yes")
             no_label = gettext("No")
-            date_label = gettext("Conversation date")
+            date_label = gettext("Date")
 
         if len(events) == 0:
             return ConversationsReportWorksheet(
@@ -977,6 +1013,15 @@ class ConversationsReportService(BaseConversationsReportService):
                     ),
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    transferred_to_human_label: "",
+                    date_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
@@ -1089,6 +1134,16 @@ class ConversationsReportService(BaseConversationsReportService):
                 }
             )
 
+        if len(results_data) == 0:
+            results_data = [
+                {
+                    "URN": "",
+                    topic_label: "",
+                    subtopic_label: "",
+                    date_label: "",
+                }
+            ]
+
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=results_data,
@@ -1119,23 +1174,32 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("CSAT AI")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         data = []
 
-        scores = {"1", "2", "3", "4", "5"}
+        ratings = {"1", "2", "3", "4", "5"}
 
         for event in events:
-            if event.get("value") not in scores:
+            if event.get("value") not in ratings:
                 continue
 
             data.append(
                 {
                     "URN": event.get("contact_urn"),
                     date_label: self._format_date(event.get("date"), report),
-                    score_label: event.get("value"),
+                    rating_label: event.get("value"),
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    rating_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
@@ -1168,13 +1232,13 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("NPS AI")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         data = []
-        scores = {str(n): 0 for n in range(0, 11)}
+        ratings = {str(n): 0 for n in range(0, 11)}
 
         for event in events:
-            if event.get("value") not in scores:
+            if event.get("value") not in ratings:
                 continue
 
             data.append(
@@ -1185,9 +1249,18 @@ class ConversationsReportService(BaseConversationsReportService):
                         if event.get("date")
                         else ""
                     ),
-                    score_label: event.get("value"),
+                    rating_label: event.get("value"),
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    rating_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(name=worksheet_name, data=data)
 
@@ -1230,7 +1303,7 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("CSAT Human")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         data = []
 
@@ -1242,9 +1315,18 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": doc["urn"],
                     date_label: self._format_date(doc["modified_on"], report),
-                    score_label: doc["op_field_value"],
+                    rating_label: doc["op_field_value"],
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    rating_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
@@ -1290,7 +1372,7 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("NPS Human")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         data = []
 
@@ -1302,9 +1384,18 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": doc["urn"],
                     date_label: self._format_date(doc["modified_on"], report),
-                    score_label: doc["op_field_value"],
+                    rating_label: doc["op_field_value"],
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    rating_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
@@ -1355,6 +1446,15 @@ class ConversationsReportService(BaseConversationsReportService):
                     value_label: event.get("value"),
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    value_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(
             name=worksheet_name,

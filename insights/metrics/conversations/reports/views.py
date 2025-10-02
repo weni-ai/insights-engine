@@ -7,14 +7,12 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from insights.authentication.permissions import (
-    ProjectAuthQueryParamPermission,
-)
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
 )
 from insights.metrics.conversations.reports.permissions import (
     CanGenerateConversationsReportPermission,
+    CanCheckReportGenerationStatusPermission,
 )
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.reports.serializers import (
@@ -46,7 +44,7 @@ class ConversationsReportsViewSet(APIView):
         permissions = [IsAuthenticated]
 
         if self.request.method == "GET":
-            permissions.append(ProjectAuthQueryParamPermission)
+            permissions.append(CanCheckReportGenerationStatusPermission)
 
         if self.request.method == "POST":
             permissions.append(CanGenerateConversationsReportPermission)
