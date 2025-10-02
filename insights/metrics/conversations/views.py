@@ -78,7 +78,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
         # [STAGING] Mock topics distribution
         project_uuid = serializer.validated_data["project_uuid"]
-        if project_uuid in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
+        if str(project_uuid) in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
             with override(request.user.language or "en"):
                 unclassified_label = gettext("Unclassified")
 
@@ -343,7 +343,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
         # [STAGING] Mock conversations metrics totals
         project_uuid = query_params_serializer.validated_data["project_uuid"]
-        if project_uuid in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
+        if str(project_uuid) in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
             mock_data = {
                 "total_conversations": {"value": 9227, "percentage": 100.0},
                 "resolved": {"value": 7219, "percentage": 78.24},
@@ -419,7 +419,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
         # [STAGING] Mock NPS metrics
         project_uuid = query_params.validated_data["project_uuid"]
-        if project_uuid in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
+        if str(project_uuid) in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
             mock_data = {
                 "total_responses": 242,
                 "promoters": 75.21,
