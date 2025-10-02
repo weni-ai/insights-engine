@@ -959,18 +959,25 @@ class ConversationsReportService(BaseConversationsReportService):
         # Mock for the staging environment
         mock_urns = ["55988776655", "55988776656", "55988776657"]
 
-        return ConversationsReportWorksheet(
-            name=(
+        with override(report.requested_by.language or "en"):
+            worksheet_name = (
                 gettext("Topics Distribution AI")
                 if conversation_type == ConversationType.AI
                 else gettext("Topics Distribution Human")
-            ),
+            )
+            date_label = gettext("Date")
+            topic_label = gettext("Topic")
+            subtopic_label = gettext("Subtopic")
+            unclassified_label = gettext("Unclassified")
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
             data=[
                 {
                     "URN": mock_urn,
-                    gettext("Topic"): "Test Topic",
-                    gettext("Subtopic"): "Test Subtopic",
-                    gettext("Date"): self._format_date(
+                    topic_label: "Test Topic",
+                    subtopic_label: "Test Subtopic",
+                    date_label: self._format_date(
                         "2025-01-01T00:00:00.000000Z", report
                     ),
                 }
