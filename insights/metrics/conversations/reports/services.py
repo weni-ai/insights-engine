@@ -988,7 +988,7 @@ class ConversationsReportService(BaseConversationsReportService):
             transferred_to_human_label = gettext("Transferred to Human")
             yes_label = gettext("Yes")
             no_label = gettext("No")
-            date_label = gettext("Conversation date")
+            date_label = gettext("Date")
 
         if len(events) == 0:
             return ConversationsReportWorksheet(
@@ -1174,21 +1174,21 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("CSAT AI")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         data = []
 
-        scores = {"1", "2", "3", "4", "5"}
+        ratings = {"1", "2", "3", "4", "5"}
 
         for event in events:
-            if event.get("value") not in scores:
+            if event.get("value") not in ratings:
                 continue
 
             data.append(
                 {
                     "URN": event.get("contact_urn"),
                     date_label: self._format_date(event.get("date"), report),
-                    score_label: event.get("value"),
+                    rating_label: event.get("value"),
                 }
             )
 
@@ -1197,7 +1197,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": "",
                     date_label: "",
-                    score_label: "",
+                    rating_label: "",
                 }
             ]
 
@@ -1232,13 +1232,13 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("NPS AI")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         data = []
-        scores = {str(n): 0 for n in range(0, 11)}
+        ratings = {str(n): 0 for n in range(0, 11)}
 
         for event in events:
-            if event.get("value") not in scores:
+            if event.get("value") not in ratings:
                 continue
 
             data.append(
@@ -1249,7 +1249,7 @@ class ConversationsReportService(BaseConversationsReportService):
                         if event.get("date")
                         else ""
                     ),
-                    score_label: event.get("value"),
+                    rating_label: event.get("value"),
                 }
             )
 
@@ -1258,7 +1258,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": "",
                     date_label: "",
-                    score_label: "",
+                    rating_label: "",
                 }
             ]
 
@@ -1303,7 +1303,7 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("CSAT Human")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         data = []
 
@@ -1315,7 +1315,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": doc["urn"],
                     date_label: self._format_date(doc["modified_on"], report),
-                    score_label: doc["op_field_value"],
+                    rating_label: doc["op_field_value"],
                 }
             )
 
@@ -1324,7 +1324,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": "",
                     date_label: "",
-                    score_label: "",
+                    rating_label: "",
                 }
             ]
 
@@ -1372,7 +1372,7 @@ class ConversationsReportService(BaseConversationsReportService):
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("NPS Human")
             date_label = gettext("Date")
-            score_label = gettext("Score")
+            rating_label = gettext("Rating")
 
         data = []
 
@@ -1384,7 +1384,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": doc["urn"],
                     date_label: self._format_date(doc["modified_on"], report),
-                    score_label: doc["op_field_value"],
+                    rating_label: doc["op_field_value"],
                 }
             )
 
@@ -1393,7 +1393,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": "",
                     date_label: "",
-                    score_label: "",
+                    rating_label: "",
                 }
             ]
 

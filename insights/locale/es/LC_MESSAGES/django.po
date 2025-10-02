@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-02 17:51+0000\n"
+"POT-Creation-Date: 2025-10-02 18:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -93,7 +93,8 @@ msgstr "Reporte dash de conversas"
 #: insights/metrics/conversations/reports/services.py:386
 msgid ""
 "Your conversations dashboard report is ready and attached to this email."
-msgstr "El reporte de dashboard de conversas está listo y anexado a este email."
+msgstr ""
+"El reporte de dashboard de conversas está listo y anexado a este email."
 
 #: insights/metrics/conversations/reports/services.py:915
 msgid "Resolutions"
@@ -104,6 +105,7 @@ msgid "Resolution"
 msgstr "Resolución"
 
 #: insights/metrics/conversations/reports/services.py:918
+#: insights/metrics/conversations/reports/services.py:991
 #: insights/metrics/conversations/reports/services.py:1084
 #: insights/metrics/conversations/reports/services.py:1176
 #: insights/metrics/conversations/reports/services.py:1234
@@ -134,10 +136,6 @@ msgstr "Si"
 msgid "No"
 msgstr "No"
 
-#: insights/metrics/conversations/reports/services.py:991
-msgid "Conversation date"
-msgstr "Fecha de conversa"
-
 #: insights/metrics/conversations/reports/services.py:1080
 msgid "Topics Distribution AI"
 msgstr "Distribución de Tópicos AI"
@@ -162,8 +160,8 @@ msgstr "CSAT AI"
 #: insights/metrics/conversations/reports/services.py:1235
 #: insights/metrics/conversations/reports/services.py:1306
 #: insights/metrics/conversations/reports/services.py:1375
-msgid "Score"
-msgstr "Puntaje"
+msgid "Rating"
+msgstr "Avaliación"
 
 #: insights/metrics/conversations/reports/services.py:1233
 msgid "NPS AI"
@@ -644,6 +642,12 @@ msgstr "El proyecto no tiene permisos para acceder a WABA"
 #: insights/sources/vtex_conversions/usecases/query_execute.py:32
 msgid "Project does not have the credentials to access VTEX's API"
 msgstr "El proyecto no tiene las credenciales para acceder a la API de VTEX"
+
+#~ msgid "Conversation date"
+#~ msgstr "Fecha de conversa"
+
+#~ msgid "Score"
+#~ msgstr "Puntaje"
 
 #~ msgid "Please find the conversations report attached."
 #~ msgstr "Por favor, encuentre el reporte de conversas adjunto."
