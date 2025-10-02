@@ -1,6 +1,8 @@
 from typing import TYPE_CHECKING
 import logging
 
+from django.utils.translation import gettext, override
+
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -9,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 
+from django.conf import settings
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
@@ -56,67 +59,6 @@ class ConversationsMetricsViewSet(GenericViewSet):
     @action(
         detail=False,
         methods=["get"],
-        serializer_class=ConversationsTimeseriesMetricsSerializer,
-    )
-    def timeseries(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get conversations timeseries metrics
-        """
-        query_params = ConversationsTimeseriesMetricsQueryParamsSerializer(
-            data=request.query_params
-        )
-        query_params.is_valid(raise_exception=True)
-        data = self.service.get_timeseries(
-            project=query_params.validated_data["project"],
-            start_date=query_params.validated_data["start_date"].isoformat(),
-            end_date=query_params.validated_data["end_date"].isoformat(),
-            unit=query_params.validated_data["unit"],
-        )
-
-        return Response(
-            ConversationsTimeseriesMetricsSerializer(data).data,
-            status=status.HTTP_200_OK,
-        )
-
-    @action(detail=False, methods=["get"], serializer_class=SubjectsMetricsSerializer)
-    def subjects(self, request: Request) -> Response:
-        query_params = ConversationsSubjectsMetricsQueryParamsSerializer(
-            data=request.query_params
-        )
-        query_params.is_valid(raise_exception=True)
-
-        subjects_metrics = self.service.get_subjects_metrics(
-            project_uuid=query_params.validated_data["project_uuid"],
-            start_date=query_params.validated_data["start_date"],
-            end_date=query_params.validated_data["end_date"],
-            conversation_type=query_params.validated_data["type"],
-            limit=query_params.validated_data.get("limit", None),
-        )
-
-        return Response(
-            SubjectsMetricsSerializer(subjects_metrics).data,
-            status=status.HTTP_200_OK,
-        )
-
-    @action(detail=False, methods=["get"])
-    def queues(self, request: Request) -> Response:
-        query_params = RoomsByQueueMetricQueryParamsSerializer(
-            data=request.query_params
-        )
-        query_params.is_valid(raise_exception=True)
-        rooms_by_queue = self.service.get_rooms_numbers_by_queue(
-            project=query_params.validated_data["project"],
-            start_date=query_params.validated_data["start_date"],
-            end_date=query_params.validated_data["end_date"],
-            limit=query_params.validated_data.get("limit", None),
-        )
-
-        serializer = RoomsByQueueMetricSerializer(rooms_by_queue)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @action(
-        detail=False,
-        methods=["get"],
         url_path="topics-distribution",
         url_name="topics-distribution",
         serializer_class=TopicsDistributionMetricsSerializer,
@@ -133,6 +75,36 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # [STAGING] Mock topics distribution
+        project_uuid = serializer.validated_data["project_uuid"]
+        if project_uuid in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
+            with override(request.user.language or "en"):
+                unclassified_label = gettext("Unclassified")
+
+            mock_data = {
+                "topics": [
+                    {
+                        "uuid": "OTHER",
+                        "name": unclassified_label,
+                        "quantity": 4052,
+                        "percentage": 52.7,
+                        "subtopics": [],
+                    },
+                    {
+                        "uuid": "a06cc186-35ae-42ed-99fd-c045d3a227bf",
+                        "name": "Localization",
+                        "quantity": 3637,
+                        "percentage": 47.3,
+                        "subtopics": [],
+                    },
+                ]
+            }
+            return Response(
+                mock_data,
+                status=status.HTTP_200_OK,
+            )
+
         try:
             try:
                 output_language = request.user.language
@@ -368,6 +340,20 @@ class ConversationsMetricsViewSet(GenericViewSet):
             data=request.query_params,
         )
         query_params_serializer.is_valid(raise_exception=True)
+
+        # [STAGING] Mock conversations metrics totals
+        project_uuid = query_params_serializer.validated_data["project_uuid"]
+        if project_uuid in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
+            mock_data = {
+                "total_conversations": {"value": 9227, "percentage": 100.0},
+                "resolved": {"value": 7219, "percentage": 78.24},
+                "unresolved": {"value": 2008, "percentage": 21.76},
+                "transferred_to_human": {"value": 1551, "percentage": 16.81},
+            }
+            return Response(
+                mock_data,
+                status=status.HTTP_200_OK,
+            )
 
         try:
             totals = self.service.get_totals(
