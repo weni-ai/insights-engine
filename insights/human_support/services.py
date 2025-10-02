@@ -219,7 +219,23 @@ class HumanSupportDashboardService:
             if filters.get("offset") is not None:
                 params["offset"] = filters.get("offset")
 
-        return RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
+        response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
+        
+        formatted_results = []
+        for room in response.get("results", []):
+            formatted_results.append({
+                "awaiting_time": room.get("queue_time"),
+                "contact": room.get("contact"),
+                "sector": room.get("sector"),
+                "queue": room.get("queue"),
+                "link": room.get("link"),
+            })
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
 
     def get_detailed_monitoring_agents(self, filters: dict | None = None):
 
