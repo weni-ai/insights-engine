@@ -259,6 +259,13 @@ class ConversationsReportService(BaseConversationsReportService):
         files: list[ConversationsReportFile] = []
 
         for worksheet in worksheets:
+            if len(worksheet.data) == 0:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Worksheet %s has no data",
+                    worksheet.name,
+                )
+                continue
+
             with io.StringIO() as csv_buffer:
                 fieldnames = list(worksheet.data[0].keys()) if worksheet.data else []
                 writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
@@ -344,6 +351,13 @@ class ConversationsReportService(BaseConversationsReportService):
 
         used_worksheet_names = set()
         for worksheet in worksheets:
+            if len(worksheet.data) == 0:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Worksheet %s has no data",
+                    worksheet.name,
+                )
+                continue
+
             worksheet_name = self._ensure_unique_worksheet_name(
                 worksheet.name, used_worksheet_names
             )
@@ -932,6 +946,15 @@ class ConversationsReportService(BaseConversationsReportService):
 
         setattr(self, "_conversation_classification_events_cache", events)
 
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    resolutions_label: "",
+                    date_label: "",
+                }
+            ]
+
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
@@ -989,6 +1012,15 @@ class ConversationsReportService(BaseConversationsReportService):
                     ),
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    transferred_to_human_label: "",
+                    date_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
@@ -1101,6 +1133,16 @@ class ConversationsReportService(BaseConversationsReportService):
                 }
             )
 
+        if len(results_data) == 0:
+            results_data = [
+                {
+                    "URN": "",
+                    topic_label: "",
+                    subtopic_label: "",
+                    date_label: "",
+                }
+            ]
+
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=results_data,
@@ -1148,6 +1190,15 @@ class ConversationsReportService(BaseConversationsReportService):
                     score_label: event.get("value"),
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    score_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
@@ -1200,6 +1251,15 @@ class ConversationsReportService(BaseConversationsReportService):
                     score_label: event.get("value"),
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    score_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(name=worksheet_name, data=data)
 
@@ -1257,6 +1317,15 @@ class ConversationsReportService(BaseConversationsReportService):
                     score_label: doc["op_field_value"],
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    score_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
@@ -1318,6 +1387,15 @@ class ConversationsReportService(BaseConversationsReportService):
                 }
             )
 
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    score_label: "",
+                }
+            ]
+
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
@@ -1367,6 +1445,15 @@ class ConversationsReportService(BaseConversationsReportService):
                     value_label: event.get("value"),
                 }
             )
+
+        if len(data) == 0:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    value_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
