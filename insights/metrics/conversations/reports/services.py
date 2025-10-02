@@ -36,6 +36,11 @@ from insights.sources.cache import CacheClient
 logger = logging.getLogger(__name__)
 
 
+CSV_FILE_NAME_MAX_LENGTH = 31
+XLSX_FILE_NAME_MAX_LENGTH = 31
+XLSX_WORKSHEET_NAME_MAX_LENGTH = 31
+
+
 def serialize_filters_for_json(filters: dict) -> dict:
     """
     Serialize datetime objects in filters dictionary to JSON-compatible format.
@@ -261,11 +266,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 writer.writerows(worksheet.data)
                 file_content = csv_buffer.getvalue()
 
-            files.append(
-                ConversationsReportFile(
-                    name=f"{worksheet.name}.csv", content=file_content
-                )
-            )
+            name = worksheet.name[: CSV_FILE_NAME_MAX_LENGTH - 4] + ".csv"
+
+            files.append(ConversationsReportFile(name=name, content=file_content))
 
         return files
 
@@ -280,6 +283,9 @@ class ConversationsReportService(BaseConversationsReportService):
         Returns:
             A unique worksheet name
         """
+
+        name = name[:XLSX_WORKSHEET_NAME_MAX_LENGTH]
+
         if name not in used_names:
             used_names.add(name)
             return name
@@ -292,6 +298,12 @@ class ConversationsReportService(BaseConversationsReportService):
                 raise ValueError("Too many unique names found")
 
         unique_name = f"{name} ({counter})"
+
+        if len(unique_name) > XLSX_WORKSHEET_NAME_MAX_LENGTH:
+            counter_length = len(f" ({counter})")
+            new_name = name[: XLSX_WORKSHEET_NAME_MAX_LENGTH - counter_length]
+            unique_name = f"{new_name} ({counter})"
+
         used_names.add(unique_name)
         return unique_name
 
