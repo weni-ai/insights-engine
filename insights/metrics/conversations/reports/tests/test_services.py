@@ -866,7 +866,7 @@ class TestConversationsReportService(TestCase):
                 {
                     "URN": "123",
                     "Date": "14/09/2025 19:27:10",
-                    "Score": "5",
+                    "Rating": "5",
                 }
             ],
         )
