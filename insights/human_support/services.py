@@ -101,8 +101,7 @@ class HumanSupportDashboardService:
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve(params=request_params)
         
-        raw_data = (response or {}).get("raw_data") or []
-        metrics = raw_data[0] if raw_data else {}
+        metrics = response or {}
         
         waiting_avg = float(metrics.get("avg_waiting_time", 0) or 0)
         waiting_max = float(metrics.get("max_waiting_time", 0) or 0)
@@ -171,7 +170,27 @@ class HumanSupportDashboardService:
             if offset is not None:
                 params["offset"] = offset
 
-        return RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
+        response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
+                
+        formatted_results = []
+        for room in response.get("results", []):
+            formatted_results.append({
+                "agent": room.get("agent"),
+                "duration": room.get("duration"),
+                "awaiting_time": room.get("waiting_time"),
+                "first_response_time": room.get("first_response_time"),
+                "sector": room.get("sector"),
+                "queue": room.get("queue"),
+                "contact": room.get("contact"),
+                "link": room.get("link"),
+            })
+        
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
 
     def get_detailed_monitoring_awaiting(self, filters: dict | None = None) -> dict:
         """
