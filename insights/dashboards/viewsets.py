@@ -157,6 +157,20 @@ class DashboardViewSet(
     def get_widget_data(self, request, pk=None, widget_uuid=None):
         try:
             widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+
+            # [STAGING] Mock widget data
+            if str(widget.uuid) in settings.STG_MOCK_CUSTOM_FLOWRUNS:
+                mock_data = {
+                    "results": [
+                        {"label": "Muito satisfeito", "value": 20.59, "full_value": 7},
+                        {"label": "Satisfeito", "value": 14.71, "full_value": 5},
+                        {"label": "Neutro", "value": 11.76, "full_value": 4},
+                        {"label": "Insatisfeito", "value": 11.76, "full_value": 4},
+                        {"label": "Muito insatisfeito", "value": 8.82, "full_value": 3},
+                    ]
+                }
+                return Response(mock_data, status.HTTP_200_OK)
+
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
