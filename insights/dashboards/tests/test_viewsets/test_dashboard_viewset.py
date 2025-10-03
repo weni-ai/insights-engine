@@ -1,3 +1,4 @@
+import uuid
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -491,9 +492,9 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         data = {
             "name": "New Flows Dashboard",
         }
-        response = self.create_flows_dashboard(data, "123")
+        response = self.create_flows_dashboard(data, str(uuid.uuid4()))
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         MockCreateFlowsDashboard.assert_not_called()
 
     @with_project_auth
@@ -529,20 +530,21 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         mock_client_instance = MockCustomStatusRESTClient.return_value
         mock_client_instance.list.return_value = {"status": "ok"}
 
-        response = self.get_custom_status({"project": str(self.project.uuid)})
+        response = self.get_custom_status({"project_uuid": str(self.project.uuid)})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"status": "ok"})
         MockCustomStatusRESTClient.assert_called_once_with(self.project)
         mock_client_instance.list.assert_called_once_with(
-            {"project": [str(self.project.uuid)]}
+            {"project_uuid": [str(self.project.uuid)]}
         )
 
     @with_project_auth
     @patch("insights.dashboards.viewsets.CustomStatusRESTClient")
     def test_get_custom_status_project_not_found(self, MockCustomStatusRESTClient):
         non_existent_project_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
-        response = self.get_custom_status({"project": non_existent_project_uuid})
+        response = self.get_custom_status({"project_uuid": non_existent_project_uuid})
+
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
         MockCustomStatusRESTClient.assert_not_called()

@@ -240,7 +240,7 @@ class DashboardViewSet(
 
         if not project_uuid:
             return Response(
-                {"detail": "project_uuid is required"},
+                {"detail": "project is required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
