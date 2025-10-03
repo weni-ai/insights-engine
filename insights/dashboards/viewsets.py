@@ -7,6 +7,7 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.filters import DashboardFilter
@@ -154,8 +155,9 @@ class DashboardViewSet(
         detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/data"
     )
     def get_widget_data(self, request, pk=None, widget_uuid=None):
+        dashboard = self.get_object()
         try:
-            widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+            widget = Widget.objects.get(uuid=widget_uuid, dashboard=dashboard)
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
@@ -178,8 +180,9 @@ class DashboardViewSet(
         detail=True, methods=["get"], url_path="widgets/(?P<widget_uuid>[^/.]+)/report"
     )
     def get_widget_report(self, request, pk=None, widget_uuid=None):
+        dashboard = self.get_object()
         try:
-            widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+            widget = Widget.objects.get(uuid=widget_uuid, dashboard=dashboard)
             report = widget.report
             serializer = ReportSerializer(report)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -198,8 +201,9 @@ class DashboardViewSet(
         url_path="widgets/(?P<widget_uuid>[^/.]+)/report/data",
     )
     def get_report_data(self, request, pk=None, widget_uuid=None):
+        dashboard = self.get_object()
         try:
-            widget = Widget.objects.get(uuid=widget_uuid, dashboard_id=pk)
+            widget = Widget.objects.get(uuid=widget_uuid, dashboard=dashboard)
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
@@ -232,14 +236,17 @@ class DashboardViewSet(
 
     @action(detail=False, methods=["post"])
     def create_flows_dashboard(self, request, pk=None):
-        try:
-            project = Project.objects.get(pk=request.query_params.get("project"))
-        except Exception as error:
-            logger.exception(f"Error creating flows dashboard: {error}")
+        project_uuid = request.query_params.get("project")
+
+        if not project_uuid:
             return Response(
-                {"detail": "Project not found or invalid"},
+                {"detail": "project is required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        project = get_object_or_404(
+            Project, uuid=project_uuid, authorizations__user=request.user
+        )
 
         flow_dashboard = FlowsDashboardCreationDTO(
             project=project,
@@ -261,10 +268,19 @@ class DashboardViewSet(
         methods=["get"],
     )
     def get_contacts_results(self, request, pk=None, flow_uuid=None):
+        project_uuid = request.query_params.get("project_uuid")
+
+        if not project_uuid:
+            return Response(
+                {"detail": "project_uuid is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        get_object_or_404(Project, uuid=project_uuid, authorizations__user=request.user)
+
         flow_uuid = request.query_params.get("flow_uuid")
         page_number = request.query_params.get("page_number")
         page_size = request.query_params.get("page_size")
-        project_uuid = request.query_params.get("project_uuid")
         op_field = request.query_params.get("op_field")
         label = request.query_params.get("label")
         user = request.query_params.get("user_email")
@@ -291,12 +307,17 @@ class DashboardViewSet(
         methods=["get"],
     )
     def get_custom_status(self, request, project=None):
-        project = Project.objects.filter(pk=request.query_params.get("project")).first()
+        project_uuid = request.query_params.get("project")
 
-        if not project:
+        if not project_uuid:
             return Response(
-                {"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND
+                {"detail": "project is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
+
+        project = get_object_or_404(
+            Project, uuid=project_uuid, authorizations__user=request.user
+        )
 
         custom_status_client = CustomStatusRESTClient(project)
 
