@@ -307,11 +307,11 @@ class DashboardViewSet(
         methods=["get"],
     )
     def get_custom_status(self, request, project=None):
-        project_uuid = request.query_params.get("project_uuid")
+        project_uuid = request.query_params.get("project")
 
         if not project_uuid:
             return Response(
-                {"detail": "project_uuid is required"},
+                {"detail": "project is required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

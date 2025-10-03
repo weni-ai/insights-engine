@@ -530,20 +530,20 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         mock_client_instance = MockCustomStatusRESTClient.return_value
         mock_client_instance.list.return_value = {"status": "ok"}
 
-        response = self.get_custom_status({"project_uuid": str(self.project.uuid)})
+        response = self.get_custom_status({"project": str(self.project.uuid)})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"status": "ok"})
         MockCustomStatusRESTClient.assert_called_once_with(self.project)
         mock_client_instance.list.assert_called_once_with(
-            {"project_uuid": [str(self.project.uuid)]}
+            {"project": [str(self.project.uuid)]}
         )
 
     @with_project_auth
     @patch("insights.dashboards.viewsets.CustomStatusRESTClient")
     def test_get_custom_status_project_not_found(self, MockCustomStatusRESTClient):
         non_existent_project_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
-        response = self.get_custom_status({"project_uuid": non_existent_project_uuid})
+        response = self.get_custom_status({"project": non_existent_project_uuid})
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
