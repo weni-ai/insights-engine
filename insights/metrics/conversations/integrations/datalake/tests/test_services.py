@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
-import json
 import uuid
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from django.test import TestCase
 
 from insights.metrics.conversations.dataclass import (
