@@ -814,7 +814,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 if not currency_code:
                     currency_code = metadata.get("currency")
 
-                order_value = int(metadata.get("value") * 100)  # convert to cents
+                order_value = int(metadata.get("value", 0) * 100)  # convert to cents
                 total_orders_value += order_value
 
             if page >= max_pages:
