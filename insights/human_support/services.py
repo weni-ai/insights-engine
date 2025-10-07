@@ -97,9 +97,18 @@ class HumanSupportDashboardService:
 
 
     def get_time_metrics(self, filters: dict | None = None) -> Dict[str, float]:
-        request_params = self._normalize_filters(filters)
+        normalized = self._normalize_filters(filters)
+        
+        params: dict = {}
+        if normalized.get("sectors"):
+            params["sector"] = normalized["sectors"]
+        if normalized.get("queues"):
+            params["queue"] = normalized["queues"]
+        if normalized.get("tags"):
+            params["tags"] = normalized["tags"]
+        
         client = ChatsTimeMetricsClient(self.project)
-        response = client.retrieve(params=request_params)
+        response = client.retrieve(params=params)
         
         metrics = response or {}
         
@@ -155,6 +164,8 @@ class HumanSupportDashboardService:
             "is_active": True,
             "user_id__isnull": False,
             "attending": True,
+            "queue__is_deleted": False,
+            "queue__sector__is_deleted": False,
         }
         filter_to_rooms = {"sectors": "sector", "queues": "queue", "tags": "tags"}
         for filter_key, rooms_field in filter_to_rooms.items():
@@ -169,6 +180,9 @@ class HumanSupportDashboardService:
             offset = filters.get("offset")
             if offset is not None:
                 params["offset"] = offset
+            ordering = filters.get("ordering")
+            if ordering is not None:
+                params["ordering"] = ordering
 
         response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
                 
@@ -204,6 +218,8 @@ class HumanSupportDashboardService:
             "is_active": True,
             "user_id__isnull": True,
             "attending": False,
+            "queue__is_deleted": False,
+            "queue__sector__is_deleted": False,
         }
         # mapeia nomes do FilterSet -> campos esperados pelo Rooms
         filter_to_rooms_field = {"sectors": "sector", "queues": "queue", "tags": "tags"}
@@ -218,6 +234,8 @@ class HumanSupportDashboardService:
                 params["limit"] = filters.get("limit")
             if filters.get("offset") is not None:
                 params["offset"] = filters.get("offset")
+            if filters.get("ordering") is not None:
+                params["ordering"] = filters.get("ordering")
 
         response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
         
@@ -268,6 +286,8 @@ class HumanSupportDashboardService:
                 params["limit"] = filters.get("limit")
             if filters.get("offset") is not None:
                 params["offset"] = filters.get("offset")
+            if filters.get("ordering") is not None:
+                params["ordering"] = filters.get("ordering")
         return AgentsRESTClient(self.project).list(params)
 
     def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
@@ -287,6 +307,8 @@ class HumanSupportDashboardService:
                     params["created_on__gte"] = filters.get("created_on__gte")
                 if filters.get("created_on__lte") is not None:
                     params["created_on__lte"] = filters.get("created_on__lte")
+                if filters.get("ordering") is not None:
+                    params["ordering"] = filters.get("ordering")
 
             sectors = normalized.get("sectors") or []
             if isinstance(sectors, list) and sectors:
