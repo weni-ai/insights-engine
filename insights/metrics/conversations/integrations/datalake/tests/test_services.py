@@ -3,8 +3,8 @@ import json
 import uuid
 
 from django.conf import settings
-from unittest.mock import call, patch
-from django.test import TestCase
+from unittest.mock import call, patch, Mock
+from django.test import TestCase, override_settings
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
@@ -14,20 +14,30 @@ from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     SalesFunnelData,
 )
-from insights.sources.dl_events.tests.mock_client import (
-    ClassificationMockDataLakeEventsClient,
-)
+from insights.sources.dl_events.clients import BaseDataLakeEventsClient
+from insights.sources.cache import CacheClient
 from insights.metrics.conversations.integrations.datalake.services import (
     DatalakeConversationsMetricsService,
 )
-from insights.sources.tests.mock import MockCacheClient
 
 
 class DatalakeConversationsMetricsServiceTestCase(TestCase):
     def setUp(self):
+        self.mock_events_client = Mock(spec=BaseDataLakeEventsClient)
+        self.mock_cache_client = Mock(spec=CacheClient)
+
+        self.mock_events_client.get_events.return_value = []
+        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {"payload_value": "1", "count": 10}
+        ]
+        self.mock_cache_client.get.return_value = None
+        self.mock_cache_client.set.return_value = True
+        self.mock_cache_client.delete.return_value = True
+
         self.service = DatalakeConversationsMetricsService(
-            events_client=ClassificationMockDataLakeEventsClient(),
-            cache_client=MockCacheClient(),
+            events_client=self.mock_events_client,
+            cache_client=self.mock_cache_client,
             cache_results=True,
             cache_ttl=300,
         )
@@ -96,43 +106,39 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertEqual(results1, results2)
 
     def test_get_csat_metrics_with_exception(self):
-        with patch.object(
-            self.service.events_client, "get_events_count_by_group"
-        ) as mock_get_events:
-            mock_get_events.side_effect = Exception("Test exception")
+        self.mock_events_client.get_events_count_by_group.side_effect = Exception(
+            "Test exception"
+        )
 
-            with self.assertRaises(Exception):
-                self.service.get_csat_metrics(
-                    project_uuid=uuid.uuid4(),
-                    agent_uuid=str(uuid.uuid4()),
-                    start_date=datetime.now() - timedelta(days=1),
-                    end_date=datetime.now(),
-                )
-
-    def test_get_csat_metrics_with_invalid_payload_values(self):
-        with patch.object(
-            self.service.events_client, "get_events_count_by_group"
-        ) as mock_get_events:
-            mock_get_events.return_value = [
-                {"payload_value": "invalid", "count": 5},
-                {"payload_value": None, "count": 3},
-                {"payload_value": 6, "count": 2},  # Invalid CSAT score
-                {"payload_value": "1", "count": 10},
-            ]
-
-            results = self.service.get_csat_metrics(
+        with self.assertRaises(Exception):
+            self.service.get_csat_metrics(
                 project_uuid=uuid.uuid4(),
                 agent_uuid=str(uuid.uuid4()),
                 start_date=datetime.now() - timedelta(days=1),
                 end_date=datetime.now(),
             )
 
-            # Only valid CSAT scores should be included
-            self.assertEqual(results["1"], 10)
-            self.assertEqual(results["2"], 0)
-            self.assertEqual(results["3"], 0)
-            self.assertEqual(results["4"], 0)
-            self.assertEqual(results["5"], 0)
+    def test_get_csat_metrics_with_invalid_payload_values(self):
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {"payload_value": "invalid", "count": 5},
+            {"payload_value": None, "count": 3},
+            {"payload_value": 6, "count": 2},  # Invalid CSAT score
+            {"payload_value": "1", "count": 10},
+        ]
+
+        results = self.service.get_csat_metrics(
+            project_uuid=uuid.uuid4(),
+            agent_uuid=str(uuid.uuid4()),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        # Only valid CSAT scores should be included
+        self.assertEqual(results["1"], 10)
+        self.assertEqual(results["2"], 0)
+        self.assertEqual(results["3"], 0)
+        self.assertEqual(results["4"], 0)
+        self.assertEqual(results["5"], 0)
 
     def test_get_nps_metrics(self):
         project_uuid = uuid.uuid4()
@@ -177,41 +183,37 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertEqual(results1, results2)
 
     def test_get_nps_metrics_with_exception(self):
-        with patch.object(
-            self.service.events_client, "get_events_count_by_group"
-        ) as mock_get_events:
-            mock_get_events.side_effect = Exception("Test exception")
+        self.mock_events_client.get_events_count_by_group.side_effect = Exception(
+            "Test exception"
+        )
 
-            with self.assertRaises(Exception):
-                self.service.get_nps_metrics(
-                    project_uuid=uuid.uuid4(),
-                    agent_uuid=str(uuid.uuid4()),
-                    start_date=datetime.now() - timedelta(days=1),
-                    end_date=datetime.now(),
-                )
-
-    def test_get_nps_metrics_with_invalid_payload_values(self):
-        with patch.object(
-            self.service.events_client, "get_events_count_by_group"
-        ) as mock_get_events:
-            mock_get_events.return_value = [
-                {"payload_value": "invalid", "count": 5},
-                {"payload_value": None, "count": 3},
-                {"payload_value": 11, "count": 2},  # Invalid NPS score
-                {"payload_value": "5", "count": 10},
-            ]
-
-            results = self.service.get_nps_metrics(
+        with self.assertRaises(Exception):
+            self.service.get_nps_metrics(
                 project_uuid=uuid.uuid4(),
                 agent_uuid=str(uuid.uuid4()),
                 start_date=datetime.now() - timedelta(days=1),
                 end_date=datetime.now(),
             )
 
-            self.assertEqual(results["5"], 10)
-            for i in range(11):
-                if str(i) != "5":
-                    self.assertEqual(results[str(i)], 0)
+    def test_get_nps_metrics_with_invalid_payload_values(self):
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {"payload_value": "invalid", "count": 5},
+            {"payload_value": None, "count": 3},
+            {"payload_value": 11, "count": 2},  # Invalid NPS score
+            {"payload_value": "5", "count": 10},
+        ]
+
+        results = self.service.get_nps_metrics(
+            project_uuid=uuid.uuid4(),
+            agent_uuid=str(uuid.uuid4()),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertEqual(results["5"], 10)
+        for i in range(11):
+            if str(i) != "5":
+                self.assertEqual(results[str(i)], 0)
 
     def test_get_topics_distribution_ai(self):
         project_uuid = uuid.uuid4()
@@ -300,28 +302,12 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertEqual(results1, results2)
 
     def test_get_topics_distribution_with_exception(self):
-        with patch.object(
-            self.service.events_client, "get_events_count_by_group"
-        ) as mock_get_events:
-            mock_get_events.side_effect = Exception("Test exception")
+        self.mock_events_client.get_events_count_by_group.side_effect = Exception(
+            "Test exception"
+        )
 
-            with self.assertRaises(Exception):
-                self.service.get_topics_distribution(
-                    project_uuid=uuid.uuid4(),
-                    start_date=datetime.now() - timedelta(days=1),
-                    end_date=datetime.now(),
-                    conversation_type=ConversationType.AI,
-                    subtopics=[],
-                    output_language="en",
-                )
-
-    def test_get_topics_distribution_with_empty_events(self):
-        with patch.object(
-            self.service.events_client, "get_events_count_by_group"
-        ) as mock_get_events:
-            mock_get_events.return_value = [{}]
-
-            results = self.service.get_topics_distribution(
+        with self.assertRaises(Exception):
+            self.service.get_topics_distribution(
                 project_uuid=uuid.uuid4(),
                 start_date=datetime.now() - timedelta(days=1),
                 end_date=datetime.now(),
@@ -330,8 +316,20 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 output_language="en",
             )
 
-            # Should return empty results when no events
-            self.assertEqual(results, {})
+    def test_get_topics_distribution_with_empty_events(self):
+        self.mock_events_client.get_events_count_by_group.return_value = [{}]
+
+        results = self.service.get_topics_distribution(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+            conversation_type=ConversationType.AI,
+            subtopics=[],
+            output_language="en",
+        )
+
+        # Should return empty results when no events
+        self.assertEqual(results, {})
 
     def test_get_topics_distribution_with_subtopics_events_empty(self):
         with patch.object(
@@ -808,23 +806,15 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             self.assertEqual(results.unresolved.value, 40)
             self.assertEqual(results.transferred_to_human.value, 20)
 
-    @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
-    )
-    @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
-    )
-    def test_get_sales_funnel_data(
-        self, mock_data_lake_events_count_client, mock_data_lake_events_client
-    ):
+    def test_get_sales_funnel_data(self):
         def get_events(**kwargs):
             if kwargs.get("offset") == 0:
                 return [{"metadata": json.dumps({"currency": "BRL", "value": 100})}]
 
             return []
 
-        mock_data_lake_events_client.side_effect = get_events
-        mock_data_lake_events_count_client.return_value = [{"count": 10}]
+        self.mock_events_client.get_events.side_effect = get_events
+        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
 
         project_uuid = uuid.uuid4()
         start_date = datetime.now() - timedelta(days=1)
@@ -838,7 +828,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
         self.assertIsInstance(results, SalesFunnelData)
 
-        mock_data_lake_events_client.assert_has_calls(
+        self.mock_events_client.get_events.assert_has_calls(
             [
                 call(
                     event_name="conversion_purchase",
@@ -858,7 +848,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 ),
             ]
         )
-        mock_data_lake_events_count_client.assert_called_once_with(
+        self.mock_events_client.get_events_count.assert_called_once_with(
             event_name="conversion_lead",
             project=project_uuid,
             date_start=start_date,
@@ -868,4 +858,63 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertEqual(results.leads_count, 10)
         self.assertEqual(results.total_orders_count, 1)
         self.assertEqual(results.total_orders_value, 10000)  # Converted to cents
+        self.assertEqual(results.currency_code, "BRL")
+
+    @override_settings(SALES_FUNNEL_EVENTS_MAX_PAGES=1)
+    def test_get_sales_funnel_data_exceeding_max_pages(self):
+        def get_events(**kwargs):
+            if kwargs.get("offset") == 0:
+                return [{"metadata": json.dumps({"currency": "BRL", "value": 100})}]
+
+            return []
+
+        self.mock_events_client.get_events.side_effect = get_events
+        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_sales_funnel_data(
+                project_uuid=uuid.uuid4(),
+                start_date=datetime.now() - timedelta(days=1),
+                end_date=datetime.now(),
+            )
+
+        self.assertEqual(str(context.exception), "Max pages reached")
+
+    def test_get_sales_funnel_data_with_cached_data(self):
+        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+        self.mock_events_client.get_events.return_value = []
+        self.mock_cache_client.get.return_value = None
+
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        cached_data = {
+            "leads_count": 10,
+            "total_orders_count": 1,
+            "total_orders_value": 10000,
+            "currency_code": "BRL",
+        }
+        self.mock_cache_client.get.return_value = json.dumps(cached_data)
+
+        results = self.service.get_sales_funnel_data(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.mock_cache_client.get.assert_called_once_with(
+            self.service._get_cache_key(
+                data_type="sales_funnel_data",
+                project_uuid=project_uuid,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        )
+        self.mock_events_client.get_events.assert_not_called()
+        self.mock_events_client.get_events_count.assert_not_called()
+
+        self.assertEqual(results.leads_count, 10)
+        self.assertEqual(results.total_orders_count, 1)
+        self.assertEqual(results.total_orders_value, 10000)
         self.assertEqual(results.currency_code, "BRL")
