@@ -79,8 +79,6 @@ class HumanSupportDashboardService:
 
         base: dict = {
             "project": str(self.project.uuid),
-            "queue__is_deleted": False,
-            "queue__sector__is_deleted": False,
         }
         if normalized.get("sectors"):
             base["sector"] = normalized["sectors"]
