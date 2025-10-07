@@ -773,8 +773,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             date_end=end_date,
         )[0].get("count", 0)
 
-        max_pages = 100
-        page_size = 5000
+        max_pages = settings.SALES_FUNNEL_EVENTS_MAX_PAGES
+        page_size = settings.SALES_FUNNEL_EVENTS_PAGE_SIZE
         page = 1
 
         currency_code = None

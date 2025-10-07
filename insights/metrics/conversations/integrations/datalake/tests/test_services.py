@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 import json
 import uuid
+
+from django.conf import settings
 from unittest.mock import call, patch
 from django.test import TestCase
 
@@ -843,16 +845,16 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                     project=project_uuid,
                     date_start=start_date,
                     date_end=end_date,
-                    limit=5000,
-                    offset=0,
+                    limit=settings.SALES_FUNNEL_EVENTS_PAGE_SIZE,
+                    offset=settings.SALES_FUNNEL_EVENTS_PAGE_SIZE * 0,
                 ),
                 call(
                     event_name="conversion_purchase",
                     project=project_uuid,
                     date_start=start_date,
                     date_end=end_date,
-                    limit=5000,
-                    offset=5000,
+                    limit=settings.SALES_FUNNEL_EVENTS_PAGE_SIZE,
+                    offset=settings.SALES_FUNNEL_EVENTS_PAGE_SIZE * 1,
                 ),
             ]
         )
