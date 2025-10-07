@@ -1,4 +1,3 @@
-from unittest.mock import patch
 import uuid
 
 
@@ -18,13 +17,11 @@ class TestConversationsElasticsearchService(TestCase):
             client=MockElasticsearchClient(),
         )
 
-    @patch(
-        "insights.metrics.conversations.integrations.elasticsearch.tests.mock.MockElasticsearchClient.get"
-    )
-    def test_get_flowsrun_results_by_contacts(self, mock_get):
+    def test_get_flowsrun_results_by_contacts(self):
         op_field = "user_feedback"
 
-        mock_get.return_value = {
+        # Configure the mock to return the expected data structure
+        self.service.client.get.return_value = {
             "hits": {
                 "total": {"value": 10},
                 "hits": [
