@@ -200,24 +200,21 @@ class HumanSupportDashboardService:
                 
         formatted_results = []
         for room in response.get("results", []):
-            sector_name = room.get("sector", "")
-            queue_name = room.get("queue", "")
-            if "_is_deleted_" not in str(sector_name) and "_is_deleted_" not in str(queue_name):
-                formatted_results.append({
-                    "agent": room.get("agent"),
-                    "duration": room.get("duration"),
-                    "awaiting_time": room.get("waiting_time"),
-                    "first_response_time": room.get("first_response_time"),
-                    "sector": sector_name,
-                    "queue": queue_name,
-                    "contact": room.get("contact"),
-                    "link": room.get("link"),
-                })
+            formatted_results.append({
+                "agent": room.get("agent"),
+                "duration": room.get("duration"),
+                "awaiting_time": room.get("waiting_time"),
+                "first_response_time": room.get("first_response_time"),
+                "sector": room.get("sector"),
+                "queue": room.get("queue"),
+                "contact": room.get("contact"),
+                "link": room.get("link"),
+            })
         
         return {
             "next": response.get("next"),
             "previous": response.get("previous"),
-            "count": len(formatted_results),
+            "count": response.get("count"),
             "results": formatted_results,
         }
 
@@ -262,20 +259,17 @@ class HumanSupportDashboardService:
         
         formatted_results = []
         for room in response.get("results", []):
-            sector_name = room.get("sector", "")
-            queue_name = room.get("queue", "")
-            if "_is_deleted_" not in str(sector_name) and "_is_deleted_" not in str(queue_name):
-                formatted_results.append({
-                    "awaiting_time": room.get("queue_time"),
-                    "contact": room.get("contact"),
-                    "sector": sector_name,
-                    "queue": queue_name,
-                    "link": room.get("link"),
-                })
+            formatted_results.append({
+                "awaiting_time": room.get("queue_time"),
+                "contact": room.get("contact"),
+                "sector": room.get("sector"),
+                "queue": room.get("queue"),
+                "link": room.get("link"),
+            })
         return {
             "next": response.get("next"),
             "previous": response.get("previous"),
-            "count": len(formatted_results),
+            "count": response.get("count"),
             "results": formatted_results,
         }
 
