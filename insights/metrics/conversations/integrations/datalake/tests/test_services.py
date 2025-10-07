@@ -858,6 +858,12 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 ),
             ]
         )
+        mock_data_lake_events_count_client.assert_called_once_with(
+            event_name="conversion_lead",
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+        )
 
         self.assertEqual(results.leads_count, 10)
         self.assertEqual(results.total_orders_count, 1)
