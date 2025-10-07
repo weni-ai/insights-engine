@@ -751,13 +751,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         if self.cache_results and (
             cached_results := self._get_cached_results(cache_key)
         ):
-            if not isinstance(cached_results, dict):
-                try:
-                    cached_results = json.loads(cached_results)
-                except Exception as e:
-                    logger.warning("Failed to deserialize cached data: %s", e)
-                    return None
-
             return SalesFunnelData(
                 leads_count=cached_results["leads_count"],
                 total_orders_count=cached_results["total_orders_count"],
