@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from insights.authentication.permissions import ProjectAuthPermission
+from insights.authentication.permissions import ProjectAuthPermission, FeatureFlagPermission
 from insights.dashboards.filters import DashboardFilter
 from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.dashboards.usecases.flows_dashboard_creation import (
@@ -48,6 +48,19 @@ class DashboardViewSet(
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = DashboardFilter
+
+    def get_permissions(self):
+        if self.action in [
+            'monitoring_list_status',
+            'monitoring_average_time_metrics',
+            'monitoring_peaks_in_human_service'
+        ]:
+            return [
+                IsAuthenticated(),
+                ProjectAuthPermission(),
+                FeatureFlagPermission()
+            ]
+        return super().get_permissions()
 
     def get_queryset(self):
         queryset = (
