@@ -168,8 +168,6 @@ class HumanSupportDashboardService:
             "is_active": True,
             "user_id__isnull": False,
             "attending": True,
-            "queue__is_deleted": False,
-            "queue__sector__is_deleted": False,
         }
         filter_to_rooms = {"sectors": "sector", "queues": "queue", "tags": "tags"}
         for filter_key, rooms_field in filter_to_rooms.items():
@@ -204,21 +202,24 @@ class HumanSupportDashboardService:
                 
         formatted_results = []
         for room in response.get("results", []):
-            formatted_results.append({
-                "agent": room.get("agent"),
-                "duration": room.get("duration"),
-                "awaiting_time": room.get("waiting_time"),
-                "first_response_time": room.get("first_response_time"),
-                "sector": room.get("sector"),
-                "queue": room.get("queue"),
-                "contact": room.get("contact"),
-                "link": room.get("link"),
-            })
+            sector_name = room.get("sector", "")
+            queue_name = room.get("queue", "")
+            if "_is_deleted_" not in str(sector_name) and "_is_deleted_" not in str(queue_name):
+                formatted_results.append({
+                    "agent": room.get("agent"),
+                    "duration": room.get("duration"),
+                    "awaiting_time": room.get("waiting_time"),
+                    "first_response_time": room.get("first_response_time"),
+                    "sector": sector_name,
+                    "queue": queue_name,
+                    "contact": room.get("contact"),
+                    "link": room.get("link"),
+                })
         
         return {
             "next": response.get("next"),
             "previous": response.get("previous"),
-            "count": response.get("count"),
+            "count": len(formatted_results),
             "results": formatted_results,
         }
 
@@ -234,17 +235,13 @@ class HumanSupportDashboardService:
             "is_active": True,
             "user_id__isnull": True,
             "attending": False,
-            "queue__is_deleted": False,
-            "queue__sector__is_deleted": False,
         }
-        # mapeia nomes do FilterSet -> campos esperados pelo Rooms
         filter_to_rooms_field = {"sectors": "sector", "queues": "queue", "tags": "tags"}
         for filter_key, rooms_field in filter_to_rooms_field.items():
             value = normalized.get(filter_key)
             if value:
                 params[rooms_field] = value
 
-        # paginação (fora do FilterSet)
         if filters:
             if filters.get("limit") is not None:
                 params["limit"] = filters.get("limit")
@@ -267,17 +264,20 @@ class HumanSupportDashboardService:
         
         formatted_results = []
         for room in response.get("results", []):
-            formatted_results.append({
-                "awaiting_time": room.get("queue_time"),
-                "contact": room.get("contact"),
-                "sector": room.get("sector"),
-                "queue": room.get("queue"),
-                "link": room.get("link"),
-            })
+            sector_name = room.get("sector", "")
+            queue_name = room.get("queue", "")
+            if "_is_deleted_" not in str(sector_name) and "_is_deleted_" not in str(queue_name):
+                formatted_results.append({
+                    "awaiting_time": room.get("queue_time"),
+                    "contact": room.get("contact"),
+                    "sector": sector_name,
+                    "queue": queue_name,
+                    "link": room.get("link"),
+                })
         return {
             "next": response.get("next"),
             "previous": response.get("previous"),
-            "count": response.get("count"),
+            "count": len(formatted_results),
             "results": formatted_results,
         }
 
