@@ -10,6 +10,7 @@ from rest_framework import status
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
     NPSMetrics,
+    SalesFunnelMetrics,
     SubtopicMetrics,
     SubtopicTopicRelation,
     TopicMetrics,
@@ -694,3 +695,23 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         }
 
         return results
+
+    def get_sales_funnel_data(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> SalesFunnelMetrics:
+        """
+        Get sales funnel data
+        """
+        data = self.datalake_service.get_sales_funnel_data(
+            project_uuid, start_date, end_date
+        )
+
+        return SalesFunnelMetrics(
+            leads_count=data.leads_count,
+            total_orders_count=data.total_orders_count,
+            total_orders_value=data.total_orders_value,
+            currency_code=data.currency_code,
+        )

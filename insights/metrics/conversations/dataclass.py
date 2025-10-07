@@ -76,3 +76,26 @@ class NPSMetrics:
     passives: float
     detractors: float
     score: float
+
+
+@dataclass(frozen=True)
+class SalesFunnelMetrics:
+    """
+    Dataclass for sales funnel metrics
+    """
+
+    leads_count: int
+    total_orders_count: int
+    total_orders_value: int  # In cents
+    currency_code: str
+
+    @property
+    def average_ticket(self) -> int:
+        """
+        Get the average ticket
+        """
+        return round(
+            self.total_orders_value / self.total_orders_count
+            if self.total_orders_count > 0
+            else 0
+        )
