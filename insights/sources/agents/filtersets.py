@@ -1,5 +1,3 @@
-# use stub files to represent it on other parts of the code
-# Use django_filters Filter class as a reference
 from insights.sources.filtersets import GenericSQLFilter
 
 
@@ -9,6 +7,21 @@ class AgentFilterSet:
         table_alias="pp",
     )
     project_id = project
+    sector = GenericSQLFilter(
+        source_field="sector_id",
+        table_alias="q",
+        join_clause={
+            "r": "INNER JOIN public.rooms_room AS r ON r.user_id=pp.user_id",
+            "q": "INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id",
+        },
+    )
+    queue = GenericSQLFilter(
+        source_field="queue_id",
+        table_alias="r",
+        join_clause={
+            "r": "INNER JOIN public.rooms_room AS r ON r.user_id=pp.user_id",
+        },
+    )
 
     def get_field(self, field_name):
         try:

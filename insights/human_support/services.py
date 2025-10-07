@@ -245,15 +245,15 @@ class HumanSupportDashboardService:
         # sectors -> sector (um único UUID se fornecido)
         sectors = normalized.get("sectors")
         if isinstance(sectors, list) and len(sectors) == 1:
-            params["sector"] = sectors[0]
+            params["sector"] = [str(sectors[0])]
         elif isinstance(sectors, str):
-            params["sector"] = sectors
+            params["sector"] = [str(sectors[0])]
         # queues -> queue (um único UUID se fornecido)
         queues = normalized.get("queues")
         if isinstance(queues, list) and len(queues) == 1:
             params["queue"] = queues[0]
         elif isinstance(queues, str):
-            params["queue"] = queues
+            params["queue"] = str(queues[0])
         # tags pode ser lista
         tags = normalized.get("tags")
         if tags:
@@ -268,7 +268,7 @@ class HumanSupportDashboardService:
                 params["limit"] = filters.get("limit")
             if filters.get("offset") is not None:
                 params["offset"] = filters.get("offset")
-
+        print(f"[DEBUG get_detailed_monitoring_agents] params enviados: {params}")
         return AgentsRESTClient(self.project).list(params)
 
     def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
