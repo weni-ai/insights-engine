@@ -77,7 +77,11 @@ class HumanSupportDashboardService:
         start_of_day = project_tz.localize(datetime.combine(today, datetime.min.time())).isoformat()
         now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
 
-        base: dict = {"project": str(self.project.uuid)}
+        base: dict = {
+            "project": str(self.project.uuid),
+            "queue__is_deleted": False,
+            "queue__sector__is_deleted": False,
+        }
         if normalized.get("sectors"):
             base["sector"] = normalized["sectors"]
         if normalized.get("queues"):
@@ -85,8 +89,8 @@ class HumanSupportDashboardService:
         if normalized.get("tags"):
             base["tags"] = normalized["tags"]
 
-        is_waiting = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": False}, "count", lambda x: x, self.project).get("value") or 0
-        in_progress = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": True}, "count", lambda x: x, self.project).get("value") or 0
+        is_waiting = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": True}, "count", lambda x: x, self.project).get("value") or 0
+        in_progress = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": False}, "count", lambda x: x, self.project).get("value") or 0
         finished = RoomsQueryExecutor.execute({**base, "is_active": False, "ended_at__gte": start_of_day, "ended_at__lte": now_iso}, "count", lambda x: x, self.project).get("value") or 0
 
         return {
@@ -182,7 +186,19 @@ class HumanSupportDashboardService:
                 params["offset"] = offset
             ordering = filters.get("ordering")
             if ordering is not None:
-                params["ordering"] = ordering
+                prefix = "-" if ordering.startswith("-") else ""
+                field = ordering.lstrip("-")
+                field_mapping = {
+                    "Agent": "uuid",
+                    "Duration": "duration",
+                    "Awaiting time": "waiting_time",
+                    "First response time": "first_response_time",
+                    "Sector": "queue__sector__name",
+                    "Queue": "queue__name",
+                    "Contact": "contact__name",
+                }
+                mapped_field = field_mapping.get(field, field)
+                params["ordering"] = f"{prefix}{mapped_field}"
 
         response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
                 
@@ -234,8 +250,18 @@ class HumanSupportDashboardService:
                 params["limit"] = filters.get("limit")
             if filters.get("offset") is not None:
                 params["offset"] = filters.get("offset")
-            if filters.get("ordering") is not None:
-                params["ordering"] = filters.get("ordering")
+            ordering = filters.get("ordering")
+            if ordering is not None:
+                prefix = "-" if ordering.startswith("-") else ""
+                field = ordering.lstrip("-")
+                field_mapping = {
+                    "Awaiting time": "queue_time",
+                    "Sector": "queue__sector__name",
+                    "Queue": "queue__name",
+                    "Contact": "contact__name",
+                }
+                mapped_field = field_mapping.get(field, field)
+                params["ordering"] = f"{prefix}{mapped_field}"
 
         response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
         
@@ -287,7 +313,16 @@ class HumanSupportDashboardService:
             if filters.get("offset") is not None:
                 params["offset"] = filters.get("offset")
             if filters.get("ordering") is not None:
-                params["ordering"] = filters.get("ordering")
+                ordering = filters.get("ordering")
+                prefix = "-" if ordering.startswith("-") else ""
+                field = ordering.lstrip("-")
+                field_mapping = {
+                    "Agent": "uuid",
+                    "Status": "status",
+                    "Name": "name",
+                }
+                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
+                params["ordering"] = f"{prefix}{mapped_field}"
         return AgentsRESTClient(self.project).list(params)
 
     def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
@@ -308,7 +343,16 @@ class HumanSupportDashboardService:
                 if filters.get("created_on__lte") is not None:
                     params["created_on__lte"] = filters.get("created_on__lte")
                 if filters.get("ordering") is not None:
-                    params["ordering"] = filters.get("ordering")
+                    ordering = filters.get("ordering")
+                    prefix = "-" if ordering.startswith("-") else ""
+                    field = ordering.lstrip("-")
+                    field_mapping = {
+                        "Agent": "uuid",
+                        "Status": "status",
+                        "Created on": "created_on",
+                    }
+                    mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
+                    params["ordering"] = f"{prefix}{mapped_field}"
 
             sectors = normalized.get("sectors") or []
             if isinstance(sectors, list) and sectors:
