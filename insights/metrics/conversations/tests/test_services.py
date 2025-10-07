@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 import json
 from uuid import UUID
-from unittest.mock import patch, Mock
+from unittest.mock import Mock
 
 from django.test import TestCase
 from django.core.cache import cache
