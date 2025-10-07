@@ -56,7 +56,6 @@ class DashboardViewSet(
             return [
                 IsAuthenticated(),
                 ProjectAuthPermission(),
-                FeatureFlagPermission()
             ]
         return super().get_permissions()
 
