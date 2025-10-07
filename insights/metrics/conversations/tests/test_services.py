@@ -1,19 +1,26 @@
 from datetime import datetime, timedelta
 import uuid
 from uuid import UUID
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.core.cache import cache
+
 
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
     NPSMetrics,
+    SalesFunnelMetrics,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import (
     ConversationType,
     CsatMetricsType,
     NpsMetricsType,
+)
+from insights.metrics.conversations.integrations.datalake.dataclass import (
+    SalesFunnelData,
 )
 from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
     MockDatalakeConversationsMetricsService,
@@ -329,3 +336,32 @@ class TestConversationsMetricsService(TestCase):
                 start_date=self.start_date,
                 end_date=self.end_date,
             )
+
+    @patch(
+        "insights.metrics.conversations.integrations.datalake.tests.mock_services.MockDatalakeConversationsMetricsService.get_sales_funnel_data"
+    )
+    def test_get_sales_funnel_data(self, mock_get_sales_funnel_data):
+        mock_get_sales_funnel_data.return_value = SalesFunnelData(
+            leads_count=100,
+            total_orders_count=100,
+            total_orders_value=10000,
+            currency_code="BRL",
+        )
+        metrics = self.service.get_sales_funnel_data(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(metrics, SalesFunnelMetrics)
+
+        mock_get_sales_funnel_data.assert_called_once_with(
+            self.project.uuid,
+            self.start_date,
+            self.end_date,
+        )
+
+        self.assertEqual(metrics.leads_count, 100)
+        self.assertEqual(metrics.total_orders_count, 100)
+        self.assertEqual(metrics.total_orders_value, 10000)
+        self.assertEqual(metrics.currency_code, "BRL")
