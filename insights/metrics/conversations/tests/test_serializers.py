@@ -444,8 +444,8 @@ class TestSalesFunnelMetricsQueryParamsSerializer(TestCase):
         self.widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="flowruns",
-            type="flow_result",
+            source="sales_funnel",
+            type="sales_funnel",
             position=[1, 2],
             config={},
         )
@@ -466,6 +466,53 @@ class TestSalesFunnelMetricsQueryParamsSerializer(TestCase):
         )
         self.assertEqual(serializer.validated_data["project"], self.project)
         self.assertEqual(serializer.validated_data["widget"], self.widget)
+
+    def test_serializer_invalid_widget_uuid(self):
+        serializer = SalesFunnelMetricsQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+                "widget_uuid": uuid.uuid4(),
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["widget_uuid"][0].code, "widget_not_found")
+
+    def test_serializer_invalid_widget_source(self):
+        self.widget.source = "flowruns"
+        self.widget.save(update_fields=["source"])
+        serializer = SalesFunnelMetricsQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+                "widget_uuid": self.widget.uuid,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(
+            serializer.errors["widget_uuid"][0].code, "widget_source_not_sales_funnel"
+        )
+
+    def test_serializer_invalid_widget_type(self):
+        self.widget.type = "flow_result"
+        self.widget.save(update_fields=["type"])
+        serializer = SalesFunnelMetricsQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+                "widget_uuid": self.widget.uuid,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(
+            serializer.errors["widget_uuid"][0].code, "widget_type_not_sales_funnel"
+        )
 
 
 class TestSalesFunnelMetricsSerializer(TestCase):

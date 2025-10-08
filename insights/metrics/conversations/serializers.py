@@ -1,5 +1,7 @@
 import pytz
 from datetime import datetime, time
+
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from insights.metrics.conversations.enums import (
@@ -268,7 +270,19 @@ class SalesFunnelMetricsQueryParamsSerializer(ConversationBaseQueryParamsSeriali
 
         if not widget:
             raise serializers.ValidationError(
-                {"widget_uuid": "Widget not found"}, code="widget_not_found"
+                {"widget_uuid": _("Widget not found")}, code="widget_not_found"
+            )
+
+        if widget.source != "sales_funnel":
+            raise serializers.ValidationError(
+                {"widget_uuid": _("Widget source is not sales funnel")},
+                code="widget_source_not_sales_funnel",
+            )
+
+        if widget.type != "sales_funnel":
+            raise serializers.ValidationError(
+                {"widget_uuid": _("Widget type is not sales funnel")},
+                code="widget_type_not_sales_funnel",
             )
 
         attrs["widget"] = widget
