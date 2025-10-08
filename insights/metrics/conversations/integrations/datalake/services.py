@@ -796,6 +796,14 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         """
         Get sales funnel data from Datalake.
         """
+        # [STAGING] Mock sales funnel data
+        return SalesFunnelData(
+            leads_count=24197,
+            total_orders_count=124,
+            total_orders_value=1680211,
+            currency_code="BRL",
+        )
+
         cache_key = self._get_cache_key(
             data_type="sales_funnel_data",
             project_uuid=project_uuid,
