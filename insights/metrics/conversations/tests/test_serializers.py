@@ -6,6 +6,7 @@ from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
+    SalesFunnelMetrics,
     SubtopicMetrics,
     TopicMetrics,
     TopicsDistributionMetrics,
@@ -17,6 +18,8 @@ from insights.metrics.conversations.serializers import (
     ConversationTotalsMetricsQueryParamsSerializer,
     ConversationTotalsMetricsSerializer,
     CsatMetricsQueryParamsSerializer,
+    SalesFunnelMetricsQueryParamsSerializer,
+    SalesFunnelMetricsSerializer,
     SubtopicSerializer,
     TopicSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
@@ -427,3 +430,59 @@ class TestConversationTotalsMetricsQueryParamsSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("project_uuid", serializer.errors)
         self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+
+class TestSalesFunnelMetricsQueryParamsSerializer(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+        )
+        self.dashboard = Dashboard.objects.create(
+            name="Test Dashboard",
+            project=self.project,
+        )
+        self.widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={},
+        )
+
+    def test_serializer(self):
+        serializer = SalesFunnelMetricsQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+                "widget_uuid": self.widget.uuid,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertIn("project", serializer.validated_data)
+        self.assertEqual(
+            str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
+        )
+        self.assertEqual(serializer.validated_data["project"], self.project)
+        self.assertEqual(serializer.validated_data["widget"], self.widget)
+
+
+class TestSalesFunnelMetricsSerializer(TestCase):
+    def test_serializer(self):
+        metrics = SalesFunnelMetrics(
+            leads_count=100,
+            total_orders_count=100,
+            total_orders_value=10000,
+            currency_code="BRL",
+        )
+        serializer = SalesFunnelMetricsSerializer(metrics)
+        self.assertEqual(serializer.data["leads_count"], metrics.leads_count)
+        self.assertEqual(
+            serializer.data["total_orders_count"], metrics.total_orders_count
+        )
+        self.assertEqual(
+            serializer.data["total_orders_value"], metrics.total_orders_value
+        )
+        self.assertEqual(serializer.data["currency_code"], metrics.currency_code)
+        self.assertEqual(serializer.data["average_ticket"], metrics.average_ticket)

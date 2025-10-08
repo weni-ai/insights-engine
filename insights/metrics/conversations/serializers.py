@@ -247,3 +247,41 @@ class CustomMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
 
         attrs["widget"] = widget
         return attrs
+
+
+class SalesFunnelMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for sales funnel metrics query params
+    """
+
+    widget_uuid = serializers.UUIDField(required=True)
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        widget = Widget.objects.filter(
+            uuid=attrs["widget_uuid"], dashboard__project=attrs["project"]
+        ).first()
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"widget_uuid": "Widget not found"}, code="widget_not_found"
+            )
+
+        attrs["widget"] = widget
+        return attrs
+
+
+class SalesFunnelMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for sales funnel metrics
+    """
+
+    currency_code = serializers.CharField()
+    leads_count = serializers.IntegerField()
+    total_orders_count = serializers.IntegerField()
+    total_orders_value = serializers.IntegerField()
+    average_ticket = serializers.IntegerField()
