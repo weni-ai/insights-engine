@@ -799,8 +799,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         # [STAGING] Mock sales funnel data
         return SalesFunnelData(
             leads_count=24197,
-            total_orders_count=124,
-            total_orders_value=1680211,
+            total_orders_count=10250,
+            total_orders_value=5125331,
             currency_code="BRL",
         )
 
