@@ -331,12 +331,22 @@ class HumanSupportDashboardService:
                     "opened": "opened",
                     "In Progress": "opened",
                     
-                    # Métricas de tempo
+                    # Métricas de tempo - com espaços (como vem do front)
+                    "Average first response time": "avg_first_response_time",
+                    "average first response time": "avg_first_response_time",
                     "average_first_response_time": "avg_first_response_time",
+                    
+                    "Average response time": "avg_message_response_time",
+                    "average response time": "avg_message_response_time",
                     "average_response_time": "avg_message_response_time",
+                    
+                    "Average duration": "avg_interaction_time",
+                    "average duration": "avg_interaction_time",
                     "average_duration": "avg_interaction_time",
                     
                     # Tempo em serviço
+                    "Time in service": "in_service_time",
+                    "time in service": "in_service_time",
                     "time_in_service": "in_service_time",
                     "Time In Service": "in_service_time", 
                     "in_service_time": "in_service_time",
