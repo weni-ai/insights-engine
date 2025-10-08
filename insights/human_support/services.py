@@ -274,23 +274,21 @@ class HumanSupportDashboardService:
         }
 
     def get_detailed_monitoring_agents(self, filters: dict | None = None):
-
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
-        # sectors -> sector (um único UUID se fornecido)
         sectors = normalized.get("sectors")
         if isinstance(sectors, list) and len(sectors) == 1:
             params["sector"] = [str(sectors[0])]
         elif isinstance(sectors, str):
             params["sector"] = [str(sectors)]
-        # queues -> queue (um único UUID se fornecido)
+        
         queues = normalized.get("queues")
         if isinstance(queues, list) and len(queues) == 1:
             params["queue"] = queues[0]
         elif isinstance(queues, str):
             params["queue"] = str(queues)
-        # tags pode ser lista
+        
         tags = normalized.get("tags")
         if tags:
             params["tags"] = tags
@@ -298,7 +296,6 @@ class HumanSupportDashboardService:
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
 
-        # paginação opcional
         if filters:
             if filters.get("limit") is not None:
                 params["limit"] = filters.get("limit")
@@ -308,13 +305,46 @@ class HumanSupportDashboardService:
                 ordering = filters.get("ordering")
                 prefix = "-" if ordering.startswith("-") else ""
                 field = ordering.lstrip("-")
-                field_mapping = {
-                    "Agent": "uuid",
-                    "Status": "status",
-                    "Name": "name",
-                }
+                
+            field_mapping = {
+                # Agent/Attendant
+                "Agent": "first_name",
+                "Attendant": "first_name",
+                "attendant": "first_name",
+                "agent": "first_name",
+                "Name": "first_name",
+                "Email": "email",
+                
+                # Status
+                "Status": "status",
+                "status": "status",
+                
+                # Contadores de atendimentos
+                "Finished": "closed",
+                "finished": "closed",
+                "Closed": "closed",
+                "closed": "closed",
+                
+                "Ongoing": "opened",
+                "ongoing": "opened",
+                "Opened": "opened",
+                "opened": "opened",
+                "In Progress": "opened",
+                
+                # Métricas de tempo
+                "average_first_response_time": "avg_first_response_time",
+                "average_response_time": "avg_message_response_time",
+                "average_duration": "avg_interaction_time",
+                
+                # Tempo em serviço
+                "time_in_service": "in_service_time",
+                "Time In Service": "in_service_time", 
+                "in_service_time": "in_service_time",
+            }
+                
                 mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
                 params["ordering"] = f"{prefix}{mapped_field}"
+        
         return AgentsRESTClient(self.project).list(params)
 
     def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
