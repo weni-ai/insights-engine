@@ -7,6 +7,7 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+from sentry_sdk import capture_exception
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
@@ -19,6 +20,8 @@ from insights.metrics.conversations.serializers import (
     DeleteTopicSerializer,
     GetTopicsQueryParamsSerializer,
     NpsMetricsQueryParamsSerializer,
+    SalesFunnelMetricsQueryParamsSerializer,
+    SalesFunnelMetricsSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
     TopicsDistributionMetricsSerializer,
     NpsMetricsSerializer,
@@ -406,3 +409,40 @@ class ConversationsMetricsViewSet(GenericViewSet):
             )
 
         return Response(metrics, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="sales_funnel",
+        url_name="sales-funnel",
+    )
+    def sales_funnel(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get sales funnel metrics
+        """
+        query_params = SalesFunnelMetricsQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            metrics = self.service.get_sales_funnel_data(
+                project_uuid=query_params.validated_data["project_uuid"],
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            logger.error(
+                "[ConversationsMetricsViewSet] Error getting sales funnel metrics: %s",
+                e,
+                exc_info=True,
+            )
+            event_id = capture_exception(e)
+            return Response(
+                {"error": f"Internal error. Event ID: {event_id}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            SalesFunnelMetricsSerializer(metrics).data, status=status.HTTP_200_OK
+        )
