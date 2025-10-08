@@ -307,15 +307,8 @@ class SalesFunnelMetricsSerializer(serializers.Serializer):
     purchases_made = serializers.SerializerMethodField()
 
     def get_captured_leads(self, obj) -> ValueAndPercentageSerializer:
-        full_value = obj.leads_count
-        value = (
-            round((full_value / obj.total_orders_count) * 100, 2)
-            if obj.total_orders_count > 0
-            else 0
-        )
-
         return ValueAndPercentageSerializer(
-            {"full_value": full_value, "value": value}
+            {"full_value": obj.leads_count, "value": obj.leads_count}
         ).data
 
     def get_purchases_made(self, obj) -> ValueAndPercentageSerializer:
