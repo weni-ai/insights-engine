@@ -444,7 +444,7 @@ class TestSalesFunnelMetricsQueryParamsSerializer(TestCase):
         self.widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="sales_funnel",
+            source="conversations.sales_funnel",
             type="sales_funnel",
             position=[1, 2],
             config={},

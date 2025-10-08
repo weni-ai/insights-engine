@@ -273,7 +273,7 @@ class SalesFunnelMetricsQueryParamsSerializer(ConversationBaseQueryParamsSeriali
                 {"widget_uuid": _("Widget not found")}, code="widget_not_found"
             )
 
-        if widget.source != "sales_funnel":
+        if widget.source != "conversations.sales_funnel":
             raise serializers.ValidationError(
                 {"widget_uuid": _("Widget source is not sales funnel")},
                 code="widget_source_not_sales_funnel",
