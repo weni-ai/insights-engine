@@ -524,12 +524,12 @@ class TestSalesFunnelMetricsSerializer(TestCase):
             currency_code="BRL",
         )
         serializer = SalesFunnelMetricsSerializer(metrics)
-        self.assertEqual(serializer.data["leads_count"], metrics.leads_count)
-        self.assertEqual(
-            serializer.data["total_orders_count"], metrics.total_orders_count
-        )
-        self.assertEqual(
-            serializer.data["total_orders_value"], metrics.total_orders_value
-        )
-        self.assertEqual(serializer.data["currency_code"], metrics.currency_code)
-        self.assertEqual(serializer.data["average_ticket"], metrics.average_ticket)
+
+        self.assertEqual(serializer.data["currency"], "BRL")
+        self.assertEqual(serializer.data["total_orders"], 100)
+        self.assertEqual(serializer.data["total_value"], 10000)
+        self.assertEqual(serializer.data["average_ticket"], 100)
+        self.assertEqual(serializer.data["captured_leads"]["full_value"], 100)
+        self.assertEqual(serializer.data["captured_leads"]["value"], 100)
+        self.assertEqual(serializer.data["purchases_made"]["full_value"], 100)
+        self.assertEqual(serializer.data["purchases_made"]["value"], 100)

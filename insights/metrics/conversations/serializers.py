@@ -289,13 +289,41 @@ class SalesFunnelMetricsQueryParamsSerializer(ConversationBaseQueryParamsSeriali
         return attrs
 
 
+class ValueAndPercentageSerializer(serializers.Serializer):
+    full_value = serializers.IntegerField()
+    value = serializers.FloatField()
+
+
 class SalesFunnelMetricsSerializer(serializers.Serializer):
     """
     Serializer for sales funnel metrics
     """
 
-    currency_code = serializers.CharField()
-    leads_count = serializers.IntegerField()
-    total_orders_count = serializers.IntegerField()
-    total_orders_value = serializers.IntegerField()
+    currency = serializers.CharField(source="currency_code")
+    total_orders = serializers.IntegerField(source="total_orders_count")
+    total_value = serializers.IntegerField(source="total_orders_value")
     average_ticket = serializers.IntegerField()
+    captured_leads = serializers.SerializerMethodField()
+    purchases_made = serializers.SerializerMethodField()
+
+    def get_captured_leads(self, obj) -> ValueAndPercentageSerializer:
+        full_value = obj.leads_count
+        value = (
+            round((full_value / obj.total_orders_count) * 100, 2)
+            if obj.total_orders_count > 0
+            else 0
+        )
+
+        return ValueAndPercentageSerializer(
+            {"full_value": full_value, "value": value}
+        ).data
+
+    def get_purchases_made(self, obj) -> ValueAndPercentageSerializer:
+        full_value = obj.total_orders_count
+        value = (
+            round((full_value / obj.leads_count) * 100, 2) if obj.leads_count > 0 else 0
+        )
+
+        return ValueAndPercentageSerializer(
+            {"full_value": full_value, "value": value}
+        ).data
