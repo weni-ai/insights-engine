@@ -344,12 +344,11 @@ class HumanSupportDashboardService:
                     "average duration": "avg_interaction_time",
                     "average_duration": "avg_interaction_time",
                     
-                    # Tempo em serviço
-                    "Time in service": "in_service_time",
-                    "time in service": "in_service_time",
-                    "time_in_service": "in_service_time",
-                    "Time In Service": "in_service_time", 
-                    "in_service_time": "in_service_time",
+                    "Time in service": "time_in_service",       
+                    "time in service": "time_in_service",       
+                    "time_in_service": "time_in_service",       
+                    "Time In Service": "time_in_service",       
+                    "in_service_time": "time_in_service",
                 }
                 
                 mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
@@ -379,14 +378,26 @@ class HumanSupportDashboardService:
                 
                 field_mapping = {
                     # Agent
-                    "Agent": "uuid",
-                    "agent": "uuid",
+                    "Agent": "email",
+                    "agent": "email",
                     
                     # Status
                     "Status": "status",
                     "status": "status",
                     
-                    # Created on (com variações)
+                    # Contadores de atendimentos
+                    "Finished": "closed",
+                    "finished": "closed",
+                    "Closed": "closed",
+                    "closed": "closed",
+                    
+                    "Ongoing": "opened",
+                    "ongoing": "opened",
+                    "Opened": "opened",
+                    "opened": "opened",
+                    "In Progress": "opened",
+                    
+                    # Created on
                     "Created on": "created_on",
                     "created on": "created_on",
                     "Created On": "created_on",
