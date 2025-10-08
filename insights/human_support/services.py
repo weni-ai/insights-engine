@@ -342,8 +342,8 @@ class HumanSupportDashboardService:
                 "in_service_time": "in_service_time",
             }
                 
-                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-                params["ordering"] = f"{prefix}{mapped_field}"
+            mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
+            params["ordering"] = f"{prefix}{mapped_field}"
         
         return AgentsRESTClient(self.project).list(params)
 
