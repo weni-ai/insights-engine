@@ -100,7 +100,7 @@ class HumanSupportDashboardService:
 
     def get_time_metrics(self, filters: dict | None = None) -> Dict[str, float]:
         normalized = self._normalize_filters(filters)
-        
+
         params: dict = {}
         if normalized.get("sectors"):
             params["sector"] = normalized["sectors"]
@@ -108,12 +108,12 @@ class HumanSupportDashboardService:
             params["queue"] = normalized["queues"]
         if normalized.get("tags"):
             params["tags"] = normalized["tags"]
-        
+
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve(params=params)
-        
+
         metrics = response or {}
-        
+
         waiting_avg = float(metrics.get("avg_waiting_time", 0) or 0)
         waiting_max = float(metrics.get("max_waiting_time", 0) or 0)
         first_resp_avg = float(metrics.get("avg_first_response_time", 0) or 0)
@@ -197,7 +197,7 @@ class HumanSupportDashboardService:
                 params["ordering"] = f"{prefix}{mapped_field}"
 
         response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
-                
+
         formatted_results = []
         for room in response.get("results", []):
             formatted_results.append({
@@ -210,7 +210,7 @@ class HumanSupportDashboardService:
                 "contact": room.get("contact"),
                 "link": room.get("link"),
             })
-        
+
         return {
             "next": response.get("next"),
             "previous": response.get("previous"),
@@ -256,7 +256,7 @@ class HumanSupportDashboardService:
                 params["ordering"] = f"{prefix}{mapped_field}"
 
         response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
-        
+
         formatted_results = []
         for room in response.get("results", []):
             formatted_results.append({
@@ -282,13 +282,13 @@ class HumanSupportDashboardService:
             params["sector"] = [str(sectors[0])]
         elif isinstance(sectors, str):
             params["sector"] = [str(sectors)]
-        
+
         queues = normalized.get("queues")
         if isinstance(queues, list) and len(queues) == 1:
             params["queue"] = queues[0]
         elif isinstance(queues, str):
             params["queue"] = str(queues)
-        
+
         tags = normalized.get("tags")
         if tags:
             params["tags"] = tags
@@ -305,7 +305,7 @@ class HumanSupportDashboardService:
                 ordering = filters.get("ordering")
                 prefix = "-" if ordering.startswith("-") else ""
                 field = ordering.lstrip("-")
-                
+
                 field_mapping = {
                     # Agent/Attendant
                     "Agent": "first_name",
@@ -314,47 +314,75 @@ class HumanSupportDashboardService:
                     "agent": "first_name",
                     "Name": "first_name",
                     "Email": "email",
-                    
+
                     # Status
                     "Status": "status",
                     "status": "status",
-                    
+
                     # Contadores de atendimentos
                     "Finished": "closed",
                     "finished": "closed",
                     "Closed": "closed",
                     "closed": "closed",
-                    
+
                     "Ongoing": "opened",
                     "ongoing": "opened",
                     "Opened": "opened",
                     "opened": "opened",
                     "In Progress": "opened",
-                    
+
                     # Métricas de tempo - com espaços (como vem do front)
                     "Average first response time": "avg_first_response_time",
                     "average first response time": "avg_first_response_time",
                     "average_first_response_time": "avg_first_response_time",
-                    
+
                     "Average response time": "avg_message_response_time",
                     "average response time": "avg_message_response_time",
                     "average_response_time": "avg_message_response_time",
-                    
+
                     "Average duration": "avg_interaction_time",
                     "average duration": "avg_interaction_time",
                     "average_duration": "avg_interaction_time",
-                    
-                    "Time in service": "time_in_service",       
-                    "time in service": "time_in_service",       
-                    "time_in_service": "time_in_service",       
-                    "Time In Service": "time_in_service",       
+
+                    "Time in service": "time_in_service",
+                    "time in service": "time_in_service",
+                    "time_in_service": "time_in_service",
+                    "Time In Service": "time_in_service",
                     "in_service_time": "time_in_service",
                 }
-                
+
                 mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
                 params["ordering"] = f"{prefix}{mapped_field}"
+
+        response = AgentsRESTClient(self.project).list(params)
         
-        return AgentsRESTClient(self.project).list(params)
+        formatted_results = []
+        for agent in response.get("results", []):
+            status_data = agent.get("status", {})
+            if isinstance(status_data, dict):
+                status = status_data.get("status", "offline")
+            else:
+                status = status_data or "offline"
+            
+            formatted_results.append({
+                "agent": agent.get("agent"),
+                "agent_email": agent.get("agent_email"),
+                "status": status,
+                "ongoing": agent.get("opened", 0),
+                "finished": agent.get("closed", 0),
+                "average_first_response_time": agent.get("avg_first_response_time"),
+                "average_response_time": agent.get("avg_message_response_time"),
+                "average_duration": agent.get("avg_interaction_time"),
+                "time_in_service": agent.get("time_in_service"),
+                "link": agent.get("link"),
+            })
+        
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
 
     def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
         normalized = self._normalize_filters(filters)
@@ -375,35 +403,35 @@ class HumanSupportDashboardService:
                 ordering = filters.get("ordering")
                 prefix = "-" if ordering.startswith("-") else ""
                 field = ordering.lstrip("-")
-                
+
                 field_mapping = {
                     # Agent
                     "Agent": "email",
                     "agent": "email",
-                    
+
                     # Status
                     "Status": "status",
                     "status": "status",
-                    
+
                     # Contadores de atendimentos
                     "Finished": "closed",
                     "finished": "closed",
                     "Closed": "closed",
                     "closed": "closed",
-                    
+
                     "Ongoing": "opened",
                     "ongoing": "opened",
                     "Opened": "opened",
                     "opened": "opened",
                     "In Progress": "opened",
-                    
+
                     # Created on
                     "Created on": "created_on",
                     "created on": "created_on",
                     "Created On": "created_on",
                     "created_on": "created_on",
                 }
-                
+
                 mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
                 params["ordering"] = f"{prefix}{mapped_field}"
 
