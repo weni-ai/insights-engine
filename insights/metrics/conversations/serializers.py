@@ -1,5 +1,7 @@
 import pytz
 from datetime import datetime, time
+
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 
@@ -361,3 +363,74 @@ class CustomMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
 
         attrs["widget"] = widget
         return attrs
+
+
+class SalesFunnelMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for sales funnel metrics query params
+    """
+
+    widget_uuid = serializers.UUIDField(required=True)
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        widget = Widget.objects.filter(
+            uuid=attrs["widget_uuid"], dashboard__project=attrs["project"]
+        ).first()
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"widget_uuid": _("Widget not found")}, code="widget_not_found"
+            )
+
+        if widget.source != "conversations.sales_funnel":
+            raise serializers.ValidationError(
+                {"widget_uuid": _("Widget source is not sales funnel")},
+                code="widget_source_not_sales_funnel",
+            )
+
+        if widget.type != "sales_funnel":
+            raise serializers.ValidationError(
+                {"widget_uuid": _("Widget type is not sales funnel")},
+                code="widget_type_not_sales_funnel",
+            )
+
+        attrs["widget"] = widget
+        return attrs
+
+
+class ValueAndPercentageSerializer(serializers.Serializer):
+    full_value = serializers.IntegerField()
+    value = serializers.FloatField()
+
+
+class SalesFunnelMetricsSerializer(serializers.Serializer):
+    """
+    Serializer for sales funnel metrics
+    """
+
+    currency = serializers.CharField(source="currency_code")
+    total_orders = serializers.IntegerField(source="total_orders_count")
+    total_value = serializers.IntegerField(source="total_orders_value")
+    average_ticket = serializers.IntegerField()
+    captured_leads = serializers.SerializerMethodField()
+    purchases_made = serializers.SerializerMethodField()
+
+    def get_captured_leads(self, obj) -> ValueAndPercentageSerializer:
+        return ValueAndPercentageSerializer(
+            {"full_value": obj.leads_count, "value": obj.leads_count}
+        ).data
+
+    def get_purchases_made(self, obj) -> ValueAndPercentageSerializer:
+        full_value = obj.total_orders_count
+        value = (
+            round((full_value / obj.leads_count) * 100, 2) if obj.leads_count > 0 else 0
+        )
+
+        return ValueAndPercentageSerializer(
+            {"full_value": full_value, "value": value}
+        ).data

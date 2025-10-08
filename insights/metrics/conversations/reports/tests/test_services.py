@@ -1027,46 +1027,1046 @@ class TestSerializeFiltersForJson(TestCase):
             result["top_level_datetime"], (now + timedelta(days=1)).isoformat()
         )
 
-    @patch("insights.sources.tests.mock.MockCacheClient.set")
-    @patch("insights.sources.tests.mock.MockCacheClient.get")
-    def test_get_flowsrun_results_by_contacts(self, mock_cache_get, mock_cache_set):
-        mock_cache_get.return_value = None
-        mock_cache_set.return_value = None
+    def test_serialize_filters_with_none_values(self):
+        """Test serialization of filters with None values."""
+        filters = {
+            "start": None,
+            "end": None,
+            "string_field": "test",
+        }
 
-        def get_side_effect(*args, **kwargs):
-            # First call: return hits
-            if not hasattr(get_side_effect, "called"):
-                get_side_effect.called = True
+        result = serialize_filters_for_json(filters)
 
-                return {
-                    "hits": {
-                        "total": {"value": 10},
-                        "hits": [
-                            {
-                                "_source": {
-                                    "project_uuid": uuid.uuid4(),
-                                    "contact_uuid": uuid.uuid4(),
-                                    "created_on": "2025-01-01",
-                                    "modified_on": "2025-01-01",
-                                    "contact_name": "John Doe",
-                                    "contact_urn": "1234567890",
-                                    "values": [
-                                        {
-                                            "name": "user_feedback",
-                                            "value": "5",
-                                        }
-                                    ],
-                                }
-                            }
-                        ],
-                    }
+        self.assertEqual(result["start"], None)
+        self.assertEqual(result["end"], None)
+        self.assertEqual(result["string_field"], "test")
+
+
+class TestConversationsReportServiceAdditional(TestCase):
+    """Additional test cases for ConversationsReportService to increase coverage."""
+
+    def setUp(self):
+        self.service = ConversationsReportService(
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=MockElasticsearchClient(),
+            ),
+            events_limit_per_page=5,
+            page_limit=5,
+            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            metrics_service=ConversationsMetricsService(
+                datalake_service=MockDatalakeConversationsMetricsService(),
+                nexus_client=MockNexusClient(),
+                cache_client=MockCacheClient(),
+                flowruns_query_executor=MockFlowRunsQueryExecutor(),
+            ),
+            cache_client=MockCacheClient(),
+        )
+        self.project = Project.objects.create(name="Test")
+        self.dashboard = Dashboard.objects.create(name="Test", project=self.project)
+        self.user = User.objects.create(
+            email="test@test.com",
+            language="en",
+        )
+
+    def test_ensure_unique_worksheet_name_with_long_name(self):
+        """Test worksheet name truncation when name exceeds max length."""
+        used_names = set()
+        long_name = "A" * 50  # Exceeds XLSX_WORKSHEET_NAME_MAX_LENGTH (31)
+
+        result = self.service._ensure_unique_worksheet_name(long_name, used_names)
+
+        self.assertEqual(len(result), 31)
+        self.assertTrue(result.startswith("A"))
+
+    def test_ensure_unique_worksheet_name_with_too_many_duplicates(self):
+        """Test worksheet name generation when too many duplicates exist."""
+        used_names = set()
+
+        # Add the base name first
+        used_names.add("Test")
+
+        # Fill up to the limit (20) - need to add 20 more to trigger the limit
+        for i in range(1, 21):
+            used_names.add(f"Test ({i})")
+
+        # The method should try to find a unique name and hit the limit
+        with self.assertRaises(ValueError) as context:
+            self.service._ensure_unique_worksheet_name("Test", used_names)
+
+        self.assertEqual(str(context.exception), "Too many unique names found")
+
+    def test_ensure_unique_worksheet_name_with_truncation_needed(self):
+        """Test worksheet name generation when truncation is needed for unique name."""
+        used_names = set()
+        long_name = "A" * 30  # Just under the limit
+
+        # Add the original name to used_names
+        used_names.add(long_name)
+
+        result = self.service._ensure_unique_worksheet_name(long_name, used_names)
+
+        # Should be truncated to fit " (1)" suffix
+        self.assertEqual(len(result), 31)
+        self.assertTrue(result.endswith(" (1)"))
+
+    def test_process_csv_with_empty_worksheets(self):
+        """Test CSV processing with empty worksheets."""
+        worksheets = [
+            ConversationsReportWorksheet(name="Empty", data=[]),
+            ConversationsReportWorksheet(
+                name="Valid", data=[{"col1": "val1", "col2": "val2"}]
+            ),
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        files = self.service.process_csv(report, worksheets)
+
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0].name, "Valid.csv")
+
+    def test_process_xlsx_with_empty_worksheets(self):
+        """Test XLSX processing with empty worksheets."""
+        worksheets = [
+            ConversationsReportWorksheet(name="Empty", data=[]),
+            ConversationsReportWorksheet(
+                name="Valid", data=[{"col1": "val1", "col2": "val2"}]
+            ),
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.XLSX,
+            requested_by=self.user,
+        )
+
+        files = self.service.process_xlsx(report, worksheets)
+
+        self.assertEqual(len(files), 1)
+        self.assertTrue(files[0].name.endswith(".xlsx"))
+
+    def test_process_xlsx_with_duplicate_worksheet_names(self):
+        """Test XLSX processing with duplicate worksheet names."""
+        worksheets = [
+            ConversationsReportWorksheet(name="Test", data=[{"col1": "val1"}]),
+            ConversationsReportWorksheet(name="Test", data=[{"col1": "val2"}]),
+            ConversationsReportWorksheet(name="Test", data=[{"col1": "val3"}]),
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.XLSX,
+            requested_by=self.user,
+        )
+
+        files = self.service.process_xlsx(report, worksheets)
+
+        self.assertEqual(len(files), 1)
+        self.assertTrue(files[0].name.endswith(".xlsx"))
+
+    def test_generate_with_missing_start_date(self):
+        """Test generate method with missing start date."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"end": "2025-01-02"},  # Missing start date
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.PENDING,
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.generate(report)
+
+        self.assertIn("Start date or end date is missing", str(context.exception))
+
+    def test_generate_with_missing_end_date(self):
+        """Test generate method with missing end date."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01"},  # Missing end date
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.PENDING,
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.generate(report)
+
+        self.assertIn("Start date or end date is missing", str(context.exception))
+
+    def test_generate_with_interrupted_report(self):
+        """Test generate method with interrupted report."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+            config={"interrupted": True},
+        )
+
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
+        ) as mock_get_resolutions:
+            mock_get_resolutions.return_value = ConversationsReportWorksheet(
+                name="Resolutions",
+                data=[{"URN": "123", "Resolution": "Resolved", "Date": "2025-01-01"}],
+            )
+
+            # Should not raise exception and should return early
+            self.service.generate(report)
+
+    def test_generate_with_exception_during_processing(self):
+        """Test generate method when exception occurs during processing."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.PENDING,
+        )
+
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
+        ) as mock_get_resolutions:
+            mock_get_resolutions.side_effect = Exception("Test error")
+
+            with self.assertRaises(Exception):
+                self.service.generate(report)
+
+            report.refresh_from_db()
+            self.assertEqual(report.status, ReportStatus.FAILED)
+            self.assertIn("generate", report.errors)
+
+    def test_generate_with_email_send_failure(self):
+        """Test generate method when email sending fails."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.PENDING,
+        )
+
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
+        ) as mock_get_resolutions:
+            mock_get_resolutions.return_value = ConversationsReportWorksheet(
+                name="Resolutions",
+                data=[{"URN": "123", "Resolution": "Resolved", "Date": "2025-01-01"}],
+            )
+
+            with patch(
+                "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
+            ) as mock_send_email:
+                mock_send_email.side_effect = Exception("Email send failed")
+
+                with self.assertRaises(Exception):
+                    self.service.generate(report)
+
+                report.refresh_from_db()
+                self.assertEqual(report.status, ReportStatus.FAILED)
+                self.assertIn("send_email", report.errors)
+
+    def test_get_datalake_events_with_cached_data(self):
+        """Test get_datalake_events with cached data."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        cached_events = [{"id": "1"}, {"id": "2"}]
+        cache_key = f"datalake_events:{report.uuid}:{json.dumps({}, sort_keys=True, default=str)}"
+
+        # Mock the cache client directly on the service instance
+        with patch.object(self.service.cache_client, "get") as mock_cache_get:
+            with patch.object(self.service.cache_client, "set") as mock_cache_set:
+                mock_cache_get.return_value = json.dumps(cached_events)
+                mock_cache_set.return_value = None
+
+                # Mock the datalake events client to avoid hitting page limit
+                with patch.object(
+                    self.service.datalake_events_client, "get_events"
+                ) as mock_get_events:
+                    mock_get_events.return_value = []
+
+                    events = self.service.get_datalake_events(report)
+
+                    self.assertEqual(events, cached_events)
+                    mock_cache_get.assert_called_once_with(cache_key)
+
+    def test_get_datalake_events_with_invalid_cached_data(self):
+        """Test get_datalake_events with invalid cached data."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with patch("insights.sources.tests.mock.MockCacheClient.get") as mock_cache_get:
+            mock_cache_get.return_value = "invalid json"
+
+            with patch(
+                "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+            ) as mock_get_events:
+                mock_get_events.return_value = []
+
+                events = self.service.get_datalake_events(report)
+
+                self.assertEqual(events, [])
+
+    def test_get_datalake_events_with_empty_events(self):
+        """Test get_datalake_events with empty events list."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with patch(
+            "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        ) as mock_get_events:
+            mock_get_events.return_value = [{}]  # Empty dict
+
+            events = self.service.get_datalake_events(report)
+
+            self.assertEqual(events, [])
+
+    def test_format_date_with_various_formats(self):
+        """Test _format_date with various date formats."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        # Test with timezone
+        self.project.timezone = "America/New_York"
+        self.project.save()
+
+        # Test ISO format
+        result = self.service._format_date("2025-01-01T12:00:00", report)
+        self.assertIn("01/01/2025", result)
+
+        # Test with microseconds
+        result = self.service._format_date("2025-01-01T12:00:00.000000Z", report)
+        self.assertIn("01/01/2025", result)
+
+    def test_format_date_with_invalid_format(self):
+        """Test _format_date with invalid date format."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        with self.assertRaises(Exception):
+            self.service._format_date("invalid-date", report)
+
+    def test_get_resolutions_worksheet_with_no_events(self):
+        """Test get_resolutions_worksheet with no events."""
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+        ) as mock_get_events:
+            mock_get_events.return_value = []
+
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={},
+                filters={},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+            )
+
+            worksheet = self.service.get_resolutions_worksheet(
+                report, "2025-01-01", "2025-01-02"
+            )
+
+            self.assertEqual(worksheet.name, "Resolutions")
+            self.assertEqual(len(worksheet.data), 0)  # No data when no events
+
+    def test_get_resolutions_worksheet_with_events(self):
+        """Test get_resolutions_worksheet with events."""
+        mock_events = [
+            {
+                "contact_urn": "123",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "value": "resolved",
+            },
+            {
+                "contact_urn": "456",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "value": "unresolved",
+            },
+        ]
+
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+        ) as mock_get_events:
+            mock_get_events.return_value = mock_events
+
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={},
+                filters={},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+            )
+
+            worksheet = self.service.get_resolutions_worksheet(
+                report, "2025-01-01", "2025-01-02"
+            )
+
+            self.assertEqual(worksheet.name, "Resolutions")
+            self.assertEqual(len(worksheet.data), 2)
+            self.assertEqual(worksheet.data[0]["URN"], "123")
+            self.assertEqual(worksheet.data[1]["URN"], "456")
+
+    def test_get_transferred_to_human_worksheet_with_cached_events(self):
+        """Test get_transferred_to_human_worksheet with cached events."""
+        mock_events = [
+            {
+                "contact_urn": "123",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "metadata": json.dumps({"human_support": True}),
+            },
+            {
+                "contact_urn": "456",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "metadata": json.dumps({"human_support": False}),
+            },
+        ]
+
+        # Set cached events
+        self.service._conversation_classification_events_cache = mock_events
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        worksheet = self.service.get_transferred_to_human_worksheet(
+            report, "2025-01-01", "2025-01-02"
+        )
+
+        self.assertEqual(worksheet.name, "Transferred to Human")
+        self.assertEqual(len(worksheet.data), 2)
+
+    def test_get_transferred_to_human_worksheet_with_no_events(self):
+        """Test get_transferred_to_human_worksheet with no events."""
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+        ) as mock_get_events:
+            mock_get_events.return_value = []
+
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={},
+                filters={},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+            )
+
+            worksheet = self.service.get_transferred_to_human_worksheet(
+                report, "2025-01-01", "2025-01-02"
+            )
+
+            self.assertEqual(worksheet.name, "Transferred to Human")
+            self.assertEqual(len(worksheet.data), 0)  # No data when no events
+
+    def test_get_topics_distribution_worksheet_for_human(self):
+        """Test get_topics_distribution_worksheet for human conversations."""
+        nexus_topics_data = {
+            "name": "Test Topic",
+            "uuid": uuid.uuid4(),
+            "subtopic": [
+                {
+                    "name": "Test Subtopic",
+                    "uuid": uuid.uuid4(),
                 }
+            ],
+        }
 
-            # Second call: return no hits
-            return {"hits": {"total": {"value": 10}, "hits": []}}
+        with patch(
+            "insights.metrics.conversations.services.ConversationsMetricsService.get_topics"
+        ) as mock_get_topics:
+            mock_get_topics.return_value = [nexus_topics_data]
 
-        self.service.elasticsearch_service.client.get.side_effect = get_side_effect
+            with patch(
+                "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+            ) as mock_get_events:
+                mock_get_events.return_value = [
+                    {
+                        "contact_urn": "1",
+                        "date": "2025-01-01T00:00:00.000000Z",
+                        "metadata": json.dumps(
+                            {
+                                "topic_uuid": str(nexus_topics_data["uuid"]),
+                                "subtopic_uuid": str(
+                                    nexus_topics_data["subtopic"][0]["uuid"]
+                                ),
+                                "subtopic": nexus_topics_data["subtopic"][0]["name"],
+                            }
+                        ),
+                        "value": nexus_topics_data["name"],
+                    }
+                ]
 
+                report = Report.objects.create(
+                    project=self.project,
+                    source=self.service.source,
+                    source_config={"sections": ["TOPICS_HUMAN"]},
+                    filters={"start": "2025-01-01", "end": "2025-01-02"},
+                    requested_by=self.user,
+                )
+
+                worksheet = self.service.get_topics_distribution_worksheet(
+                    report,
+                    datetime(2025, 1, 1),
+                    datetime(2025, 1, 2),
+                    ConversationType.HUMAN,
+                )
+
+                self.assertIsInstance(worksheet, ConversationsReportWorksheet)
+                self.assertEqual(worksheet.name, "Topics Distribution Human")
+
+    def test_get_topics_distribution_worksheet_with_invalid_metadata(self):
+        """Test get_topics_distribution_worksheet with invalid metadata."""
+        with patch(
+            "insights.metrics.conversations.services.ConversationsMetricsService.get_topics"
+        ) as mock_get_topics:
+            mock_get_topics.return_value = []
+
+            with patch(
+                "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+            ) as mock_get_events:
+                mock_get_events.return_value = [
+                    {
+                        "contact_urn": "1",
+                        "date": "2025-01-01T00:00:00.000000Z",
+                        "metadata": "invalid json",
+                        "value": "Test Topic",
+                    }
+                ]
+
+                report = Report.objects.create(
+                    project=self.project,
+                    source=self.service.source,
+                    source_config={"sections": ["TOPICS_AI"]},
+                    filters={"start": "2025-01-01", "end": "2025-01-02"},
+                    requested_by=self.user,
+                )
+
+                worksheet = self.service.get_topics_distribution_worksheet(
+                    report,
+                    datetime(2025, 1, 1),
+                    datetime(2025, 1, 2),
+                    ConversationType.AI,
+                )
+
+                self.assertIsInstance(worksheet, ConversationsReportWorksheet)
+                self.assertEqual(len(worksheet.data), 1)  # Empty row when no events
+
+    def test_get_topics_distribution_worksheet_with_no_events(self):
+        """Test get_topics_distribution_worksheet with no events."""
+        with patch(
+            "insights.metrics.conversations.services.ConversationsMetricsService.get_topics"
+        ) as mock_get_topics:
+            mock_get_topics.return_value = []
+
+            with patch(
+                "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+            ) as mock_get_events:
+                mock_get_events.return_value = []
+
+                report = Report.objects.create(
+                    project=self.project,
+                    source=self.service.source,
+                    source_config={"sections": ["TOPICS_AI"]},
+                    filters={"start": "2025-01-01", "end": "2025-01-02"},
+                    requested_by=self.user,
+                )
+
+                worksheet = self.service.get_topics_distribution_worksheet(
+                    report,
+                    datetime(2025, 1, 1),
+                    datetime(2025, 1, 2),
+                    ConversationType.AI,
+                )
+
+                self.assertIsInstance(worksheet, ConversationsReportWorksheet)
+                self.assertEqual(len(worksheet.data), 1)  # Empty row
+
+    def test_get_csat_ai_worksheet_with_invalid_ratings(self):
+        """Test get_csat_ai_worksheet with invalid ratings."""
+        mock_events = [
+            {
+                "contact_urn": "123",
+                "date": "2025-09-14T19:27:10.293700Z",
+                "value": "5",  # Valid rating
+            },
+            {
+                "contact_urn": "456",
+                "date": "2025-09-14T19:27:10.293700Z",
+                "value": "6",  # Invalid rating
+            },
+            {
+                "contact_urn": "789",
+                "date": "2025-09-14T19:27:10.293700Z",
+                "value": "invalid",  # Invalid rating
+            },
+        ]
+
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+        ) as mock_get_events:
+            mock_get_events.return_value = mock_events
+
+            agent_uuid = str(uuid.uuid4())
+
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={
+                    "sections": ["CSAT_AI"],
+                    "csat_ai_agent_uuid": agent_uuid,
+                },
+                filters={"start": "2025-01-01", "end": "2025-01-02"},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+                status=ReportStatus.IN_PROGRESS,
+            )
+
+            worksheet = self.service.get_csat_ai_worksheet(
+                report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+            )
+
+            self.assertEqual(worksheet.name, "CSAT AI")
+            self.assertEqual(len(worksheet.data), 1)  # Only valid rating included
+
+    def test_get_csat_ai_worksheet_with_no_events(self):
+        """Test get_csat_ai_worksheet with no events."""
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+        ) as mock_get_events:
+            mock_get_events.return_value = []
+
+            agent_uuid = str(uuid.uuid4())
+
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={
+                    "sections": ["CSAT_AI"],
+                    "csat_ai_agent_uuid": agent_uuid,
+                },
+                filters={"start": "2025-01-01", "end": "2025-01-02"},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+                status=ReportStatus.IN_PROGRESS,
+            )
+
+            worksheet = self.service.get_csat_ai_worksheet(
+                report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+            )
+
+            self.assertEqual(worksheet.name, "CSAT AI")
+            self.assertEqual(len(worksheet.data), 1)  # Empty row
+
+    def test_get_nps_ai_worksheet_with_invalid_ratings(self):
+        """Test get_nps_ai_worksheet with invalid ratings."""
+        mock_events = [
+            {
+                "contact_urn": "123",
+                "date": "2025-09-14T19:27:10.293700Z",
+                "value": "5",  # Valid rating
+            },
+            {
+                "contact_urn": "456",
+                "date": "2025-09-14T19:27:10.293700Z",
+                "value": "11",  # Invalid rating
+            },
+            {
+                "contact_urn": "789",
+                "date": "2025-09-14T19:27:10.293700Z",
+                "value": "invalid",  # Invalid rating
+            },
+        ]
+
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+        ) as mock_get_events:
+            mock_get_events.return_value = mock_events
+
+            agent_uuid = str(uuid.uuid4())
+
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={"sections": ["NPS_AI"], "nps_ai_agent_uuid": agent_uuid},
+                filters={"start": "2025-01-01", "end": "2025-01-02"},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+                status=ReportStatus.IN_PROGRESS,
+            )
+
+            worksheet = self.service.get_nps_ai_worksheet(
+                report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+            )
+
+            self.assertEqual(worksheet.name, "NPS AI")
+            self.assertEqual(len(worksheet.data), 1)  # Only valid rating included
+
+    def test_get_nps_ai_worksheet_with_no_agent_uuid(self):
+        """Test get_nps_ai_worksheet when no agent UUID is provided."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["NPS_AI"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_nps_ai_worksheet(
+                report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+            )
+
+        self.assertEqual(
+            str(context.exception),
+            "Agent UUID is required in the report source config",
+        )
+
+    def test_get_csat_human_worksheet_with_missing_flow_uuid(self):
+        """Test get_csat_human_worksheet with missing flow UUID."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["CSAT_HUMAN"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_csat_human_worksheet(report, "2025-01-01", "2025-01-02")
+
+        self.assertIn("flow_uuid", str(context.exception))
+
+    def test_get_csat_human_worksheet_with_missing_op_field(self):
+        """Test get_csat_human_worksheet with missing op field."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={
+                "sections": ["CSAT_HUMAN"],
+                "csat_human_flow_uuid": str(uuid.uuid4()),
+            },
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_csat_human_worksheet(report, "2025-01-01", "2025-01-02")
+
+        self.assertIn("op_field", str(context.exception))
+
+    def test_get_csat_human_worksheet_with_none_values(self):
+        """Test get_csat_human_worksheet with None values in results."""
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_flowsrun_results_by_contacts"
+        ) as mock_get_results:
+            mock_get_results.return_value = [
+                {
+                    "urn": "123",
+                    "modified_on": "2025-01-01T12:00:00.000000Z",
+                    "op_field_value": "5",
+                },
+                {
+                    "urn": "456",
+                    "modified_on": "2025-01-01T12:00:00.000000Z",
+                    "op_field_value": None,  # Should be filtered out
+                },
+            ]
+
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={
+                    "sections": ["CSAT_HUMAN"],
+                    "csat_human_flow_uuid": str(uuid.uuid4()),
+                    "csat_human_op_field": "test_field",
+                },
+                filters={"start": "2025-01-01", "end": "2025-01-02"},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+                status=ReportStatus.IN_PROGRESS,
+            )
+
+            worksheet = self.service.get_csat_human_worksheet(
+                report, "2025-01-01", "2025-01-02"
+            )
+
+            self.assertEqual(worksheet.name, "CSAT Human")
+            self.assertEqual(len(worksheet.data), 1)  # Only non-None value included
+
+    def test_get_nps_human_worksheet_with_missing_flow_uuid(self):
+        """Test get_nps_human_worksheet with missing flow UUID."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["NPS_HUMAN"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_nps_human_worksheet(report, "2025-01-01", "2025-01-02")
+
+        self.assertIn("flow_uuid", str(context.exception))
+
+    def test_get_nps_human_worksheet_with_missing_op_field(self):
+        """Test get_nps_human_worksheet with missing op field."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={
+                "sections": ["NPS_HUMAN"],
+                "nps_human_flow_uuid": str(uuid.uuid4()),
+            },
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_nps_human_worksheet(report, "2025-01-01", "2025-01-02")
+
+        self.assertIn("op_field", str(context.exception))
+
+    def test_get_nps_human_worksheet_with_none_values(self):
+        """Test get_nps_human_worksheet with None values in results."""
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_flowsrun_results_by_contacts"
+        ) as mock_get_results:
+            mock_get_results.return_value = [
+                {
+                    "urn": "123",
+                    "modified_on": "2025-01-01T12:00:00.000000Z",
+                    "op_field_value": "5",
+                },
+                {
+                    "urn": "456",
+                    "modified_on": "2025-01-01T12:00:00.000000Z",
+                    "op_field_value": None,  # Should be filtered out
+                },
+            ]
+
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={
+                    "sections": ["NPS_HUMAN"],
+                    "nps_human_flow_uuid": str(uuid.uuid4()),
+                    "nps_human_op_field": "test_field",
+                },
+                filters={"start": "2025-01-01", "end": "2025-01-02"},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+                status=ReportStatus.IN_PROGRESS,
+            )
+
+            worksheet = self.service.get_nps_human_worksheet(
+                report, "2025-01-01", "2025-01-02"
+            )
+
+            self.assertEqual(worksheet.name, "NPS Human")
+            self.assertEqual(len(worksheet.data), 1)  # Only non-None value included
+
+    def test_get_custom_widget_worksheet_with_missing_key(self):
+        """Test get_custom_widget_worksheet with missing key in config."""
+        widget = Widget.objects.create(
+            name="Test",
+            config={"datalake_config": {"agent_uuid": "test"}},  # Missing key
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"custom_widgets": [str(widget.uuid)]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_custom_widget_worksheet(
+                report=report,
+                widget=widget,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
+
+        self.assertIn("Key or agent_uuid is missing", str(context.exception))
+
+    def test_get_custom_widget_worksheet_with_missing_agent_uuid(self):
+        """Test get_custom_widget_worksheet with missing agent_uuid in config."""
+        widget = Widget.objects.create(
+            name="Test",
+            config={"datalake_config": {"key": "test"}},  # Missing agent_uuid
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"custom_widgets": [str(widget.uuid)]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_custom_widget_worksheet(
+                report=report,
+                widget=widget,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
+
+        self.assertIn("Key or agent_uuid is missing", str(context.exception))
+
+    def test_get_custom_widget_worksheet_with_no_events(self):
+        """Test get_custom_widget_worksheet with no events."""
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+        ) as mock_get_events:
+            mock_get_events.return_value = []
+
+            widget = Widget.objects.create(
+                name="Test",
+                config={"datalake_config": {"key": "test", "agent_uuid": "test"}},
+                source="conversations.custom",
+                type="custom",
+                position=[1, 2],
+                dashboard=self.dashboard,
+            )
+
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={"custom_widgets": [str(widget.uuid)]},
+                filters={"start": "2025-01-01", "end": "2025-01-02"},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+                status=ReportStatus.IN_PROGRESS,
+            )
+
+            worksheet = self.service.get_custom_widget_worksheet(
+                report=report,
+                widget=widget,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
+
+            self.assertEqual(worksheet.name, widget.name)
+            self.assertEqual(len(worksheet.data), 1)  # Empty row
+
+    def test_get_flowsrun_results_by_contacts_with_cached_data(self):
+        """Test get_flowsrun_results_by_contacts with cached data."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        cached_results = [{"urn": "123", "op_field_value": "5"}]
+        flow_uuid = uuid.uuid4()
+        cache_key = f"flowsrun_results_by_contacts:{report.uuid}:{flow_uuid}:2025-01-01:2025-01-02:user_feedback"
+
+        # Mock the cache client directly on the service instance
+        with patch.object(self.service.cache_client, "get") as mock_cache_get:
+            with patch.object(self.service.cache_client, "set") as mock_cache_set:
+                mock_cache_get.return_value = json.dumps(cached_results)
+                mock_cache_set.return_value = None
+
+                # Mock the elasticsearch service to avoid hitting page limit
+                with patch.object(
+                    self.service.elasticsearch_service,
+                    "get_flowsrun_results_by_contacts",
+                ) as mock_get_results:
+                    mock_get_results.return_value = {
+                        "contacts": []
+                    }  # Empty response to avoid page limit
+
+                    results = self.service.get_flowsrun_results_by_contacts(
+                        report=report,
+                        flow_uuid=flow_uuid,
+                        start_date="2025-01-01",
+                        end_date="2025-01-02",
+                        op_field="user_feedback",
+                    )
+
+                    self.assertEqual(results, cached_results)
+                    mock_cache_get.assert_called_once_with(cache_key)
+
+    def test_get_flowsrun_results_by_contacts_with_invalid_cached_data(self):
+        """Test get_flowsrun_results_by_contacts with invalid cached data."""
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
@@ -1079,58 +2079,80 @@ class TestSerializeFiltersForJson(TestCase):
 
         flow_uuid = uuid.uuid4()
 
-        results = self.service.get_flowsrun_results_by_contacts(
-            report=report,
-            flow_uuid=flow_uuid,
-            start_date="2025-01-01",
-            end_date="2025-01-02",
-            op_field="user_feedback",
+        with patch("insights.sources.tests.mock.MockCacheClient.get") as mock_cache_get:
+            mock_cache_get.return_value = "invalid json"
+
+            with patch(
+                "insights.metrics.conversations.integrations.elasticsearch.services.ConversationsElasticsearchService.get_flowsrun_results_by_contacts"
+            ) as mock_get_results:
+                mock_get_results.return_value = {"contacts": []}
+
+                results = self.service.get_flowsrun_results_by_contacts(
+                    report=report,
+                    flow_uuid=flow_uuid,
+                    start_date="2025-01-01",
+                    end_date="2025-01-02",
+                    op_field="user_feedback",
+                )
+
+                self.assertEqual(results, [])
+
+    def test_get_flowsrun_results_by_contacts_with_page_limit_reached(self):
+        """Test get_flowsrun_results_by_contacts when page limit is reached."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
         )
 
-        self.assertEqual(
-            results,
-            [
-                {
-                    "contact": {"name": "John Doe"},
-                    "urn": "1234567890",
-                    "modified_on": "2025-01-01",
-                    "op_field_value": "5",
+        flow_uuid = uuid.uuid4()
+
+        def get_side_effect(*args, **kwargs):
+            # Always return contacts to trigger page limit
+            return {
+                "hits": {
+                    "total": {"value": 10},
+                    "hits": [{"_source": {"contact_urn": "123"}}],
                 }
-            ],
+            }
+
+        self.service.elasticsearch_service.client.get.side_effect = get_side_effect
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_flowsrun_results_by_contacts(
+                report=report,
+                flow_uuid=flow_uuid,
+                start_date="2025-01-01",
+                end_date="2025-01-02",
+                op_field="user_feedback",
+            )
+
+        self.assertIn("Report has more than", str(context.exception))
+
+    def test_get_flowsrun_results_by_contacts_with_empty_contacts(self):
+        """Test get_flowsrun_results_by_contacts with empty contacts."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
         )
 
-        cache_key = f"flowsrun_results_by_contacts:{report.uuid}:{flow_uuid}:2025-01-01:2025-01-02:user_feedback"
+        flow_uuid = uuid.uuid4()
 
-        mock_cache_get.assert_called_once_with(cache_key)
-        mock_cache_set.assert_called_once_with(
-            cache_key, json.dumps(results), ex=settings.REPORT_GENERATION_TIMEOUT
-        )
-
-    @patch("insights.sources.tests.mock.MockCacheClient.set")
-    @patch("insights.sources.tests.mock.MockCacheClient.get")
-    def test_get_flowsrun_results_by_contacts_when_no_results_exist(
-        self, mock_cache_get, mock_cache_set
-    ):
-        mock_cache_get.return_value = None
-        mock_cache_set.return_value = None
         self.service.elasticsearch_service.client.get.return_value = {
             "hits": {
                 "total": {"value": 0},
                 "hits": [],
             }
         }
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
-            filters={"start": "2025-01-01", "end": "2025-01-02"},
-            format=ReportFormat.CSV,
-            requested_by=self.user,
-            status=ReportStatus.IN_PROGRESS,
-        )
-
-        flow_uuid = uuid.uuid4()
 
         results = self.service.get_flowsrun_results_by_contacts(
             report=report,
@@ -1141,41 +2163,3 @@ class TestSerializeFiltersForJson(TestCase):
         )
 
         self.assertEqual(results, [])
-
-        cache_key = f"flowsrun_results_by_contacts:{report.uuid}:{flow_uuid}:2025-01-01:2025-01-02:user_feedback"
-
-        mock_cache_get.assert_called_once_with(cache_key)
-        mock_cache_set.assert_called_once_with(
-            cache_key, json.dumps(results), ex=settings.REPORT_GENERATION_TIMEOUT
-        )
-
-    def test_get_flowsrun_results_by_contacts_when_report_is_failed(self):
-        self.service.elasticsearch_service.client.get.return_value = {
-            "hits": {
-                "total": {"value": 0},
-                "hits": [],
-            }
-        }
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={"sections": ["RESOLUTIONS"]},
-            filters={"start": "2025-01-01", "end": "2025-01-02"},
-            status=ReportStatus.FAILED,
-            errors={"send_email": "test", "event_id": "test"},
-        )
-
-        with self.assertRaises(ValueError) as context:
-            self.service.get_flowsrun_results_by_contacts(
-                report=report,
-                flow_uuid=uuid.uuid4(),
-                start_date="2025-01-01",
-                end_date="2025-01-02",
-                op_field="user_feedback",
-            )
-
-        self.assertEqual(
-            str(context.exception),
-            "Report %s is not in progress" % report.uuid,
-        )

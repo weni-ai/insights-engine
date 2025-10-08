@@ -702,6 +702,7 @@ class ConversationsReportService(BaseConversationsReportService):
             try:
                 cached_events = json.loads(cached_events)
                 self._add_cache_key(report.uuid, cache_key)
+                return cached_events
             except Exception as e:
                 logger.error(
                     "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached events for report %s. Error: %s",

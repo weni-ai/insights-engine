@@ -1,16 +1,42 @@
 from datetime import datetime, timedelta
 from unittest.mock import patch
 import uuid
+import json
 from uuid import UUID
+from unittest.mock import Mock
 
 from django.test import TestCase
 from django.core.cache import cache
 from django.utils import timezone
 
-from insights.sources.integrations.tests.mock_clients import MockNexusClient
-from insights.sources.flowruns.tests.mock_query_executor import (
-    MockFlowRunsQueryExecutor,
+
+from insights.dashboards.models import Dashboard
+from insights.metrics.conversations.dataclass import (
+    ConversationsTotalsMetrics,
+    ConversationsTotalsMetric,
+    NPSMetrics,
+    SalesFunnelMetrics,
+    TopicsDistributionMetrics,
 )
+from insights.metrics.conversations.enums import (
+    ConversationType,
+    CsatMetricsType,
+    NpsMetricsType,
+)
+from insights.metrics.conversations.integrations.datalake.dataclass import (
+    SalesFunnelData,
+)
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseConversationsMetricsService,
+)
+from insights.metrics.conversations.exceptions import ConversationsMetricsError
+from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.projects.models import Project
+from insights.sources.flowruns.usecases.query_execute import (
+    QueryExecutor as FlowRunsQueryExecutor,
+)
+from insights.sources.integrations.clients import NexusClient
+from insights.sources.cache import CacheClient
 from insights.widgets.models import Widget
 
 from insights.dashboards.models import Dashboard
@@ -30,7 +56,6 @@ from insights.metrics.conversations.enums import (
     ConversationType,
     ConversationsSubjectsType,
     ConversationsTimeseriesUnit,
-    NPSType,
     CsatMetricsType,
     NpsMetricsType,
 )
@@ -40,10 +65,20 @@ from insights.metrics.conversations.tests.mock import (
     CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
 )
 from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
-from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockDatalakeConversationsMetricsService,
-)
 from insights.projects.models import Project
+
+
+class MockResponse:
+    def __init__(self, status_code: int, content: str):
+        self.status_code = status_code
+        self.content = content
+
+    @property
+    def text(self):
+        return self.content
+
+    def json(self):
+        return json.loads(self.content)
 
 
 class TestConversationsMetricsService(TestCase):
@@ -57,10 +92,126 @@ class TestConversationsMetricsService(TestCase):
             name="Test Dashboard",
             project=self.project,
         )
+
+        # Create mocks with proper specs for type safety
+        self.mock_datalake_service = Mock(spec=BaseConversationsMetricsService)
+        self.mock_nexus_client = Mock(spec=NexusClient)
+        self.mock_cache_client = Mock(spec=CacheClient)
+        self.mock_flowruns_query_executor = Mock(spec=FlowRunsQueryExecutor)
+
+        # Configure default mock return values
+        self.mock_datalake_service.get_csat_metrics.return_value = {
+            "1": 10,
+            "2": 20,
+            "3": 30,
+            "4": 40,
+            "5": 50,
+        }
+        self.mock_datalake_service.get_nps_metrics.return_value = {
+            str(i): 10 for i in range(0, 11)
+        }
+        self.mock_datalake_service.get_conversations_totals.return_value = (
+            ConversationsTotalsMetrics(
+                total_conversations=ConversationsTotalsMetric(
+                    value=100, percentage=100
+                ),
+                resolved=ConversationsTotalsMetric(value=60, percentage=60),
+                unresolved=ConversationsTotalsMetric(value=40, percentage=40),
+                transferred_to_human=ConversationsTotalsMetric(value=0, percentage=0),
+            )
+        )
+        self.mock_datalake_service.get_sales_funnel_data.return_value = SalesFunnelData(
+            leads_count=100,
+            total_orders_count=100,
+            total_orders_value=100,
+            currency_code="BRL",
+        )
+        self.mock_datalake_service.get_generic_metrics_by_key.return_value = {
+            str(i): 10 for i in range(0, 11)
+        }
+        self.mock_datalake_service.get_topics_distribution.return_value = {
+            "OTHER": {
+                "name": "OTHER",
+                "uuid": None,
+                "count": 100,
+                "subtopics": {},
+            },
+            str(uuid.uuid4()): {
+                "name": "Cancelamento",
+                "uuid": "2026cedc-67f6-4a04-977a-55cc581defa9",
+                "count": 100,
+                "subtopics": {
+                    str(uuid.uuid4()): {
+                        "name": "Subtopic 1",
+                        "uuid": str(uuid.uuid4()),
+                        "count": 70,
+                    },
+                    "OTHER": {
+                        "name": "OTHER",
+                        "uuid": None,
+                        "count": 30,
+                    },
+                },
+            },
+        }
+
+        # Configure nexus client mocks
+        topics_data = [
+            {
+                "name": "Cancelamento",
+                "uuid": "2026cedc-67f6-4a04-977a-55cc581defa9",
+                "created_at": "2025-07-15T20:56:47.582521Z",
+                "description": "Quando cliente pede para cancelar um pedido",
+                "subtopic": [
+                    {
+                        "name": "Subtopic 1",
+                        "uuid": "023d2374-04ef-45b5-8b5f-5c031fafd59e",
+                        "created_at": "2025-07-15T20:56:47.582521Z",
+                        "description": "Quando cliente pede para cancelar um pedido",
+                    },
+                ],
+            }
+        ]
+
+        self.mock_nexus_client.get_topics.return_value = MockResponse(
+            200, json.dumps(topics_data)
+        )
+        self.mock_nexus_client.get_subtopics.return_value = MockResponse(
+            200, json.dumps(topics_data)
+        )
+        self.mock_nexus_client.create_topic.return_value = MockResponse(
+            201, json.dumps({})
+        )
+        self.mock_nexus_client.create_subtopic.return_value = MockResponse(
+            201, json.dumps({})
+        )
+        self.mock_nexus_client.delete_topic.return_value = MockResponse(
+            204, json.dumps({})
+        )
+        self.mock_nexus_client.delete_subtopic.return_value = MockResponse(
+            204, json.dumps({})
+        )
+        self.mock_nexus_client.get_project_multi_agents_status.return_value = (
+            MockResponse(200, json.dumps({"multi_agents": False}))
+        )
+
+        # Configure flowruns query executor mocks
+        self.mock_flowruns_query_executor.execute.return_value = {
+            "results": [
+                {"label": "label1", "value": 10, "full_value": 10},
+                {"label": "label2", "value": 20, "full_value": 20},
+            ],
+        }
+
+        self.mock_cache_client.get.return_value = None
+        self.mock_cache_client.set.return_value = True
+        self.mock_cache_client.delete.return_value = True
+
         self.service = ConversationsMetricsService(
-            datalake_service=MockDatalakeConversationsMetricsService(),
-            nexus_client=MockNexusClient(),
-            flowruns_query_executor=MockFlowRunsQueryExecutor,
+            datalake_service=self.mock_datalake_service,
+            nexus_client=self.mock_nexus_client,
+            cache_client=self.mock_cache_client,
+            flowruns_query_executor=self.mock_flowruns_query_executor,
         )
 
     def test_get_timeseries_for_day_unit(self):
@@ -544,3 +695,29 @@ class TestConversationsMetricsService(TestCase):
                 start_date=self.start_date,
                 end_date=self.end_date,
             )
+
+    def test_get_sales_funnel_data(self):
+        self.mock_datalake_service.get_sales_funnel_data.return_value = SalesFunnelData(
+            leads_count=100,
+            total_orders_count=100,
+            total_orders_value=10000,
+            currency_code="BRL",
+        )
+        metrics = self.service.get_sales_funnel_data(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(metrics, SalesFunnelMetrics)
+
+        self.mock_datalake_service.get_sales_funnel_data.assert_called_once_with(
+            self.project.uuid,
+            self.start_date,
+            self.end_date,
+        )
+
+        self.assertEqual(metrics.leads_count, 100)
+        self.assertEqual(metrics.total_orders_count, 100)
+        self.assertEqual(metrics.total_orders_value, 10000)
+        self.assertEqual(metrics.currency_code, "BRL")

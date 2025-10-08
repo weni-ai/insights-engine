@@ -11,13 +11,9 @@ from sentry_sdk import capture_exception, capture_message
 from insights.projects.parsers import parse_dict_to_json
 
 from insights.metrics.conversations.dataclass import (
-    NPS,
-    ConversationsTimeseriesMetrics,
     ConversationsTotalsMetrics,
-    QueueMetric,
-    RoomsByQueueMetric,
-    SubjectMetricData,
-    SubjectsMetrics,
+    NPSMetrics,
+    SalesFunnelMetrics,
     SubtopicMetrics,
     SubtopicTopicRelation,
     TopicMetrics,
@@ -27,20 +23,11 @@ from insights.metrics.conversations.dataclass import (
 from insights.metrics.conversations.enums import (
     ConversationType,
     ConversationsMetricsResource,
-    ConversationsSubjectsType,
-    ConversationsTimeseriesUnit,
-    NPSType,
     CsatMetricsType,
     NpsMetricsType,
 )
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
-from insights.metrics.conversations.integrations.chats.db.client import ChatsClient
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
-from insights.metrics.conversations.tests.mock import (
-    CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
-    CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
-    NPS_METRICS_MOCK_DATA,
-)
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
     DatalakeConversationsMetricsService,
@@ -57,7 +44,6 @@ logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
-    from datetime import date
     from insights.projects.models import Project
 
 
@@ -718,3 +704,23 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         }
 
         return results
+
+    def get_sales_funnel_data(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> SalesFunnelMetrics:
+        """
+        Get sales funnel data
+        """
+        data = self.datalake_service.get_sales_funnel_data(
+            project_uuid, start_date, end_date
+        )
+
+        return SalesFunnelMetrics(
+            leads_count=data.leads_count,
+            total_orders_count=data.total_orders_count,
+            total_orders_value=data.total_orders_value,
+            currency_code=data.currency_code,
+        )

@@ -18,6 +18,9 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.integrations.datalake.dataclass import (
+    SalesFunnelData,
+)
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
@@ -86,6 +89,14 @@ class BaseConversationsMetricsService(ABC):
     ) -> dict:
         """
         Get generic metrics grouped by value from Datalake.
+        """
+
+    @abstractmethod
+    def get_sales_funnel_data(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SalesFunnelData:
+        """
+        Get sales funnel data from Datalake.
         """
 
 
@@ -778,3 +789,101 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             self._save_results_to_cache(cache_key, values)
 
         return values
+
+    def get_sales_funnel_data(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SalesFunnelData:
+        """
+        Get sales funnel data from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="sales_funnel_data",
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            return SalesFunnelData(
+                leads_count=cached_results["leads_count"],
+                total_orders_count=cached_results["total_orders_count"],
+                total_orders_value=cached_results["total_orders_value"],
+                currency_code=cached_results["currency_code"],
+            )
+
+        # Leads events
+        leads_count = self.events_client.get_events_count(
+            event_name="conversion_lead",
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+        )[0].get("count", 0)
+
+        max_pages = settings.SALES_FUNNEL_EVENTS_MAX_PAGES
+        page_size = settings.SALES_FUNNEL_EVENTS_PAGE_SIZE
+        page = 1
+
+        currency_code = None
+
+        total_orders_count = 0
+        total_orders_value = 0
+
+        while page <= max_pages:
+            events = self.events_client.get_events(
+                event_name="conversion_purchase",
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                limit=page_size,
+                offset=(page - 1) * page_size,
+            )
+
+            length = len(events)
+
+            if length == 0:
+                break
+
+            total_orders_count += length
+
+            for event in events:
+                metadata = event.get("metadata")
+
+                if not isinstance(metadata, dict):
+                    try:
+                        metadata = json.loads(metadata)
+                    except Exception as e:
+                        logger.error(
+                            "Error on converting metadata to dict: %s" % metadata
+                        )
+                        raise e
+
+                if not currency_code:
+                    currency_code = metadata.get("currency")
+
+                order_value = int(metadata.get("value", 0) * 100)  # convert to cents
+                total_orders_value += order_value
+
+            if page >= max_pages:
+                raise ValueError("Max pages reached")
+
+            page += 1
+
+        if self.cache_results:
+            self._save_results_to_cache(
+                cache_key,
+                {
+                    "leads_count": leads_count,
+                    "total_orders_count": total_orders_count,
+                    "total_orders_value": total_orders_value,
+                    "currency_code": currency_code,
+                },
+            )
+
+        return SalesFunnelData(
+            leads_count=leads_count,
+            total_orders_count=total_orders_count,
+            total_orders_value=total_orders_value,
+            currency_code=currency_code,
+        )
