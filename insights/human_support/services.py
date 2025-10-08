@@ -306,44 +306,44 @@ class HumanSupportDashboardService:
                 prefix = "-" if ordering.startswith("-") else ""
                 field = ordering.lstrip("-")
                 
-            field_mapping = {
-                # Agent/Attendant
-                "Agent": "first_name",
-                "Attendant": "first_name",
-                "attendant": "first_name",
-                "agent": "first_name",
-                "Name": "first_name",
-                "Email": "email",
+                field_mapping = {
+                    # Agent/Attendant
+                    "Agent": "first_name",
+                    "Attendant": "first_name",
+                    "attendant": "first_name",
+                    "agent": "first_name",
+                    "Name": "first_name",
+                    "Email": "email",
+                    
+                    # Status
+                    "Status": "status",
+                    "status": "status",
+                    
+                    # Contadores de atendimentos
+                    "Finished": "closed",
+                    "finished": "closed",
+                    "Closed": "closed",
+                    "closed": "closed",
+                    
+                    "Ongoing": "opened",
+                    "ongoing": "opened",
+                    "Opened": "opened",
+                    "opened": "opened",
+                    "In Progress": "opened",
+                    
+                    # Métricas de tempo
+                    "average_first_response_time": "avg_first_response_time",
+                    "average_response_time": "avg_message_response_time",
+                    "average_duration": "avg_interaction_time",
+                    
+                    # Tempo em serviço
+                    "time_in_service": "in_service_time",
+                    "Time In Service": "in_service_time", 
+                    "in_service_time": "in_service_time",
+                }
                 
-                # Status
-                "Status": "status",
-                "status": "status",
-                
-                # Contadores de atendimentos
-                "Finished": "closed",
-                "finished": "closed",
-                "Closed": "closed",
-                "closed": "closed",
-                
-                "Ongoing": "opened",
-                "ongoing": "opened",
-                "Opened": "opened",
-                "opened": "opened",
-                "In Progress": "opened",
-                
-                # Métricas de tempo
-                "average_first_response_time": "avg_first_response_time",
-                "average_response_time": "avg_message_response_time",
-                "average_duration": "avg_interaction_time",
-                
-                # Tempo em serviço
-                "time_in_service": "in_service_time",
-                "Time In Service": "in_service_time", 
-                "in_service_time": "in_service_time",
-            }
-                
-            mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-            params["ordering"] = f"{prefix}{mapped_field}"
+                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
+                params["ordering"] = f"{prefix}{mapped_field}"
         
         return AgentsRESTClient(self.project).list(params)
 
