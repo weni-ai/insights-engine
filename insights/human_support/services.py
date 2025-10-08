@@ -358,40 +358,50 @@ class HumanSupportDashboardService:
         return AgentsRESTClient(self.project).list(params)
 
     def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
+        normalized = self._normalize_filters(filters)
 
-            normalized = self._normalize_filters(filters)
+        params: dict = {}
+        if filters:
+            if filters.get("user_request") is not None:
+                params["user_request"] = filters.get("user_request")
+            if filters.get("start_date") is not None:
+                params["start_date"] = filters.get("start_date")
+            if filters.get("end_date") is not None:
+                params["end_date"] = filters.get("end_date")
+            if filters.get("created_on__gte") is not None:
+                params["created_on__gte"] = filters.get("created_on__gte")
+            if filters.get("created_on__lte") is not None:
+                params["created_on__lte"] = filters.get("created_on__lte")
+            if filters.get("ordering") is not None:
+                ordering = filters.get("ordering")
+                prefix = "-" if ordering.startswith("-") else ""
+                field = ordering.lstrip("-")
+                
+                field_mapping = {
+                    # Agent
+                    "Agent": "uuid",
+                    "agent": "uuid",
+                    
+                    # Status
+                    "Status": "status",
+                    "status": "status",
+                    
+                    # Created on (com variações)
+                    "Created on": "created_on",
+                    "created on": "created_on",
+                    "Created On": "created_on",
+                    "created_on": "created_on",
+                }
+                
+                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
+                params["ordering"] = f"{prefix}{mapped_field}"
 
-            params: dict = {}
-            if filters:
-                if filters.get("user_request") is not None:
-                    params["user_request"] = filters.get("user_request")
-                if filters.get("start_date") is not None:
-                    params["start_date"] = filters.get("start_date")
-                if filters.get("end_date") is not None:
-                    params["end_date"] = filters.get("end_date")
-                # aliases also accepted by the client (mapped to start/end_date)
-                if filters.get("created_on__gte") is not None:
-                    params["created_on__gte"] = filters.get("created_on__gte")
-                if filters.get("created_on__lte") is not None:
-                    params["created_on__lte"] = filters.get("created_on__lte")
-                if filters.get("ordering") is not None:
-                    ordering = filters.get("ordering")
-                    prefix = "-" if ordering.startswith("-") else ""
-                    field = ordering.lstrip("-")
-                    field_mapping = {
-                        "Agent": "uuid",
-                        "Status": "status",
-                        "Created on": "created_on",
-                    }
-                    mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-                    params["ordering"] = f"{prefix}{mapped_field}"
+        sectors = normalized.get("sectors") or []
+        if isinstance(sectors, list) and sectors:
+            params["sector"] = sectors[0]
+        queues = normalized.get("queues") or []
+        if isinstance(queues, list) and queues:
+            params["queue"] = queues[0]
 
-            sectors = normalized.get("sectors") or []
-            if isinstance(sectors, list) and sectors:
-                params["sector"] = sectors[0]
-            queues = normalized.get("queues") or []
-            if isinstance(queues, list) and queues:
-                params["queue"] = queues[0]
-
-            client = CustomStatusRESTClient(self.project)
-            return client.list(params)
+        client = CustomStatusRESTClient(self.project)
+        return client.list(params)
