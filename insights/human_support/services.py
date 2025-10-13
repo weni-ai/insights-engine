@@ -186,12 +186,19 @@ class HumanSupportDashboardService:
                 field = ordering.lstrip("-")
                 field_mapping = {
                     "Agent": "uuid",
+                    "agent": "uuid",
                     "Duration": "duration",
+                    "duration": "duration",
                     "Awaiting time": "waiting_time",
+                    "awaiting_time": "waiting_time",
                     "First response time": "first_response_time",
+                    "first_response_time": "first_response_time",
                     "Sector": "queue__sector__name",
+                    "sector": "queue__sector__name",
                     "Queue": "queue__name",
+                    "queue": "queue__name",
                     "Contact": "contact__name",
+                    "contact": "contact__name",
                 }
                 mapped_field = field_mapping.get(field, field)
                 params["ordering"] = f"{prefix}{mapped_field}"
@@ -248,9 +255,13 @@ class HumanSupportDashboardService:
                 field = ordering.lstrip("-")
                 field_mapping = {
                     "Awaiting time": "queue_time",
+                    "awaiting_time": "queue_time",
                     "Sector": "queue__sector__name",
+                    "sector": "queue__sector__name",
                     "Queue": "queue__name",
+                    "queue": "queue__name",
                     "Contact": "contact__name",
+                    "contact": "contact__name",
                 }
                 mapped_field = field_mapping.get(field, field)
                 params["ordering"] = f"{prefix}{mapped_field}"
