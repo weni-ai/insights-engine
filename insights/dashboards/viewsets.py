@@ -8,6 +8,7 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.filters import DashboardFilter
@@ -171,6 +172,7 @@ class DashboardViewSet(
         dashboard = self.get_object()
         try:
             widget = Widget.objects.get(uuid=widget_uuid, dashboard=dashboard)
+<<<<<<< HEAD
 
             # [STAGING] Mock widget data
             if str(widget.uuid) in settings.STG_MOCK_CUSTOM_FLOWRUNS:
@@ -185,6 +187,8 @@ class DashboardViewSet(
                 }
                 return Response(mock_data, status.HTTP_200_OK)
 
+=======
+>>>>>>> e1bf0eb2102a0118a6f94879c5f91ce044b5598a
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)

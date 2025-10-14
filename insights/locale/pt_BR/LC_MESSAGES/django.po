@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-09 10:27-0300\n"
+"POT-Creation-Date: 2025-10-02 18:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -27,8 +27,160 @@ msgid "User does not exist"
 msgstr "Usuário não existe"
 
 #: insights/metrics/conversations/integrations/datalake/services.py:299
+#: insights/metrics/conversations/reports/services.py:1087
 msgid "Unclassified"
 msgstr "Não classificadas"
+
+#: insights/metrics/conversations/reports/serializers.py:30
+msgid "Project not found"
+msgstr "Projeto não encontrado"
+
+#: insights/metrics/conversations/reports/serializers.py:69
+msgid "Start date must be before end date"
+msgstr "A data de início deve ser antes da data de fim"
+
+#: insights/metrics/conversations/reports/serializers.py:78
+#: insights/metrics/conversations/reports/serializers.py:79
+msgid "Sections or custom widgets are required"
+msgstr "Seções ou widgets personalizados são obrigatórios"
+
+#: insights/metrics/conversations/reports/serializers.py:95
+#, python-brace-format
+msgid "Widget {widget_uuid} not found"
+msgstr "Widget {widget_uuid} não encontrado"
+
+#: insights/metrics/conversations/reports/serializers.py:113
+msgid "Conversations dashboard not found"
+msgstr "Dashboard de conversas não encontrado"
+
+#: insights/metrics/conversations/reports/serializers.py:127
+msgid "CSAT AI widget not found"
+msgstr "Widget CSAT AI não encontrado"
+
+#: insights/metrics/conversations/reports/serializers.py:135
+#: insights/metrics/conversations/reports/serializers.py:158
+msgid "Agent UUID not found in widget config"
+msgstr "UUID do agente não encontrado na configuração do widget"
+
+#: insights/metrics/conversations/reports/serializers.py:150
+msgid "NPS AI widget not found"
+msgstr "Widget NPS AI não encontrado"
+
+#: insights/metrics/conversations/reports/serializers.py:173
+msgid "CSAT human widget not found"
+msgstr "Widget CSAT Humano não encontrado"
+
+#: insights/metrics/conversations/reports/serializers.py:182
+#: insights/metrics/conversations/reports/serializers.py:213
+msgid "Flow UUID not found in widget config"
+msgstr "UUID do fluxo não encontrado na configuração do widget"
+
+#: insights/metrics/conversations/reports/serializers.py:188
+#: insights/metrics/conversations/reports/serializers.py:219
+msgid "Op field not found in widget config"
+msgstr "Op field não encontrado na configuração do widget"
+
+#: insights/metrics/conversations/reports/serializers.py:204
+msgid "NPS human widget not found"
+msgstr "Widget NPS Humano não encontrado"
+
+#: insights/metrics/conversations/reports/services.py:350
+#: insights/metrics/conversations/reports/services.py:384
+msgid "Conversations dashboard report"
+msgstr "Relatório de dashboard de conversas"
+
+#: insights/metrics/conversations/reports/services.py:386
+msgid ""
+"Your conversations dashboard report is ready and attached to this email."
+msgstr ""
+"O relatório de dashboard de conversas está pronto e anexado a este email."
+
+#: insights/metrics/conversations/reports/services.py:915
+msgid "Resolutions"
+msgstr "Resolução"
+
+#: insights/metrics/conversations/reports/services.py:917
+msgid "Resolution"
+msgstr "Resoluções"
+
+#: insights/metrics/conversations/reports/services.py:918
+#: insights/metrics/conversations/reports/services.py:991
+#: insights/metrics/conversations/reports/services.py:1084
+#: insights/metrics/conversations/reports/services.py:1176
+#: insights/metrics/conversations/reports/services.py:1234
+#: insights/metrics/conversations/reports/services.py:1305
+#: insights/metrics/conversations/reports/services.py:1374
+#: insights/metrics/conversations/reports/services.py:1436
+msgid "Date"
+msgstr "Data"
+
+#: insights/metrics/conversations/reports/services.py:920
+msgid "Optimized Resolutions"
+msgstr "Resoluções otimizadas"
+
+#: insights/metrics/conversations/reports/services.py:921
+msgid "Other conclusions"
+msgstr "Outras conclusões"
+
+#: insights/metrics/conversations/reports/services.py:986
+#: insights/metrics/conversations/reports/services.py:988
+msgid "Transferred to Human"
+msgstr "Transferido para Humano"
+
+#: insights/metrics/conversations/reports/services.py:989
+msgid "Yes"
+msgstr "Sim"
+
+#: insights/metrics/conversations/reports/services.py:990
+msgid "No"
+msgstr "Não"
+
+#: insights/metrics/conversations/reports/services.py:1080
+msgid "Topics Distribution AI"
+msgstr "Distribuição de Tópicos AI"
+
+#: insights/metrics/conversations/reports/services.py:1082
+msgid "Topics Distribution Human"
+msgstr "Distribuição de Tópicos Humano"
+
+#: insights/metrics/conversations/reports/services.py:1085
+msgid "Topic"
+msgstr "Tópico"
+
+#: insights/metrics/conversations/reports/services.py:1086
+msgid "Subtopic"
+msgstr "Subtópico"
+
+#: insights/metrics/conversations/reports/services.py:1175
+msgid "CSAT AI"
+msgstr "CSAT AI"
+
+#: insights/metrics/conversations/reports/services.py:1177
+#: insights/metrics/conversations/reports/services.py:1235
+#: insights/metrics/conversations/reports/services.py:1306
+#: insights/metrics/conversations/reports/services.py:1375
+msgid "Rating"
+msgstr "Avaliação"
+
+#: insights/metrics/conversations/reports/services.py:1233
+msgid "NPS AI"
+msgstr "NPS AI"
+
+#: insights/metrics/conversations/reports/services.py:1304
+msgid "CSAT Human"
+msgstr "CSAT Humano"
+
+#: insights/metrics/conversations/reports/services.py:1373
+msgid "NPS Human"
+msgstr "NPS Humano"
+
+#: insights/metrics/conversations/reports/services.py:1437
+msgid "Value"
+msgstr "Valor"
+
+#: insights/metrics/conversations/reports/views.py:80
+msgid "A report is already being generated for this project"
+msgstr "Um relatório já está sendo gerado para este projeto"
 
 #: insights/metrics/meta/choices.py:7
 msgid "Account Update"
@@ -390,7 +542,7 @@ msgstr "Obrigatório"
 msgid "Invalid date format. Use YYYY-MM-DD."
 msgstr "Formato de data inválido. Use YYYY-MM-DD."
 
-#: insights/projects/choices.py:10
+#: insights/projects/choices.py:10 insights/reports/choices.py:27
 msgid "Pending"
 msgstr "Pendente"
 
@@ -398,9 +550,77 @@ msgstr "Pendente"
 msgid "Success"
 msgstr "Sucesso"
 
-#: insights/projects/choices.py:12
+#: insights/projects/choices.py:12 insights/reports/choices.py:30
 msgid "Failed"
 msgstr "Falha"
+
+#: insights/reports/choices.py:10
+msgid "Conversations dashboard"
+msgstr "Dashboard de conversas"
+
+#: insights/reports/choices.py:18
+msgid "CSV"
+msgstr "CSV"
+
+#: insights/reports/choices.py:19
+msgid "XLSX"
+msgstr "XLSX"
+
+#: insights/reports/choices.py:28
+msgid "In progress"
+msgstr "Em progresso"
+
+#: insights/reports/choices.py:29
+msgid "Ready"
+msgstr "Pronto"
+
+#: insights/reports/models.py:16
+msgid "Project"
+msgstr "Projeto"
+
+#: insights/reports/models.py:18
+msgid "Source"
+msgstr "Origem"
+
+#: insights/reports/models.py:19
+msgid "Source config"
+msgstr "configuração da fonte"
+
+#: insights/reports/models.py:20
+msgid "Filters"
+msgstr "Filtros"
+
+#: insights/reports/models.py:21
+msgid "Format"
+msgstr "Formato"
+
+#: insights/reports/models.py:23
+msgid "Status"
+msgstr "Status"
+
+#: insights/reports/models.py:29
+msgid "Requested by"
+msgstr "Solicitado por"
+
+#: insights/reports/models.py:31
+msgid "Started at"
+msgstr "Iniciado em"
+
+#: insights/reports/models.py:32
+msgid "Completed at"
+msgstr "Completado em"
+
+#: insights/reports/models.py:33
+msgid "Errors"
+msgstr "Erros"
+
+#: insights/reports/models.py:36
+msgid "Report"
+msgstr "Relatório"
+
+#: insights/reports/models.py:37
+msgid "Reports"
+msgstr "Relatórios"
 
 #: insights/shared/models.py:16
 msgid "Created on"
@@ -421,3 +641,12 @@ msgstr "O projeto não tem permissão para acessar o WABA"
 #: insights/sources/vtex_conversions/usecases/query_execute.py:32
 msgid "Project does not have the credentials to access VTEX's API"
 msgstr "O projeto não tem as credenciais para acessar a API do VTEX"
+
+#~ msgid "Conversation date"
+#~ msgstr "Data da conversa"
+
+#~ msgid "Score"
+#~ msgstr "Pontuação"
+
+#~ msgid "Please find the conversations report attached."
+#~ msgstr "Por favor, encontre o relatório de conversas anexado."
