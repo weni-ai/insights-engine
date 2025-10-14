@@ -194,6 +194,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 date_end=end_date,
                 metadata_key="agent_uuid",
                 metadata_value=agent_uuid,
+                table="weni_csat",
             )
         except Exception as e:
             logger.error("Failed to get csat metrics: %s", e)
@@ -271,6 +272,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 date_end=end_date,
                 metadata_key="agent_uuid",
                 metadata_value=agent_uuid,
+                table="weni_nps",
             )
         except Exception as e:
             logger.error("Failed to get nps metrics: %s", e)
@@ -382,6 +384,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 metadata_key="human_support",
                 metadata_value=human_support,
                 group_by="topic_uuid",
+                table="topics",
             )
 
             # Subtopics
@@ -394,6 +397,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 metadata_key="human_support",
                 metadata_value=human_support,
                 group_by="subtopic_uuid",
+                table="topics",
             )
         except Exception as e:
             logger.error("Failed to get topics distribution from Datalake: %s", e)
@@ -626,6 +630,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 event_name=self.event_name,
                 key="conversation_classification",
                 value="resolved",
+                table="conversation_classification",
             )[0].get("count", 0)
             unresolved_events_count = self.events_client.get_events_count(
                 project=project_uuid,
@@ -634,6 +639,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 event_name=self.event_name,
                 key="conversation_classification",
                 value="unresolved",
+                table="conversation_classification",
             )[0].get("count", 0)
             transferred_to_human_events_count = self.events_client.get_events_count(
                 project=project_uuid,
@@ -643,6 +649,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 key="conversation_classification",
                 metadata_key="human_support",
                 metadata_value="true",
+                table="conversation_classification",
             )[0].get("count", 0)
         except Exception as e:
             capture_exception(e)
