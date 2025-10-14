@@ -49,7 +49,7 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
         Get events from the DataLakeEvents source.
         """
         if table is not None and USE_SILVER_TABLES:
-            table = f"silver_{table}"
+            table = f"{table}"
             method = get_events_silver
         else:
             method = get_events
@@ -68,7 +68,7 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
         Get the count of events from the DataLakeEvents source.
         """
         if table is not None and USE_SILVER_TABLES:
-            table = f"silver_{table}"
+            table = f"{table}"
             method = get_events_silver_count
         else:
             method = get_events_count
@@ -87,7 +87,7 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
         Get the count of events by group from the DataLakeEvents source.
         """
         if table is not None and USE_SILVER_TABLES:
-            table = f"silver_{table}"
+            table = f"{table}"
             method = get_events_silver_count_by_group
         else:
             method = get_events_count_by_group
