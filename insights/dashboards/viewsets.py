@@ -16,6 +16,7 @@ from insights.dashboards.usecases.flows_dashboard_creation import (
     CreateFlowsDashboard,
 )
 from insights.dashboards.utils import DefaultPagination
+from insights.human_support.services import HumanSupportDashboardService
 from insights.projects.models import Project
 from insights.projects.tasks import check_nexus_multi_agents_status
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
@@ -47,6 +48,18 @@ class DashboardViewSet(
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = DashboardFilter
+
+    def get_permissions(self):
+        if self.action in [
+            "monitoring_list_status",
+            "monitoring_average_time_metrics",
+            "monitoring_peaks_in_human_service",
+        ]:
+            return [
+                IsAuthenticated(),
+                ProjectAuthPermission(),
+            ]
+        return super().get_permissions()
 
     def get_queryset(self):
         queryset = (
@@ -158,6 +171,20 @@ class DashboardViewSet(
         dashboard = self.get_object()
         try:
             widget = Widget.objects.get(uuid=widget_uuid, dashboard=dashboard)
+
+            # [STAGING] Mock widget data
+            if str(widget.uuid) in settings.STG_MOCK_CUSTOM_FLOWRUNS:
+                mock_data = {
+                    "results": [
+                        {"label": "Muito satisfeito", "value": 20.59, "full_value": 7},
+                        {"label": "Satisfeito", "value": 14.71, "full_value": 5},
+                        {"label": "Neutro", "value": 11.76, "full_value": 4},
+                        {"label": "Insatisfeito", "value": 11.76, "full_value": 4},
+                        {"label": "Muito insatisfeito", "value": 8.82, "full_value": 3},
+                    ]
+                }
+                return Response(mock_data, status.HTTP_200_OK)
+
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
@@ -233,6 +260,28 @@ class DashboardViewSet(
         paginated_sources = paginator.paginate_queryset(sources, request)
 
         return paginator.get_paginated_response(paginated_sources)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/list_status",
+    )
+    def monitoring_list_status(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        data = service.get_attendance_status(filters=request.query_params)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/average_time_metrics",
+    )
+    def monitoring_average_time_metrics(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        data = service.get_time_metrics(filters=request.query_params)
+        return Response(data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"])
     def create_flows_dashboard(self, request, pk=None):
@@ -325,3 +374,14 @@ class DashboardViewSet(
         custom_status = custom_status_client.list(query_filters)
 
         return Response(custom_status, status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/peaks_in_human_service",
+    )
+    def monitoring_peaks_in_human_service(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        results = service.get_peaks_in_human_service(filters=request.query_params)
+        return Response({"results": results}, status=status.HTTP_200_OK)
