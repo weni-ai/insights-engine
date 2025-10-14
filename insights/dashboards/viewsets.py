@@ -172,7 +172,6 @@ class DashboardViewSet(
         dashboard = self.get_object()
         try:
             widget = Widget.objects.get(uuid=widget_uuid, dashboard=dashboard)
-<<<<<<< HEAD
 
             # [STAGING] Mock widget data
             if str(widget.uuid) in settings.STG_MOCK_CUSTOM_FLOWRUNS:
@@ -187,8 +186,6 @@ class DashboardViewSet(
                 }
                 return Response(mock_data, status.HTTP_200_OK)
 
-=======
->>>>>>> e1bf0eb2102a0118a6f94879c5f91ce044b5598a
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)

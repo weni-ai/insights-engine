@@ -96,8 +96,4 @@ def check_nexus_multi_agents_status(project_uuid: UUID):
         indexer_activation_service=ProjectIndexerActivationService(),
     )
 
-<<<<<<< HEAD
     service.update(project)
-=======
-    service.update(project)
->>>>>>> e1bf0eb2102a0118a6f94879c5f91ce044b5598a
