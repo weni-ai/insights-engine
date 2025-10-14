@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from django.conf import settings
 
@@ -21,19 +22,23 @@ class BaseDataLakeEventsClient(ABC):
     """
 
     @abstractmethod
-    def get_events(self, table: str, **query_kwargs) -> dict | list[dict]:
+    def get_events(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> dict | list[dict]:
         """
         Get events from the DataLakeEvents source.
         """
 
     @abstractmethod
-    def get_events_count(self, table: str, **query_kwargs) -> dict:
+    def get_events_count(self, table: Optional[str] = None, **query_kwargs) -> dict:
         """
         Get the count of events from the DataLakeEvents source.
         """
 
     @abstractmethod
-    def get_events_count_by_group(self, table: str, **query_kwargs) -> dict:
+    def get_events_count_by_group(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> dict:
         """
         Get the count of events by group from the DataLakeEvents source.
         """
@@ -44,7 +49,9 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
     Client for the DataLakeEvents source.
     """
 
-    def get_events(self, table: str, **query_kwargs) -> dict | list[dict]:
+    def get_events(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> dict | list[dict]:
         """
         Get events from the DataLakeEvents source.
         """
@@ -63,7 +70,7 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
 
         return events
 
-    def get_events_count(self, table: str, **query_kwargs) -> dict:
+    def get_events_count(self, table: Optional[str] = None, **query_kwargs) -> dict:
         """
         Get the count of events from the DataLakeEvents source.
         """
@@ -82,7 +89,9 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
 
         return events
 
-    def get_events_count_by_group(self, table: str, **query_kwargs) -> dict:
+    def get_events_count_by_group(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> dict:
         """
         Get the count of events by group from the DataLakeEvents source.
         """
