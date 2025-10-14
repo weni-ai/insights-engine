@@ -15,5 +15,8 @@ class HumanSupportFilterSet(filters.FilterSet):
 
     class Meta:
         fields = [
-            "project_uuid", "sectors", "queues", "tags",
+            "project_uuid",
+            "sectors",
+            "queues",
+            "tags",
         ]

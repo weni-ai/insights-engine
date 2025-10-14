@@ -1,13 +1,15 @@
 from django.shortcuts import get_object_or_404
-
 from rest_framework import permissions
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
-from insights.projects.models import Project, ProjectAuth
+from insights.dashboards.models import Dashboard
+from insights.feature_flags.integrations.growthbook.instance import (
+    GROWTHBOOK_CLIENT,
+)
 from insights.feature_flags.service import FeatureFlagService
-from insights.feature_flags.integrations.growthbook.instance import GROWTHBOOK_CLIENT
+from insights.projects.models import Project, ProjectAuth
 
 
 class ProjectAuthPermission(permissions.BasePermission):
@@ -89,9 +91,9 @@ class ProjectQueryParamPermission(permissions.BasePermission):
 class FeatureFlagPermission(permissions.BasePermission):
     """
     Permission to check if a feature flag is active for the project in the request.
-    
+
     Usage: Set feature_flag_key attribute on the view/viewset class.
-    
+
     Works with:
     - Views that receive project_uuid in query params or body
     - ViewSet detail actions that use dashboard pk in URL
@@ -105,18 +107,21 @@ class FeatureFlagPermission(permissions.BasePermission):
         project = self._get_project_from_request(request, view)
         if not project:
             return False
-        
+
         service = FeatureFlagService(growthbook_client=GROWTHBOOK_CLIENT)
-        return service.evaluate_feature_flag(feature_key, user=request.user, project=project)
-    
+        return service.evaluate_feature_flag(
+            feature_key, user=request.user, project=project
+        )
+
     def _get_project_from_request(self, request: Request, view: APIView):
         """Get project from query params, body, or dashboard pk"""
-        project_uuid = request.query_params.get("project_uuid") or request.data.get("project_uuid")
-        
+        project_uuid = request.query_params.get("project_uuid") or request.data.get(
+            "project_uuid"
+        )
+
         if project_uuid:
             return get_object_or_404(Project, uuid=project_uuid)
-        
-        # For detail actions (monitoring endpoints), get project from dashboard
+
         dashboard_pk = view.kwargs.get("pk")
         if dashboard_pk:
             dashboard = get_object_or_404(Dashboard, uuid=dashboard_pk)

@@ -24,9 +24,7 @@ class CreateHumanService:
                     is_deletable=False,
                     is_editable=False,
                 )
-                # TODO: Create widgets
-                # self.create_widgets(atendimento_humano)
-
+                return atendimento_humano
         except Exception as exception:
             raise InvalidDashboardObject(f"Error creating dashboard: {exception}")
 
