@@ -354,7 +354,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 metadata_key="human_support",
                 metadata_value=human_support,
                 group_by="subtopic_uuid",
-                use_silver_tables=USE_SILVER_TABLES,
+                table="topics",
             )
         except Exception as e:
             logger.error("Failed to get topics distribution from Datalake: %s", e)
