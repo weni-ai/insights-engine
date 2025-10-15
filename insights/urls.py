@@ -26,9 +26,6 @@ from rest_framework.routers import DefaultRouter
 from weni_feature_flags.views import FeatureFlagsWebhookView
 
 from insights.dashboards.viewsets import DashboardViewSet
-from insights.feature_flags.integrations.growthbook.views import (
-    GrowthbookWebhook,
-)
 from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
 from insights.widgets.viewsets import WidgetViewSet
