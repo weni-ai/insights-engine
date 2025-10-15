@@ -6,16 +6,27 @@ from typing import Dict
 import pytz
 from django.utils import timezone as dj_timezone
 
-from insights.projects.models import Project
 from insights.human_support.clients.chats_raw_data import ChatsRawDataClient
-from insights.human_support.clients.chats_time_metrics import ChatsTimeMetricsClient
+from insights.human_support.clients.chats_time_metrics import (
+    ChatsTimeMetricsClient,
+)
 from insights.human_support.filters import HumanSupportFilterSet
-from insights.sources.rooms.usecases.query_execute import QueryExecutor as RoomsQueryExecutor
-from insights.sources.sectors.usecases.query_execute import QueryExecutor as SectorsQueryExecutor
-from insights.sources.queues.usecases.query_execute import QueryExecutor as QueuesQueryExecutor
-from insights.sources.tags.usecases.query_execute import QueryExecutor as TagsQueryExecutor
+from insights.projects.models import Project
 from insights.sources.agents.clients import AgentsRESTClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
+from insights.sources.queues.usecases.query_execute import (
+    QueryExecutor as QueuesQueryExecutor,
+)
+from insights.sources.rooms.usecases.query_execute import (
+    QueryExecutor as RoomsQueryExecutor,
+)
+from insights.sources.sectors.usecases.query_execute import (
+    QueryExecutor as SectorsQueryExecutor,
+)
+from insights.sources.tags.usecases.query_execute import (
+    QueryExecutor as TagsQueryExecutor,
+)
+
 
 class HumanSupportDashboardService:
     def __init__(self, project: Project) -> None:
@@ -30,30 +41,40 @@ class HumanSupportDashboardService:
         project_uuid = str(self.project.uuid)
 
         def is_all(value):
-            return value == "__all__" or (isinstance(value, list) and "__all__" in value)
+            return value == "__all__" or (
+                isinstance(value, list) and "__all__" in value
+            )
 
         if is_all(filters.get("sectors")):
             data = SectorsQueryExecutor.execute(
                 filters={"project": project_uuid}, operation="list", parser=lambda x: x
             )
-            filters["sectors"] = [row.get("uuid") for row in (data or {}).get("results", [])]
+            filters["sectors"] = [
+                row.get("uuid") for row in (data or {}).get("results", [])
+            ]
 
         if is_all(filters.get("queues")):
             data = QueuesQueryExecutor.execute(
                 filters={"project": project_uuid}, operation="list", parser=lambda x: x
             )
-            filters["queues"] = [row.get("uuid") for row in (data or {}).get("results", [])]
+            filters["queues"] = [
+                row.get("uuid") for row in (data or {}).get("results", [])
+            ]
 
         if is_all(filters.get("tags")):
             data = TagsQueryExecutor.execute(
                 filters={"project": project_uuid}, operation="list", parser=lambda x: x
             )
-            filters["tags"] = [row.get("uuid") for row in (data or {}).get("results", [])]
+            filters["tags"] = [
+                row.get("uuid") for row in (data or {}).get("results", [])
+            ]
         return filters
 
     def _normalize_filters(self, incoming_filters: dict | None) -> dict:
         expanded = self._expand_all_tokens(incoming_filters)
-        filterset = HumanSupportFilterSet(data=expanded,  queryset=Project.objects.none())
+        filterset = HumanSupportFilterSet(
+            data=expanded, queryset=Project.objects.none()
+        )
         filter_form = filterset.form
         filter_form.is_valid()
 
@@ -74,7 +95,9 @@ class HumanSupportDashboardService:
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
         today = dj_timezone.now().date()
-        start_of_day = project_tz.localize(datetime.combine(today, datetime.min.time())).isoformat()
+        start_of_day = project_tz.localize(
+            datetime.combine(today, datetime.min.time())
+        ).isoformat()
         now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
 
         base: dict = {
@@ -87,16 +110,44 @@ class HumanSupportDashboardService:
         if normalized.get("tags"):
             base["tags"] = normalized["tags"]
 
-        is_waiting = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": True}, "count", lambda x: x, self.project).get("value") or 0
-        in_progress = RoomsQueryExecutor.execute({**base, "is_active": True, "user_id__isnull": False}, "count", lambda x: x, self.project).get("value") or 0
-        finished = RoomsQueryExecutor.execute({**base, "is_active": False, "ended_at__gte": start_of_day, "ended_at__lte": now_iso}, "count", lambda x: x, self.project).get("value") or 0
+        is_waiting = (
+            RoomsQueryExecutor.execute(
+                {**base, "is_active": True, "user_id__isnull": True},
+                "count",
+                lambda x: x,
+                self.project,
+            ).get("value")
+            or 0
+        )
+        in_progress = (
+            RoomsQueryExecutor.execute(
+                {**base, "is_active": True, "user_id__isnull": False},
+                "count",
+                lambda x: x,
+                self.project,
+            ).get("value")
+            or 0
+        )
+        finished = (
+            RoomsQueryExecutor.execute(
+                {
+                    **base,
+                    "is_active": False,
+                    "ended_at__gte": start_of_day,
+                    "ended_at__lte": now_iso,
+                },
+                "count",
+                lambda x: x,
+                self.project,
+            ).get("value")
+            or 0
+        )
 
         return {
-                "is_waiting": int(is_waiting),
-                "in_progress": int(in_progress),
-                "finished": int(finished),
-            }
-
+            "is_waiting": int(is_waiting),
+            "in_progress": int(in_progress),
+            "finished": int(finished),
+        }
 
     def get_time_metrics(self, filters: dict | None = None) -> Dict[str, float]:
         normalized = self._normalize_filters(filters)
@@ -122,15 +173,12 @@ class HumanSupportDashboardService:
         chat_max = float(metrics.get("max_conversation_duration", 0) or 0)
 
         return {
-            "average_time_is_waiting": {
-                "average": waiting_avg, "max": waiting_max
-            },
+            "average_time_is_waiting": {"average": waiting_avg, "max": waiting_max},
             "average_time_first_response": {
-                "average": first_resp_avg, "max": first_resp_max
+                "average": first_resp_avg,
+                "max": first_resp_max,
             },
-            "average_time_chat": {
-                "average": chat_avg, "max": chat_max
-            },
+            "average_time_chat": {"average": chat_avg, "max": chat_max},
         }
 
     def get_peaks_in_human_service(self, filters: dict | None = None):
@@ -146,16 +194,25 @@ class HumanSupportDashboardService:
             "project": str(self.project.uuid),
             "created_on__gte": start_of_day,
         }
-        if "sectors" in request_params: rooms_filters["sector"] = request_params["sectors"]
-        if "queues" in request_params: rooms_filters["queue"] = request_params["queues"]
-        if "tags" in request_params: rooms_filters["tags"] = request_params["tags"]
+        if "sectors" in request_params:
+            rooms_filters["sector"] = request_params["sectors"]
+        if "queues" in request_params:
+            rooms_filters["queue"] = request_params["queues"]
+        if "tags" in request_params:
+            rooms_filters["tags"] = request_params["tags"]
 
         result = RoomsQueryExecutor.execute(
             filters=rooms_filters,
             operation="timeseries_hour_group_count",
             parser=lambda x: x,
             project=self.project,
-            query_kwargs={"time_field": "created_on", "start_hour": 0, "end_hour": 23, "limit": 24, "timezone": tzname},
+            query_kwargs={
+                "time_field": "created_on",
+                "start_hour": 0,
+                "end_hour": 23,
+                "limit": 24,
+                "timezone": tzname,
+            },
         )
         return result.get("results", [])
 
@@ -207,16 +264,18 @@ class HumanSupportDashboardService:
 
         formatted_results = []
         for room in response.get("results", []):
-            formatted_results.append({
-                "agent": room.get("agent"),
-                "duration": room.get("duration"),
-                "awaiting_time": room.get("waiting_time"),
-                "first_response_time": room.get("first_response_time"),
-                "sector": room.get("sector"),
-                "queue": room.get("queue"),
-                "contact": room.get("contact"),
-                "link": room.get("link"),
-            })
+            formatted_results.append(
+                {
+                    "agent": room.get("agent"),
+                    "duration": room.get("duration"),
+                    "awaiting_time": room.get("waiting_time"),
+                    "first_response_time": room.get("first_response_time"),
+                    "sector": room.get("sector"),
+                    "queue": room.get("queue"),
+                    "contact": room.get("contact"),
+                    "link": room.get("link"),
+                }
+            )
 
         return {
             "next": response.get("next"),
@@ -270,13 +329,15 @@ class HumanSupportDashboardService:
 
         formatted_results = []
         for room in response.get("results", []):
-            formatted_results.append({
-                "awaiting_time": room.get("queue_time"),
-                "contact": room.get("contact"),
-                "sector": room.get("sector"),
-                "queue": room.get("queue"),
-                "link": room.get("link"),
-            })
+            formatted_results.append(
+                {
+                    "awaiting_time": room.get("queue_time"),
+                    "contact": room.get("contact"),
+                    "sector": room.get("sector"),
+                    "queue": room.get("queue"),
+                    "link": room.get("link"),
+                }
+            )
         return {
             "next": response.get("next"),
             "previous": response.get("previous"),
@@ -325,36 +386,29 @@ class HumanSupportDashboardService:
                     "agent": "first_name",
                     "Name": "first_name",
                     "Email": "email",
-
                     # Status
                     "Status": "status",
                     "status": "status",
-
                     # Contadores de atendimentos
                     "Finished": "closed",
                     "finished": "closed",
                     "Closed": "closed",
                     "closed": "closed",
-
                     "Ongoing": "opened",
                     "ongoing": "opened",
                     "Opened": "opened",
                     "opened": "opened",
                     "In Progress": "opened",
-
                     # Métricas de tempo - com espaços (como vem do front)
                     "Average first response time": "avg_first_response_time",
                     "average first response time": "avg_first_response_time",
                     "average_first_response_time": "avg_first_response_time",
-
                     "Average response time": "avg_message_response_time",
                     "average response time": "avg_message_response_time",
                     "average_response_time": "avg_message_response_time",
-
                     "Average duration": "avg_interaction_time",
                     "average duration": "avg_interaction_time",
                     "average_duration": "avg_interaction_time",
-
                     "Time in service": "time_in_service",
                     "time in service": "time_in_service",
                     "time_in_service": "time_in_service",
@@ -366,7 +420,6 @@ class HumanSupportDashboardService:
                 params["ordering"] = f"{prefix}{mapped_field}"
 
         response = AgentsRESTClient(self.project).list(params)
-        
         formatted_results = []
         for agent in response.get("results", []):
             status_data = agent.get("status", {})
@@ -374,20 +427,22 @@ class HumanSupportDashboardService:
                 status = status_data.get("status", "offline")
             else:
                 status = status_data or "offline"
-            
-            formatted_results.append({
-                "agent": agent.get("agent"),
-                "agent_email": agent.get("agent_email"),
-                "status": status,
-                "ongoing": agent.get("opened", 0),
-                "finished": agent.get("closed", 0),
-                "average_first_response_time": agent.get("avg_first_response_time"),
-                "average_response_time": agent.get("avg_message_response_time"),
-                "average_duration": agent.get("avg_interaction_time"),
-                "time_in_service": agent.get("time_in_service"),
-                "link": agent.get("link"),
-            })
-        
+
+            formatted_results.append(
+                {
+                    "agent": agent.get("agent"),
+                    "agent_email": agent.get("agent_email"),
+                    "status": status,
+                    "ongoing": agent.get("opened", 0),
+                    "finished": agent.get("closed", 0),
+                    "average_first_response_time": agent.get("avg_first_response_time"),
+                    "average_response_time": agent.get("avg_message_response_time"),
+                    "average_duration": agent.get("avg_interaction_time"),
+                    "time_in_service": agent.get("time_in_service"),
+                    "link": agent.get("link"),
+                }
+            )
+
         return {
             "next": response.get("next"),
             "previous": response.get("previous"),
@@ -419,24 +474,19 @@ class HumanSupportDashboardService:
                     # Agent
                     "Agent": "email",
                     "agent": "email",
-
                     # Status
                     "Status": "status",
                     "status": "status",
-
                     # Contadores de atendimentos
                     "Finished": "closed",
                     "finished": "closed",
                     "Closed": "closed",
                     "closed": "closed",
-
                     "Ongoing": "opened",
                     "ongoing": "opened",
                     "Opened": "opened",
                     "opened": "opened",
                     "In Progress": "opened",
-
-                    # Created on
                     "Created on": "created_on",
                     "created on": "created_on",
                     "Created On": "created_on",

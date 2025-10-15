@@ -9,13 +9,17 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from insights.authentication.permissions import ProjectAuthPermission, FeatureFlagPermission
+from insights.authentication.permissions import (
+    ProjectAuthPermission,
+    FeatureFlagPermission,
+)
 from insights.dashboards.filters import DashboardFilter
 from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.dashboards.usecases.flows_dashboard_creation import (
     CreateFlowsDashboard,
 )
 from insights.dashboards.utils import DefaultPagination
+from insights.human_support.services import HumanSupportDashboardService
 from insights.projects.models import Project
 from insights.projects.tasks import check_nexus_multi_agents_status
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
@@ -51,9 +55,9 @@ class DashboardViewSet(
 
     def get_permissions(self):
         if self.action in [
-            'monitoring_list_status',
-            'monitoring_average_time_metrics',
-            'monitoring_peaks_in_human_service'
+            "monitoring_list_status",
+            "monitoring_average_time_metrics",
+            "monitoring_peaks_in_human_service",
         ]:
             return [
                 IsAuthenticated(),
@@ -267,9 +271,6 @@ class DashboardViewSet(
         url_path="monitoring/list_status",
     )
     def monitoring_list_status(self, request, pk=None):
-        """
-        Returns active_rooms, closed_rooms, queue_rooms for the dashboard's project.
-        """
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
         data = service.get_attendance_status(filters=request.query_params)
@@ -281,9 +282,6 @@ class DashboardViewSet(
         url_path="monitoring/average_time_metrics",
     )
     def monitoring_average_time_metrics(self, request, pk=None):
-        """
-        Returns average and max time metrics for the dashboard's project.
-        """
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
         data = service.get_time_metrics(filters=request.query_params)
@@ -387,9 +385,6 @@ class DashboardViewSet(
         url_path="monitoring/peaks_in_human_service",
     )
     def monitoring_peaks_in_human_service(self, request, pk=None):
-        """
-        Retorna a série de atendimentos por hora (mesmo cálculo do widget).
-        """
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
         results = service.get_peaks_in_human_service(filters=request.query_params)
