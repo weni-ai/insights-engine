@@ -29,7 +29,7 @@ class FeatureFlagsViewSet(GenericViewSet):
 
         attributes = {
             "userEmail": request.user.email,
-            "projectUUID": query_params.validated_data["project"].uuid,
+            "projectUUID": str(query_params.validated_data["project"].uuid),
         }
 
         active_features = self.service.get_active_feature_flags_for_attributes(
