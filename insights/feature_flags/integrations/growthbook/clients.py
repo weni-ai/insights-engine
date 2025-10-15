@@ -7,9 +7,9 @@ import requests
 from growthbook import GrowthBook
 from sentry_sdk import capture_exception
 
-from insights.feature_flags.integrations.growthbook.tasks import (
-    update_growthbook_feature_flags,
-)
+# from insights.feature_flags.integrations.growthbook.tasks import (
+#     update_growthbook_feature_flags,
+# )
 from insights.sources.cache import CacheClient
 
 logger = logging.getLogger(__name__)
@@ -206,7 +206,8 @@ class GrowthbookClient(BaseGrowthbookClient):
         # If the short cache is not valid, this means that is time
         # to update the feature flags definitions.
         # This is done asynchronously and we return the long cache as a fallback.
-        update_growthbook_feature_flags.delay()
+
+        # update_growthbook_feature_flags.delay()
 
         # This exists as a safety net to avoid not having the feature flags
         # definitions if Growthbook's API is down for some reason.

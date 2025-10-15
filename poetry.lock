@@ -3217,6 +3217,30 @@ protobuf = ">=6.30.0,<7.0.0"
 pytest = ">=8.4.0,<9.0.0"
 
 [[package]]
+name = "weni-feature-flags"
+version = "0.1.0a2"
+description = "Weni's feature flags SDK for Python backends"
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "weni_feature_flags-0.1.0a2-py3-none-any.whl", hash = "sha256:a68e97a009420320bb21e4046fb67da65d7ac7c4330c5f30be6d97cdd4873ecb"},
+    {file = "weni_feature_flags-0.1.0a2.tar.gz", hash = "sha256:78ecb4b6bb631ba4a0cf39fbf9617a915e3972546831336cf71d5f7f88f345db"},
+]
+
+[package.dependencies]
+celery = ">=5.0.0,<6.0"
+django = ">=3.2.22,<6.0"
+django-redis = ">=4.0.0,<6.0"
+djangorestframework = ">=3.14.0,<4.0"
+growthbook = ">=1.0.0,<2.0"
+requests = ">=2.25.0,<3.0"
+
+[package.source]
+type = "legacy"
+url = "https://test.pypi.org/simple"
+reference = "testpypi"
+
+[[package]]
 name = "werkzeug"
 version = "3.1.3"
 description = "The comprehensive WSGI web application library."
@@ -3551,4 +3575,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "7d3ecb2ad25697b36d35efea52ff1270addd3b2aeb592dcac92eceaad36e1cd3"
+content-hash = "ef5eb5191685da800acaae56fe82ddb595b02ca4254b266b9a98fc144ad9b1f5"
