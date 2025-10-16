@@ -1,9 +1,19 @@
 from abc import ABC, abstractmethod
+from typing import Optional
+
+from django.conf import settings
+
 from weni_datalake_sdk.clients.redshift.events import (
     get_events,
     get_events_count,
     get_events_count_by_group,
+    get_events_silver,
+    get_events_silver_count,
+    get_events_silver_count_by_group,
 )
+
+
+USE_SILVER_TABLES = settings.CONVERSATIONS_DASHBOARD_USE_SILVER_TABLES
 
 
 class BaseDataLakeEventsClient(ABC):
@@ -12,19 +22,23 @@ class BaseDataLakeEventsClient(ABC):
     """
 
     @abstractmethod
-    def get_events(self, **query_kwargs) -> dict | list[dict]:
+    def get_events(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> dict | list[dict]:
         """
         Get events from the DataLakeEvents source.
         """
 
     @abstractmethod
-    def get_events_count(self, **query_kwargs) -> dict:
+    def get_events_count(self, table: Optional[str] = None, **query_kwargs) -> dict:
         """
         Get the count of events from the DataLakeEvents source.
         """
 
     @abstractmethod
-    def get_events_count_by_group(self, **query_kwargs) -> dict:
+    def get_events_count_by_group(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> dict:
         """
         Get the count of events by group from the DataLakeEvents source.
         """
@@ -35,12 +49,20 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
     Client for the DataLakeEvents source.
     """
 
-    def get_events(self, **query_kwargs) -> dict | list[dict]:
+    def get_events(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> dict | list[dict]:
         """
         Get events from the DataLakeEvents source.
         """
+        if table is not None and USE_SILVER_TABLES:
+            query_kwargs["table"] = table
+            method = get_events_silver
+        else:
+            method = get_events
+
         try:
-            events = get_events(
+            events = method(
                 **query_kwargs,
             )
         except Exception as e:
@@ -48,12 +70,18 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
 
         return events
 
-    def get_events_count(self, **query_kwargs) -> dict:
+    def get_events_count(self, table: Optional[str] = None, **query_kwargs) -> dict:
         """
         Get the count of events from the DataLakeEvents source.
         """
+        if table is not None and USE_SILVER_TABLES:
+            query_kwargs["table"] = table
+            method = get_events_silver_count
+        else:
+            method = get_events_count
+
         try:
-            events = get_events_count(
+            events = method(
                 **query_kwargs,
             )
         except Exception as e:
@@ -61,12 +89,20 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
 
         return events
 
-    def get_events_count_by_group(self, **query_kwargs) -> dict:
+    def get_events_count_by_group(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> dict:
         """
         Get the count of events by group from the DataLakeEvents source.
         """
+        if table is not None and USE_SILVER_TABLES:
+            query_kwargs["table"] = table
+            method = get_events_silver_count_by_group
+        else:
+            method = get_events_count_by_group
+
         try:
-            events = get_events_count_by_group(
+            events = method(
                 **query_kwargs,
             )
         except Exception as e:
