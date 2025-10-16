@@ -1,8 +1,8 @@
 from django.conf import settings
 from rest_framework.permissions import BasePermission
 from rest_framework.exceptions import ValidationError
+from weni_feature_flags.shortcuts import is_feature_active
 
-from insights.feature_flags.utils import is_feature_active
 from insights.projects.models import Project, ProjectAuth
 
 
@@ -26,7 +26,9 @@ class CanCheckReportGenerationStatusPermission(BasePermission):
             return False
 
         return is_feature_active(
-            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY, request.user, project
+            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY,
+            request.user.email,
+            project.uuid,
         )
 
 

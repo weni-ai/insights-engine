@@ -15,6 +15,8 @@ env:
   INSIGHTS_DOMAIN: ""
   CHATS_URL: ""
   INTEGRATIONS_URL: "https://integrations.weni.local"
+  GROWTHBOOK_CLIENT_KEY: "test"
+  GROWTHBOOK_HOST_BASE_URL: "https://test.local"
 
 jobs:
   build:
