@@ -817,13 +817,12 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 try:
                     value = metadata.get("value", 0)
 
-                    if isinstance(value, str):
+                    if not isinstance(value, float):
                         try:
                             value = float(value)
                         except Exception as e:
                             logger.error("Error on converting value to float: %s" % e)
-                            capture_exception(e)
-                            value = 0
+                            raise e
 
                     order_value = int(value * 100)  # convert to cents
                 except Exception as e:
