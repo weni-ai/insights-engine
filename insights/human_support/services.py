@@ -364,6 +364,15 @@ class HumanSupportDashboardService:
         tags = normalized.get("tags")
         if tags:
             params["tags"] = tags
+            
+        agents = normalized.get("agents") or filters.get("agent")
+        if agents:
+            if isinstance(agents, list) and len(agents) == 1:
+                params["agent"] = agents[0]
+            elif isinstance(agents, str):
+                params["agent"] = agents
+            else:
+                params["agent"] = agents
 
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
