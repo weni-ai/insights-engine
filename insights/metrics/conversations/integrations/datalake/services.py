@@ -814,7 +814,23 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 if not currency_code:
                     currency_code = metadata.get("currency")
 
-                order_value = int(metadata.get("value", 0) * 100)  # convert to cents
+                try:
+                    value = metadata.get("value", 0)
+
+                    if isinstance(value, str):
+                        try:
+                            value = float(value)
+                        except Exception as e:
+                            logger.error("Error on converting value to float: %s" % e)
+                            capture_exception(e)
+                            value = 0
+
+                    order_value = int(value * 100)  # convert to cents
+                except Exception as e:
+                    logger.error("Error on converting value to int: %s" % e)
+                    capture_exception(e)
+                    order_value = 0
+
                 total_orders_value += order_value
 
             if page >= max_pages:
