@@ -802,6 +802,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             for event in events:
                 metadata = event.get("metadata")
 
+                if not metadata:
+                    continue
+
                 if not isinstance(metadata, dict):
                     try:
                         metadata = json.loads(metadata)
