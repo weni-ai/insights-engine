@@ -506,3 +506,92 @@ class HumanSupportDashboardService:
 
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
+
+    def get_finished_rooms_status(self, filters: dict | None = None) -> Dict[str, any]:
+        normalized = self._normalize_filters(filters)
+
+        # timezone e recorte para finished
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+        
+        # Check if custom date filters are provided
+        if normalized.get("start_date"):
+            start_of_day = normalized["start_date"].astimezone(project_tz).isoformat()
+        else:
+            today = dj_timezone.now().date()
+            start_of_day = project_tz.localize(
+                datetime.combine(today, datetime.min.time())
+            ).isoformat()
+        
+        if normalized.get("end_date"):
+            now_iso = normalized["end_date"].astimezone(project_tz).isoformat()
+        else:
+            now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base: dict = {
+            "project": str(self.project.uuid),
+        }
+        if normalized.get("sectors"):
+            base["sector"] = normalized["sectors"]
+        if normalized.get("queues"):
+            base["queue"] = normalized["queues"]
+        if normalized.get("tags"):
+            base["tags"] = normalized["tags"]
+
+        is_waiting = (
+            RoomsQueryExecutor.execute(
+                {**base, "is_active": True, "user_id__isnull": True},
+                "count",
+                lambda x: x,
+                self.project,
+            ).get("value")
+            or 0
+        )
+        in_progress = (
+            RoomsQueryExecutor.execute(
+                {**base, "is_active": True, "user_id__isnull": False},
+                "count",
+                lambda x: x,
+                self.project,
+            ).get("value")
+            or 0
+        )
+        finished = (
+            RoomsQueryExecutor.execute(
+                {
+                    **base,
+                    "is_active": False,
+                    "ended_at__gte": start_of_day,
+                    "ended_at__lte": now_iso,
+                },
+                "count",
+                lambda x: x,
+                self.project,
+            ).get("value")
+            or 0
+        )
+        
+        # Get interaction_time average for finished rooms
+        interaction_time_avg = (
+            RoomsQueryExecutor.execute(
+                {
+                    **base,
+                    "is_active": False,
+                    "user_id__isnull": False,
+                    "created_on__gte": start_of_day,
+                    "created_on__lte": now_iso,
+                },
+                "avg",
+                lambda x: x,
+                self.project,
+                query_kwargs={"op_field": "interaction_time"},
+            ).get("value")
+            or 0
+        )
+
+        return {
+            "is_waiting": int(is_waiting),
+            "in_progress": int(in_progress),
+            "finished": int(finished),
+            "interaction_time": float(interaction_time_avg),
+        }

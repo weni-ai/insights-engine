@@ -371,3 +371,14 @@ class DashboardViewSet(
         service = HumanSupportDashboardService(project=dashboard.project)
         results = service.get_peaks_in_human_service(filters=request.query_params)
         return Response({"results": results}, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/finished_rooms_status",
+    )
+    def analysis_finished_rooms_status(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        data = service.get_finished_rooms_status(filters=request.query_params)
+        return Response(data, status=status.HTTP_200_OK)
