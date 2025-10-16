@@ -8,6 +8,9 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.integrations.datalake.dataclass import (
+    SalesFunnelData,
+)
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
 )
@@ -96,3 +99,13 @@ class MockDatalakeConversationsMetricsService(BaseConversationsMetricsService):
         key: str,
     ) -> dict:
         return {str(i): 10 for i in range(0, 11)}
+
+    def get_sales_funnel_data(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SalesFunnelData:
+        return SalesFunnelData(
+            leads_count=100,
+            total_orders_count=100,
+            total_orders_value=100,
+            currency_code="BRL",
+        )
