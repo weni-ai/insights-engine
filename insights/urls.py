@@ -37,7 +37,6 @@ router = DefaultRouter()
 router.register(r"widgets", WidgetViewSet, basename="widget")
 router.register(r"dashboards", DashboardViewSet, basename="dashboard")
 router.register(r"projects", ProjectViewSet, basename="project")
-# router.register(r"growthbook", GrowthbookWebhook, basename="growthbook_webhook")
 router.register(r"feature_flags", FeatureFlagsViewSet, basename="feature_flags")
 
 urlpatterns += [
