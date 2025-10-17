@@ -139,7 +139,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     )
     def verify_csat(self, request, *args, **kwargs):
         project = self.get_object()
-        chats_client = ChatsRESTClient(project)
+        chats_client = ChatsRESTClient()
 
         project_data = chats_client.get_project(str(project.uuid))
         is_csat_enabled = project_data.get("is_csat_enabled", False)
