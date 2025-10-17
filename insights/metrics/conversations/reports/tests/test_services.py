@@ -2163,3 +2163,274 @@ class TestConversationsReportServiceAdditional(TestCase):
         )
 
         self.assertEqual(results, [])
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_basic_only(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with only basic widgets (no special widgets)."""
+        # Mock all special widget functions to return None
+        mock_get_csat_ai_widget.return_value = None
+        mock_get_nps_ai_widget.return_value = None
+        mock_get_csat_human_widget.return_value = None
+        mock_get_nps_human_widget.return_value = None
+        mock_get_custom_widgets.return_value = []
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should only contain basic widgets
+        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(result.custom_widgets, [])
+
+        # Verify all special widget functions were called
+        mock_get_csat_ai_widget.assert_called_once_with(self.project)
+        mock_get_nps_ai_widget.assert_called_once_with(self.project)
+        mock_get_csat_human_widget.assert_called_once_with(self.project)
+        mock_get_nps_human_widget.assert_called_once_with(self.project)
+        mock_get_custom_widgets.assert_called_once_with(self.project)
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_with_special_widgets(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with special widgets available."""
+        # Mock special widget functions to return mock widgets
+        mock_csat_ai_widget = Widget.objects.create(
+            name="CSAT AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.csat",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        mock_nps_ai_widget = Widget.objects.create(
+            name="NPS AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.nps",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        mock_csat_human_widget = Widget.objects.create(
+            name="CSAT Human Widget",
+            config={
+                "type": "flow_result",
+                "filter": {"flow": "test-flow"},
+                "op_field": "test_field",
+            },
+            source="conversations.csat",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        mock_nps_human_widget = Widget.objects.create(
+            name="NPS Human Widget",
+            config={
+                "type": "flow_result",
+                "filter": {"flow": "test-flow"},
+                "op_field": "test_field",
+            },
+            source="conversations.nps",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
+        mock_get_nps_ai_widget.return_value = mock_nps_ai_widget
+        mock_get_csat_human_widget.return_value = mock_csat_human_widget
+        mock_get_nps_human_widget.return_value = mock_nps_human_widget
+        mock_get_custom_widgets.return_value = []
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should contain basic widgets plus special widgets
+        expected_sections = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+            "CSAT_AI",
+            "CSAT_HUMAN",
+            "NPS_AI",
+            "NPS_HUMAN",
+        ]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(result.custom_widgets, [])
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_with_custom_widgets(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with custom widgets available."""
+        # Mock special widget functions to return None
+        mock_get_csat_ai_widget.return_value = None
+        mock_get_nps_ai_widget.return_value = None
+        mock_get_csat_human_widget.return_value = None
+        mock_get_nps_human_widget.return_value = None
+
+        # Create custom widgets
+        custom_widget1 = Widget.objects.create(
+            name="Custom Widget 1",
+            config={"datalake_config": {"key": "test1", "agent_uuid": "test-uuid"}},
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        custom_widget2 = Widget.objects.create(
+            name="Custom Widget 2",
+            config={"datalake_config": {"key": "test2", "agent_uuid": "test-uuid"}},
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_custom_widgets.return_value = [
+            custom_widget1.uuid,
+            custom_widget2.uuid,
+        ]
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should contain basic widgets and custom widgets
+        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(
+            result.custom_widgets, [custom_widget1.uuid, custom_widget2.uuid]
+        )
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_combined(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with all types of widgets available."""
+        # Mock special widget functions to return mock widgets
+        mock_csat_ai_widget = Widget.objects.create(
+            name="CSAT AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.csat",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        mock_nps_ai_widget = Widget.objects.create(
+            name="NPS AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.nps",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
+        mock_get_nps_ai_widget.return_value = mock_nps_ai_widget
+        mock_get_csat_human_widget.return_value = None
+        mock_get_nps_human_widget.return_value = None
+
+        # Create custom widgets
+        custom_widget = Widget.objects.create(
+            name="Custom Widget",
+            config={"datalake_config": {"key": "test", "agent_uuid": "test-uuid"}},
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_custom_widgets.return_value = [custom_widget.uuid]
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should contain basic widgets, some special widgets, and custom widgets
+        expected_sections = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+            "CSAT_AI",
+            "NPS_AI",
+        ]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(result.custom_widgets, [custom_widget.uuid])
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_partial_special_widgets(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with only some special widgets available."""
+        # Mock only some special widget functions to return widgets
+        mock_csat_ai_widget = Widget.objects.create(
+            name="CSAT AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.csat",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
+        mock_get_nps_ai_widget.return_value = None
+        mock_get_csat_human_widget.return_value = None
+        mock_get_nps_human_widget.return_value = None
+        mock_get_custom_widgets.return_value = []
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should contain basic widgets plus only CSAT_AI
+        expected_sections = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+            "CSAT_AI",
+        ]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(result.custom_widgets, [])

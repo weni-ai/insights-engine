@@ -1482,9 +1482,6 @@ class ConversationsReportService(BaseConversationsReportService):
             "TOPICS_HUMAN",
         ]
 
-        # TODO: CSAT AI, CSAT HUMAN, NPS AI, NPS HUMAN
-        # TODO: Custom widgets
-
         special_widgets_get_functions = [
             (get_csat_ai_widget, "CSAT_AI"),
             (get_csat_human_widget, "CSAT_HUMAN"),
