@@ -41,7 +41,7 @@ class ChatsRESTClientTestCase(TestCase):
         self.assertEqual(project, expected_response)
 
         mock_request_with_retry.assert_called_once_with(
-            url=f"/internal/project/{project_uuid}",
+            url=f"/v1/internal/project/{project_uuid}/",
             headers={
                 "Content-Type": "application/json; charset: utf-8",
                 "Authorization": "Bearer mock-token",
