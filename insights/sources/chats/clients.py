@@ -10,7 +10,7 @@ class ChatsRESTClient(InternalAuthentication):
 
     def get_project(self, project_uuid: str) -> dict:
         response = request_with_retry(
-            url=f"{self.base_url}/internal/project/{project_uuid}",
+            url=f"{self.base_url}/v1/internal/project/{project_uuid}/",
             headers=self.headers,
             params={},
             method="GET",
