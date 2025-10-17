@@ -174,10 +174,10 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["sections"][0].code, "sections_or_custom_widgets_required"
+            serializer.errors["error"][0].code, "sections_or_custom_widgets_required"
         )
         self.assertEqual(
-            serializer.errors["custom_widgets"][0].code,
+            serializer.errors["error"][0].code,
             "sections_or_custom_widgets_required",
         )
 
@@ -297,9 +297,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             }
         )
         self.assertFalse(serializer.is_valid())
-        self.assertEqual(
-            serializer.errors["sections"][0].code, "csat_ai_widget_not_found"
-        )
+        self.assertEqual(serializer.errors["error"][0].code, "csat_ai_widget_not_found")
 
     def test_serializer_with_csat_ai_section_and_csat_ai_widget_without_agent_uuid(
         self,
@@ -328,8 +326,8 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["sections"][0].code,
-            "agent_uuid_not_found_in_widget_config",
+            serializer.errors["error"][0].code,
+            "csat_ai_widget_not_found",
         )
 
     def test_serializer_with_csat_ai_section_and_csat_ai_widget_with_agent_uuid(self):
@@ -373,9 +371,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             }
         )
         self.assertFalse(serializer.is_valid())
-        self.assertEqual(
-            serializer.errors["sections"][0].code, "nps_ai_widget_not_found"
-        )
+        self.assertEqual(serializer.errors["error"][0].code, "nps_ai_widget_not_found")
 
     def test_serializer_with_nps_ai_section_and_nps_ai_widget_without_agent_uuid(self):
         Widget.objects.create(
@@ -401,8 +397,8 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["sections"][0].code,
-            "agent_uuid_not_found_in_widget_config",
+            serializer.errors["error"][0].code,
+            "nps_ai_widget_not_found",
         )
 
     def test_serializer_with_csat_human_section_and_csat_human_widget(self):
@@ -418,7 +414,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["sections"][0].code, "csat_human_widget_not_found"
+            serializer.errors["error"][0].code, "csat_human_widget_not_found"
         )
 
     def test_serializer_with_csat_human_section_and_csat_human_widget_without_flow_uuid(
@@ -449,8 +445,8 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["sections"][0].code,
-            "flow_uuid_not_found_in_widget_config",
+            serializer.errors["error"][0].code,
+            "csat_human_widget_not_found",
         )
 
     def test_serializer_with_csat_human_section_and_csat_human_widget_without_op_field(
@@ -480,8 +476,8 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["sections"][0].code,
-            "op_field_not_found_in_widget_config",
+            serializer.errors["error"][0].code,
+            "csat_human_widget_not_found",
         )
 
     def test_serializer_with_csat_human_section_and_csat_human_widget_with_flow_uuid(
@@ -532,7 +528,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["sections"][0].code, "nps_human_widget_not_found"
+            serializer.errors["error"][0].code, "nps_human_widget_not_found"
         )
 
     def test_serializer_with_nps_human_section_and_nps_human_widget_without_flow_uuid(
@@ -562,8 +558,8 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["sections"][0].code,
-            "flow_uuid_not_found_in_widget_config",
+            serializer.errors["error"][0].code,
+            "nps_human_widget_not_found",
         )
 
     def test_serializer_with_nps_human_section_and_nps_human_widget_without_op_field(
@@ -593,7 +589,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["sections"][0].code, "op_field_not_found_in_widget_config"
+            serializer.errors["error"][0].code, "nps_human_widget_not_found"
         )
 
     def test_serializer_with_nps_human_section_and_nps_human_widget_with_flow_uuid_and_op_field(
