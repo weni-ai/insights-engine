@@ -50,6 +50,22 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         )
 
         self.assertIsInstance(results, ConversationsTotalsMetrics)
+        self.assertEqual(
+            results.total_conversations.value,
+            results.resolved.value
+            + results.unresolved.value
+            + results.transferred_to_human.value,
+        )
+        self.assertEqual(
+            results.total_conversations.percentage,
+            (
+                results.resolved.value
+                + results.unresolved.value
+                + results.transferred_to_human.value
+            )
+            / results.total_conversations.value
+            * 100,
+        )
 
     def test_get_unclassified_label(self):
         label = self.service._get_unclassified_label("en")
