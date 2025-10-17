@@ -16,6 +16,7 @@ from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import ProjectSerializer
 from insights.shared.viewsets import get_source
+from insights.sources.chats.clients import ChatsRESTClient
 
 logger = logging.getLogger(__name__)
 
@@ -130,3 +131,17 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     def get_allowed_projects(self, request, *args, **kwargs):
         projects = Project.objects.filter(is_allowed=True).values("uuid")
         return Response(list(projects), status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="verify_csat",
+    )
+    def verify_csat(self, request, *args, **kwargs):
+        project = self.get_object()
+        chats_client = ChatsRESTClient(project)
+
+        project_data = chats_client.get_project(str(project.uuid))
+        is_csat_enabled = project_data.get("is_csat_enabled", False)
+
+        return Response(is_csat_enabled, status=status.HTTP_200_OK)
