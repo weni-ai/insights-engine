@@ -50,7 +50,7 @@ class TestAvailableWidgets(TestCase):
 
     def test_get_csat_ai_widget_without_agent_uuid(self):
         """Test get_csat_ai_widget returns None when widget exists but has no agent_uuid"""
-        widget = Widget.objects.create(
+        Widget.objects.create(
             dashboard=self.dashboard,
             name="CSAT AI Widget",
             type="chart",
@@ -70,7 +70,7 @@ class TestAvailableWidgets(TestCase):
     def test_get_csat_ai_widget_with_different_source(self):
         """Test get_csat_ai_widget returns None when widget has different source"""
         agent_uuid = uuid4()
-        widget = Widget.objects.create(
+        Widget.objects.create(
             dashboard=self.dashboard,
             name="NPS AI Widget",
             type="chart",
@@ -85,7 +85,7 @@ class TestAvailableWidgets(TestCase):
     def test_get_csat_ai_widget_with_different_type(self):
         """Test get_csat_ai_widget returns None when widget has different type"""
         agent_uuid = uuid4()
-        widget = Widget.objects.create(
+        Widget.objects.create(
             dashboard=self.dashboard,
             name="CSAT AI Widget",
             type="chart",
@@ -130,7 +130,7 @@ class TestAvailableWidgets(TestCase):
 
     def test_get_nps_ai_widget_without_agent_uuid(self):
         """Test get_nps_ai_widget returns None when widget exists but has no agent_uuid"""
-        widget = Widget.objects.create(
+        Widget.objects.create(
             dashboard=self.dashboard,
             name="NPS AI Widget",
             type="chart",
@@ -177,7 +177,7 @@ class TestAvailableWidgets(TestCase):
 
     def test_get_csat_human_widget_without_flow(self):
         """Test get_csat_human_widget returns None when widget exists but has no flow"""
-        widget = Widget.objects.create(
+        Widget.objects.create(
             dashboard=self.dashboard,
             name="CSAT Human Widget",
             type="chart",
@@ -197,7 +197,7 @@ class TestAvailableWidgets(TestCase):
 
     def test_get_csat_human_widget_without_op_field(self):
         """Test get_csat_human_widget returns None when widget exists but has no op_field"""
-        widget = Widget.objects.create(
+        Widget.objects.create(
             dashboard=self.dashboard,
             name="CSAT Human Widget",
             type="chart",
@@ -215,7 +215,7 @@ class TestAvailableWidgets(TestCase):
 
     def test_get_csat_human_widget_with_different_type(self):
         """Test get_csat_human_widget returns None when widget has different type"""
-        widget = Widget.objects.create(
+        Widget.objects.create(
             dashboard=self.dashboard,
             name="CSAT Human Widget",
             type="chart",
@@ -261,7 +261,7 @@ class TestAvailableWidgets(TestCase):
 
     def test_get_nps_human_widget_without_flow(self):
         """Test get_nps_human_widget returns None when widget exists but has no flow"""
-        widget = Widget.objects.create(
+        Widget.objects.create(
             dashboard=self.dashboard,
             name="NPS Human Widget",
             type="chart",
@@ -281,7 +281,7 @@ class TestAvailableWidgets(TestCase):
 
     def test_get_nps_human_widget_without_op_field(self):
         """Test get_nps_human_widget returns None when widget exists but has no op_field"""
-        widget = Widget.objects.create(
+        Widget.objects.create(
             dashboard=self.dashboard,
             name="NPS Human Widget",
             type="chart",

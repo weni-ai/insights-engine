@@ -17,7 +17,6 @@ from insights.reports.choices import ReportFormat
 from insights.reports.models import Report
 from insights.metrics.conversations.reports.choices import ConversationsReportSections
 from insights.projects.models import Project
-from insights.widgets.models import Widget
 from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 
 
