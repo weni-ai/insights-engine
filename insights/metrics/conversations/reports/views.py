@@ -16,6 +16,8 @@ from insights.metrics.conversations.reports.permissions import (
 )
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.reports.serializers import (
+    AvailableReportWidgetsQueryParamsSerializer,
+    AvailableReportWidgetsResponseSerializer,
     GetConversationsReportStatusQueryParamsSerializer,
     GetConversationsReportStatusResponseSerializer,
     RequestConversationsReportGenerationSerializer,
@@ -77,7 +79,11 @@ class ConversationsReportsViewSet(APIView):
             serializer.validated_data["project"]
         ):
             return Response(
-                {"error": _("A report is already being generated for this project")},
+                {
+                    "concurrent_report": _(
+                        "There is another report being processed for this project"
+                    )
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -112,3 +118,27 @@ class ConversationsReportsViewSet(APIView):
             GetConversationsReportStatusResponseSerializer(instance=report).data,
             status=status.HTTP_202_ACCEPTED,
         )
+
+
+class AvailableWidgetsViewSet(APIView):
+    service = ConversationsReportService(
+        elasticsearch_service=ConversationsElasticsearchService(
+            client=MockElasticsearchClient(),
+        ),
+        datalake_events_client=DataLakeEventsClient(),
+        metrics_service=ConversationsMetricsService(),
+        cache_client=CacheClient(),
+    )
+
+    permission_classes = [IsAuthenticated, CanCheckReportGenerationStatusPermission]
+
+    def get(self, request: Request) -> Response:
+        query_params = AvailableReportWidgetsQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+        widgets = self.service.get_available_widgets(
+            project=query_params.validated_data["project"]
+        )
+
+        return Response(AvailableReportWidgetsResponseSerializer(instance=widgets).data)

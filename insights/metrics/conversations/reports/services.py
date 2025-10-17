@@ -17,6 +17,7 @@ from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.reports.dataclass import (
+    AvailableReportWidgets,
     ConversationsReportFile,
     ConversationsReportWorksheet,
 )
@@ -1462,3 +1463,19 @@ class ConversationsReportService(BaseConversationsReportService):
             name=worksheet_name,
             data=data,
         )
+
+    def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
+        """
+        Get available widgets.
+        """
+        available_widgets = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+        ]
+
+        # TODO: CSAT AI, CSAT HUMAN, NPS AI, NPS HUMAN
+        # TODO: Custom widgets
+
+        csat_ai_widget_exists = Widget.objects.filter()
