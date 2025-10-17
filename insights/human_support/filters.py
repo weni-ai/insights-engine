@@ -12,6 +12,11 @@ class HumanSupportFilterSet(filters.FilterSet):
     sectors = UUIDInFilter(required=False)
     queues = UUIDInFilter(required=False)
     tags = UUIDInFilter(required=False)
+    start_date = filters.IsoDateTimeFilter(required=False)
+    end_date = filters.IsoDateTimeFilter(required=False)
+    agent = filters.UUIDFilter(required=False)
+    contact = filters.UUIDFilter(required=False)
+    ticket_id = filters.UUIDFilter(required=False)
 
     class Meta:
         fields = [
@@ -19,4 +24,9 @@ class HumanSupportFilterSet(filters.FilterSet):
             "sectors",
             "queues",
             "tags",
+            "start_date",
+            "end_date",
+            "agent",
+            "contact",
+            "ticket_id",
         ]
