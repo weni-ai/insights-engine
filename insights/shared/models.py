@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import uuid4
 
 from django.db import models
@@ -33,6 +34,13 @@ class ConfigurableModel(models.Model):
 
     class Meta:
         abstract = True
+
+    def get_config(self, key: str, default: Any = None) -> Any:
+        return (
+            self.config.get(key, default)
+            if self.config and isinstance(self.config, dict)
+            else default
+        )
 
 
 class BaseModel(UUIDModel, DateTimeModel):
