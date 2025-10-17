@@ -20,6 +20,7 @@ from insights.projects.serializers import (
     SetProjectAsSecondarySerializer,
 )
 from insights.shared.viewsets import get_source
+from insights.sources.chats.clients import ChatsRESTClient
 
 logger = logging.getLogger(__name__)
 
@@ -159,3 +160,17 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             project.save(update_fields=["config"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="verify_csat",
+    )
+    def verify_csat(self, request, *args, **kwargs):
+        project = self.get_object()
+        chats_client = ChatsRESTClient(project)
+
+        project_data = chats_client.get_project(str(project.uuid))
+        is_csat_enabled = project_data.get("is_csat_enabled", False)
+
+        return Response(is_csat_enabled, status=status.HTTP_200_OK)
