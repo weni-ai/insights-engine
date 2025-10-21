@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-02 18:09+0000\n"
+"POT-Creation-Date: 2025-10-21 14:51+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -26,8 +26,8 @@ msgstr "Não é possível definir um dashboard padrão como não padrão"
 msgid "User does not exist"
 msgstr "Usuário não existe"
 
-#: insights/metrics/conversations/integrations/datalake/services.py:299
-#: insights/metrics/conversations/reports/services.py:1087
+#: insights/metrics/conversations/integrations/datalake/services.py:312
+#: insights/metrics/conversations/reports/services.py:1084
 msgid "Unclassified"
 msgstr "Não classificadas"
 
@@ -95,92 +95,95 @@ msgid ""
 msgstr ""
 "O relatório de dashboard de conversas está pronto e anexado a este email."
 
-#: insights/metrics/conversations/reports/services.py:915
+#: insights/metrics/conversations/reports/services.py:917
 msgid "Resolutions"
 msgstr "Resolução"
 
-#: insights/metrics/conversations/reports/services.py:917
+#: insights/metrics/conversations/reports/services.py:919
 msgid "Resolution"
 msgstr "Resoluções"
 
-#: insights/metrics/conversations/reports/services.py:918
-#: insights/metrics/conversations/reports/services.py:991
-#: insights/metrics/conversations/reports/services.py:1084
-#: insights/metrics/conversations/reports/services.py:1176
-#: insights/metrics/conversations/reports/services.py:1234
-#: insights/metrics/conversations/reports/services.py:1305
-#: insights/metrics/conversations/reports/services.py:1374
-#: insights/metrics/conversations/reports/services.py:1436
+#: insights/metrics/conversations/reports/services.py:920
+#: insights/metrics/conversations/reports/services.py:993
+#: insights/metrics/conversations/reports/services.py:1081
+#: insights/metrics/conversations/reports/services.py:1173
+#: insights/metrics/conversations/reports/services.py:1231
+#: insights/metrics/conversations/reports/services.py:1302
+#: insights/metrics/conversations/reports/services.py:1371
+#: insights/metrics/conversations/reports/services.py:1433
 msgid "Date"
 msgstr "Data"
 
-#: insights/metrics/conversations/reports/services.py:920
+#: insights/metrics/conversations/reports/services.py:922
 msgid "Optimized Resolutions"
 msgstr "Resoluções otimizadas"
 
-#: insights/metrics/conversations/reports/services.py:921
+#: insights/metrics/conversations/reports/services.py:923
 msgid "Other conclusions"
 msgstr "Outras conclusões"
 
-#: insights/metrics/conversations/reports/services.py:986
-#: insights/metrics/conversations/reports/services.py:988
+#: insights/metrics/conversations/reports/services.py:991
 msgid "Transferred to Human"
 msgstr "Transferido para Humano"
 
-#: insights/metrics/conversations/reports/services.py:989
-msgid "Yes"
-msgstr "Sim"
-
-#: insights/metrics/conversations/reports/services.py:990
-msgid "No"
-msgstr "Não"
-
-#: insights/metrics/conversations/reports/services.py:1080
+#: insights/metrics/conversations/reports/services.py:1077
 msgid "Topics Distribution AI"
 msgstr "Distribuição de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1082
+#: insights/metrics/conversations/reports/services.py:1079
 msgid "Topics Distribution Human"
 msgstr "Distribuição de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1085
+#: insights/metrics/conversations/reports/services.py:1082
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1086
+#: insights/metrics/conversations/reports/services.py:1083
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1175
+#: insights/metrics/conversations/reports/services.py:1172
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1177
-#: insights/metrics/conversations/reports/services.py:1235
-#: insights/metrics/conversations/reports/services.py:1306
-#: insights/metrics/conversations/reports/services.py:1375
+#: insights/metrics/conversations/reports/services.py:1174
+#: insights/metrics/conversations/reports/services.py:1232
+#: insights/metrics/conversations/reports/services.py:1303
+#: insights/metrics/conversations/reports/services.py:1372
 msgid "Rating"
 msgstr "Avaliação"
 
-#: insights/metrics/conversations/reports/services.py:1233
+#: insights/metrics/conversations/reports/services.py:1230
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1304
+#: insights/metrics/conversations/reports/services.py:1301
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1373
+#: insights/metrics/conversations/reports/services.py:1370
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1437
+#: insights/metrics/conversations/reports/services.py:1434
 msgid "Value"
 msgstr "Valor"
 
 #: insights/metrics/conversations/reports/views.py:80
 msgid "A report is already being generated for this project"
 msgstr "Um relatório já está sendo gerado para este projeto"
+
+#: insights/metrics/conversations/serializers.py:273
+msgid "Widget not found"
+msgstr "Widget não encontrado"
+
+#: insights/metrics/conversations/serializers.py:278
+msgid "Widget source is not sales funnel"
+msgstr "O origem do widget não é um canal de vendas"
+
+#: insights/metrics/conversations/serializers.py:284
+msgid "Widget type is not sales funnel"
+msgstr "O tipo de widget não é um canal de vendas"
 
 #: insights/metrics/meta/choices.py:7
 msgid "Account Update"
@@ -641,12 +644,3 @@ msgstr "O projeto não tem permissão para acessar o WABA"
 #: insights/sources/vtex_conversions/usecases/query_execute.py:32
 msgid "Project does not have the credentials to access VTEX's API"
 msgstr "O projeto não tem as credenciais para acessar a API do VTEX"
-
-#~ msgid "Conversation date"
-#~ msgstr "Data da conversa"
-
-#~ msgid "Score"
-#~ msgstr "Pontuação"
-
-#~ msgid "Please find the conversations report attached."
-#~ msgstr "Por favor, encontre o relatório de conversas anexado."
