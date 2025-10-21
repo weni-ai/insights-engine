@@ -1004,14 +1004,14 @@ class ConversationsReportService(BaseConversationsReportService):
                 date_end=end_date,
                 event_name="weni_nexus_data",
                 key="conversation_classification",
+                table="conversation_classification",
+                metadata_key="human_support",
+                metadata_value="true",
             )
 
         with override(report.requested_by.language):
             worksheet_name = gettext("Transferred to Human")
 
-            transferred_to_human_label = gettext("Transferred to Human")
-            yes_label = gettext("Yes")
-            no_label = gettext("No")
             date_label = gettext("Date")
 
         if len(events) == 0:
@@ -1023,13 +1023,9 @@ class ConversationsReportService(BaseConversationsReportService):
         data = []
 
         for event in events:
-            metadata = json.loads(event.get("metadata"))
             data.append(
                 {
                     "URN": event.get("contact_urn", ""),
-                    transferred_to_human_label: (
-                        yes_label if metadata.get("human_support", False) else no_label
-                    ),
                     date_label: (
                         self._format_date(event.get("date", ""), report)
                         if event.get("date")
@@ -1042,7 +1038,6 @@ class ConversationsReportService(BaseConversationsReportService):
             data = [
                 {
                     "URN": "",
-                    transferred_to_human_label: "",
                     date_label: "",
                 }
             ]
