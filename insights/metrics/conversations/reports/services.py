@@ -932,6 +932,7 @@ class ConversationsReportService(BaseConversationsReportService):
             date_end=end_date,
             event_name="weni_nexus_data",
             key="conversation_classification",
+            table="conversation_classification",
         )
 
         with override(report.requested_by.language):
@@ -1096,6 +1097,7 @@ class ConversationsReportService(BaseConversationsReportService):
             key="topics",
             metadata_key="human_support",
             metadata_value=human_support,
+            table="topics",
         )
 
         with override(report.requested_by.language or "en"):
@@ -1192,6 +1194,7 @@ class ConversationsReportService(BaseConversationsReportService):
             metadata_value=agent_uuid,
             key="weni_csat",
             event_name="weni_nexus_data",
+            table="weni_csat",
         )
 
         with override(report.requested_by.language or "en"):
@@ -1250,6 +1253,7 @@ class ConversationsReportService(BaseConversationsReportService):
             metadata_value=agent_uuid,
             key="weni_nps",
             event_name="weni_nexus_data",
+            table="weni_nps",
         )
 
         with override(report.requested_by.language or "en"):
