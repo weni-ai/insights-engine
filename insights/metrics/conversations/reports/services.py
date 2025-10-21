@@ -781,20 +781,20 @@ class ConversationsReportService(BaseConversationsReportService):
 
             try:
                 datetime_date = datetime.fromtimestamp(original_date)
-            except Exception as e:
+            except Exception:
                 pass
 
         for _format in formats:
             try:
                 datetime_date = datetime.strptime(original_date, _format)
                 break
-            except Exception as e:
+            except Exception:
                 continue
 
         if not datetime_date:
             try:
                 datetime_date = datetime.fromisoformat(original_date)
-            except Exception as e:
+            except Exception:
                 pass
 
         if datetime_date:
