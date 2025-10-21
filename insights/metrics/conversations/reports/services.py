@@ -766,7 +766,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def _format_date(self, date_str: str, report: Report) -> str:
+    def _format_date(self, original_date: str | int, report: Report) -> str:
         """
         Format the date.
         """
@@ -774,15 +774,32 @@ class ConversationsReportService(BaseConversationsReportService):
 
         datetime_date = None
 
+        if isinstance(original_date, int):
+            if len(str(original_date)) == 13:
+                # If the date is in milliseconds, convert it to seconds
+                original_date = original_date // 1000
+
+            try:
+                datetime_date = datetime.fromtimestamp(original_date)
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
+                    % (
+                        original_date,
+                        report.uuid,
+                        e,
+                    ),
+                )
+
         for _format in formats:
             try:
-                datetime_date = datetime.strptime(date_str, _format)
+                datetime_date = datetime.strptime(original_date, _format)
                 break
             except Exception as e:
                 logger.error(
                     "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
                     % (
-                        date_str,
+                        original_date,
                         report.uuid,
                         e,
                     ),
@@ -792,26 +809,30 @@ class ConversationsReportService(BaseConversationsReportService):
 
         if not datetime_date:
             try:
-                datetime_date = datetime.fromisoformat(date_str)
+                datetime_date = datetime.fromisoformat(original_date)
             except Exception as e:
                 logger.error(
                     "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
                     % (
-                        date_str,
+                        original_date,
                         report.uuid,
                         e,
                     ),
                 )
                 capture_exception(e)
-                raise e
 
-        tz_name = report.project.timezone
+        if datetime_date:
+            tz_name = report.project.timezone
 
-        if tz_name:
-            tz = pytz.timezone(tz_name)
-            datetime_date = datetime_date.astimezone(tz)
+            if tz_name:
+                tz = pytz.timezone(tz_name)
+                datetime_date = datetime_date.astimezone(tz)
 
-        return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
+            return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
+
+        # Return the original date as a fallback
+        # if everything fails
+        return str(original_date)
 
     def get_flowsrun_results_by_contacts(
         self,
