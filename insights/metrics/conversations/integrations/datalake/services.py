@@ -657,7 +657,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             raise e
 
-        total_conversations = resolved_events_count + unresolved_events_count
+        total_conversations = (
+            resolved_events_count
+            + unresolved_events_count
+            + transferred_to_human_events_count
+        )
 
         percentage_resolved = round(
             (
