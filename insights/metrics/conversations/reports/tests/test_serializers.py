@@ -205,10 +205,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             }
         )
         self.assertFalse(serializer.is_valid())
-        self.assertEqual(len(serializer.errors["custom_widgets"]), 1)
-        self.assertEqual(
-            serializer.errors["custom_widgets"][0].code, "widgets_not_found"
-        )
+        self.assertEqual(serializer.errors["error"][0].code, "widgets_not_found")
 
     def test_serializer_with_custom_widgets_from_another_project(self):
         widget = Widget.objects.create(
@@ -240,10 +237,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             }
         )
         self.assertFalse(serializer.is_valid())
-        self.assertEqual(len(serializer.errors["custom_widgets"]), 1)
-        self.assertEqual(
-            serializer.errors["custom_widgets"][0].code, "widgets_not_found"
-        )
+        self.assertEqual(serializer.errors["error"][0].code, "widgets_not_found")
 
     def test_serializer_with_start_date_after_end_date(self):
         serializer = RequestConversationsReportGenerationSerializer(
@@ -257,7 +251,7 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["start_date"][0].code, "start_date_after_end_date"
+            serializer.errors["error"][0].code, "start_date_after_end_date"
         )
 
     def test_serializer_with_invalid_type(self):

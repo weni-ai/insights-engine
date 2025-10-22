@@ -2,7 +2,7 @@ from django.utils.translation import gettext_lazy as _
 
 
 from rest_framework.views import APIView
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -73,7 +73,24 @@ class ConversationsReportsViewSet(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = RequestConversationsReportGenerationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except serializers.ValidationError as e:
+            if e.errors.get("error"):
+                error = e.errors.get("error")
+
+                if isinstance(error, list):
+                    error = error[0]
+
+                return Response(
+                    {"error": error},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            else:
+                return Response(
+                    e.errors,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         if self.service.get_current_report_for_project(
             serializer.validated_data["project"]
