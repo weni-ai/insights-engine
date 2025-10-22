@@ -76,8 +76,8 @@ class ConversationsReportsViewSet(APIView):
         try:
             serializer.is_valid(raise_exception=True)
         except serializers.ValidationError as e:
-            if e.errors.get("error"):
-                error = e.errors.get("error")
+            if e.detail.get("error"):
+                error = e.detail.get("error")
 
                 if isinstance(error, list):
                     error = error[0]
@@ -88,7 +88,7 @@ class ConversationsReportsViewSet(APIView):
                 )
             else:
                 return Response(
-                    e.errors,
+                    e.detail,
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
