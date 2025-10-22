@@ -419,6 +419,7 @@ class ConversationsReportService(BaseConversationsReportService):
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     to=[report.requested_by.email],
                 )
+                email.content_subtype = "html"
 
                 for file in files:
                     email.attach(
