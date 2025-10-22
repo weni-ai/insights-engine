@@ -72,7 +72,7 @@ class RequestConversationsReportGenerationSerializer(
 
         if attrs["start_date"] > attrs["end_date"]:
             raise serializers.ValidationError(
-                {"start_date": [_("Start date must be before end date")]},
+                {"error": _("Start date must be before end date")},
                 code="start_date_after_end_date",
             )
 
@@ -94,12 +94,13 @@ class RequestConversationsReportGenerationSerializer(
             if not_found_widgets:
                 raise serializers.ValidationError(
                     {
-                        "custom_widgets": [
-                            _("Widget {widget_uuid} not found").format(
-                                widget_uuid=widget_uuid
-                            )
-                            for widget_uuid in not_found_widgets
-                        ]
+                        "error": ",".join(
+                            [
+                                _("Widget %(widget_uuid)s not found")
+                                % {"widget_uuid": widget_uuid}
+                                for widget_uuid in not_found_widgets
+                            ]
+                        ),
                     },
                     code="widgets_not_found",
                 )
