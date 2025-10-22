@@ -6,7 +6,12 @@
         <span style="font-size: 16px; font-weight: 700; line-height: 24px;">{% trans 'Hi,' %}</span>
 
         <p>
-            {% blocktrans with project_name=project_name %}The data export for the {{ project_name }} project is ready and the files have been attached to this email.{% endblocktrans %}
+            {% blocktrans with project_name=project_name %}Unable to generate export of {{ project_name }} project data.{% endblocktrans %}
         <p>
+        {% if event_id %}
+            <p>
+                Use the following ID to report to support: {{ event_id }}.
+            </p>
+        {% endif %}
     </div>
 {% endblock %}
