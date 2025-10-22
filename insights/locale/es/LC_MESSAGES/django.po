@@ -8,9 +8,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-02 18:09+0000\n"
+"POT-Creation-Date: 2025-10-22 19:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Last-Translator: Kallil Souza dos Santos <kallilsouza@hotmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
@@ -18,6 +18,32 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
 "1 : 2;\n"
+
+#: insights/core/templates/core/emails/base.html:27
+msgid "Our site"
+msgstr "Nuestro sitio"
+
+#: insights/core/templates/core/emails/base.html:41
+msgid "2025 © Weni by VTEX. All rights reserved."
+msgstr "2025 © Weni by VTEX. Todos los derechos reservados."
+
+#: insights/core/templates/core/emails/base.html:46
+msgid ""
+"You are receiving this mail because you registered in Weni platform. This "
+"also shows that you agree to our Terms of use and Privacy Policies."
+msgstr "Estás recibiendo este correo porque te has registrado en la plataforma Weni. Esto también muestra que aceptas nuestros Términos de uso y Política de privacidade."
+
+#: insights/core/templates/core/emails/base.html:49
+msgid "Privacy Policy"
+msgstr "Política de privacidad"
+
+#: insights/core/templates/core/emails/base.html:53
+msgid "Terms of use"
+msgstr "Términos de uso"
+
+#: insights/core/templates/core/emails/base.html:57
+msgid "Help Center"
+msgstr "Centro de ayuda"
 
 #: insights/dashboards/serializers.py:46
 msgid "Cannot set a default dashboard as non-default"
@@ -27,8 +53,8 @@ msgstr "No se puede establecer un panel predeterminado como no predeterminado"
 msgid "User does not exist"
 msgstr "El usuario no existe"
 
-#: insights/metrics/conversations/integrations/datalake/services.py:299
-#: insights/metrics/conversations/reports/services.py:1087
+#: insights/metrics/conversations/integrations/datalake/services.py:312
+#: insights/metrics/conversations/reports/services.py:1123
 msgid "Unclassified"
 msgstr "No clasificadas"
 
@@ -85,103 +111,126 @@ msgstr "Op field no encontrado en la configuración del widget"
 msgid "NPS human widget not found"
 msgstr "Widget NPS Humano no encontrado"
 
-#: insights/metrics/conversations/reports/services.py:350
-#: insights/metrics/conversations/reports/services.py:384
+#: insights/metrics/conversations/reports/services.py:351
+#: insights/metrics/conversations/reports/services.py:392
 msgid "Conversations dashboard report"
 msgstr "Reporte dash de conversas"
 
-#: insights/metrics/conversations/reports/services.py:386
-msgid ""
-"Your conversations dashboard report is ready and attached to this email."
-msgstr ""
-"El reporte de dashboard de conversas está listo y anexado a este email."
-
-#: insights/metrics/conversations/reports/services.py:915
+#: insights/metrics/conversations/reports/services.py:951
 msgid "Resolutions"
 msgstr "Resoluciones"
 
-#: insights/metrics/conversations/reports/services.py:917
+#: insights/metrics/conversations/reports/services.py:953
 msgid "Resolution"
 msgstr "Resolución"
 
-#: insights/metrics/conversations/reports/services.py:918
-#: insights/metrics/conversations/reports/services.py:991
-#: insights/metrics/conversations/reports/services.py:1084
-#: insights/metrics/conversations/reports/services.py:1176
-#: insights/metrics/conversations/reports/services.py:1234
-#: insights/metrics/conversations/reports/services.py:1305
-#: insights/metrics/conversations/reports/services.py:1374
-#: insights/metrics/conversations/reports/services.py:1436
+#: insights/metrics/conversations/reports/services.py:954
+#: insights/metrics/conversations/reports/services.py:1027
+#: insights/metrics/conversations/reports/services.py:1120
+#: insights/metrics/conversations/reports/services.py:1212
+#: insights/metrics/conversations/reports/services.py:1270
+#: insights/metrics/conversations/reports/services.py:1341
+#: insights/metrics/conversations/reports/services.py:1410
+#: insights/metrics/conversations/reports/services.py:1472
 msgid "Date"
 msgstr "Fecha"
 
-#: insights/metrics/conversations/reports/services.py:920
+#: insights/metrics/conversations/reports/services.py:956
 msgid "Optimized Resolutions"
 msgstr "Resoluciones optimizadas"
 
-#: insights/metrics/conversations/reports/services.py:921
+#: insights/metrics/conversations/reports/services.py:957
 msgid "Other conclusions"
 msgstr "Otras conclusiones"
 
-#: insights/metrics/conversations/reports/services.py:986
-#: insights/metrics/conversations/reports/services.py:988
+#: insights/metrics/conversations/reports/services.py:1022
+#: insights/metrics/conversations/reports/services.py:1024
 msgid "Transferred to Human"
 msgstr "Transferido para Humano"
 
-#: insights/metrics/conversations/reports/services.py:989
+#: insights/metrics/conversations/reports/services.py:1025
 msgid "Yes"
 msgstr "Si"
 
-#: insights/metrics/conversations/reports/services.py:990
+#: insights/metrics/conversations/reports/services.py:1026
 msgid "No"
 msgstr "No"
 
-#: insights/metrics/conversations/reports/services.py:1080
+#: insights/metrics/conversations/reports/services.py:1116
 msgid "Topics Distribution AI"
 msgstr "Distribución de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1082
+#: insights/metrics/conversations/reports/services.py:1118
 msgid "Topics Distribution Human"
 msgstr "Distribución de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1085
+#: insights/metrics/conversations/reports/services.py:1121
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1086
+#: insights/metrics/conversations/reports/services.py:1122
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1175
+#: insights/metrics/conversations/reports/services.py:1211
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1177
-#: insights/metrics/conversations/reports/services.py:1235
-#: insights/metrics/conversations/reports/services.py:1306
-#: insights/metrics/conversations/reports/services.py:1375
+#: insights/metrics/conversations/reports/services.py:1213
+#: insights/metrics/conversations/reports/services.py:1271
+#: insights/metrics/conversations/reports/services.py:1342
+#: insights/metrics/conversations/reports/services.py:1411
 msgid "Rating"
 msgstr "Avaliación"
 
-#: insights/metrics/conversations/reports/services.py:1233
+#: insights/metrics/conversations/reports/services.py:1269
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1304
+#: insights/metrics/conversations/reports/services.py:1340
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1373
+#: insights/metrics/conversations/reports/services.py:1409
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1437
+#: insights/metrics/conversations/reports/services.py:1473
 msgid "Value"
 msgstr "Valor"
 
 #: insights/metrics/conversations/reports/views.py:80
 msgid "A report is already being generated for this project"
 msgstr "Un reporte ya está siendo generado para este proyecto"
+
+#: insights/metrics/conversations/serializers.py:273
+msgid "Widget not found"
+msgstr "Widget no encontrado"
+
+#: insights/metrics/conversations/serializers.py:278
+msgid "Widget source is not sales funnel"
+msgstr "El origen del widget no es una canal de ventas"
+
+#: insights/metrics/conversations/serializers.py:284
+msgid "Widget type is not sales funnel"
+msgstr "El tipo del widget no es una canal de ventas"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:6
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:6
+msgid "Hi,"
+msgstr "Hola,"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:9
+#, python-format
+msgid "Unable to generate export of %(project_name)s project data."
+msgstr "No se puede generar el export de los datos del proyecto %(project_name)s."
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:9
+#, python-format
+msgid ""
+"The data export for the %(project_name)s project is ready and the files have "
+"been attached to this email."
+msgstr "El export de los datos del proyecto %(project_name)s está listo y los archivos han sido adjuntos a este email."
 
 #: insights/metrics/meta/choices.py:7
 msgid "Account Update"
@@ -642,12 +691,3 @@ msgstr "El proyecto no tiene permisos para acceder a WABA"
 #: insights/sources/vtex_conversions/usecases/query_execute.py:32
 msgid "Project does not have the credentials to access VTEX's API"
 msgstr "El proyecto no tiene las credenciales para acceder a la API de VTEX"
-
-#~ msgid "Conversation date"
-#~ msgstr "Fecha de conversa"
-
-#~ msgid "Score"
-#~ msgstr "Puntaje"
-
-#~ msgid "Please find the conversations report attached."
-#~ msgstr "Por favor, encuentre el reporte de conversas adjunto."
