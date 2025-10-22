@@ -1189,10 +1189,23 @@ class TestConversationsReportServiceAdditional(TestCase):
             status=ReportStatus.PENDING,
         )
 
-        with self.assertRaises(ValueError) as context:
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
+        ) as mock_send_email:
+            mock_send_email.return_value = None
+
             self.service.generate(report)
 
-        self.assertIn("Start date or end date is missing", str(context.exception))
+            # Check that error email was sent
+            mock_send_email.assert_called_once()
+            call_args = mock_send_email.call_args
+            self.assertEqual(
+                call_args[0][0], report
+            )  # First argument should be the report
+            self.assertEqual(
+                call_args[0][1], []
+            )  # Second argument should be empty files list
+            self.assertTrue(call_args[1]["is_error"])  # is_error should be True
 
     def test_generate_with_missing_end_date(self):
         """Test generate method with missing end date."""
@@ -1206,10 +1219,23 @@ class TestConversationsReportServiceAdditional(TestCase):
             status=ReportStatus.PENDING,
         )
 
-        with self.assertRaises(ValueError) as context:
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
+        ) as mock_send_email:
+            mock_send_email.return_value = None
+
             self.service.generate(report)
 
-        self.assertIn("Start date or end date is missing", str(context.exception))
+            # Check that error email was sent
+            mock_send_email.assert_called_once()
+            call_args = mock_send_email.call_args
+            self.assertEqual(
+                call_args[0][0], report
+            )  # First argument should be the report
+            self.assertEqual(
+                call_args[0][1], []
+            )  # Second argument should be empty files list
+            self.assertTrue(call_args[1]["is_error"])  # is_error should be True
 
     def test_generate_with_interrupted_report(self):
         """Test generate method with interrupted report."""
@@ -1252,8 +1278,23 @@ class TestConversationsReportServiceAdditional(TestCase):
         ) as mock_get_resolutions:
             mock_get_resolutions.side_effect = Exception("Test error")
 
-            with self.assertRaises(Exception):
+            with patch(
+                "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
+            ) as mock_send_email:
+                mock_send_email.return_value = None
+
                 self.service.generate(report)
+
+                # Check that error email was sent
+                mock_send_email.assert_called_once()
+                call_args = mock_send_email.call_args
+                self.assertEqual(
+                    call_args[0][0], report
+                )  # First argument should be the report
+                self.assertEqual(
+                    call_args[0][1], []
+                )  # Second argument should be empty files list
+                self.assertTrue(call_args[1]["is_error"])  # is_error should be True
 
             report.refresh_from_db()
             self.assertEqual(report.status, ReportStatus.FAILED)
