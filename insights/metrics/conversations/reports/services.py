@@ -10,6 +10,7 @@ import pytz
 
 from django.core.mail import EmailMessage
 from django.conf import settings
+from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext, override
 from django.utils import translation, timezone
@@ -382,8 +383,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         with translation.override(report.requested_by.language):
             subject = _("Conversations dashboard report")
-            body = _(
-                "Your conversations dashboard report is ready and attached to this email."
+            body = render_to_string(
+                "metrics/conversations/emails/report_is_ready.html",
+                {
+                    "project_name": report.project.name,
+                },
             )
 
             email = EmailMessage(
