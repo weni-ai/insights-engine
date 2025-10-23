@@ -102,6 +102,22 @@ class BaseConversationsReportService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def zip_files(
+        self, files: list[ConversationsReportFile]
+    ) -> ConversationsReportFile:
+        """
+        Zip the files into a single file.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def upload_file_to_s3(self, file: ConversationsReportFile) -> str:
+        """
+        Upload the file to S3.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def send_email(self, report: Report, file_content: str) -> None:
         """
         Send the email for the conversations report.
@@ -437,6 +453,20 @@ class ConversationsReportService(BaseConversationsReportService):
             with translation.override(report.requested_by.language):
                 subject = _("Conversations dashboard report")
 
+                if len(files) > 1:
+                    reports_file = self.zip_files(files)
+                elif len(files) == 1:
+                    reports_file = files[0]
+                else:
+                    reports_file = None
+
+                file_link = None
+
+                if reports_file and settings.USE_S3:
+                    obj_key = self.upload_file_to_s3(reports_file)
+                    file_link = self.get_presigned_url(obj_key)
+                    reports_file = None
+
                 if is_error:
                     body = render_to_string(
                         "metrics/conversations/emails/report_failed.html",
@@ -450,6 +480,7 @@ class ConversationsReportService(BaseConversationsReportService):
                         "metrics/conversations/emails/report_is_ready.html",
                         {
                             "project_name": report.project.name,
+                            "file_link": file_link,
                         },
                     )
 
@@ -461,16 +492,12 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
                 email.content_subtype = "html"
 
-                if len(files) > 1:
-                    reports_file = self.zip_files(files)
-                else:
-                    reports_file = files[0]
-
-                email.attach(
-                    reports_file.name,
-                    reports_file.content,
-                    "application/zip",
-                )
+                if reports_file and not settings.USE_S3:
+                    email.attach(
+                        reports_file.name,
+                        reports_file.content,
+                        "application/zip",
+                    )
 
                 email.send(fail_silently=False)
         except Exception as e:
