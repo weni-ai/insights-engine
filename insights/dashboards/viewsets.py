@@ -59,6 +59,7 @@ class DashboardViewSet(
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
             "finished",
+            "analysis_finished_rooms_status",
         ]:
             return [
                 IsAuthenticated(),
@@ -400,4 +401,15 @@ class DashboardViewSet(
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
         data = service.get_finished_rooms(filters=request.query_params)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/finished_rooms_status",
+    )
+    def analysis_finished_rooms_status(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        data = service.get_analysis_status(filters=request.query_params)
         return Response(data, status=status.HTTP_200_OK)
