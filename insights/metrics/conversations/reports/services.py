@@ -10,6 +10,7 @@ import pytz
 
 from django.core.mail import EmailMessage
 from django.conf import settings
+from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext, override
 from django.utils import translation, timezone
@@ -384,35 +385,64 @@ class ConversationsReportService(BaseConversationsReportService):
             ConversationsReportFile(name=f"{file_name}.xlsx", content=output.getvalue())
         ]
 
-    def send_email(self, report: Report, files: list[ConversationsReportFile]) -> None:
+    def send_email(
+        self,
+        report: Report,
+        files: list[ConversationsReportFile],
+        is_error: bool = False,
+        event_id: str | None = None,
+    ) -> None:
         """
         Send the email for the conversations report.
         """
-        with translation.override(report.requested_by.language):
-            subject = _("Conversations dashboard report")
-            body = _(
-                "Your conversations dashboard report is ready and attached to this email."
-            )
+        try:
+            with translation.override(report.requested_by.language):
+                subject = _("Conversations dashboard report")
 
-            email = EmailMessage(
-                subject=subject,
-                body=body,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[report.requested_by.email],
-            )
+                if is_error:
+                    body = render_to_string(
+                        "metrics/conversations/emails/report_failed.html",
+                        {
+                            "project_name": report.project.name,
+                            "event_id": event_id,
+                        },
+                    )
+                else:
+                    body = render_to_string(
+                        "metrics/conversations/emails/report_is_ready.html",
+                        {
+                            "project_name": report.project.name,
+                        },
+                    )
 
-            for file in files:
-                email.attach(
-                    file.name,
-                    file.content,
-                    (
-                        "application/csv"
-                        if report.format == ReportFormat.CSV
-                        else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    ),
+                email = EmailMessage(
+                    subject=subject,
+                    body=body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[report.requested_by.email],
                 )
+                email.content_subtype = "html"
 
-            email.send(fail_silently=False)
+                for file in files:
+                    email.attach(
+                        file.name,
+                        file.content,
+                        (
+                            "application/csv"
+                            if report.format == ReportFormat.CSV
+                            else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        ),
+                    )
+
+                email.send(fail_silently=False)
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Failed to send email for conversations report %s. Error: %s",
+                report.uuid,
+                e,
+            )
+
+            return None
 
     def request_generation(
         self,
@@ -620,7 +650,12 @@ class ConversationsReportService(BaseConversationsReportService):
             report.errors = errors
             report.save(update_fields=["status", "completed_at", "errors"])
             self._clear_cache_keys(report.uuid)
-            raise e
+
+            event_id = capture_exception(e)
+
+            self.send_email(report, [], is_error=True, event_id=event_id)
+
+            return None
 
         report.refresh_from_db(fields=["config"])
 
