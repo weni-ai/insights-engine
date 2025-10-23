@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-21 14:51+0000\n"
+"POT-Creation-Date: 2025-10-23 16:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -27,163 +27,161 @@ msgid "User does not exist"
 msgstr "Usuário não existe"
 
 #: insights/metrics/conversations/integrations/datalake/services.py:312
-#: insights/metrics/conversations/reports/services.py:1084
+#: insights/metrics/conversations/reports/services.py:1091
 msgid "Unclassified"
 msgstr "Não classificadas"
 
-#: insights/metrics/conversations/reports/serializers.py:30
+#: insights/metrics/conversations/reports/serializers.py:36
 msgid "Project not found"
 msgstr "Projeto não encontrado"
 
-#: insights/metrics/conversations/reports/serializers.py:69
+#: insights/metrics/conversations/reports/serializers.py:75
 msgid "Start date must be before end date"
 msgstr "A data de início deve ser antes da data de fim"
 
-#: insights/metrics/conversations/reports/serializers.py:78
-#: insights/metrics/conversations/reports/serializers.py:79
+#: insights/metrics/conversations/reports/serializers.py:83
 msgid "Sections or custom widgets are required"
 msgstr "Seções ou widgets personalizados são obrigatórios"
 
-#: insights/metrics/conversations/reports/serializers.py:95
-#, python-brace-format
-msgid "Widget {widget_uuid} not found"
-msgstr "Widget {widget_uuid} não encontrado"
+#: insights/metrics/conversations/reports/serializers.py:99
+msgid "Widget %(widget_uuid)s not found"
+msgstr "Widget %(widget_uuid)s não encontrado"
 
-#: insights/metrics/conversations/reports/serializers.py:113
+#: insights/metrics/conversations/reports/serializers.py:117
 msgid "Conversations dashboard not found"
 msgstr "Dashboard de conversas não encontrado"
 
-#: insights/metrics/conversations/reports/serializers.py:127
-msgid "CSAT AI widget not found"
-msgstr "Widget CSAT AI não encontrado"
+#: insights/metrics/conversations/reports/serializers.py:129
+msgid "CSAT AI widget not found or not configured correctly"
+msgstr "Widget CSAT AI não encontrado ou não está configurado corretamente"
 
-#: insights/metrics/conversations/reports/serializers.py:135
-#: insights/metrics/conversations/reports/serializers.py:158
+#: insights/metrics/conversations/reports/serializers.py:139
+#: insights/metrics/conversations/reports/serializers.py:162
 msgid "Agent UUID not found in widget config"
 msgstr "UUID do agente não encontrado na configuração do widget"
 
-#: insights/metrics/conversations/reports/serializers.py:150
-msgid "NPS AI widget not found"
-msgstr "Widget NPS AI não encontrado"
+#: insights/metrics/conversations/reports/serializers.py:152
+msgid "NPS AI widget not found or not configured correctly"
+msgstr "Widget NPS AI não encontrado ou não está configurado corretamente"
 
-#: insights/metrics/conversations/reports/serializers.py:173
-msgid "CSAT human widget not found"
-msgstr "Widget CSAT Humano não encontrado"
+#: insights/metrics/conversations/reports/serializers.py:175
+msgid "CSAT human widget not found or not configured correctly"
+msgstr "Widget CSAT Humano não encontrado ou não está configurado corretamente"
 
-#: insights/metrics/conversations/reports/serializers.py:182
-#: insights/metrics/conversations/reports/serializers.py:213
+#: insights/metrics/conversations/reports/serializers.py:186
+#: insights/metrics/conversations/reports/serializers.py:217
 msgid "Flow UUID not found in widget config"
 msgstr "UUID do fluxo não encontrado na configuração do widget"
 
-#: insights/metrics/conversations/reports/serializers.py:188
-#: insights/metrics/conversations/reports/serializers.py:219
+#: insights/metrics/conversations/reports/serializers.py:192
+#: insights/metrics/conversations/reports/serializers.py:223
 msgid "Op field not found in widget config"
 msgstr "Op field não encontrado na configuração do widget"
 
-#: insights/metrics/conversations/reports/serializers.py:204
-msgid "NPS human widget not found"
-msgstr "Widget NPS Humano não encontrado"
+#: insights/metrics/conversations/reports/serializers.py:206
+msgid "NPS human widget not found or not configured correctly"
+msgstr "Widget NPS Humano não encontrado ou não está configurado corretamente"
 
-#: insights/metrics/conversations/reports/services.py:350
-#: insights/metrics/conversations/reports/services.py:384
+#: insights/metrics/conversations/reports/services.py:358
+#: insights/metrics/conversations/reports/services.py:392
 msgid "Conversations dashboard report"
 msgstr "Relatório de dashboard de conversas"
 
-#: insights/metrics/conversations/reports/services.py:386
+#: insights/metrics/conversations/reports/services.py:394
 msgid ""
 "Your conversations dashboard report is ready and attached to this email."
 msgstr ""
 "O relatório de dashboard de conversas está pronto e anexado a este email."
 
-#: insights/metrics/conversations/reports/services.py:917
+#: insights/metrics/conversations/reports/services.py:923
 msgid "Resolutions"
 msgstr "Resolução"
 
-#: insights/metrics/conversations/reports/services.py:919
+#: insights/metrics/conversations/reports/services.py:925
 msgid "Resolution"
 msgstr "Resoluções"
 
-#: insights/metrics/conversations/reports/services.py:920
-#: insights/metrics/conversations/reports/services.py:993
-#: insights/metrics/conversations/reports/services.py:1081
-#: insights/metrics/conversations/reports/services.py:1173
-#: insights/metrics/conversations/reports/services.py:1231
-#: insights/metrics/conversations/reports/services.py:1302
-#: insights/metrics/conversations/reports/services.py:1371
-#: insights/metrics/conversations/reports/services.py:1433
+#: insights/metrics/conversations/reports/services.py:926
+#: insights/metrics/conversations/reports/services.py:999
+#: insights/metrics/conversations/reports/services.py:1088
+#: insights/metrics/conversations/reports/services.py:1181
+#: insights/metrics/conversations/reports/services.py:1240
+#: insights/metrics/conversations/reports/services.py:1311
+#: insights/metrics/conversations/reports/services.py:1380
+#: insights/metrics/conversations/reports/services.py:1442
 msgid "Date"
 msgstr "Data"
 
-#: insights/metrics/conversations/reports/services.py:922
+#: insights/metrics/conversations/reports/services.py:928
 msgid "Optimized Resolutions"
 msgstr "Resoluções otimizadas"
 
-#: insights/metrics/conversations/reports/services.py:923
+#: insights/metrics/conversations/reports/services.py:929
 msgid "Other conclusions"
 msgstr "Outras conclusões"
 
-#: insights/metrics/conversations/reports/services.py:991
+#: insights/metrics/conversations/reports/services.py:997
 msgid "Transferred to Human"
 msgstr "Transferido para Humano"
 
-#: insights/metrics/conversations/reports/services.py:1077
+#: insights/metrics/conversations/reports/services.py:1084
 msgid "Topics Distribution AI"
 msgstr "Distribuição de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1079
+#: insights/metrics/conversations/reports/services.py:1086
 msgid "Topics Distribution Human"
 msgstr "Distribuição de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1082
+#: insights/metrics/conversations/reports/services.py:1089
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1083
+#: insights/metrics/conversations/reports/services.py:1090
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1172
+#: insights/metrics/conversations/reports/services.py:1180
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1174
-#: insights/metrics/conversations/reports/services.py:1232
-#: insights/metrics/conversations/reports/services.py:1303
-#: insights/metrics/conversations/reports/services.py:1372
+#: insights/metrics/conversations/reports/services.py:1182
+#: insights/metrics/conversations/reports/services.py:1241
+#: insights/metrics/conversations/reports/services.py:1312
+#: insights/metrics/conversations/reports/services.py:1381
 msgid "Rating"
 msgstr "Avaliação"
 
-#: insights/metrics/conversations/reports/services.py:1230
+#: insights/metrics/conversations/reports/services.py:1239
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1301
+#: insights/metrics/conversations/reports/services.py:1310
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1370
+#: insights/metrics/conversations/reports/services.py:1379
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1434
+#: insights/metrics/conversations/reports/services.py:1443
 msgid "Value"
 msgstr "Valor"
 
-#: insights/metrics/conversations/reports/views.py:80
-msgid "A report is already being generated for this project"
-msgstr "Um relatório já está sendo gerado para este projeto"
+#: insights/metrics/conversations/reports/views.py:101
+msgid "There is another report being processed for this project"
+msgstr "Existe outro relatório sendo processado para este projeto"
 
 #: insights/metrics/conversations/serializers.py:273
 msgid "Widget not found"
-msgstr "Widget não encontrado"
+msgstr "Widget NPS AI não encontrado"
 
 #: insights/metrics/conversations/serializers.py:278
 msgid "Widget source is not sales funnel"
-msgstr "O origem do widget não é um canal de vendas"
+msgstr "A fonte do widget não é uma funnel de vendas"
 
 #: insights/metrics/conversations/serializers.py:284
 msgid "Widget type is not sales funnel"
-msgstr "O tipo de widget não é um canal de vendas"
+msgstr "O tipo de widget não é uma funnel de vendas"
 
 #: insights/metrics/meta/choices.py:7
 msgid "Account Update"
@@ -625,15 +623,15 @@ msgstr "Relatório"
 msgid "Reports"
 msgstr "Relatórios"
 
-#: insights/shared/models.py:16
+#: insights/shared/models.py:17
 msgid "Created on"
 msgstr "Criado em"
 
-#: insights/shared/models.py:18
+#: insights/shared/models.py:19
 msgid "Modified on"
 msgstr "Modificado em"
 
-#: insights/shared/models.py:32
+#: insights/shared/models.py:33
 msgid "config"
 msgstr "configuração"
 
