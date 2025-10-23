@@ -127,7 +127,9 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         mock_is_feature_active.assert_called_once_with(
-            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY, self.user, self.project
+            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY,
+            self.user.email,
+            self.project.uuid,
         )
 
     @with_project_auth
@@ -186,7 +188,9 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["report_uuid"], str(report.uuid))
 
         mock_is_feature_active.assert_called_once_with(
-            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY, self.user, self.project
+            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY,
+            self.user.email,
+            self.project.uuid,
         )
 
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-17 14:50+0000\n"
+"POT-Creation-Date: 2025-10-23 16:33+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -27,26 +27,25 @@ msgid "User does not exist"
 msgstr "Usuário não existe"
 
 #: insights/metrics/conversations/integrations/datalake/services.py:312
-#: insights/metrics/conversations/reports/services.py:1097
+#: insights/metrics/conversations/reports/services.py:1091
 msgid "Unclassified"
 msgstr "Não classificadas"
 
-#: insights/metrics/conversations/reports/serializers.py:37
+#: insights/metrics/conversations/reports/serializers.py:36
 msgid "Project not found"
 msgstr "Projeto não encontrado"
 
-#: insights/metrics/conversations/reports/serializers.py:76
+#: insights/metrics/conversations/reports/serializers.py:75
 msgid "Start date must be before end date"
 msgstr "A data de início deve ser antes da data de fim"
 
-#: insights/metrics/conversations/reports/serializers.py:84
+#: insights/metrics/conversations/reports/serializers.py:83
 msgid "Sections or custom widgets are required"
 msgstr "Seções ou widgets personalizados são obrigatórios"
 
 #: insights/metrics/conversations/reports/serializers.py:99
-#, python-brace-format
-msgid "Widget {widget_uuid} not found"
-msgstr "Widget {widget_uuid} não encontrado"
+msgid "Widget %(widget_uuid)s not found"
+msgstr "Widget %(widget_uuid)s não encontrado"
 
 #: insights/metrics/conversations/reports/serializers.py:117
 msgid "Conversations dashboard not found"
@@ -94,90 +93,81 @@ msgid ""
 msgstr ""
 "O relatório de dashboard de conversas está pronto e anexado a este email."
 
-#: insights/metrics/conversations/reports/services.py:925
+#: insights/metrics/conversations/reports/services.py:923
 msgid "Resolutions"
 msgstr "Resolução"
 
-#: insights/metrics/conversations/reports/services.py:927
+#: insights/metrics/conversations/reports/services.py:925
 msgid "Resolution"
 msgstr "Resoluções"
 
-#: insights/metrics/conversations/reports/services.py:928
-#: insights/metrics/conversations/reports/services.py:1001
-#: insights/metrics/conversations/reports/services.py:1094
-#: insights/metrics/conversations/reports/services.py:1186
-#: insights/metrics/conversations/reports/services.py:1244
-#: insights/metrics/conversations/reports/services.py:1315
-#: insights/metrics/conversations/reports/services.py:1384
-#: insights/metrics/conversations/reports/services.py:1446
+#: insights/metrics/conversations/reports/services.py:926
+#: insights/metrics/conversations/reports/services.py:999
+#: insights/metrics/conversations/reports/services.py:1088
+#: insights/metrics/conversations/reports/services.py:1181
+#: insights/metrics/conversations/reports/services.py:1240
+#: insights/metrics/conversations/reports/services.py:1311
+#: insights/metrics/conversations/reports/services.py:1380
+#: insights/metrics/conversations/reports/services.py:1442
 msgid "Date"
 msgstr "Data"
 
-#: insights/metrics/conversations/reports/services.py:930
+#: insights/metrics/conversations/reports/services.py:928
 msgid "Optimized Resolutions"
 msgstr "Resoluções otimizadas"
 
-#: insights/metrics/conversations/reports/services.py:931
+#: insights/metrics/conversations/reports/services.py:929
 msgid "Other conclusions"
 msgstr "Outras conclusões"
 
-#: insights/metrics/conversations/reports/services.py:996
-#: insights/metrics/conversations/reports/services.py:998
+#: insights/metrics/conversations/reports/services.py:997
 msgid "Transferred to Human"
 msgstr "Transferido para Humano"
 
-#: insights/metrics/conversations/reports/services.py:999
-msgid "Yes"
-msgstr "Sim"
-
-#: insights/metrics/conversations/reports/services.py:1000
-msgid "No"
-msgstr "Não"
-
-#: insights/metrics/conversations/reports/services.py:1090
+#: insights/metrics/conversations/reports/services.py:1084
 msgid "Topics Distribution AI"
 msgstr "Distribuição de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1092
+#: insights/metrics/conversations/reports/services.py:1086
 msgid "Topics Distribution Human"
 msgstr "Distribuição de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1095
+#: insights/metrics/conversations/reports/services.py:1089
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1096
+#: insights/metrics/conversations/reports/services.py:1090
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1185
+#: insights/metrics/conversations/reports/services.py:1180
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1187
-#: insights/metrics/conversations/reports/services.py:1245
-#: insights/metrics/conversations/reports/services.py:1316
-#: insights/metrics/conversations/reports/services.py:1385
+#: insights/metrics/conversations/reports/services.py:1182
+#: insights/metrics/conversations/reports/services.py:1241
+#: insights/metrics/conversations/reports/services.py:1312
+#: insights/metrics/conversations/reports/services.py:1381
 msgid "Rating"
 msgstr "Avaliação"
 
-#: insights/metrics/conversations/reports/services.py:1243
+#: insights/metrics/conversations/reports/services.py:1239
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1314
+#: insights/metrics/conversations/reports/services.py:1310
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1383
+#: insights/metrics/conversations/reports/services.py:1379
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1447
+#: insights/metrics/conversations/reports/services.py:1443
 msgid "Value"
 msgstr "Valor"
 
-#: insights/metrics/conversations/reports/views.py:84
+#: insights/metrics/conversations/reports/views.py:101
 msgid "There is another report being processed for this project"
 msgstr "Existe outro relatório sendo processado para este projeto"
 
@@ -652,12 +642,3 @@ msgstr "O projeto não tem permissão para acessar o WABA"
 #: insights/sources/vtex_conversions/usecases/query_execute.py:32
 msgid "Project does not have the credentials to access VTEX's API"
 msgstr "O projeto não tem as credenciais para acessar a API do VTEX"
-
-#~ msgid "Conversation date"
-#~ msgstr "Data da conversa"
-
-#~ msgid "Score"
-#~ msgstr "Pontuação"
-
-#~ msgid "Please find the conversations report attached."
-#~ msgstr "Por favor, encontre o relatório de conversas anexado."
