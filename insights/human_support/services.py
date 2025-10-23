@@ -437,16 +437,16 @@ class HumanSupportDashboardService:
                     "Status": "status",
                     "status": "status",
                     # Contadores de atendimentos
-                    "Finished": "closed_rooms",
-                    "finished": "closed_rooms",
-                    "Closed": "closed_rooms",
-                    "closed": "closed_rooms",
-                    "total_attendances": "closed_rooms",
-                    "Ongoing": "opened_rooms",
-                    "ongoing": "opened_rooms",
-                    "Opened": "opened_rooms",
-                    "opened": "opened_rooms",
-                    "In Progress": "opened_rooms",
+                    "Finished": "closed",
+                    "finished": "closed",
+                    "Closed": "closed",
+                    "closed": "closed",
+                    "total_attendances": "closed",
+                    "Ongoing": "opened",
+                    "ongoing": "opened",
+                    "Opened": "opened",
+                    "opened": "opened",
+                    "In Progress": "opened",
                     # Métricas de tempo - com espaços (como vem do front)
                     "Average first response time": "avg_first_response_time",
                     "average first response time": "avg_first_response_time",
@@ -479,7 +479,7 @@ class HumanSupportDashboardService:
             
             # When date filter is present, return only finished rooms count (no status/link)
             if has_date_filter:
-                result["total_attendances"] = agent.get("closed_rooms", 0)
+                result["total_attendances"] = agent.get("closed", 0)
             else:
                 # Without date filter, return status, link, ongoing and finished
                 status_data = agent.get("status", {})
@@ -490,8 +490,8 @@ class HumanSupportDashboardService:
                 
                 result["status"] = status
                 result["link"] = agent.get("link")
-                result["ongoing"] = agent.get("opened_rooms", 0)
-                result["finished"] = agent.get("closed_rooms", 0)
+                result["ongoing"] = agent.get("opened", 0)
+                result["finished"] = agent.get("closed", 0)
             
             # Add time metrics (always present)
             result.update({

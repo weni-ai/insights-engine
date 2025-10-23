@@ -28,8 +28,10 @@ class AgentsRESTClient(InternalAuthentication):
             query_filters["end_date"] = query_filters.pop("ended_at__lte")
         
         
-        print(query_filters)
+        print(f"🔥 AgentsRESTClient - Params enviados: {query_filters}")
         response = requests.get(
             url=self.url, headers=self.headers, params=query_filters
         )
-        return response.json()
+        result = response.json()
+        print(f"🔥 AgentsRESTClient - Resposta (primeiro resultado): {result.get('results', [])[0] if result.get('results') else 'Vazio'}")
+        return result
