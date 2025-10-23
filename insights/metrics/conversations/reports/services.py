@@ -442,9 +442,11 @@ class ConversationsReportService(BaseConversationsReportService):
         Get the presigned url for the file.
         """
         s3 = boto3.client("s3")
+
         return s3.generate_presigned_url(
             "get_object",
             Params={"Bucket": settings.S3_BUCKET_NAME, "Key": obj_key},
+            ExpiresIn=settings.CONVERSATIONS_REPORT_PRESIGNED_URL_EXPIRATION_TIME,
         )
 
     def send_email(
