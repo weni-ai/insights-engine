@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-23 19:46+0000\n"
+"POT-Creation-Date: 2025-10-23 22:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Kallil Souza dos Santos <kallilsouza@hotmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -56,7 +56,7 @@ msgid "User does not exist"
 msgstr "Usuário não existe"
 
 #: insights/metrics/conversations/integrations/datalake/services.py:312
-#: insights/metrics/conversations/reports/services.py:1126
+#: insights/metrics/conversations/reports/services.py:1201
 msgid "Unclassified"
 msgstr "Não classificadas"
 
@@ -112,82 +112,82 @@ msgstr "Op field não encontrado na configuração do widget"
 msgid "NPS human widget not found or not configured correctly"
 msgstr "Widget NPS Humano não encontrado ou não está configurado corretamente"
 
-#: insights/metrics/conversations/reports/services.py:359
-#: insights/metrics/conversations/reports/services.py:400
+#: insights/metrics/conversations/reports/services.py:378
+#: insights/metrics/conversations/reports/services.py:464
 msgid "Conversations dashboard report"
 msgstr "Relatório de dashboard de conversas"
 
-#: insights/metrics/conversations/reports/services.py:958
+#: insights/metrics/conversations/reports/services.py:1033
 msgid "Resolutions"
 msgstr "Resolução"
 
-#: insights/metrics/conversations/reports/services.py:960
+#: insights/metrics/conversations/reports/services.py:1035
 msgid "Resolution"
 msgstr "Resoluções"
 
-#: insights/metrics/conversations/reports/services.py:961
-#: insights/metrics/conversations/reports/services.py:1034
-#: insights/metrics/conversations/reports/services.py:1123
-#: insights/metrics/conversations/reports/services.py:1216
-#: insights/metrics/conversations/reports/services.py:1275
-#: insights/metrics/conversations/reports/services.py:1346
-#: insights/metrics/conversations/reports/services.py:1415
-#: insights/metrics/conversations/reports/services.py:1477
+#: insights/metrics/conversations/reports/services.py:1036
+#: insights/metrics/conversations/reports/services.py:1109
+#: insights/metrics/conversations/reports/services.py:1198
+#: insights/metrics/conversations/reports/services.py:1291
+#: insights/metrics/conversations/reports/services.py:1350
+#: insights/metrics/conversations/reports/services.py:1421
+#: insights/metrics/conversations/reports/services.py:1490
+#: insights/metrics/conversations/reports/services.py:1552
 msgid "Date"
 msgstr "Data"
 
-#: insights/metrics/conversations/reports/services.py:963
+#: insights/metrics/conversations/reports/services.py:1038
 msgid "Optimized Resolutions"
 msgstr "Resoluções otimizadas"
 
-#: insights/metrics/conversations/reports/services.py:964
+#: insights/metrics/conversations/reports/services.py:1039
 msgid "Other conclusions"
 msgstr "Outras conclusões"
 
-#: insights/metrics/conversations/reports/services.py:1032
+#: insights/metrics/conversations/reports/services.py:1107
 msgid "Transferred to Human"
 msgstr "Transferido para Humano"
 
-#: insights/metrics/conversations/reports/services.py:1119
+#: insights/metrics/conversations/reports/services.py:1194
 msgid "Topics Distribution AI"
 msgstr "Distribuição de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1121
+#: insights/metrics/conversations/reports/services.py:1196
 msgid "Topics Distribution Human"
 msgstr "Distribuição de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1124
+#: insights/metrics/conversations/reports/services.py:1199
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1125
+#: insights/metrics/conversations/reports/services.py:1200
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1215
+#: insights/metrics/conversations/reports/services.py:1290
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1217
-#: insights/metrics/conversations/reports/services.py:1276
-#: insights/metrics/conversations/reports/services.py:1347
-#: insights/metrics/conversations/reports/services.py:1416
+#: insights/metrics/conversations/reports/services.py:1292
+#: insights/metrics/conversations/reports/services.py:1351
+#: insights/metrics/conversations/reports/services.py:1422
+#: insights/metrics/conversations/reports/services.py:1491
 msgid "Rating"
 msgstr "Avaliação"
 
-#: insights/metrics/conversations/reports/services.py:1274
+#: insights/metrics/conversations/reports/services.py:1349
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1345
+#: insights/metrics/conversations/reports/services.py:1420
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1414
+#: insights/metrics/conversations/reports/services.py:1489
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1478
+#: insights/metrics/conversations/reports/services.py:1553
 msgid "Value"
 msgstr "Valor"
 
@@ -217,13 +217,24 @@ msgstr "Oi,"
 msgid "Unable to generate export of %(project_name)s project data."
 msgstr "Não foi possível gerar o export dos dados do projeto %(project_name)s."
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:9
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:10
+#, python-format
+msgid ""
+"The data export for the %(project_name)s project is ready and you can "
+"download it by <a style=\"color: #00A49F; text-decoration: none;\" "
+"href=\"%(file_link)s\" target=\"_blank\">clicking here</a>."
+msgstr ""
+"A exportação dos dados do projeto %(project_name)s está pronta e você pode "
+"baixá-la <a style=\"color: #00A49F; text-decoration: none;\" "
+"href=\"%(file_link)s\" target=\"_blank\">clicando aqui</a>."
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:14
 #, python-format
 msgid ""
 "The data export for the %(project_name)s project is ready and the files have "
 "been attached to this email."
 msgstr ""
-"O export dos dados do projeto %(project_name)s está pronto e os arquivos "
+"A exportação dos dados do projeto %(project_name)s está pronta e os arquivos "
 "foram anexados a este email."
 
 #: insights/metrics/meta/choices.py:7
