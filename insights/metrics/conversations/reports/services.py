@@ -845,6 +845,15 @@ class ConversationsReportService(BaseConversationsReportService):
         current_page = 1
         page_limit = self.page_limit
 
+        date_start = kwargs.get("date_start")
+        date_end = kwargs.get("date_end")
+
+        if isinstance(date_start, datetime):
+            date_start = date_start.isoformat()
+
+        if isinstance(date_end, datetime):
+            date_end = date_end.isoformat()
+
         while True:
             if current_page >= page_limit:
                 logger.error(
