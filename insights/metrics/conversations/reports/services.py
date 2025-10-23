@@ -7,6 +7,9 @@ import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
 import pytz
+import zipfile
+import boto3
+import uuid
 
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -103,6 +106,22 @@ class BaseConversationsReportService(ABC):
     ) -> list[ConversationsReportFile]:
         """
         Process the xlsx for the conversations report.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def zip_files(
+        self, files: list[ConversationsReportFile]
+    ) -> ConversationsReportFile:
+        """
+        Zip the files into a single file.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def upload_file_to_s3(self, file: ConversationsReportFile) -> str:
+        """
+        Upload the file to S3.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -385,6 +404,54 @@ class ConversationsReportService(BaseConversationsReportService):
             ConversationsReportFile(name=f"{file_name}.xlsx", content=output.getvalue())
         ]
 
+    def zip_files(
+        self, files: list[ConversationsReportFile]
+    ) -> ConversationsReportFile:
+        """
+        Zip the files into a single file.
+        """
+        with io.BytesIO() as zip_buffer:
+            with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                for file in files:
+                    zip_file.writestr(file.name, file.content)
+
+            zip_content = zip_buffer.getvalue()
+
+        return ConversationsReportFile(
+            name="conversations_report.zip", content=zip_content
+        )
+
+    def upload_file_to_s3(self, file: ConversationsReportFile):
+        """
+        Upload the file to S3.
+        """
+        s3 = boto3.client("s3")
+        extension = file.name.split(".")[-1]
+        obj_key = f"reports/conversations/{str(uuid.uuid4())}.{extension}"
+
+        # Wrap content in BytesIO to make it file-like
+        file_obj = io.BytesIO(file.content)
+
+        s3.upload_fileobj(
+            file_obj,
+            settings.S3_BUCKET_NAME,
+            obj_key,
+        )
+
+        return obj_key
+
+    def get_presigned_url(self, obj_key: str) -> str:
+        """
+        Get the presigned url for the file.
+        """
+        s3 = boto3.client("s3")
+
+        return s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": settings.S3_BUCKET_NAME, "Key": obj_key},
+            ExpiresIn=settings.CONVERSATIONS_REPORT_PRESIGNED_URL_EXPIRATION_TIME,
+        )
+
     def send_email(
         self,
         report: Report,
@@ -399,6 +466,20 @@ class ConversationsReportService(BaseConversationsReportService):
             with translation.override(report.requested_by.language):
                 subject = _("Conversations dashboard report")
 
+                if len(files) > 1:
+                    reports_file = self.zip_files(files)
+                elif len(files) == 1:
+                    reports_file = files[0]
+                else:
+                    reports_file = None
+
+                file_link = None
+
+                if reports_file and settings.USE_S3:
+                    obj_key = self.upload_file_to_s3(reports_file)
+                    file_link = self.get_presigned_url(obj_key)
+                    reports_file = None
+
                 if is_error:
                     body = render_to_string(
                         "metrics/conversations/emails/report_failed.html",
@@ -412,6 +493,7 @@ class ConversationsReportService(BaseConversationsReportService):
                         "metrics/conversations/emails/report_is_ready.html",
                         {
                             "project_name": report.project.name,
+                            "file_link": file_link,
                         },
                     )
 
@@ -423,15 +505,11 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
                 email.content_subtype = "html"
 
-                for file in files:
+                if reports_file and not settings.USE_S3:
                     email.attach(
-                        file.name,
-                        file.content,
-                        (
-                            "application/csv"
-                            if report.format == ReportFormat.CSV
-                            else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        ),
+                        reports_file.name,
+                        reports_file.content,
+                        "application/zip",
                     )
 
                 email.send(fail_silently=False)
