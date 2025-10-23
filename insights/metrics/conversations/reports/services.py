@@ -9,6 +9,8 @@ import logging
 from abc import ABC, abstractmethod
 import pytz
 import zipfile
+import boto3
+import uuid
 
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -105,6 +107,22 @@ class BaseConversationsReportService(ABC):
     ) -> list[ConversationsReportFile]:
         """
         Process the xlsx for the conversations report.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def zip_files(
+        self, files: list[ConversationsReportFile]
+    ) -> ConversationsReportFile:
+        """
+        Zip the files into a single file.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def upload_file_to_s3(self, file: ConversationsReportFile) -> str:
+        """
+        Upload the file to S3.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -401,6 +419,34 @@ class ConversationsReportService(BaseConversationsReportService):
             name="conversations_report.zip", content=zip_content
         )
 
+    def upload_file_to_s3(self, file: ConversationsReportFile):
+        """
+        Upload the file to S3.
+        """
+        s3 = boto3.client("s3")
+        extension = file.name.split(".")[-1]
+        obj_key = f"reports/conversations/{str(uuid.uuid4())}.{extension}"
+
+        s3.upload_fileobj(
+            file.content,
+            settings.S3_BUCKET_NAME,
+            obj_key,
+        )
+
+        return obj_key
+
+    def get_presigned_url(self, obj_key: str) -> str:
+        """
+        Get the presigned url for the file.
+        """
+        s3 = boto3.client("s3")
+
+        return s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": settings.S3_BUCKET_NAME, "Key": obj_key},
+            ExpiresIn=settings.CONVERSATIONS_REPORT_PRESIGNED_URL_EXPIRATION_TIME,
+        )
+
     def send_email(
         self,
         report: Report,
@@ -415,6 +461,20 @@ class ConversationsReportService(BaseConversationsReportService):
             with translation.override(report.requested_by.language):
                 subject = _("Conversations dashboard report")
 
+                if len(files) > 1:
+                    reports_file = self.zip_files(files)
+                elif len(files) == 1:
+                    reports_file = files[0]
+                else:
+                    reports_file = None
+
+                file_link = None
+
+                if reports_file and settings.USE_S3:
+                    obj_key = self.upload_file_to_s3(reports_file)
+                    file_link = self.get_presigned_url(obj_key)
+                    reports_file = None
+
                 if is_error:
                     body = render_to_string(
                         "metrics/conversations/emails/report_failed.html",
@@ -428,6 +488,7 @@ class ConversationsReportService(BaseConversationsReportService):
                         "metrics/conversations/emails/report_is_ready.html",
                         {
                             "project_name": report.project.name,
+                            "file_link": file_link,
                         },
                     )
 
@@ -439,16 +500,12 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
                 email.content_subtype = "html"
 
-                if len(files) > 1:
-                    reports_file = self.zip_files(files)
-                else:
-                    reports_file = files[0]
-
-                email.attach(
-                    reports_file.name,
-                    reports_file.content,
-                    "application/zip",
-                )
+                if reports_file and not settings.USE_S3:
+                    email.attach(
+                        reports_file.name,
+                        reports_file.content,
+                        "application/zip",
+                    )
 
                 email.send(fail_silently=False)
         except Exception as e:
@@ -842,45 +899,21 @@ class ConversationsReportService(BaseConversationsReportService):
 
             try:
                 datetime_date = datetime.fromtimestamp(original_date)
-            except Exception as e:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
-                    % (
-                        original_date,
-                        report.uuid,
-                        e,
-                    ),
-                )
+            except Exception:
+                pass
 
         for _format in formats:
             try:
                 datetime_date = datetime.strptime(original_date, _format)
                 break
-            except Exception as e:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
-                    % (
-                        original_date,
-                        report.uuid,
-                        e,
-                    ),
-                )
-                capture_exception(e)
+            except Exception:
                 continue
 
         if not datetime_date:
             try:
                 datetime_date = datetime.fromisoformat(original_date)
-            except Exception as e:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
-                    % (
-                        original_date,
-                        report.uuid,
-                        e,
-                    ),
-                )
-                capture_exception(e)
+            except Exception:
+                pass
 
         if datetime_date:
             tz_name = report.project.timezone

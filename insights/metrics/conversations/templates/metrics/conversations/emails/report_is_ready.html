@@ -5,8 +5,14 @@
     <div style="font-family: 'Lato'; font-size: 14px; line-height: 22px; color: #3B414D; width: 616px; margin: 24px auto auto auto;">
         <span style="font-size: 16px; font-weight: 700; line-height: 24px;">{% trans 'Hi,' %}</span>
 
-        <p>
-            {% blocktrans with project_name=project_name %}The data export for the {{ project_name }} project is ready and the files have been attached to this email.{% endblocktrans %}
-        <p>
+        {% if file_link %}
+            <p>
+                {% blocktrans with project_name=project_name %}The data export for the {{ project_name }} project is ready and you can download it by <a style="color: #00A49F; text-decoration: none;" href="{{ file_link }}" target="_blank">clicking here</a>.{% endblocktrans %}
+            <p>
+        {% else %}
+            <p>
+                {% blocktrans with project_name=project_name %}The data export for the {{ project_name }} project is ready and the files have been attached to this email.{% endblocktrans %}
+            <p>
+        {% endif %}
     </div>
 {% endblock %}
