@@ -427,8 +427,11 @@ class ConversationsReportService(BaseConversationsReportService):
         extension = file.name.split(".")[-1]
         obj_key = f"reports/conversations/{str(uuid.uuid4())}.{extension}"
 
+        # Wrap content in BytesIO to make it file-like
+        file_obj = io.BytesIO(file.content)
+
         s3.upload_fileobj(
-            file.content,
+            file_obj,
             settings.S3_BUCKET_NAME,
             obj_key,
         )
