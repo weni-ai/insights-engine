@@ -7,6 +7,7 @@ import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
 import pytz
+import zipfile
 
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -377,6 +378,21 @@ class ConversationsReportService(BaseConversationsReportService):
             ConversationsReportFile(name=f"{file_name}.xlsx", content=output.getvalue())
         ]
 
+    def zip_files(
+        self, files: list[ConversationsReportFile]
+    ) -> ConversationsReportFile:
+        """
+        Zip the files into a single file.
+        """
+        with io.BytesIO() as zip_buffer:
+            with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                for file in files:
+                    zip_file.writestr(file.name, file.content)
+
+        return ConversationsReportFile(
+            name="conversations_report.zip", content=zip_buffer.getvalue()
+        )
+
     def send_email(
         self,
         report: Report,
@@ -415,16 +431,16 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
                 email.content_subtype = "html"
 
-                for file in files:
-                    email.attach(
-                        file.name,
-                        file.content,
-                        (
-                            "application/csv"
-                            if report.format == ReportFormat.CSV
-                            else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        ),
-                    )
+                if len(files) > 1:
+                    reports_file = self.zip_files(files)
+                else:
+                    reports_file = files[0]
+
+                email.attach(
+                    reports_file.name,
+                    reports_file.content,
+                    "application/zip",
+                )
 
                 email.send(fail_silently=False)
         except Exception as e:
