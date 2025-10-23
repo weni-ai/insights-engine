@@ -14,6 +14,9 @@ class HumanSupportFilterSet(filters.FilterSet):
     tags = UUIDInFilter(required=False)
     start_date = filters.IsoDateTimeFilter(required=False)
     end_date = filters.IsoDateTimeFilter(required=False)
+    agent = filters.UUIDFilter(required=False)
+    contact = filters.UUIDFilter(required=False)
+    ticket_id = filters.UUIDFilter(required=False)
 
     class Meta:
         fields = [
@@ -23,4 +26,7 @@ class HumanSupportFilterSet(filters.FilterSet):
             "tags",
             "start_date",
             "end_date",
+            "agent",
+            "contact",
+            "ticket_id",
         ]
