@@ -406,11 +406,11 @@ class HumanSupportDashboardService:
             else:
                 params["agent"] = agents
 
-        # Add date filters
+        # Add date filters - filter by ended_at (finished rooms) not created_on
         if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].date().isoformat()
+            params["ended_at__gte"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].date().isoformat()
+            params["ended_at__lte"] = normalized["end_date"].date().isoformat()
 
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
@@ -437,15 +437,16 @@ class HumanSupportDashboardService:
                     "Status": "status",
                     "status": "status",
                     # Contadores de atendimentos
-                    "Finished": "closed",
-                    "finished": "closed",
-                    "Closed": "closed",
-                    "closed": "closed",
-                    "Ongoing": "opened",
-                    "ongoing": "opened",
-                    "Opened": "opened",
-                    "opened": "opened",
-                    "In Progress": "opened",
+                    "Finished": "closed_rooms",
+                    "finished": "closed_rooms",
+                    "Closed": "closed_rooms",
+                    "closed": "closed_rooms",
+                    "total_attendances": "closed_rooms",
+                    "Ongoing": "opened_rooms",
+                    "ongoing": "opened_rooms",
+                    "Opened": "opened_rooms",
+                    "opened": "opened_rooms",
+                    "In Progress": "opened_rooms",
                     # Métricas de tempo - com espaços (como vem do front)
                     "Average first response time": "avg_first_response_time",
                     "average first response time": "avg_first_response_time",
@@ -468,27 +469,39 @@ class HumanSupportDashboardService:
 
         response = AgentsRESTClient(self.project).list(params)
         formatted_results = []
+        has_date_filter = normalized.get("start_date") or normalized.get("end_date")
+        
         for agent in response.get("results", []):
-            status_data = agent.get("status", {})
-            if isinstance(status_data, dict):
-                status = status_data.get("status", "offline")
+            result = {
+                "agent": agent.get("agent"),
+                "agent_email": agent.get("agent_email"),
+            }
+            
+            # When date filter is present, return only finished rooms count (no status/link)
+            if has_date_filter:
+                result["total_attendances"] = agent.get("closed_rooms", 0)
             else:
-                status = status_data or "offline"
-
-            formatted_results.append(
-                {
-                    "agent": agent.get("agent"),
-                    "agent_email": agent.get("agent_email"),
-                    "status": status,
-                    "ongoing": agent.get("opened", 0),
-                    "finished": agent.get("closed", 0),
-                    "average_first_response_time": agent.get("avg_first_response_time"),
-                    "average_response_time": agent.get("avg_message_response_time"),
-                    "average_duration": agent.get("avg_interaction_time"),
-                    "time_in_service": agent.get("time_in_service"),
-                    "link": agent.get("link"),
-                }
-            )
+                # Without date filter, return status, link, ongoing and finished
+                status_data = agent.get("status", {})
+                if isinstance(status_data, dict):
+                    status = status_data.get("status", "offline")
+                else:
+                    status = status_data or "offline"
+                
+                result["status"] = status
+                result["link"] = agent.get("link")
+                result["ongoing"] = agent.get("opened_rooms", 0)
+                result["finished"] = agent.get("closed_rooms", 0)
+            
+            # Add time metrics (always present)
+            result.update({
+                "average_first_response_time": agent.get("avg_first_response_time"),
+                "average_response_time": agent.get("avg_message_response_time"),
+                "average_duration": agent.get("avg_interaction_time"),
+                "time_in_service": agent.get("time_in_service"),
+            })
+            
+            formatted_results.append(result)
 
         return {
             "next": response.get("next"),

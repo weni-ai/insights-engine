@@ -19,8 +19,13 @@ class AgentsRESTClient(InternalAuthentication):
     def list(self, query_filters: dict):
         if query_filters.get("created_on__gte", None):
             query_filters["start_date"] = query_filters.pop("created_on__gte")
+        elif query_filters.get("ended_at__gte", None):
+            query_filters["start_date"] = query_filters.pop("ended_at__gte")
+            
         if query_filters.get("created_on__lte", None):
             query_filters["end_date"] = query_filters.pop("created_on__lte")
+        elif query_filters.get("ended_at__lte", None):
+            query_filters["end_date"] = query_filters.pop("ended_at__lte")
         
         
         print(query_filters)
