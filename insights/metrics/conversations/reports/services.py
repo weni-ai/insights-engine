@@ -17,7 +17,15 @@ from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.reports.available_widgets import (
+    get_csat_ai_widget,
+    get_csat_human_widget,
+    get_custom_widgets,
+    get_nps_ai_widget,
+    get_nps_human_widget,
+)
 from insights.metrics.conversations.reports.dataclass import (
+    AvailableReportWidgets,
     ConversationsReportFile,
     ConversationsReportWorksheet,
 )
@@ -1492,4 +1500,33 @@ class ConversationsReportService(BaseConversationsReportService):
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
+        )
+
+    def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
+        """
+        Get available widgets.
+        """
+        available_widgets = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+        ]
+
+        special_widgets_get_functions = [
+            (get_csat_ai_widget, "CSAT_AI"),
+            (get_csat_human_widget, "CSAT_HUMAN"),
+            (get_nps_ai_widget, "NPS_AI"),
+            (get_nps_human_widget, "NPS_HUMAN"),
+        ]
+
+        for get_function, section in special_widgets_get_functions:
+            if get_function(project):
+                available_widgets.append(section)
+
+        custom_widgets = get_custom_widgets(project)
+
+        return AvailableReportWidgets(
+            sections=available_widgets,
+            custom_widgets=custom_widgets,
         )
