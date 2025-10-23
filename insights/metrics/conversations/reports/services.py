@@ -766,10 +766,10 @@ class ConversationsReportService(BaseConversationsReportService):
         date_start = kwargs.get("date_start")
         date_end = kwargs.get("date_end")
 
-        if isinstance(date_start, datetime):
+        if date_start and isinstance(date_start, datetime):
             kwargs["date_start"] = date_start.isoformat()
 
-        if isinstance(date_end, datetime):
+        if date_end and isinstance(date_end, datetime):
             kwargs["date_end"] = date_end.isoformat()
 
         while True:
