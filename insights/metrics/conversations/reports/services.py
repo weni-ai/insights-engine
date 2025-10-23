@@ -505,6 +505,12 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
                 email.content_subtype = "html"
 
+                email.extra_headers = {
+                    "X-No-Track": "True",
+                    "X-Track-Click": "no",
+                    "o:tracking-clicks": "no",
+                }
+
                 if reports_file and not settings.USE_S3:
                     email.attach(
                         reports_file.name,
