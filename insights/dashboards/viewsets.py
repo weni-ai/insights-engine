@@ -275,7 +275,8 @@ class DashboardViewSet(
     def monitoring_list_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        data = service.get_attendance_status(filters=dict(request.query_params))
+        filters = {key: value for key, value in request.query_params.items()}
+        data = service.get_attendance_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
     @action(
@@ -286,7 +287,8 @@ class DashboardViewSet(
     def monitoring_average_time_metrics(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        data = service.get_time_metrics(filters=dict(request.query_params))
+        filters = {key: value for key, value in request.query_params.items()}
+        data = service.get_time_metrics(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"])
@@ -376,7 +378,11 @@ class DashboardViewSet(
 
         custom_status_client = CustomStatusRESTClient(project)
 
-        query_filters = dict(request.data or request.query_params or {})
+        # Convert QueryDict properly to avoid list issues
+        if request.data:
+            query_filters = dict(request.data)
+        else:
+            query_filters = {key: value for key, value in request.query_params.items()}
         custom_status = custom_status_client.list(query_filters)
 
         return Response(custom_status, status.HTTP_200_OK)
@@ -389,7 +395,8 @@ class DashboardViewSet(
     def monitoring_peaks_in_human_service(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        results = service.get_peaks_in_human_service(filters=dict(request.query_params))
+        filters = {key: value for key, value in request.query_params.items()}
+        results = service.get_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
 
     @action(
@@ -400,7 +407,11 @@ class DashboardViewSet(
     def finished(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        data = service.get_finished_rooms(filters=dict(request.query_params))
+        # Convert QueryDict properly - get first value from lists
+        filters = {}
+        for key, value in request.query_params.items():
+            filters[key] = value
+        data = service.get_finished_rooms(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
     @action(
@@ -411,5 +422,6 @@ class DashboardViewSet(
     def analysis_finished_rooms_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        data = service.get_analysis_status(filters=dict(request.query_params))
+        filters = {key: value for key, value in request.query_params.items()}
+        data = service.get_analysis_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
