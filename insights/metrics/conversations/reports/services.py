@@ -8,6 +8,8 @@ import logging
 from abc import ABC, abstractmethod
 import pytz
 import zipfile
+import boto3
+import uuid
 
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -393,6 +395,32 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return ConversationsReportFile(
             name="conversations_report.zip", content=zip_content
+        )
+
+    def upload_file_to_s3(self, file: ConversationsReportFile):
+        """
+        Upload the file to S3.
+        """
+        s3 = boto3.client("s3")
+        extension = file.name.split(".")[-1]
+        obj_key = f"reports/conversations/{str(uuid.uuid4())}.{extension}"
+
+        s3.upload_fileobj(
+            file.content,
+            settings.S3_BUCKET_NAME,
+            obj_key,
+        )
+
+        return obj_key
+
+    def get_presigned_url(self, obj_key: str) -> str:
+        """
+        Get the presigned url for the file.
+        """
+        s3 = boto3.client("s3")
+        return s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": settings.S3_BUCKET_NAME, "Key": obj_key},
         )
 
     def send_email(

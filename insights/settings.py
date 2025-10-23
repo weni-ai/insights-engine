@@ -251,6 +251,10 @@ OIDC_CACHE_TTL = env.int(
 # CORS CONFIG
 CORS_ORIGIN_ALLOW_ALL = True
 
+# S3
+USE_S3 = env.bool("USE_S3", default=False)
+S3_BUCKET_NAME = env.str("S3_BUCKET_NAME", default="")
+
 # Sentry configuration
 
 USE_SENTRY = env.bool("USE_SENTRY", default=False)
