@@ -1432,6 +1432,13 @@ class TestConversationsReportServiceAdditional(TestCase):
         result = self.service._format_date("2025-01-01T12:00:00.000000Z", report)
         self.assertIn("01/01/2025", result)
 
+        # Test with timestamp in milliseconds
+        result = self.service._format_date(1759965431207, report)
+        self.assertIn("08/10/2025", result)
+
+        result = self.service._format_date(1759965431, report)
+        self.assertIn("08/10/2025", result)
+
     def test_format_date_with_invalid_format(self):
         """Test _format_date with invalid date format."""
         report = Report.objects.create(
@@ -1443,8 +1450,10 @@ class TestConversationsReportServiceAdditional(TestCase):
             requested_by=self.user,
         )
 
-        with self.assertRaises(Exception):
-            self.service._format_date("invalid-date", report)
+        result = self.service._format_date("invalid-date", report)
+
+        # Fallback to original date
+        self.assertEqual(result, "invalid-date")
 
     def test_get_resolutions_worksheet_with_no_events(self):
         """Test get_resolutions_worksheet with no events."""

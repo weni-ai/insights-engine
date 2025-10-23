@@ -847,7 +847,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def _format_date(self, date_str: str, report: Report) -> str:
+    def _format_date(self, original_date: str | int, report: Report) -> str:
         """
         Format the date.
         """
@@ -855,44 +855,41 @@ class ConversationsReportService(BaseConversationsReportService):
 
         datetime_date = None
 
+        if isinstance(original_date, int):
+            if len(str(original_date)) == 13:
+                # If the date is in milliseconds, convert it to seconds
+                original_date = original_date // 1000
+
+            try:
+                datetime_date = datetime.fromtimestamp(original_date)
+            except Exception:
+                pass
+
         for _format in formats:
             try:
-                datetime_date = datetime.strptime(date_str, _format)
+                datetime_date = datetime.strptime(original_date, _format)
                 break
-            except Exception as e:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
-                    % (
-                        date_str,
-                        report.uuid,
-                        e,
-                    ),
-                )
-                capture_exception(e)
+            except Exception:
                 continue
 
         if not datetime_date:
             try:
-                datetime_date = datetime.fromisoformat(date_str)
-            except Exception as e:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
-                    % (
-                        date_str,
-                        report.uuid,
-                        e,
-                    ),
-                )
-                capture_exception(e)
-                raise e
+                datetime_date = datetime.fromisoformat(original_date)
+            except Exception:
+                pass
 
-        tz_name = report.project.timezone
+        if datetime_date:
+            tz_name = report.project.timezone
 
-        if tz_name:
-            tz = pytz.timezone(tz_name)
-            datetime_date = datetime_date.astimezone(tz)
+            if tz_name:
+                tz = pytz.timezone(tz_name)
+                datetime_date = datetime_date.astimezone(tz)
 
-        return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
+            return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
+
+        # Return the original date as a fallback
+        # if everything fails
+        return str(original_date)
 
     def get_flowsrun_results_by_contacts(
         self,
@@ -992,6 +989,7 @@ class ConversationsReportService(BaseConversationsReportService):
             date_end=end_date,
             event_name="weni_nexus_data",
             key="conversation_classification",
+            table="conversation_classification",
         )
 
         with override(report.requested_by.language):
@@ -1063,14 +1061,14 @@ class ConversationsReportService(BaseConversationsReportService):
                 date_end=end_date,
                 event_name="weni_nexus_data",
                 key="conversation_classification",
+                table="conversation_classification",
+                metadata_key="human_support",
+                metadata_value="true",
             )
 
         with override(report.requested_by.language):
             worksheet_name = gettext("Transferred to Human")
 
-            transferred_to_human_label = gettext("Transferred to Human")
-            yes_label = gettext("Yes")
-            no_label = gettext("No")
             date_label = gettext("Date")
 
         if len(events) == 0:
@@ -1082,13 +1080,9 @@ class ConversationsReportService(BaseConversationsReportService):
         data = []
 
         for event in events:
-            metadata = json.loads(event.get("metadata"))
             data.append(
                 {
                     "URN": event.get("contact_urn", ""),
-                    transferred_to_human_label: (
-                        yes_label if metadata.get("human_support", False) else no_label
-                    ),
                     date_label: (
                         self._format_date(event.get("date", ""), report)
                         if event.get("date")
@@ -1101,7 +1095,6 @@ class ConversationsReportService(BaseConversationsReportService):
             data = [
                 {
                     "URN": "",
-                    transferred_to_human_label: "",
                     date_label: "",
                 }
             ]
@@ -1156,6 +1149,7 @@ class ConversationsReportService(BaseConversationsReportService):
             key="topics",
             metadata_key="human_support",
             metadata_value=human_support,
+            table="topics",
         )
 
         with override(report.requested_by.language or "en"):
@@ -1252,6 +1246,7 @@ class ConversationsReportService(BaseConversationsReportService):
             metadata_value=agent_uuid,
             key="weni_csat",
             event_name="weni_nexus_data",
+            table="weni_csat",
         )
 
         with override(report.requested_by.language or "en"):
@@ -1310,6 +1305,7 @@ class ConversationsReportService(BaseConversationsReportService):
             metadata_value=agent_uuid,
             key="weni_nps",
             event_name="weni_nexus_data",
+            table="weni_nps",
         )
 
         with override(report.requested_by.language or "en"):
