@@ -94,11 +94,17 @@ class HumanSupportDashboardService:
         # timezone e recorte "hoje" para finished
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
-        today = dj_timezone.now().date()
-        start_of_day = project_tz.localize(
-            datetime.combine(today, datetime.min.time())
-        ).isoformat()
-        now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
+        
+        # Use start_date/end_date if provided, otherwise use today
+        if normalized.get("start_date") and normalized.get("end_date"):
+            start_of_day = normalized["start_date"].isoformat()
+            now_iso = normalized["end_date"].isoformat()
+        else:
+            today = dj_timezone.now().date()
+            start_of_day = project_tz.localize(
+                datetime.combine(today, datetime.min.time())
+            ).isoformat()
+            now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
 
         base: dict = {
             "project": str(self.project.uuid),
@@ -159,6 +165,10 @@ class HumanSupportDashboardService:
             params["queue"] = normalized["queues"]
         if normalized.get("tags"):
             params["tags"] = normalized["tags"]
+        if normalized.get("start_date"):
+            params["start_date"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            params["end_date"] = normalized["end_date"].isoformat()
 
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve(params=params)
@@ -186,14 +196,24 @@ class HumanSupportDashboardService:
 
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
-        start_of_day = project_tz.localize(
-            datetime.combine(dj_timezone.now().date(), datetime.min.time())
-        ).isoformat()
+        
+        # Use start_date if provided, otherwise use start of today
+        if request_params.get("start_date"):
+            start_of_day = request_params["start_date"].isoformat()
+        else:
+            start_of_day = project_tz.localize(
+                datetime.combine(dj_timezone.now().date(), datetime.min.time())
+            ).isoformat()
 
         rooms_filters = {
             "project": str(self.project.uuid),
             "created_on__gte": start_of_day,
         }
+        
+        # Add end_date filter if provided
+        if request_params.get("end_date"):
+            rooms_filters["created_on__lte"] = request_params["end_date"].isoformat()
+        
         if "sectors" in request_params:
             rooms_filters["sector"] = request_params["sectors"]
         if "queues" in request_params:
@@ -229,6 +249,12 @@ class HumanSupportDashboardService:
             value = normalized.get(filter_key)
             if value:
                 params[rooms_field] = value
+
+        # Add date filters
+        if normalized.get("start_date"):
+            params["created_on__gte"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            params["created_on__lte"] = normalized["end_date"].isoformat()
 
         if filters:
             limit = filters.get("limit")
@@ -303,6 +329,12 @@ class HumanSupportDashboardService:
             if value:
                 params[rooms_field] = value
 
+        # Add date filters
+        if normalized.get("start_date"):
+            params["created_on__gte"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            params["created_on__lte"] = normalized["end_date"].isoformat()
+
         if filters:
             if filters.get("limit") is not None:
                 params["limit"] = filters.get("limit")
@@ -373,6 +405,12 @@ class HumanSupportDashboardService:
                 params["agent"] = agents
             else:
                 params["agent"] = agents
+
+        # Add date filters
+        if normalized.get("start_date"):
+            params["start_date"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            params["end_date"] = normalized["end_date"].isoformat()
 
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
@@ -466,14 +504,18 @@ class HumanSupportDashboardService:
         if filters:
             if filters.get("user_request") is not None:
                 params["user_request"] = filters.get("user_request")
-            if filters.get("start_date") is not None:
-                params["start_date"] = filters.get("start_date")
-            if filters.get("end_date") is not None:
-                params["end_date"] = filters.get("end_date")
             if filters.get("created_on__gte") is not None:
                 params["created_on__gte"] = filters.get("created_on__gte")
             if filters.get("created_on__lte") is not None:
                 params["created_on__lte"] = filters.get("created_on__lte")
+        
+        # Add date filters from normalized
+        if normalized.get("start_date"):
+            params["start_date"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            params["end_date"] = normalized["end_date"].isoformat()
+        
+        if filters:
             if filters.get("ordering") is not None:
                 ordering = filters.get("ordering")
                 prefix = "-" if ordering.startswith("-") else ""
