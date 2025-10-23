@@ -104,6 +104,10 @@ def generate_conversations_report():
                 client=ElasticsearchClient(),
             ),
             cache_client=CacheClient(),
+            events_limit_per_page=settings.CONVERSATIONS_REPORT_EVENTS_LIMIT_PER_PAGE,
+            page_limit=settings.CONVERSATIONS_REPORT_PAGE_LIMIT,
+            elastic_page_size=settings.CONVERSATIONS_REPORT_ELASTIC_PAGE_SIZE,
+            elastic_page_limit=settings.CONVERSATIONS_REPORT_ELASTIC_PAGE_LIMIT,
         ).generate(oldest_report)
     except Exception as e:
         logger.error(
