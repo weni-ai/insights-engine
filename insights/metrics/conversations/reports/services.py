@@ -388,7 +388,7 @@ class ConversationsReportService(BaseConversationsReportService):
             with zipfile.ZipFile(zip_buffer, "w") as zip_file:
                 for file in files:
                     zip_file.writestr(file.name, file.content)
-            
+
             zip_content = zip_buffer.getvalue()
 
         return ConversationsReportFile(
