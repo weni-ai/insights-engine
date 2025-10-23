@@ -767,10 +767,10 @@ class ConversationsReportService(BaseConversationsReportService):
         date_end = kwargs.get("date_end")
 
         if isinstance(date_start, datetime):
-            date_start = date_start.isoformat()
+            kwargs["date_start"] = date_start.isoformat()
 
         if isinstance(date_end, datetime):
-            date_end = date_end.isoformat()
+            kwargs["date_end"] = date_end.isoformat()
 
         while True:
             if current_page >= page_limit:
