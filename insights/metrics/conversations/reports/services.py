@@ -395,8 +395,10 @@ class ConversationsReportService(BaseConversationsReportService):
                 for file in files:
                     zip_file.writestr(file.name, file.content)
 
+            zip_content = zip_buffer.getvalue()
+
         return ConversationsReportFile(
-            name="conversations_report.zip", content=zip_buffer.getvalue()
+            name="conversations_report.zip", content=zip_content
         )
 
     def send_email(
