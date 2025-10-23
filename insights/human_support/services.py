@@ -166,9 +166,9 @@ class HumanSupportDashboardService:
         if normalized.get("tags"):
             params["tags"] = normalized["tags"]
         if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].isoformat()
+            params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].isoformat()
+            params["end_date"] = normalized["end_date"].date().isoformat()
 
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve(params=params)
@@ -408,9 +408,9 @@ class HumanSupportDashboardService:
 
         # Add date filters
         if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].isoformat()
+            params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].isoformat()
+            params["end_date"] = normalized["end_date"].date().isoformat()
 
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
@@ -511,9 +511,9 @@ class HumanSupportDashboardService:
         
         # Add date filters from normalized
         if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].isoformat()
+            params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].isoformat()
+            params["end_date"] = normalized["end_date"].date().isoformat()
         
         if filters:
             if filters.get("ordering") is not None:
@@ -751,9 +751,9 @@ class HumanSupportDashboardService:
         if normalized.get("tags"):
             metrics_params["tags"] = normalized["tags"]
         if normalized.get("start_date"):
-            metrics_params["start_date"] = normalized["start_date"].isoformat()
+            metrics_params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
-            metrics_params["end_date"] = normalized["end_date"].isoformat()
+            metrics_params["end_date"] = normalized["end_date"].date().isoformat()
 
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve(params=metrics_params)

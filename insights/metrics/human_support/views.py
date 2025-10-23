@@ -23,7 +23,7 @@ class DetailedMonitoringOnGoingView(APIView):
         project = get_object_or_404(Project, uuid=project_uuid)
         service = HumanSupportDashboardService(project=project)
 
-        data = service.get_detailed_monitoring_on_going(filters=request.query_params)
+        data = service.get_detailed_monitoring_on_going(filters=dict(request.query_params))
         return Response(data, status=200)
 
 
@@ -39,7 +39,7 @@ class DetailedMonitoringAwaitingView(APIView):
         project = get_object_or_404(Project, uuid=project_uuid)
         service = HumanSupportDashboardService(project=project)
 
-        data = service.get_detailed_monitoring_awaiting(filters=request.query_params)
+        data = service.get_detailed_monitoring_awaiting(filters=dict(request.query_params))
         return Response(data, status=200)
 
 
@@ -55,7 +55,7 @@ class DetailedMonitoringAgentsView(APIView):
         project = get_object_or_404(Project, uuid=project_uuid)
         service = HumanSupportDashboardService(project=project)
 
-        filters = request.query_params.copy()
+        filters = dict(request.query_params)
         filters["user_request"] = request.user.email
         data = service.get_detailed_monitoring_agents(filters=filters)
 
@@ -78,7 +78,7 @@ class DetailedMonitoringStatusView(APIView):
         project = get_object_or_404(Project, uuid=project_uuid)
         service = HumanSupportDashboardService(project=project)
 
-        filters = request.query_params.copy()
+        filters = dict(request.query_params)
         filters["user_request"] = request.user.email
         data = service.get_detailed_monitoring_status(filters=filters)
 
