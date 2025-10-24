@@ -311,6 +311,68 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             # immediately inside this block
             return gettext("Unclassified")
 
+    def _get_topics_events_from_datalake(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> list[dict]:
+        try:
+            human_support = (
+                "true" if conversation_type == ConversationType.HUMAN else "false"
+            )
+
+            topics_events = self.events_client.get_events_count_by_group(
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=str(start_date),
+                date_end=str(end_date),
+                key="topics",
+                metadata_key="human_support",
+                metadata_value=human_support,
+                group_by="topic_uuid",
+                table="topics",
+            )
+        except Exception as e:
+            logger.error("Failed to get topics events from Datalake: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        return topics_events
+
+    def _get_subtopics_events_from_datalake(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> list[dict]:
+        try:
+            human_support = (
+                "true" if conversation_type == ConversationType.HUMAN else "false"
+            )
+
+            subtopics_events = self.events_client.get_events_count_by_group(
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=str(start_date),
+                date_end=str(end_date),
+                key="topics",
+                metadata_key="human_support",
+                metadata_value=human_support,
+                group_by="subtopic_uuid",
+                table="topics",
+            )
+        except Exception as e:
+            logger.error("Failed to get subtopics events from Datalake: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        return subtopics_events
+
     def get_topics_distribution(
         self,
         project_uuid: UUID,
@@ -338,40 +400,18 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             return cached_results
 
-        try:
-            human_support = (
-                "true" if conversation_type == ConversationType.HUMAN else "false"
-            )
-
-            topics_events = self.events_client.get_events_count_by_group(
-                event_name=self.event_name,
-                project=project_uuid,
-                date_start=str(start_date),
-                date_end=str(end_date),
-                key="topics",
-                metadata_key="human_support",
-                metadata_value=human_support,
-                group_by="topic_uuid",
-                table="topics",
-            )
-
-            # Subtopics
-            subtopics_events = self.events_client.get_events_count_by_group(
-                event_name=self.event_name,
-                project=project_uuid,
-                date_start=str(start_date),
-                date_end=str(end_date),
-                key="topics",
-                metadata_key="human_support",
-                metadata_value=human_support,
-                group_by="subtopic_uuid",
-                table="topics",
-            )
-        except Exception as e:
-            logger.error("Failed to get topics distribution from Datalake: %s", e)
-            capture_exception(e)
-
-            raise e
+        topics_events = self._get_topics_events_from_datalake(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            conversation_type=conversation_type,
+        )
+        subtopics_events = self._get_subtopics_events_from_datalake(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            conversation_type=conversation_type,
+        )
 
         unclassified_label = self._get_unclassified_label(output_language)
 
