@@ -7,6 +7,7 @@ import pytz
 from django.utils import timezone as dj_timezone
 
 from insights.human_support.clients.chats_raw_data import ChatsRawDataClient
+from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_time_metrics import (
     ChatsTimeMetricsClient,
 )
@@ -32,6 +33,7 @@ class HumanSupportDashboardService:
     def __init__(self, project: Project) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
+        self.chats_client = ChatsClient()
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
@@ -94,7 +96,7 @@ class HumanSupportDashboardService:
         # timezone e recorte "hoje" para finished
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
-        
+
         # Use start_date/end_date if provided, otherwise use today
         if normalized.get("start_date") and normalized.get("end_date"):
             start_of_day = normalized["start_date"].isoformat()
@@ -196,7 +198,7 @@ class HumanSupportDashboardService:
 
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
-        
+
         # Use start_date if provided, otherwise use start of today
         if request_params.get("start_date"):
             start_of_day = request_params["start_date"].isoformat()
@@ -209,11 +211,11 @@ class HumanSupportDashboardService:
             "project": str(self.project.uuid),
             "created_on__gte": start_of_day,
         }
-        
+
         # Add end_date filter if provided
         if request_params.get("end_date"):
             rooms_filters["created_on__lte"] = request_params["end_date"].isoformat()
-        
+
         if "sectors" in request_params:
             rooms_filters["sector"] = request_params["sectors"]
         if "queues" in request_params:
@@ -396,7 +398,7 @@ class HumanSupportDashboardService:
         tags = normalized.get("tags")
         if tags:
             params["tags"] = tags
-            
+
         agents = normalized.get("agents") or filters.get("agent")
         if agents:
             if isinstance(agents, list) and len(agents) == 1:
@@ -470,13 +472,13 @@ class HumanSupportDashboardService:
         response = AgentsRESTClient(self.project).list(params)
         formatted_results = []
         has_date_filter = normalized.get("start_date") or normalized.get("end_date")
-        
+
         for agent in response.get("results", []):
             result = {
                 "agent": agent.get("agent"),
                 "agent_email": agent.get("agent_email"),
             }
-            
+
             # When date filter is present, return only finished rooms count (no status/link)
             if has_date_filter:
                 result["total_attendances"] = agent.get("closed", 0)
@@ -487,20 +489,22 @@ class HumanSupportDashboardService:
                     status = status_data.get("status", "offline")
                 else:
                     status = status_data or "offline"
-                
+
                 result["status"] = status
                 result["link"] = agent.get("link")
                 result["ongoing"] = agent.get("opened", 0)
                 result["finished"] = agent.get("closed", 0)
-            
+
             # Add time metrics (always present)
-            result.update({
-                "average_first_response_time": agent.get("avg_first_response_time"),
-                "average_response_time": agent.get("avg_message_response_time"),
-                "average_duration": agent.get("avg_interaction_time"),
-                "time_in_service": agent.get("time_in_service"),
-            })
-            
+            result.update(
+                {
+                    "average_first_response_time": agent.get("avg_first_response_time"),
+                    "average_response_time": agent.get("avg_message_response_time"),
+                    "average_duration": agent.get("avg_interaction_time"),
+                    "time_in_service": agent.get("time_in_service"),
+                }
+            )
+
             formatted_results.append(result)
 
         return {
@@ -521,13 +525,13 @@ class HumanSupportDashboardService:
                 params["created_on__gte"] = filters.get("created_on__gte")
             if filters.get("created_on__lte") is not None:
                 params["created_on__lte"] = filters.get("created_on__lte")
-        
+
         # Add date filters from normalized
         if normalized.get("start_date"):
             params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
             params["end_date"] = normalized["end_date"].date().isoformat()
-        
+
         if filters:
             if filters.get("ordering") is not None:
                 ordering = filters.get("ordering")
@@ -699,7 +703,7 @@ class HumanSupportDashboardService:
         # Timezone e recorte para finished
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
-        
+
         # Use start_date/end_date if provided, otherwise use today
         if normalized.get("start_date") and normalized.get("end_date"):
             start_of_day = normalized["start_date"].isoformat()
@@ -784,3 +788,13 @@ class HumanSupportDashboardService:
             "average_response_time": message_resp_avg,
             "average_conversation_duration": chat_avg,
         }
+
+    def csat_score_by_agents(self, filters: dict | None = None) -> dict:
+        """
+        Return the csat score by agents.
+        """
+        normalized_filters = self._normalize_filters(filters)
+
+        return self.chats_client.csat_score_by_agents(
+            project_uuid=str(self.project.uuid), params=normalized_filters or {}
+        )

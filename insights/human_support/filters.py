@@ -17,6 +17,8 @@ class HumanSupportFilterSet(filters.FilterSet):
     agent = filters.UUIDFilter(required=False)
     contact = filters.UUIDFilter(required=False)
     ticket_id = filters.UUIDFilter(required=False)
+    page_size = filters.NumberFilter(required=False)
+    cursor = filters.CharFilter(required=False)
 
     class Meta:
         fields = [
@@ -29,4 +31,6 @@ class HumanSupportFilterSet(filters.FilterSet):
             "agent",
             "contact",
             "ticket_id",
+            "page_size",
+            "cursor",
         ]
