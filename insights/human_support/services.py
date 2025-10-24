@@ -7,6 +7,7 @@ import pytz
 from django.utils import timezone as dj_timezone
 
 from insights.human_support.clients.chats_raw_data import ChatsRawDataClient
+from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_time_metrics import (
     ChatsTimeMetricsClient,
 )
@@ -32,6 +33,7 @@ class HumanSupportDashboardService:
     def __init__(self, project: Project) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
+        self.chats_client = ChatsClient()
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
@@ -506,3 +508,13 @@ class HumanSupportDashboardService:
 
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
+
+    def csat_score_by_agents(self, filters: dict | None = None) -> dict:
+        """
+        Return the csat score by agents.
+        """
+        normalized_filters = self._normalize_filters(filters)
+
+        return self.chats_client.csat_score_by_agents(
+            project_uuid=str(self.project.uuid), params=normalized_filters or {}
+        )
