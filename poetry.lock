@@ -3197,6 +3197,24 @@ files = [
 ]
 
 [[package]]
+name = "weni-commons"
+version = "0.0.1a1"
+description = "Weni's common utilities for Python backends"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "weni_commons-0.0.1a1-py3-none-any.whl", hash = "sha256:64328204cefbb19033ba6cd610179235e0c7eefe638f41679c3e9f3ccdd49cbe"},
+    {file = "weni_commons-0.0.1a1.tar.gz", hash = "sha256:df583bafaea48499e88254a4af421d2c9c742cb2585c098b8dc20bc6b2b9e3f3"},
+]
+
+[package.dependencies]
+celery = ">=5.0.0,<6.0"
+django = ">=3.2.22,<6.0"
+django-redis = ">=4.0.0,<6.0"
+djangorestframework = ">=3.12.0,<4.0"
+weni-feature-flags = ">=1.0.1a0,<2.0.0"
+
+[[package]]
 name = "weni-datalake-sdk"
 version = "0.6.0"
 description = "Lib to connect python/django modules to redshift"
@@ -3218,20 +3236,20 @@ pytest = ">=8.4.0,<9.0.0"
 
 [[package]]
 name = "weni-feature-flags"
-version = "0.1.3"
+version = "1.0.1a0"
 description = "Weni's feature flags SDK for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_feature_flags-0.1.3-py3-none-any.whl", hash = "sha256:5347d8438a45893b2fbec40433c632a1828927dc57730d545e8da4992914fd25"},
-    {file = "weni_feature_flags-0.1.3.tar.gz", hash = "sha256:d28300b88b536f67a8d2d922ea94dfc1feb9c0fc1661cf7a0f5e9b984cf8c8ae"},
+    {file = "weni_feature_flags-1.0.1a0-py3-none-any.whl", hash = "sha256:3f91b70bf531f6af7da1cb27f314f2900bb9f3e46eab3861f6c921c2d73e6433"},
+    {file = "weni_feature_flags-1.0.1a0.tar.gz", hash = "sha256:c1256604f1103b6e6f897bd6edbd4c16c116292a7fef5dbb948aae916e332a95"},
 ]
 
 [package.dependencies]
 celery = ">=5.0.0,<6.0"
 django = ">=3.2.22,<6.0"
 django-redis = ">=4.0.0,<6.0"
-djangorestframework = ">=3.14.0,<4.0"
+djangorestframework = ">=3.12.0,<4.0"
 growthbook = ">=1.0.0,<2.0"
 requests = ">=2.25.0,<3.0"
 
@@ -3570,4 +3588,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "f8a6cd4067867e7a8fca0f39da354637fbf280a196e689747501ebbbafea4297"
+content-hash = "ea53924144274b59aa6c571a5d57c2a67af57e5651c94c2f32bd4cf51e9bf555"
