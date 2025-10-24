@@ -3340,6 +3340,24 @@ files = [
 ]
 
 [[package]]
+name = "weni-commons"
+version = "0.0.1a2"
+description = "Weni's common utilities for Python backends"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "weni_commons-0.0.1a2-py3-none-any.whl", hash = "sha256:35828dc92164572458b0a97f6f9fd7de1e04b3cd8d6c16aec6a44e1d021ebee0"},
+    {file = "weni_commons-0.0.1a2.tar.gz", hash = "sha256:a5c7caaed5ff448773d08c148d6b2f63798fd7b6276f3257ab0a398b57fb84b7"},
+]
+
+[package.dependencies]
+celery = ">=5.0.0,<6.0"
+django = ">=3.2.22,<6.0"
+django-redis = ">=4.0.0,<6.0"
+djangorestframework = ">=3.12.0,<4.0"
+weni-feature-flags = "2.0.0a0"
+
+[[package]]
 name = "weni-datalake-sdk"
 version = "0.6.0"
 description = "Lib to connect python/django modules to redshift"
@@ -3361,13 +3379,13 @@ pytest = ">=8.4.0,<9.0.0"
 
 [[package]]
 name = "weni-feature-flags"
-version = "0.1.3a1"
+version = "2.0.0a0"
 description = "Weni's feature flags SDK for Python backends"
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_feature_flags-0.1.3a1-py3-none-any.whl", hash = "sha256:f9dce9a1c102c65301efeea914d587ffa92286a91b607710df4ab9a322b81ec3"},
-    {file = "weni_feature_flags-0.1.3a1.tar.gz", hash = "sha256:bf4197e4c4fccb5df53340a7397e0b66a0270543f1a34fe65702f71da535911c"},
+    {file = "weni_feature_flags-2.0.0a0-py3-none-any.whl", hash = "sha256:bc12a7f5845cbad9d5ed0d533b288723021d90852c72c08fff8230e608c320dc"},
+    {file = "weni_feature_flags-2.0.0a0.tar.gz", hash = "sha256:a79e012b10ce14539a5e789d6e835d72c4d6284d866c87dce2cc921ec1ae8abd"},
 ]
 
 [package.dependencies]
@@ -3377,11 +3395,6 @@ django-redis = ">=4.0.0,<6.0"
 djangorestframework = ">=3.12.0,<4.0"
 growthbook = ">=1.0.0,<2.0"
 requests = ">=2.25.0,<3.0"
-
-[package.source]
-type = "legacy"
-url = "https://test.pypi.org/simple"
-reference = "testpypi"
 
 [[package]]
 name = "werkzeug"
@@ -3713,4 +3726,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "87e62e3b1fe745f96bfc93df3d07f6711d150a631c2350c1cefdd3d0ee92b8ce"
+content-hash = "d751f1c162f7c4fccbf731f54f7fab0f56267ffbdc43e5663c382922fbd0ba93"

@@ -23,7 +23,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 from rest_framework.routers import DefaultRouter
-from weni_feature_flags.views import FeatureFlagsWebhookView
+from weni.feature_flags.views import FeatureFlagsWebhookView
 
 from insights.dashboards.viewsets import DashboardViewSet
 from insights.feature_flags.views import FeatureFlagsViewSet

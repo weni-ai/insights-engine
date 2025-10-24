@@ -4,7 +4,7 @@ from rest_framework import permissions
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.views import APIView
-from weni_feature_flags.shortcuts import is_feature_active
+from weni.feature_flags.shortcuts import is_feature_active
 
 from insights.dashboards.models import Dashboard
 from insights.projects.models import Project, ProjectAuth
