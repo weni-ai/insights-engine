@@ -509,12 +509,15 @@ class HumanSupportDashboardService:
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
 
-    def csat_score_by_agents(self, filters: dict | None = None) -> dict:
+    def csat_score_by_agents(
+        self, user_request: str | None = None, filters: dict | None = None
+    ) -> dict:
         """
         Return the csat score by agents.
         """
-        normalized_filters = self._normalize_filters(filters)
+        normalized_filters = self._normalize_filters(filters) or {}
+        normalized_filters["user_request"] = user_request
 
         return self.chats_client.csat_score_by_agents(
-            project_uuid=str(self.project.uuid), params=normalized_filters or {}
+            project_uuid=str(self.project.uuid), params=normalized_filters
         )
