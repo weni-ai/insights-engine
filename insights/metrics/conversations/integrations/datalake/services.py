@@ -318,6 +318,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         conversation_type: ConversationType,
     ) -> list[dict]:
+        """
+        Get topics events from Datalake.
+        """
         try:
             human_support = (
                 "true" if conversation_type == ConversationType.HUMAN else "false"
@@ -349,6 +352,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         conversation_type: ConversationType,
     ) -> list[dict]:
+        """
+        Get subtopics events from Datalake.
+        """
         try:
             human_support = (
                 "true" if conversation_type == ConversationType.HUMAN else "false"
@@ -372,6 +378,80 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             raise e
 
         return subtopics_events
+
+    def _get_topics_from_subtopics(
+        self, subtopics: list[SubtopicTopicRelation]
+    ) -> dict:
+        """
+        Get topics from subtopics.
+
+        It returns a dictionary with the topics as keys
+        and each subtopic as a key in the subtopics dictionary.
+        """
+        topics_from_subtopics = {
+            subtopic.topic_uuid: {
+                "name": subtopic.topic_name,
+                "uuid": subtopic.topic_uuid,
+                "subtopics": {
+                    subtopic.subtopic_uuid: {
+                        "name": subtopic.subtopic_name,
+                        "uuid": subtopic.subtopic_uuid,
+                    }
+                    for subtopic in subtopics
+                },
+            }
+            for subtopic in subtopics
+        }
+
+        return topics_from_subtopics
+
+    def _get_topics_base_structure(
+        self, topics_from_subtopics: dict, output_language: str = "en"
+    ) -> dict:
+        """
+        Get topics base structure, to be used as a base for the topics distribution
+        counts data. It returns a dictionary with the topics as keys
+        and each subtopic as a key in the subtopics dictionary.
+        """
+        unclassified_label = self._get_unclassified_label(output_language)
+
+        topics_data = {
+            "OTHER": {
+                "name": unclassified_label,
+                "uuid": None,
+                "count": 0,
+                "subtopics": {},
+            }
+        }
+
+        for topic_uuid, topic_data in topics_from_subtopics.items():
+            if topic_uuid not in topics_data:
+                topic_subtopics = {}
+                for subtopic_uuid, subtopic_data in topic_data.get(
+                    "subtopics", {}
+                ).items():
+                    topic_subtopics[subtopic_uuid] = {
+                        "name": subtopic_data.get("name"),
+                        "uuid": subtopic_uuid,
+                        "count": 0,
+                    }
+
+                topic_subtopics["OTHER"] = {
+                    "count": 0,
+                    "name": unclassified_label,
+                    "uuid": None,
+                }
+
+                topics_data[topic_uuid] = {
+                    "name": topic_data.get("name"),
+                    "uuid": topic_uuid,
+                    "count": 0,
+                    "subtopics": topic_subtopics,
+                }
+            else:
+                topics_data[topic_uuid]["count"] += 0
+
+        return topics_data
 
     def get_topics_distribution(
         self,
@@ -413,58 +493,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             conversation_type=conversation_type,
         )
 
-        unclassified_label = self._get_unclassified_label(output_language)
-
-        topics_data = {
-            "OTHER": {
-                "name": unclassified_label,
-                "uuid": None,
-                "count": 0,
-                "subtopics": {},
-            }
-        }
-
-        topics_from_subtopics = {
-            subtopic.topic_uuid: {
-                "name": subtopic.topic_name,
-                "uuid": subtopic.topic_uuid,
-                "subtopics": {
-                    subtopic.subtopic_uuid: {
-                        "name": subtopic.subtopic_name,
-                        "uuid": subtopic.subtopic_uuid,
-                    }
-                    for subtopic in subtopics
-                },
-            }
-            for subtopic in subtopics
-        }
-
-        for topic_uuid, topic_data in topics_from_subtopics.items():
-            if topic_uuid not in topics_data:
-                topic_subtopics = {}
-                for subtopic_uuid, subtopic_data in topic_data.get(
-                    "subtopics", {}
-                ).items():
-                    topic_subtopics[subtopic_uuid] = {
-                        "name": subtopic_data.get("name"),
-                        "uuid": subtopic_uuid,
-                        "count": 0,
-                    }
-
-                topic_subtopics["OTHER"] = {
-                    "count": 0,
-                    "name": unclassified_label,
-                    "uuid": None,
-                }
-
-                topics_data[topic_uuid] = {
-                    "name": topic_data.get("name"),
-                    "uuid": topic_uuid,
-                    "count": 0,
-                    "subtopics": topic_subtopics,
-                }
-            else:
-                topics_data[topic_uuid]["count"] += 0
+        topics_from_subtopics = self._get_topics_from_subtopics(subtopics)
+        topics_data = self._get_topics_base_structure(
+            topics_from_subtopics, output_language
+        )
 
         if topics_events == [{}]:
             topics_to_delete = []
