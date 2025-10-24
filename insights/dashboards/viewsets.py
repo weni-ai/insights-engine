@@ -60,6 +60,7 @@ class DashboardViewSet(
             "monitoring_peaks_in_human_service",
             "finished",
             "analysis_finished_rooms_status",
+            "monitoring_csat_score_by_agents",
         ]:
             return [
                 IsAuthenticated(),
@@ -299,7 +300,9 @@ class DashboardViewSet(
     def monitoring_csat_score_by_agents(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        data = service.csat_score_by_agents(filters=request.query_params)
+        data = service.csat_score_by_agents(
+            user_request=request.user.email, filters=request.query_params
+        )
 
         return Response(data, status=status.HTTP_200_OK)
 
