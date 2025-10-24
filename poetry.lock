@@ -3198,13 +3198,13 @@ files = [
 
 [[package]]
 name = "weni-commons"
-version = "0.0.1a1"
+version = "0.0.1a2"
 description = "Weni's common utilities for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_commons-0.0.1a1-py3-none-any.whl", hash = "sha256:64328204cefbb19033ba6cd610179235e0c7eefe638f41679c3e9f3ccdd49cbe"},
-    {file = "weni_commons-0.0.1a1.tar.gz", hash = "sha256:df583bafaea48499e88254a4af421d2c9c742cb2585c098b8dc20bc6b2b9e3f3"},
+    {file = "weni_commons-0.0.1a2-py3-none-any.whl", hash = "sha256:35828dc92164572458b0a97f6f9fd7de1e04b3cd8d6c16aec6a44e1d021ebee0"},
+    {file = "weni_commons-0.0.1a2.tar.gz", hash = "sha256:a5c7caaed5ff448773d08c148d6b2f63798fd7b6276f3257ab0a398b57fb84b7"},
 ]
 
 [package.dependencies]
@@ -3212,7 +3212,7 @@ celery = ">=5.0.0,<6.0"
 django = ">=3.2.22,<6.0"
 django-redis = ">=4.0.0,<6.0"
 djangorestframework = ">=3.12.0,<4.0"
-weni-feature-flags = ">=1.0.1a0,<2.0.0"
+weni-feature-flags = "2.0.0a0"
 
 [[package]]
 name = "weni-datalake-sdk"
@@ -3236,13 +3236,13 @@ pytest = ">=8.4.0,<9.0.0"
 
 [[package]]
 name = "weni-feature-flags"
-version = "1.0.1a0"
+version = "2.0.0a0"
 description = "Weni's feature flags SDK for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_feature_flags-1.0.1a0-py3-none-any.whl", hash = "sha256:3f91b70bf531f6af7da1cb27f314f2900bb9f3e46eab3861f6c921c2d73e6433"},
-    {file = "weni_feature_flags-1.0.1a0.tar.gz", hash = "sha256:c1256604f1103b6e6f897bd6edbd4c16c116292a7fef5dbb948aae916e332a95"},
+    {file = "weni_feature_flags-2.0.0a0-py3-none-any.whl", hash = "sha256:bc12a7f5845cbad9d5ed0d533b288723021d90852c72c08fff8230e608c320dc"},
+    {file = "weni_feature_flags-2.0.0a0.tar.gz", hash = "sha256:a79e012b10ce14539a5e789d6e835d72c4d6284d866c87dce2cc921ec1ae8abd"},
 ]
 
 [package.dependencies]
@@ -3588,4 +3588,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ea53924144274b59aa6c571a5d57c2a67af57e5651c94c2f32bd4cf51e9bf555"
+content-hash = "d751f1c162f7c4fccbf731f54f7fab0f56267ffbdc43e5663c382922fbd0ba93"
