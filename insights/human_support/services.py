@@ -80,6 +80,8 @@ class HumanSupportDashboardService:
         filter_form = filterset.form
         filter_form.is_valid()
 
+        filterset.apply_project_timezone(self.project)
+
         cleaned_filters: dict = {}
         for key, value in filter_form.cleaned_data.items():
             if value in (None, [], ""):
