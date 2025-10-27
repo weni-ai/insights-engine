@@ -422,7 +422,7 @@ class ConversationsReportService(BaseConversationsReportService):
                         max_attempts = 10
                         resolved = False
 
-                        for _ in range(max_attempts):
+                        for attempt in range(max_attempts):
                             random_str = get_random_string(5)
 
                             candidate_name = f"{random_str}_{name}"
