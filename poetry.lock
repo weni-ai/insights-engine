@@ -3198,13 +3198,13 @@ files = [
 
 [[package]]
 name = "weni-commons"
-version = "0.0.1a2"
+version = "1.0.0"
 description = "Weni's common utilities for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_commons-0.0.1a2-py3-none-any.whl", hash = "sha256:35828dc92164572458b0a97f6f9fd7de1e04b3cd8d6c16aec6a44e1d021ebee0"},
-    {file = "weni_commons-0.0.1a2.tar.gz", hash = "sha256:a5c7caaed5ff448773d08c148d6b2f63798fd7b6276f3257ab0a398b57fb84b7"},
+    {file = "weni_commons-1.0.0-py3-none-any.whl", hash = "sha256:109073ecfd7b3c174e2a765a4fe3050e1d4822a370b7577117c485f633ab4d1f"},
+    {file = "weni_commons-1.0.0.tar.gz", hash = "sha256:96540393cb8e0a6ae42b71999780a6debc6ef7bdfc67c41f71d99d3adb23ec97"},
 ]
 
 [package.dependencies]
@@ -3212,7 +3212,7 @@ celery = ">=5.0.0,<6.0"
 django = ">=3.2.22,<6.0"
 django-redis = ">=4.0.0,<6.0"
 djangorestframework = ">=3.12.0,<4.0"
-weni-feature-flags = "2.0.0a0"
+weni-feature-flags = ">=2.0.0,<3.0.0"
 
 [[package]]
 name = "weni-datalake-sdk"
@@ -3236,13 +3236,13 @@ pytest = ">=8.4.0,<9.0.0"
 
 [[package]]
 name = "weni-feature-flags"
-version = "2.0.0a0"
+version = "2.0.0"
 description = "Weni's feature flags SDK for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_feature_flags-2.0.0a0-py3-none-any.whl", hash = "sha256:bc12a7f5845cbad9d5ed0d533b288723021d90852c72c08fff8230e608c320dc"},
-    {file = "weni_feature_flags-2.0.0a0.tar.gz", hash = "sha256:a79e012b10ce14539a5e789d6e835d72c4d6284d866c87dce2cc921ec1ae8abd"},
+    {file = "weni_feature_flags-2.0.0-py3-none-any.whl", hash = "sha256:c377ef2378e865b1aee3cfb5c5365ea95ce48efbfbdad5977a8ce25cc2e56c0f"},
+    {file = "weni_feature_flags-2.0.0.tar.gz", hash = "sha256:bd43c88d0376ae8bab66b1f3ba53babea2bffdb7c2366224683efe7b694cd471"},
 ]
 
 [package.dependencies]
@@ -3588,4 +3588,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d751f1c162f7c4fccbf731f54f7fab0f56267ffbdc43e5663c382922fbd0ba93"
+content-hash = "45784cb3c758e94ddd6206b7372386e5c798e8acabf7739c4f36f2f1d6e8ef85"
