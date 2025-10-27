@@ -11,6 +11,7 @@ import zipfile
 import boto3
 import uuid
 
+from django.utils.crypto import get_random_string
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.template.loader import render_to_string
@@ -410,10 +411,32 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Zip the files into a single file.
         """
+        names_used = set()
+
         with io.BytesIO() as zip_buffer:
             with zipfile.ZipFile(zip_buffer, "w") as zip_file:
                 for file in files:
-                    zip_file.writestr(file.name, file.content)
+                    name = file.name
+
+                    if name in names_used:
+                        max_attempts = 10
+                        resolved = False
+
+                        for _ in range(max_attempts):
+                            random_str = get_random_string(5)
+
+                            candidate_name = f"{random_str}_{name}"
+
+                            if candidate_name not in names_used:
+                                name = candidate_name
+                                resolved = True
+                                break
+
+                        if not resolved:
+                            raise ValueError("Failed to generate a unique name")
+
+                    names_used.add(name)
+                    zip_file.writestr(name, file.content)
 
             zip_content = zip_buffer.getvalue()
 
