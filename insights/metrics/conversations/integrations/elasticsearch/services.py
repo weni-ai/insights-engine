@@ -1,3 +1,4 @@
+from datetime import datetime
 import math
 
 from insights.metrics.conversations.integrations.elasticsearch.clients import (
@@ -8,6 +9,14 @@ from insights.metrics.conversations.integrations.elasticsearch.clients import (
 class ConversationsElasticsearchService:
     def __init__(self, client: ElasticsearchClient):
         self.client = client
+
+    def _format_date(self, date: str) -> str:
+        if isinstance(date, datetime):
+            try:
+                date = date.isoformat()
+            except Exception:
+                date = date
+        return date
 
     def get_flowsrun_results_by_contacts(
         self,
@@ -29,11 +38,14 @@ class ConversationsElasticsearchService:
             "size": page_size,
         }
 
+        start_date = self._format_date(start_date)
+        end_date = self._format_date(end_date)
+
         query = {
             "query": {
                 "bool": {
                     "must": [
-                        {"term": {"project_uuid": project_uuid}},
+                        {"term": {"project_uuid": str(project_uuid)}},
                         {"term": {"flow_uuid": flow_uuid}},
                         {
                             "nested": {
