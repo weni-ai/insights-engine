@@ -334,3 +334,15 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             # Verify project was reverted to original state
             project.refresh_from_db()
             self.assertFalse(project.is_allowed)
+
+    @with_project_auth
+    def test_verify_csat(self):
+        url = reverse("project-verify-csat", kwargs={"pk": self.project.uuid})
+
+        with patch("insights.projects.viewsets.ChatsRESTClient") as mock_chats_client:
+            mock_chats_client.return_value.get_project.return_value = {
+                "is_csat_enabled": True,
+            }
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data, True)
