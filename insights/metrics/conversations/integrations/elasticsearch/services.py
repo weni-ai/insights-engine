@@ -67,7 +67,7 @@ class ConversationsElasticsearchService:
             "sort": [{"modified_on": {"order": "desc"}}],
         }
 
-        response = self.client.get(params=params, query=query)
+        response = self.client.get(endpoint="_search", params=params, query=query)
 
         total_items = response["hits"]["total"]["value"]
         total_pages = math.ceil(total_items / page_size)
