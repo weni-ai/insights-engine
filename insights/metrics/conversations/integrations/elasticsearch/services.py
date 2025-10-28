@@ -33,7 +33,7 @@ class ConversationsElasticsearchService:
             "query": {
                 "bool": {
                     "must": [
-                        {"term": {"project_uuid": project_uuid}},
+                        {"term": {"project_uuid": str(project_uuid)}},
                         {"term": {"flow_uuid": flow_uuid}},
                         {
                             "nested": {
