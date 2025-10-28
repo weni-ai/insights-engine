@@ -67,9 +67,11 @@ class ConversationsElasticsearchService:
             "sort": [{"modified_on": {"order": "desc"}}],
         }
 
-        response = self.client.get(params=params, query=query)
+        response = self.client.get(endpoint="_search", params=params, query=query)
 
-        total_items = response["hits"]["total"]["value"]
+        # Handle Elasticsearch 8.x where total can be int or dict
+        total = response["hits"]["total"]
+        total_items = total if isinstance(total, int) else total["value"]
         total_pages = math.ceil(total_items / page_size)
 
         data = []
