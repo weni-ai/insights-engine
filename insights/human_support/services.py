@@ -506,3 +506,122 @@ class HumanSupportDashboardService:
 
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
+
+    def get_finished_rooms(self, filters: dict | None = None) -> dict:
+        """
+        Lista de salas finalizadas.
+        Retorna { next, previous, count, results: [...] }.
+        Critérios: is_active=False.
+        """
+        normalized = self._normalize_filters(filters)
+
+        params: dict = {
+            "is_active": False,
+        }
+
+        # Apply sector, queue, tags filters
+        filter_to_rooms_field = {"sectors": "sector", "queues": "queue", "tags": "tags"}
+        for filter_key, rooms_field in filter_to_rooms_field.items():
+            value = normalized.get(filter_key)
+            if value:
+                params[rooms_field] = value
+
+        # Add date filters for ended_at
+        if normalized.get("start_date"):
+            params["ended_at__gte"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            params["ended_at__lte"] = normalized["end_date"].isoformat()
+
+        # Add agent filter
+        if normalized.get("agent"):
+            params["user_id"] = str(normalized["agent"])
+
+        # Add contact filter
+        if normalized.get("contact"):
+            params["contact"] = str(normalized["contact"])
+
+        # Add ticket_id filter (protocol)
+        if normalized.get("ticket_id"):
+            params["uuid"] = str(normalized["ticket_id"])
+
+        # Pagination and ordering
+        if filters:
+            if filters.get("limit") is not None:
+                params["limit"] = filters.get("limit")
+            if filters.get("offset") is not None:
+                params["offset"] = filters.get("offset")
+            ordering = filters.get("ordering")
+            if ordering is not None:
+                prefix = "-" if ordering.startswith("-") else ""
+                field = ordering.lstrip("-")
+                field_mapping = {
+                    "Agent": "agent__first_name",
+                    "agent": "agent__first_name",
+                    "Atendente": "agent__first_name",
+                    "atendente": "agent__first_name",
+                    "Sector": "queue__sector__name",
+                    "sector": "queue__sector__name",
+                    "Setor": "queue__sector__name",
+                    "setor": "queue__sector__name",
+                    "Queue": "queue__name",
+                    "queue": "queue__name",
+                    "Fila": "queue__name",
+                    "fila": "queue__name",
+                    "Contact": "contact__name",
+                    "contact": "contact__name",
+                    "Contato": "contact__name",
+                    "contato": "contact__name",
+                    "Ticket ID": "uuid",
+                    "ticket_id": "uuid",
+                    "Ticket id": "uuid",
+                    "Protocol": "uuid",
+                    "protocol": "uuid",
+                    "Protocolo": "uuid",
+                    "protocolo": "uuid",
+                    "Tempo aguardando": "waiting_time",
+                    "tempo aguardando": "waiting_time",
+                    "Awaiting time": "waiting_time",
+                    "awaiting_time": "waiting_time",
+                    "Tempo para 1ª resposta": "first_response_time",
+                    "tempo para 1ª resposta": "first_response_time",
+                    "First response time": "first_response_time",
+                    "first_response_time": "first_response_time",
+                    "Tempo de resposta": "first_response_time",
+                    "tempo de resposta": "first_response_time",
+                    "Duration": "duration",
+                    "duration": "duration",
+                    "Duração": "duration",
+                    "duração": "duration",
+                    "Ended at": "ended_at",
+                    "ended_at": "ended_at",
+                    "Finalizado em": "ended_at",
+                    "finalizado em": "ended_at",
+                }
+                mapped_field = field_mapping.get(field, field)
+                params["ordering"] = f"{prefix}{mapped_field}"
+
+        response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
+
+        formatted_results = []
+        for room in response.get("results", []):
+            formatted_results.append(
+                {
+                    "agent": room.get("agent"),
+                    "sector": room.get("sector"),
+                    "queue": room.get("queue"),
+                    "contact": room.get("contact"),
+                    "ticket_id": room.get("uuid"),
+                    "awaiting_time": room.get("waiting_time"),
+                    "first_response_time": room.get("first_response_time"),
+                    "duration": room.get("duration"),
+                    "ended_at": room.get("ended_at"),
+                    "link": room.get("link"),
+                }
+            )
+
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
