@@ -495,19 +495,16 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             subtopic_name = subtopics[subtopic_uuid].subtopic_name
 
-            if subtopic_uuid not in topics_data[topic_uuid]["subtopics"]:
+            if subtopic_uuid in topics_data[topic_uuid]["subtopics"]:
                 topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
-                    "count": 0,
+                    "count": subtopic_event.get("count", 0),
                     "name": subtopic_name,
                     "uuid": subtopic_uuid,
                 }
-
-            topics_data[topic_uuid]["subtopics"][subtopic_uuid][
-                "count"
-            ] += subtopic_event.get("count", 0)
-            topics_data[topic_uuid]["subtopics"]["OTHER"][
-                "count"
-            ] -= subtopic_event.get("count", 0)
+            else:
+                topics_data[topic_uuid]["subtopics"]["OTHER"][
+                    "count"
+                ] += subtopic_event.get("count", 0)
 
         topics_to_delete = []
         subtopics_to_delete = {}
