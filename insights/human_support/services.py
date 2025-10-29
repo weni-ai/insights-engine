@@ -506,3 +506,99 @@ class HumanSupportDashboardService:
 
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
+
+    def get_analysis_status(self, filters: dict | None = None) -> dict:
+        """
+        Retorna análise completa: contadores + métricas de tempo (incluindo avg_message_response_time).
+        Similar ao monitoring/list_status mas com filtros de data e tempo médio de resposta.
+        """
+        normalized = self._normalize_filters(filters)
+
+        # Timezone e recorte para finished
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+        
+        # Use start_date/end_date if provided, otherwise use today
+        if normalized.get("start_date") and normalized.get("end_date"):
+            start_of_day = normalized["start_date"].isoformat()
+            now_iso = normalized["end_date"].isoformat()
+        else:
+            today = dj_timezone.now().date()
+            start_of_day = project_tz.localize(
+                datetime.combine(today, datetime.min.time())
+            ).isoformat()
+            now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base: dict = {
+            "project": str(self.project.uuid),
+        }
+        if normalized.get("sectors"):
+            base["sector"] = normalized["sectors"]
+        if normalized.get("queues"):
+            base["queue"] = normalized["queues"]
+        if normalized.get("tags"):
+            base["tags"] = normalized["tags"]
+
+        # Count rooms
+        is_waiting = (
+            RoomsQueryExecutor.execute(
+                {**base, "is_active": True, "user_id__isnull": True},
+                "count",
+                lambda x: x,
+                self.project,
+            ).get("value")
+            or 0
+        )
+        in_progress = (
+            RoomsQueryExecutor.execute(
+                {**base, "is_active": True, "user_id__isnull": False},
+                "count",
+                lambda x: x,
+                self.project,
+            ).get("value")
+            or 0
+        )
+        finished = (
+            RoomsQueryExecutor.execute(
+                {
+                    **base,
+                    "is_active": False,
+                    "ended_at__gte": start_of_day,
+                    "ended_at__lte": now_iso,
+                },
+                "count",
+                lambda x: x,
+                self.project,
+            ).get("value")
+            or 0
+        )
+
+        # Get time metrics
+        metrics_params: dict = {}
+        if normalized.get("sectors"):
+            metrics_params["sector"] = normalized["sectors"]
+        if normalized.get("queues"):
+            metrics_params["queue"] = normalized["queues"]
+        if normalized.get("tags"):
+            metrics_params["tags"] = normalized["tags"]
+        if normalized.get("start_date"):
+            metrics_params["start_date"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            metrics_params["end_date"] = normalized["end_date"].isoformat()
+
+        client = ChatsTimeMetricsClient(self.project)
+        response = client.retrieve(params=metrics_params)
+        metrics = response or {}
+
+        waiting_avg = float(metrics.get("avg_waiting_time", 0) or 0)
+        first_resp_avg = float(metrics.get("avg_first_response_time", 0) or 0)
+        message_resp_avg = float(metrics.get("avg_message_response_time", 0) or 0)
+        chat_avg = float(metrics.get("avg_conversation_duration", 0) or 0)
+
+        return {
+            "finished": int(finished),
+            "average_waiting_time": waiting_avg,
+            "average_first_response_time": first_resp_avg,
+            "average_response_time": message_resp_avg,
+            "average_conversation_duration": chat_avg,
+        }
