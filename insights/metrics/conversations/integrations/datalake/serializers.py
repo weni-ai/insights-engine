@@ -1,4 +1,27 @@
-class TopicsRelationsSerializer:
+from abc import ABC, abstractmethod
+
+
+class AbstractSerializer(ABC):
+
+    @abstractmethod
+    def serialize(self) -> dict:
+        raise NotImplementedError("Subclasses must implement this method")
+
+
+class BaseSerializer(AbstractSerializer):
+    """
+    Base serializer class
+    """
+
+    @property
+    def data(self) -> dict:
+        """
+        Get the serialized data
+        """
+        return self.serialize()
+
+
+class TopicsRelationsSerializer(BaseSerializer):
     """
     Topics relations serializer
     """
@@ -23,26 +46,19 @@ class TopicsRelationsSerializer:
                 "uuid": topic_uuid,
                 "subtopics": {},
             }
+            for subtopic in subtopics_list:
+                subtopic_uuid = subtopic.get("uuid")
+                subtopic_name = subtopic.get("name")
 
-            if subtopics_list == []:
-                relations[topic_uuid]["subtopics"]["OTHER"] = {
-                    "name": "Other",
-                    "uuid": None,
+                relations[topic_uuid]["subtopics"][subtopic_uuid] = {
+                    "name": subtopic_name,
+                    "uuid": subtopic_uuid,
                 }
-            else:
-                for subtopic in subtopics_list:
-                    subtopic_uuid = subtopic.get("uuid")
-                    subtopic_name = subtopic.get("name")
-
-                    relations[topic_uuid]["subtopics"][subtopic_uuid] = {
-                        "name": subtopic_name,
-                        "uuid": subtopic_uuid,
-                    }
 
         return relations
 
 
-class TopicsBaseStructureSerializer:
+class TopicsBaseStructureSerializer(BaseSerializer):
     """
     Topics base structure serializer
     """
@@ -92,7 +108,7 @@ class TopicsBaseStructureSerializer:
         return base_structure
 
 
-class TopicsDistributionSerializer:
+class TopicsDistributionSerializer(BaseSerializer):
     """
     Serializer for topics distribution
     """
