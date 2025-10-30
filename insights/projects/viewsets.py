@@ -136,7 +136,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="sources/contacts/search",
+        url_path="filters/contacts",
     )
     def search_contacts(self, request, *args, **kwargs):
         project = self.get_object()
@@ -179,7 +179,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="sources/ticket_id/search",
+        url_path="filters/ticket_id",
     )
     def search_ticket_ids(self, request, *args, **kwargs):
         project = self.get_object()
