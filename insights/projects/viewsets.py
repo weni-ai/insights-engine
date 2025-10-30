@@ -33,6 +33,12 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         url_path="sources/(?P<source_slug>[^/.]+)/search",
     )
     def retrieve_source_data(self, request, source_slug=None, *args, **kwargs):
+        # Handle special cases for filter endpoints
+        if source_slug == "contacts":
+            return self.search_contacts(request, *args, **kwargs)
+        elif source_slug == "ticket_id":
+            return self.search_ticket_ids(request, *args, **kwargs)
+        
         SourceQuery = get_source(slug=source_slug)
         query_kwargs = {}
         if SourceQuery is None:
