@@ -222,6 +222,47 @@ class HumanSupportDashboardService:
         )
         return result.get("results", [])
 
+    def get_analysis_peaks_in_human_service(self, filters: dict | None = None):
+        request_params = self._normalize_filters(filters)
+
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+
+        # Use start_date/end_date from filters, or default to today
+        if request_params.get("start_date") and request_params.get("end_date"):
+            start_datetime = request_params["start_date"].isoformat()
+            end_datetime = request_params["end_date"].isoformat()
+        else:
+            today = dj_timezone.now().date()
+            start_datetime = project_tz.localize(
+                datetime.combine(today, datetime.min.time())
+            ).isoformat()
+            end_datetime = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        rooms_filters = {
+            "project": str(self.project.uuid),
+            "created_on__gte": start_datetime,
+            "created_on__lte": end_datetime,
+        }
+        if "sectors" in request_params:
+            rooms_filters["sector"] = request_params["sectors"]
+        if "queues" in request_params:
+            rooms_filters["queue"] = request_params["queues"]
+        if "tags" in request_params:
+            rooms_filters["tags"] = request_params["tags"]
+
+        result = RoomsQueryExecutor.execute(
+            filters=rooms_filters,
+            operation="timeseries_day_group_count",
+            parser=lambda x: x,
+            project=self.project,
+            query_kwargs={
+                "time_field": "created_on",
+                "timezone": tzname,
+            },
+        )
+        return result.get("results", [])
+
     def get_detailed_monitoring_on_going(self, filters: dict | None = None) -> dict:
         normalized = self._normalize_filters(filters)
 
