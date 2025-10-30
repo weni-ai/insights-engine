@@ -161,6 +161,10 @@ class HumanSupportDashboardService:
             params["queue"] = normalized["queues"]
         if normalized.get("tags"):
             params["tags"] = normalized["tags"]
+        if normalized.get("start_date"):
+            params["start_date"] = normalized["start_date"].date().isoformat()
+        if normalized.get("end_date"):
+            params["end_date"] = normalized["end_date"].date().isoformat()
 
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve(params=params)
@@ -627,7 +631,7 @@ class HumanSupportDashboardService:
             "count": response.get("count"),
             "results": formatted_results,
         }
-        
+
     def get_analysis_status(self, filters: dict | None = None) -> dict:
         """
         Retorna análise completa: contadores + métricas de tempo (incluindo avg_message_response_time).
@@ -703,9 +707,9 @@ class HumanSupportDashboardService:
         if normalized.get("tags"):
             metrics_params["tags"] = normalized["tags"]
         if normalized.get("start_date"):
-            metrics_params["start_date"] = normalized["start_date"].isoformat()
+            metrics_params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
-            metrics_params["end_date"] = normalized["end_date"].isoformat()
+            metrics_params["end_date"] = normalized["end_date"].date().isoformat()
 
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve(params=metrics_params)
