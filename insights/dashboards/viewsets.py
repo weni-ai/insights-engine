@@ -54,11 +54,8 @@ class DashboardViewSet(
             "monitoring_list_status",
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
-<<<<<<< HEAD
             "finished",
-=======
             "analysis_finished_rooms_status",
->>>>>>> feature/status-endpoint-for-status
         ]:
             return [
                 IsAuthenticated(),
