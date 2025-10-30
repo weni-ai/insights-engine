@@ -12,6 +12,8 @@ class HumanSupportFilterSet(filters.FilterSet):
     sectors = UUIDInFilter(required=False)
     queues = UUIDInFilter(required=False)
     tags = UUIDInFilter(required=False)
+    page_size = filters.NumberFilter(required=False)
+    cursor = filters.CharFilter(required=False)
 
     class Meta:
         fields = [
@@ -19,4 +21,6 @@ class HumanSupportFilterSet(filters.FilterSet):
             "sectors",
             "queues",
             "tags",
+            "page_size",
+            "cursor",
         ]
