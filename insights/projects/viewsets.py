@@ -161,26 +161,38 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         if normalized.get("end_date"):
             rooms_filters["ended_at__lte"] = normalized["end_date"].isoformat()
         
-        # Get rooms with contacts
-        response = RoomsQueryExecutor.execute(
-            filters=rooms_filters,
-            operation="list",
-            parser=lambda x: x,
-            project=project,
-        )
-        
-        # Extract unique contacts
-        contacts = {}
-        for room in response.get("results", []):
-            contact = room.get("contact")
-            if contact and contact.get("uuid"):
-                contacts[contact["uuid"]] = {
-                    "uuid": contact["uuid"],
-                    "name": contact.get("name", ""),
-                    "external_id": contact.get("external_id", ""),
-                }
-        
-        return Response({"results": list(contacts.values())}, status=status.HTTP_200_OK)
+        try:
+            # Get rooms with contacts
+            response = RoomsQueryExecutor.execute(
+                filters=rooms_filters,
+                operation="list",
+                parser=lambda x: x,
+                project=project,
+            )
+            
+            # Ensure response is a dict
+            if not isinstance(response, dict):
+                logger.error(f"Unexpected response type from RoomsQueryExecutor: {type(response)}")
+                return Response({"results": []}, status=status.HTTP_200_OK)
+            
+            # Extract unique contacts
+            contacts = {}
+            for room in response.get("results", []):
+                contact = room.get("contact")
+                if contact and contact.get("uuid"):
+                    contacts[contact["uuid"]] = {
+                        "uuid": contact["uuid"],
+                        "name": contact.get("name", ""),
+                        "external_id": contact.get("external_id", ""),
+                    }
+            
+            return Response({"results": list(contacts.values())}, status=status.HTTP_200_OK)
+        except Exception as error:
+            logger.exception(f"Error searching contacts: {error}")
+            return Response(
+                {"detail": "Failed to retrieve contacts"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(
         detail=True,
@@ -204,24 +216,36 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         if normalized.get("end_date"):
             rooms_filters["ended_at__lte"] = normalized["end_date"].isoformat()
         
-        # Get rooms with ticket IDs
-        response = RoomsQueryExecutor.execute(
-            filters=rooms_filters,
-            operation="list",
-            parser=lambda x: x,
-            project=project,
-        )
-        
-        # Extract unique protocols
-        protocols = []
-        seen = set()
-        for room in response.get("results", []):
-            protocol = room.get("protocol")
-            if protocol and protocol not in seen:
-                seen.add(protocol)
-                protocols.append({
-                    "uuid": room.get("uuid"),
-                    "protocol": protocol,
-                })
-        
-        return Response({"results": protocols}, status=status.HTTP_200_OK)
+        try:
+            # Get rooms with ticket IDs
+            response = RoomsQueryExecutor.execute(
+                filters=rooms_filters,
+                operation="list",
+                parser=lambda x: x,
+                project=project,
+            )
+            
+            # Ensure response is a dict
+            if not isinstance(response, dict):
+                logger.error(f"Unexpected response type from RoomsQueryExecutor: {type(response)}")
+                return Response({"results": []}, status=status.HTTP_200_OK)
+            
+            # Extract unique protocols
+            protocols = []
+            seen = set()
+            for room in response.get("results", []):
+                protocol = room.get("protocol")
+                if protocol and protocol not in seen:
+                    seen.add(protocol)
+                    protocols.append({
+                        "uuid": room.get("uuid"),
+                        "protocol": protocol,
+                    })
+            
+            return Response({"results": protocols}, status=status.HTTP_200_OK)
+        except Exception as error:
+            logger.exception(f"Error searching ticket IDs: {error}")
+            return Response(
+                {"detail": "Failed to retrieve ticket IDs"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
