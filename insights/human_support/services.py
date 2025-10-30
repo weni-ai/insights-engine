@@ -30,10 +30,12 @@ from insights.sources.tags.usecases.query_execute import (
 
 
 class HumanSupportDashboardService:
-    def __init__(self, project: Project) -> None:
+    def __init__(
+        self, project: Project, chats_client: ChatsClient = ChatsClient()
+    ) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
-        self.chats_client = ChatsClient()
+        self.chats_client = chats_client
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
