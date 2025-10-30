@@ -179,12 +179,27 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             contacts = {}
             for room in response.get("results", []):
                 contact = room.get("contact")
-                if contact and contact.get("uuid"):
-                    contacts[contact["uuid"]] = {
-                        "uuid": contact["uuid"],
-                        "name": contact.get("name", ""),
-                        "external_id": contact.get("external_id", ""),
-                    }
+                if not contact:
+                    continue
+                
+                # Handle both string and object formats
+                if isinstance(contact, str):
+                    # Contact is a string (name or external_id)
+                    if contact and contact.strip():
+                        contacts[contact] = {
+                            "uuid": None,
+                            "name": contact,
+                            "external_id": contact,
+                        }
+                elif isinstance(contact, dict):
+                    # Contact is an object with uuid
+                    contact_uuid = contact.get("uuid")
+                    if contact_uuid:
+                        contacts[contact_uuid] = {
+                            "uuid": contact_uuid,
+                            "name": contact.get("name", ""),
+                            "external_id": contact.get("external_id", ""),
+                        }
             
             return Response({"results": list(contacts.values())}, status=status.HTTP_200_OK)
         except Exception as error:
@@ -233,15 +248,21 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             # Extract unique protocols
             protocols = []
             seen = set()
+            total_rooms = len(response.get("results", []))
+            logger.info(f"Processing {total_rooms} rooms for protocols")
+            
             for room in response.get("results", []):
                 protocol = room.get("protocol")
-                if protocol and protocol not in seen:
+                # Filter out None, empty strings, and string 'None'
+                if protocol and protocol != "None" and protocol.strip() != "" and protocol not in seen:
                     seen.add(protocol)
                     protocols.append({
                         "uuid": room.get("uuid"),
                         "protocol": protocol,
                     })
+                    logger.debug(f"Found protocol: {protocol} for room {room.get('uuid')}")
             
+            logger.info(f"Found {len(protocols)} unique protocols out of {total_rooms} rooms")
             return Response({"results": protocols}, status=status.HTTP_200_OK)
         except Exception as error:
             logger.exception(f"Error searching ticket IDs: {error}")
