@@ -38,9 +38,8 @@ class TopicsRelationsSerializer:
                         "name": subtopic_name,
                         "uuid": subtopic_uuid,
                     }
-            
-        return relations
 
+        return relations
 
 
 class TopicsBaseStructureSerializer:
@@ -76,7 +75,7 @@ class TopicsBaseStructureSerializer:
                     "uuid": subtopic_uuid,
                     "count": 0,
                 }
-                
+
             subtopics["OTHER"] = {
                 "name": self.unclassified_label,
                 "uuid": None,
@@ -91,9 +90,6 @@ class TopicsBaseStructureSerializer:
             }
 
         return base_structure
-        
-        
-
 
 
 class TopicsDistributionSerializer:
@@ -101,4 +97,34 @@ class TopicsDistributionSerializer:
     Serializer for topics distribution
     """
 
-    def __init__(self, topics_d)
+    def __init__(
+        self,
+        relations: dict,
+        base_structure: dict,
+        topics_events: list[dict],
+        subtopics_events: list[dict],
+    ):
+        self.relations = relations
+        self.base_structure = base_structure
+        self.topics_events = topics_events
+        self.subtopics_events = subtopics_events
+
+        self.topics_data = base_structure.copy()
+
+    def _serialize_topics_events(self) -> dict:
+        """
+        Serialize topics events to list.
+        """
+        pass
+
+    def _serialize_subtopics_events(self) -> dict:
+        """
+        Serialize subtopics events to list.
+        """
+        pass
+
+    def serialize(self) -> dict:
+        """
+        Serialize topics distribution to list.
+        """
+        pass
