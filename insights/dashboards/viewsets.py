@@ -257,7 +257,8 @@ class DashboardViewSet(
     def monitoring_list_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        data = service.get_attendance_status(filters=request.query_params)
+        filters = {key: value for key, value in request.query_params.items()}
+        data = service.get_attendance_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
     @action(
@@ -268,7 +269,8 @@ class DashboardViewSet(
     def monitoring_average_time_metrics(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        data = service.get_time_metrics(filters=request.query_params)
+        filters = {key: value for key, value in request.query_params.items()}
+        data = service.get_time_metrics(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"])
@@ -371,7 +373,8 @@ class DashboardViewSet(
     def monitoring_peaks_in_human_service(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        results = service.get_peaks_in_human_service(filters=request.query_params)
+        filters = {key: value for key, value in request.query_params.items()}
+        results = service.get_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
 
     @action(
@@ -382,7 +385,8 @@ class DashboardViewSet(
     def finished(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        data = service.get_finished_rooms(filters=request.query_params)
+        filters = {key: value for key, value in request.query_params.items()}
+        data = service.get_finished_rooms(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
     @action(
@@ -393,5 +397,6 @@ class DashboardViewSet(
     def analysis_finished_rooms_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        data = service.get_analysis_status(filters=request.query_params)
+        filters = {key: value for key, value in request.query_params.items()}
+        data = service.get_analysis_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)

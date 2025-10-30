@@ -5,7 +5,13 @@ from datetime import datetime, time
 import pytz
 
 class UUIDInFilter(filters.BaseInFilter, filters.UUIDFilter):
-    pass
+    def filter(self, qs, value):
+        if value:
+            if isinstance(value, list):
+                value = [str(v) for v in value if v]
+            else:
+                value = [v.strip() for v in str(value).split(',') if v.strip()]
+        return super(filters.BaseInFilter, self).filter(qs, value)
 
 
 class HumanSupportFilterSet(filters.FilterSet):
