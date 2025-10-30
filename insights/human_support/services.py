@@ -505,14 +505,6 @@ class HumanSupportDashboardService:
         if filters:
             if filters.get("user_request") is not None:
                 params["user_request"] = filters.get("user_request")
-            if filters.get("start_date") is not None:
-                params["start_date"] = filters.get("start_date")
-            if filters.get("end_date") is not None:
-                params["end_date"] = filters.get("end_date")
-            if filters.get("created_on__gte") is not None:
-                params["created_on__gte"] = filters.get("created_on__gte")
-            if filters.get("created_on__lte") is not None:
-                params["created_on__lte"] = filters.get("created_on__lte")
             if filters.get("ordering") is not None:
                 ordering = filters.get("ordering")
                 prefix = "-" if ordering.startswith("-") else ""
@@ -553,6 +545,59 @@ class HumanSupportDashboardService:
 
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
+
+    def get_analysis_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
+        normalized = self._normalize_filters(filters)
+
+        params: dict = {}
+        if filters:
+            if filters.get("user_request") is not None:
+                params["user_request"] = filters.get("user_request")
+            if filters.get("ordering") is not None:
+                ordering = filters.get("ordering")
+                prefix = "-" if ordering.startswith("-") else ""
+                field = ordering.lstrip("-")
+
+                field_mapping = {
+                    # Agent
+                    "Agent": "email",
+                    "agent": "email",
+                }
+
+                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
+                params["ordering"] = f"{prefix}{mapped_field}"
+
+        if normalized.get("start_date"):
+            params["start_date"] = normalized["start_date"].date().isoformat()
+        if normalized.get("end_date"):
+            params["end_date"] = normalized["end_date"].date().isoformat()
+
+        sectors = normalized.get("sectors") or []
+        if isinstance(sectors, list) and sectors:
+            params["sector"] = sectors[0]
+        queues = normalized.get("queues") or []
+        if isinstance(queues, list) and queues:
+            params["queue"] = queues[0]
+
+        client = CustomStatusRESTClient(self.project)
+        response = client.list(params)
+        
+        # Format response to only include agent and breaks
+        formatted_results = []
+        for agent_data in response.get("results", []):
+            formatted_results.append({
+                "agent": agent_data.get("agent"),
+                "agent_email": agent_data.get("agent_email"),
+                "custom_status": agent_data.get("custom_status", []),
+                "link": agent_data.get("link"),
+            })
+        
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
 
     def get_finished_rooms(self, filters: dict | None = None) -> dict:
         """
