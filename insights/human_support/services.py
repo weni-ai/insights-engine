@@ -415,6 +415,12 @@ class HumanSupportDashboardService:
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
 
+        # Add date filters
+        if normalized.get("start_date"):
+            params["start_date"] = normalized["start_date"].date().isoformat()
+        if normalized.get("end_date"):
+            params["end_date"] = normalized["end_date"].date().isoformat()
+
         if filters:
             if filters.get("limit") is not None:
                 params["limit"] = filters.get("limit")
@@ -634,7 +640,7 @@ class HumanSupportDashboardService:
 
         # Add ticket_id filter (protocol)
         if normalized.get("ticket_id"):
-            params["uuid"] = str(normalized["ticket_id"])
+            params["protocol"] = str(normalized["ticket_id"])
 
         # Pagination and ordering
         if filters:
