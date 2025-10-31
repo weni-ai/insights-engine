@@ -724,7 +724,7 @@ class HumanSupportDashboardService:
                     "sector": room.get("sector"),
                     "queue": room.get("queue"),
                     "contact": room.get("contact"),
-                    "ticket_id": room.get("uuid"),
+                    "ticket_id": room.get("protocol"),
                     "awaiting_time": room.get("waiting_time"),
                     "first_response_time": room.get("first_response_time"),
                     "duration": room.get("duration"),

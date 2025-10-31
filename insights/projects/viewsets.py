@@ -155,11 +155,14 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         normalized = {k: v for k, v in filterset.form.cleaned_data.items() if v not in (None, [], "")}
         
         # Build rooms query
-        rooms_filters = {"project": str(project.uuid), "is_active": False}
+        rooms_filters = {"project": str(project.uuid), "is_active": False, "limit": 10000}
         if normalized.get("start_date"):
             rooms_filters["ended_at__gte"] = normalized["start_date"].isoformat()
         if normalized.get("end_date"):
             rooms_filters["ended_at__lte"] = normalized["end_date"].isoformat()
+        
+        # Get search term for filtering contacts
+        search_term = request.query_params.get("search", "").strip().lower()
         
         try:
             # Get rooms with contacts
@@ -186,6 +189,9 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 if isinstance(contact, str):
                     # Contact is a string (name or external_id)
                     if contact and contact.strip():
+                        # Apply search filter
+                        if search_term and search_term not in contact.lower():
+                            continue
                         contacts[contact] = {
                             "uuid": None,
                             "name": contact,
@@ -195,10 +201,19 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                     # Contact is an object with uuid
                     contact_uuid = contact.get("uuid")
                     if contact_uuid:
+                        contact_name = contact.get("name", "")
+                        contact_external_id = contact.get("external_id", "")
+                        
+                        # Apply search filter (search in name or external_id)
+                        if search_term:
+                            searchable = f"{contact_name} {contact_external_id}".lower()
+                            if search_term not in searchable:
+                                continue
+                        
                         contacts[contact_uuid] = {
                             "uuid": contact_uuid,
-                            "name": contact.get("name", ""),
-                            "external_id": contact.get("external_id", ""),
+                            "name": contact_name,
+                            "external_id": contact_external_id,
                         }
             
             return Response({"results": list(contacts.values())}, status=status.HTTP_200_OK)
@@ -225,11 +240,14 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         normalized = {k: v for k, v in filterset.form.cleaned_data.items() if v not in (None, [], "")}
         
         # Build rooms query
-        rooms_filters = {"project": str(project.uuid), "is_active": False}
+        rooms_filters = {"project": str(project.uuid), "is_active": False, "limit": 10000}
         if normalized.get("start_date"):
             rooms_filters["ended_at__gte"] = normalized["start_date"].isoformat()
         if normalized.get("end_date"):
             rooms_filters["ended_at__lte"] = normalized["end_date"].isoformat()
+        
+        # Get search term for filtering protocols
+        search_term = request.query_params.get("search", "").strip().lower()
         
         try:
             # Get rooms with ticket IDs
@@ -255,6 +273,10 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 protocol = room.get("protocol")
                 # Filter out None, empty strings, and string 'None'
                 if protocol and protocol != "None" and protocol.strip() != "" and protocol not in seen:
+                    # Apply search filter
+                    if search_term and search_term not in str(protocol).lower():
+                        continue
+                    
                     seen.add(protocol)
                     protocols.append({
                         "uuid": room.get("uuid"),
