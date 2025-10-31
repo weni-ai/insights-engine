@@ -93,7 +93,6 @@ class HumanSupportDashboardService:
 
         normalized = self._normalize_filters(filters)
 
-        # timezone e recorte "hoje" para finished
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
         today = dj_timezone.now().date()
@@ -228,7 +227,6 @@ class HumanSupportDashboardService:
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
 
-        # Use start_date/end_date from filters, or default to today
         if request_params.get("start_date") and request_params.get("end_date"):
             start_datetime = request_params["start_date"].isoformat()
             end_datetime = request_params["end_date"].isoformat()
@@ -277,7 +275,6 @@ class HumanSupportDashboardService:
             if value:
                 params[rooms_field] = value
 
-        # Add agent filter
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
@@ -419,11 +416,9 @@ class HumanSupportDashboardService:
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
 
-        # Add agent filter
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
-        # Add date filters
         if normalized.get("start_date"):
             params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
@@ -440,17 +435,14 @@ class HumanSupportDashboardService:
                 field = ordering.lstrip("-")
 
                 field_mapping = {
-                    # Agent/Attendant
                     "Agent": "first_name",
                     "Attendant": "first_name",
                     "attendant": "first_name",
                     "agent": "first_name",
                     "Name": "first_name",
                     "Email": "email",
-                    # Status
                     "Status": "status",
                     "status": "status",
-                    # Contadores de atendimentos
                     "Finished": "closed",
                     "finished": "closed",
                     "Closed": "closed",
@@ -460,7 +452,6 @@ class HumanSupportDashboardService:
                     "Opened": "opened",
                     "opened": "opened",
                     "In Progress": "opened",
-                    # Métricas de tempo - com espaços (como vem do front)
                     "Average first response time": "avg_first_response_time",
                     "average first response time": "avg_first_response_time",
                     "average_first_response_time": "avg_first_response_time",
@@ -525,13 +516,10 @@ class HumanSupportDashboardService:
                 field = ordering.lstrip("-")
 
                 field_mapping = {
-                    # Agent
                     "Agent": "email",
                     "agent": "email",
-                    # Status
                     "Status": "status",
                     "status": "status",
-                    # Contadores de atendimentos
                     "Finished": "closed",
                     "finished": "closed",
                     "Closed": "closed",
@@ -557,7 +545,6 @@ class HumanSupportDashboardService:
         if isinstance(queues, list) and queues:
             params["queue"] = queues[0]
 
-        # Add agent filter
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
@@ -579,7 +566,6 @@ class HumanSupportDashboardService:
                 field = ordering.lstrip("-")
 
                 field_mapping = {
-                    # Agent
                     "Agent": "email",
                     "agent": "email",
                 }
@@ -599,14 +585,12 @@ class HumanSupportDashboardService:
         if isinstance(queues, list) and queues:
             params["queue"] = queues[0]
 
-        # Add agent filter
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
         client = CustomStatusRESTClient(self.project)
         response = client.list(params)
 
-        # Format response to only include agent and breaks
         formatted_results = []
         for agent_data in response.get("results", []):
             formatted_results.append(
@@ -637,32 +621,26 @@ class HumanSupportDashboardService:
             "is_active": False,
         }
 
-        # Apply sector, queue, tags filters
         filter_to_rooms_field = {"sectors": "sector", "queues": "queue", "tags": "tags"}
         for filter_key, rooms_field in filter_to_rooms_field.items():
             value = normalized.get(filter_key)
             if value:
                 params[rooms_field] = value
 
-        # Add date filters for ended_at
         if normalized.get("start_date"):
             params["ended_at__gte"] = normalized["start_date"].isoformat()
         if normalized.get("end_date"):
             params["ended_at__lte"] = normalized["end_date"].isoformat()
 
-        # Add agent filter
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
-        # Add contact filter
         if normalized.get("contact"):
             params["contact"] = str(normalized["contact"])
 
-        # Add ticket_id filter (protocol)
         if normalized.get("ticket_id"):
             params["protocol"] = str(normalized["ticket_id"])
 
-        # Pagination and ordering
         if filters:
             if filters.get("limit") is not None:
                 params["limit"] = filters.get("limit")
@@ -751,11 +729,9 @@ class HumanSupportDashboardService:
         """
         normalized = self._normalize_filters(filters)
 
-        # Timezone e recorte para finished
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
 
-        # Use start_date/end_date if provided, otherwise use today
         if normalized.get("start_date") and normalized.get("end_date"):
             start_of_day = normalized["start_date"].isoformat()
             now_iso = normalized["end_date"].isoformat()
@@ -776,25 +752,6 @@ class HumanSupportDashboardService:
         if normalized.get("tags"):
             base["tags"] = normalized["tags"]
 
-        # Count rooms
-        is_waiting = (
-            RoomsQueryExecutor.execute(
-                {**base, "is_active": True, "user_id__isnull": True},
-                "count",
-                lambda x: x,
-                self.project,
-            ).get("value")
-            or 0
-        )
-        in_progress = (
-            RoomsQueryExecutor.execute(
-                {**base, "is_active": True, "user_id__isnull": False},
-                "count",
-                lambda x: x,
-                self.project,
-            ).get("value")
-            or 0
-        )
         finished = (
             RoomsQueryExecutor.execute(
                 {
@@ -810,7 +767,6 @@ class HumanSupportDashboardService:
             or 0
         )
 
-        # Get time metrics
         metrics_params: dict = {}
         if normalized.get("sectors"):
             metrics_params["sector"] = normalized["sectors"]
