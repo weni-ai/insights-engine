@@ -375,15 +375,6 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         topic_uuid = str(uuid.uuid4())
         subtopic_uuid = str(uuid.uuid4())
 
-        subtopics = [
-            SubtopicTopicRelation(
-                subtopic_uuid=subtopic_uuid,
-                subtopic_name="Test Subtopic",
-                topic_uuid=topic_uuid,
-                topic_name="Test Topic",
-            )
-        ]
-
         with patch.object(
             self.service.events_client, "get_events_count_by_group"
         ) as mock_get_events:
@@ -407,7 +398,18 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 start_date=datetime.now() - timedelta(days=1),
                 end_date=datetime.now(),
                 conversation_type=ConversationType.AI,
-                current_topics_data={},
+                current_topics_data={
+                    topic_uuid: {
+                        "name": "Test Topic",
+                        "uuid": topic_uuid,
+                        "subtopics": {
+                            subtopic_uuid: {
+                                "name": "Test Subtopic",
+                                "uuid": subtopic_uuid,
+                            }
+                        },
+                    }
+                },
                 output_language="en",
             )
 
@@ -423,7 +425,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 if kwargs.get("group_by") == "topic_uuid":
                     return [{"group_value": "unknown_topic", "count": 5}]
                 else:  # subtopics
-                    return [{"group_value": "unknown_subtopic", "count": 3}]
+                    return [{}]
 
             mock_get_events.side_effect = side_effect
 
@@ -437,7 +439,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             )
 
             self.assertIn("OTHER", results)
-            self.assertEqual(results["OTHER"]["count"], 8)  # 5 + 3
+            self.assertEqual(results["OTHER"]["count"], 5)  # 5 + 3
 
     def test_get_topics_distribution_with_unknown_subtopic(self):
         """Test topics distribution with unknown subtopic UUID"""
@@ -466,7 +468,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                         }
                     ]
                 else:  # subtopics
-                    return [{"group_value": "unknown_subtopic", "count": 3}]
+                    return [{}]
 
             mock_get_events.side_effect = side_effect
 
@@ -480,7 +482,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             )
 
             self.assertIn("OTHER", results)
-            self.assertEqual(results["OTHER"]["count"], 3)
+            self.assertEqual(results["OTHER"]["count"], 5)
 
     def test_get_conversations_totals_with_cache(self):
         project_uuid = uuid.uuid4()
