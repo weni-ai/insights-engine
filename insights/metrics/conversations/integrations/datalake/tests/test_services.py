@@ -407,7 +407,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 start_date=datetime.now() - timedelta(days=1),
                 end_date=datetime.now(),
                 conversation_type=ConversationType.AI,
-                subtopics=subtopics,
+                current_topics_data={},
                 output_language="en",
             )
 
@@ -432,7 +432,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 start_date=datetime.now() - timedelta(days=1),
                 end_date=datetime.now(),
                 conversation_type=ConversationType.AI,
-                subtopics=[],
+                current_topics_data={},
                 output_language="en",
             )
 
@@ -475,7 +475,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 start_date=datetime.now() - timedelta(days=1),
                 end_date=datetime.now(),
                 conversation_type=ConversationType.AI,
-                subtopics=subtopics,
+                current_topics_data={},
                 output_language="en",
             )
 
@@ -752,7 +752,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 start_date=start_date,
                 end_date=end_date,
                 conversation_type=ConversationType.AI,
-                subtopics=[],
+                current_topics_data={},
                 output_language="en",
             )
 

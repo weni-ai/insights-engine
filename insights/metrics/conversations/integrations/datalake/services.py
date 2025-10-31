@@ -12,7 +12,6 @@ from sentry_sdk import capture_exception
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
-    SubtopicTopicRelation,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import ConversationType
@@ -69,7 +68,7 @@ class BaseConversationsMetricsService(ABC):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
-        subtopics: list[SubtopicTopicRelation],
+        current_topics_data: dict,
         output_language: str = "en",
     ) -> TopicsDistributionMetrics:
         pass
