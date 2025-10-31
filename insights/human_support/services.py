@@ -277,6 +277,10 @@ class HumanSupportDashboardService:
             if value:
                 params[rooms_field] = value
 
+        # Add agent filter
+        if normalized.get("agent"):
+            params["agent"] = str(normalized["agent"])
+
         if filters:
             limit = filters.get("limit")
             if limit is not None:
@@ -415,6 +419,10 @@ class HumanSupportDashboardService:
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
 
+        # Add agent filter
+        if normalized.get("agent"):
+            params["agent"] = str(normalized["agent"])
+
         # Add date filters
         if normalized.get("start_date"):
             params["start_date"] = normalized["start_date"].date().isoformat()
@@ -549,6 +557,10 @@ class HumanSupportDashboardService:
         if isinstance(queues, list) and queues:
             params["queue"] = queues[0]
 
+        # Add agent filter
+        if normalized.get("agent"):
+            params["agent"] = str(normalized["agent"])
+
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
 
@@ -584,6 +596,10 @@ class HumanSupportDashboardService:
         queues = normalized.get("queues") or []
         if isinstance(queues, list) and queues:
             params["queue"] = queues[0]
+
+        # Add agent filter
+        if normalized.get("agent"):
+            params["agent"] = str(normalized["agent"])
 
         client = CustomStatusRESTClient(self.project)
         response = client.list(params)
@@ -632,7 +648,7 @@ class HumanSupportDashboardService:
 
         # Add agent filter
         if normalized.get("agent"):
-            params["user_id"] = str(normalized["agent"])
+            params["agent"] = str(normalized["agent"])
 
         # Add contact filter
         if normalized.get("contact"):
