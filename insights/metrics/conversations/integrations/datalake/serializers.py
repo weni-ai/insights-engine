@@ -24,6 +24,15 @@ class BaseSerializer(AbstractSerializer):
 class TopicsRelationsSerializer(BaseSerializer):
     """
     Topics relations serializer
+
+    This is used to get the relations between topics and subtopics,
+    through a dict mapping topic UUIDs to their name and subtopics.
+
+    These topics and subtopics were previously created by the project's
+    users and are retrieved by Insights from Nexus.
+
+    Only these topics and subtopics should be returned to the frontend app,
+    any other topic or subtopic is considered as unclassified.
     """
 
     def __init__(self, topics_list: list[dict]):
@@ -127,20 +136,102 @@ class TopicsDistributionSerializer(BaseSerializer):
 
         self.topics_data = base_structure.copy()
 
-    def _serialize_topics_events(self) -> dict:
+    def _serialize_topics_events(self) -> None:
         """
         Serialize topics events to list.
         """
-        pass
+        for topic_event in self.topics_events:
+            topic_uuid = topic_event.get("group_value")
 
-    def _serialize_subtopics_events(self) -> dict:
+            if topic_uuid in {"", None} or topic_uuid not in self.relations:
+                # If the topic UUID is unknown or not present in the relations,
+                # it is considered as unclassified.
+                self.topics_data["OTHER"]["count"] += topic_event.get("count", 0)
+            else:
+                # If the topic UUID is present in the relations,
+                # it is considered as classified.
+                topic_count = topic_event.get("count", 0)
+
+                if topic_count == 0:
+                    del self.topics_data[topic_uuid]
+                else:
+                    self.topics_data[topic_uuid]["count"] += topic_count
+
+    def _get_subtopics_relations(self) -> dict:
+        """
+        Get subtopics relations from relations.
+        """
+
+        subtopics_relations = {}
+
+        for topic_uuid, topic_data in self.relations.items():
+            for subtopic_uuid, subtopic_data in topic_data["subtopics"].items():
+                subtopics_relations[subtopic_uuid] = {
+                    "name": subtopic_data.get("name"),
+                    "uuid": subtopic_uuid,
+                    "topic_uuid": topic_uuid,
+                }
+
+        return subtopics_relations
+
+    def _serialize_subtopics_events(self) -> None:
         """
         Serialize subtopics events to list.
         """
-        pass
+
+        subtopics_relations = self._get_subtopics_relations()
+
+        for subtopic_event in self.subtopics_events:
+            subtopic_uuid = subtopic_event.get("group_value")
+
+            if subtopic_uuid in {"", None}:
+                continue
+
+            subtopic_data = subtopics_relations.get(subtopic_uuid, {})
+
+            if not subtopic_data:
+                continue
+
+            subtopic_count = subtopic_event.get("count", 0)
+            topic_uuid = subtopic_data.get("topic_uuid")
+
+            if subtopic_count == 0:
+                del self.topics_data[topic_uuid]["subtopics"][subtopic_uuid]
+                continue
+
+            if subtopic_uuid in self.topics_data[topic_uuid]["subtopics"]:
+                self.topics_data[topic_uuid]["subtopics"][subtopic_uuid][
+                    "count"
+                ] += subtopic_count
+
+    def _calculate_topics_other_count(self) -> None:
+        """
+        Calculate topics other count.
+        """
+        for topic_uuid, topic_data in self.topics_data.items():
+            topic_count = topic_data.get("count", 0)
+
+            if topic_count == 0:
+                del self.topics_data[topic_uuid]
+                continue
+
+            if topic_uuid == "OTHER":
+                continue
+
+            subtopics_count = sum(
+                subtopic_data.get("count", 0)
+                for subtopic_data in topic_data["subtopics"].values()
+            )
+
+            other_count = topic_count - subtopics_count
+            self.topics_data[topic_uuid]["subtopics"]["OTHER"]["count"] = other_count
 
     def serialize(self) -> dict:
         """
         Serialize topics distribution to list.
         """
-        pass
+        self._serialize_topics_events()
+        self._serialize_subtopics_events()
+        self._calculate_topics_other_count()
+
+        return self.topics_data

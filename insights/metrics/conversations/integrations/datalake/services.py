@@ -21,6 +21,7 @@ from insights.metrics.conversations.integrations.datalake.dataclass import (
 )
 from insights.metrics.conversations.integrations.datalake.serializers import (
     TopicsBaseStructureSerializer,
+    TopicsDistributionSerializer,
     TopicsRelationsSerializer,
 )
 from insights.sources.cache import CacheClient
@@ -383,54 +384,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         return subtopics_events
 
-    def _get_topics_base_structure(
-        self, topics_from_subtopics: dict, output_language: str = "en"
-    ) -> dict:
-        """
-        Get topics base structure, to be used as a base for the topics distribution
-        counts data. It returns a dictionary with the topics as keys
-        and each subtopic as a key in the subtopics dictionary.
-        """
-        unclassified_label = self._get_unclassified_label(output_language)
-
-        topics_data = {
-            "OTHER": {
-                "name": unclassified_label,
-                "uuid": None,
-                "count": 0,
-                "subtopics": {},
-            }
-        }
-
-        for topic_uuid, topic_data in topics_from_subtopics.items():
-            if topic_uuid not in topics_data:
-                topic_subtopics = {}
-                for subtopic_uuid, subtopic_data in topic_data.get(
-                    "subtopics", {}
-                ).items():
-                    topic_subtopics[subtopic_uuid] = {
-                        "name": subtopic_data.get("name"),
-                        "uuid": subtopic_uuid,
-                        "count": 0,
-                    }
-
-                topic_subtopics["OTHER"] = {
-                    "count": 0,
-                    "name": unclassified_label,
-                    "uuid": None,
-                }
-
-                topics_data[topic_uuid] = {
-                    "name": topic_data.get("name"),
-                    "uuid": topic_uuid,
-                    "count": 0,
-                    "subtopics": topic_subtopics,
-                }
-            else:
-                topics_data[topic_uuid]["count"] += 0
-
-        return topics_data
-
     def get_topics_distribution(
         self,
         project_uuid: UUID,
@@ -477,112 +430,12 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         ).data
 
         if topics_events == [{}]:
-            topics_to_delete = []
-            for topic_uuid, topic_data in topics_data.items():
-                if topic_data.get("count", 0) == 0:
-                    topics_to_delete.append(topic_uuid)
+            topics_data = {}
 
-            for topic_uuid in topics_to_delete:
-                if topic_uuid in topics_data:
-                    del topics_data[topic_uuid]
-
-            if self.cache_results:
-                self._save_results_to_cache(cache_key, topics_data)
-
-            return topics_data
-
-        for topic_event in topics_events:
-            topic_uuid = topic_event.get("group_value")
-
-            if topic_uuid in {"", None} or topic_uuid not in topics_from_subtopics:
-                topics_data["OTHER"]["count"] += topic_event.get("count", 0)
-                continue
-
-            topic_name = topic_event.get("topic_name")
-            topic_count = topic_event.get("count", 0)
-
-            topics_data[topic_uuid]["count"] += topic_count
-
-        if subtopics_events == [{}]:
-            topics_to_delete = []
-            for topic_uuid, topic_data in topics_data.items():
-                if topic_data.get("count", 0) == 0:
-                    topics_to_delete.append(topic_uuid)
-
-            for topic_uuid in topics_to_delete:
-                if topic_uuid in topics_data:
-                    del topics_data[topic_uuid]
-
-            if self.cache_results:
-                self._save_results_to_cache(cache_key, topics_data)
-
-            return topics_data
-
-        subtopics = {str(subtopic.subtopic_uuid): subtopic for subtopic in subtopics}
-
-        for subtopic_event in subtopics_events:
-            subtopic_uuid = subtopic_event.get("group_value")
-
-            if not subtopic_uuid:
-                continue
-
-            if subtopic_uuid not in subtopics:
-                topics_data["OTHER"]["count"] += subtopic_event.get("count", 0)
-                continue
-
-            topic_uuid = subtopics[subtopic_uuid].topic_uuid
-            topic_name = subtopics[subtopic_uuid].topic_name
-
-            if topic_uuid not in topics_data:
-                topics_data[topic_uuid] = {
-                    "name": topic_name,
-                    "uuid": topic_uuid,
-                    "count": 0,
-                    "subtopics": {},
-                }
-
-            topics_data[topic_uuid]["count"] += subtopic_event.get("count", 0)
-
-            subtopic_name = subtopics[subtopic_uuid].subtopic_name
-
-            if subtopic_uuid in topics_data[topic_uuid]["subtopics"]:
-                if "count" in topics_data[topic_uuid]["subtopics"][subtopic_uuid]:
-                    topics_data[topic_uuid]["subtopics"][subtopic_uuid][
-                        "count"
-                    ] += subtopic_event.get("count", 0)
-                else:
-                    topics_data[topic_uuid]["subtopics"][subtopic_uuid] = {
-                        "count": subtopic_event.get("count", 0),
-                        "name": subtopic_name,
-                        "uuid": subtopic_uuid,
-                    }
-            else:
-                topics_data[topic_uuid]["subtopics"]["OTHER"][
-                    "count"
-                ] += subtopic_event.get("count", 0)
-
-        topics_to_delete = []
-        subtopics_to_delete = {}
-
-        for topic_uuid, topic_data in topics_data.items():
-            if topic_data.get("count", 0) == 0:
-                topics_to_delete.append(topic_uuid)
-                continue
-
-            subtopics_to_delete[topic_uuid] = []
-            for subtopic_uuid, subtopic_data in topic_data.get("subtopics", {}).items():
-                if subtopic_data.get("count", 0) == 0:
-                    subtopics_to_delete[topic_uuid].append(subtopic_uuid)
-
-        for topic_uuid in topics_to_delete:
-            if topic_uuid in topics_data:
-                del topics_data[topic_uuid]
-
-        for topic_uuid, subtopic_uuids in subtopics_to_delete.items():
-            if topic_uuid in topics_data:
-                for subtopic_uuid in subtopic_uuids:
-                    if subtopic_uuid in topics_data[topic_uuid]["subtopics"]:
-                        del topics_data[topic_uuid]["subtopics"][subtopic_uuid]
+        else:
+            topics_data = TopicsDistributionSerializer(
+                topics_from_subtopics, topics_data, topics_events, subtopics_events
+            ).data
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, topics_data)
