@@ -564,7 +564,9 @@ class HumanSupportDashboardService:
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
 
-    def get_analysis_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
+    def get_analysis_detailed_monitoring_status(
+        self, filters: dict | None = None
+    ) -> dict:
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
@@ -603,17 +605,19 @@ class HumanSupportDashboardService:
 
         client = CustomStatusRESTClient(self.project)
         response = client.list(params)
-        
+
         # Format response to only include agent and breaks
         formatted_results = []
         for agent_data in response.get("results", []):
-            formatted_results.append({
-                "agent": agent_data.get("agent"),
-                "agent_email": agent_data.get("agent_email"),
-                "custom_status": agent_data.get("custom_status", []),
-                "link": agent_data.get("link"),
-            })
-        
+            formatted_results.append(
+                {
+                    "agent": agent_data.get("agent"),
+                    "agent_email": agent_data.get("agent_email"),
+                    "custom_status": agent_data.get("custom_status", []),
+                    "link": agent_data.get("link"),
+                }
+            )
+
         return {
             "next": response.get("next"),
             "previous": response.get("previous"),
@@ -750,7 +754,7 @@ class HumanSupportDashboardService:
         # Timezone e recorte para finished
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
-        
+
         # Use start_date/end_date if provided, otherwise use today
         if normalized.get("start_date") and normalized.get("end_date"):
             start_of_day = normalized["start_date"].isoformat()
