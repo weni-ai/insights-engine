@@ -223,7 +223,15 @@ class TopicsDistributionSerializer(BaseSerializer):
                 for subtopic_data in topic_data["subtopics"].values()
             )
 
+            if (
+                len(self.topics_data[topic_uuid]["subtopics"]) == 1
+                and "OTHER" in self.topics_data[topic_uuid]["subtopics"]
+            ):
+                del self.topics_data[topic_uuid]["subtopics"]["OTHER"]
+                continue
+
             other_count = topic_count - subtopics_count
+
             self.topics_data[topic_uuid]["subtopics"]["OTHER"]["count"] = other_count
 
     def serialize(self) -> dict:

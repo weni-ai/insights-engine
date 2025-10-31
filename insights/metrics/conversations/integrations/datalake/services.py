@@ -423,9 +423,11 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             conversation_type=conversation_type,
         )
 
+        unclassified_label = self._get_unclassified_label(output_language)
+
         topics_from_subtopics = TopicsRelationsSerializer(current_topics_data).data
         topics_data = TopicsBaseStructureSerializer(
-            topics_from_subtopics, output_language
+            topics_from_subtopics, unclassified_label
         ).data
 
         if topics_events == [{}]:
