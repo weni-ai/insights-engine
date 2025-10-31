@@ -19,6 +19,10 @@ from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     SalesFunnelData,
 )
+from insights.metrics.conversations.integrations.datalake.serializers import (
+    TopicsBaseStructureSerializer,
+    TopicsRelationsSerializer,
+)
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
@@ -379,32 +383,6 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         return subtopics_events
 
-    def _get_topics_from_subtopics(
-        self, subtopics: list[SubtopicTopicRelation]
-    ) -> dict:
-        """
-        Get topics from subtopics.
-
-        It returns a dictionary with the topics as keys
-        and each subtopic as a key in the subtopics dictionary.
-        """
-        topics_from_subtopics = {
-            subtopic.topic_uuid: {
-                "name": subtopic.topic_name,
-                "uuid": subtopic.topic_uuid,
-                "subtopics": {
-                    subtopic.subtopic_uuid: {
-                        "name": subtopic.subtopic_name,
-                        "uuid": subtopic.subtopic_uuid,
-                    }
-                    for subtopic in subtopics
-                },
-            }
-            for subtopic in subtopics
-        }
-
-        return topics_from_subtopics
-
     def _get_topics_base_structure(
         self, topics_from_subtopics: dict, output_language: str = "en"
     ) -> dict:
@@ -459,7 +437,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
-        subtopics: list[SubtopicTopicRelation],
+        current_topics_data: dict,
         output_language: str = "en",
     ) -> dict:
         """
@@ -493,10 +471,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             conversation_type=conversation_type,
         )
 
-        topics_from_subtopics = self._get_topics_from_subtopics(subtopics)
-        topics_data = self._get_topics_base_structure(
+        topics_from_subtopics = TopicsRelationsSerializer(current_topics_data).data
+        topics_data = TopicsBaseStructureSerializer(
             topics_from_subtopics, output_language
-        )
+        ).data
 
         if topics_events == [{}]:
             topics_to_delete = []
