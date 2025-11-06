@@ -11,7 +11,7 @@ class ChatsClient(InternalAuthentication):
     def get_contacts(self, query_params: dict):
         url = f"{self.url}/v1/internal/contacts/"
         response = requests.get(
-            self.url, headers=self.headers, params=query_params, timeout=60
+            url, headers=self.headers, params=query_params, timeout=60
         )
         response.raise_for_status()
 
