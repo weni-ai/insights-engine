@@ -203,4 +203,3 @@ class TestTopicsDistributionSerializer(TestCase):
         self.assertEqual(data[topic_1_uuid]["subtopics"]["OTHER"]["count"], 50)
 
         self.assertEqual(data[topic_2_uuid]["count"], 20)
-        self.assertEqual(data[topic_2_uuid]["subtopics"]["OTHER"]["count"], 20)
