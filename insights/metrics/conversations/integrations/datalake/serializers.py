@@ -208,7 +208,9 @@ class TopicsDistributionSerializer(BaseSerializer):
         """
         Calculate topics other count.
         """
-        for topic_uuid, topic_data in self.topics_data.items():
+        original_topics = self.topics_data.copy()
+
+        for topic_uuid, topic_data in original_topics.items():
             topic_count = topic_data.get("count", 0)
 
             if topic_count == 0:

@@ -12,7 +12,6 @@ from insights.metrics.conversations.dataclass import (
     NPSMetrics,
     SalesFunnelMetrics,
     SubtopicMetrics,
-    SubtopicTopicRelation,
     TopicMetrics,
     TopicsDistributionMetrics,
 )

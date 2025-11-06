@@ -68,7 +68,7 @@ class BaseConversationsMetricsService(ABC):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
-        current_topics_data: dict,
+        current_topics_data: list,
         output_language: str = "en",
     ) -> TopicsDistributionMetrics:
         pass
@@ -389,7 +389,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
-        current_topics_data: dict,
+        current_topics_data: list,
         output_language: str = "en",
     ) -> dict:
         """
