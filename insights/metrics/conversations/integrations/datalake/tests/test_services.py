@@ -8,7 +8,6 @@ from django.test import TestCase, override_settings
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
-    SubtopicTopicRelation,
 )
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.dataclass import (
