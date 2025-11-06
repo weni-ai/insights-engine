@@ -19,6 +19,11 @@ class BaseProjectViewSetTestCase(APITestCase):
 
         return self.client.get(url)
 
+    def get_contacts(self, uuid: str, query_params: dict = None) -> Response:
+        url = reverse("project-search-contacts", kwargs={"pk": uuid})
+
+        return self.client.get(url, query_params)
+
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_project_as_anonymous_user(self):
@@ -56,6 +61,11 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
         url = reverse("project-get-allowed-projects")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_get_contacts_as_anonymous_user(self):
+        response = self.get_contacts(str(uuid.uuid4()), {"ordering": "name"})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
@@ -334,3 +344,29 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             # Verify project was reverted to original state
             project.refresh_from_db()
             self.assertFalse(project.is_allowed)
+
+    def test_get_contacts_without_permission(self):
+        response = self.get_contacts(str(self.project.uuid), {"ordering": "name"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch("insights.projects.viewsets.ChatsClient.get_contacts")
+    @with_project_auth
+    def test_get_contacts_success(self, mock_get_contacts):
+        mock_get_contacts.return_value = {
+            "next": f"http://engine-chats.stg.cloud.weni.ai/v1/internal/contacts/?cursor=cD0%3D&ordering=name&project={str(self.project.uuid)}",
+            "previous": None,
+            "results": [
+                {
+                    "uuid": "191ec80a-c4d5-42c3-996c-8e6507349c6b",
+                    "name": "",
+                    "external_id": "be6e76e8-1edf-494e-b9a3-3f65056f800c",
+                }
+            ],
+        }
+        response = self.get_contacts(str(self.project.uuid), {"ordering": "name"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        import pdb
+
+        pdb.set_trace()
