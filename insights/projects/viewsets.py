@@ -1,23 +1,28 @@
 import logging
+from urllib.parse import urlparse, parse_qs, urlencode
 
 import requests
 from django.conf import settings
 from rest_framework import mixins, status, viewsets
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 from insights.authentication.authentication import StaticTokenAuthentication
 from insights.authentication.permissions import (
     IsServiceAuthentication,
     ProjectAuthPermission,
     InternalAuthenticationPermission,
 )
+from insights.human_support.clients.chats import ChatsClient
+from insights.human_support.filters import HumanSupportFilterSet
 from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import (
     ProjectSerializer,
     SetProjectAsSecondarySerializer,
+    ListContactsQueryParamsSerializer,
 )
 from insights.shared.viewsets import get_source
 from insights.sources.chats.clients import ChatsRESTClient
@@ -36,6 +41,12 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         url_path="sources/(?P<source_slug>[^/.]+)/search",
     )
     def retrieve_source_data(self, request, source_slug=None, *args, **kwargs):
+        # Handle special cases for filter endpoints
+        if source_slug == "contacts":
+            return self.search_contacts(request, *args, **kwargs)
+        elif source_slug == "ticket_id":
+            return self.search_ticket_ids(request, *args, **kwargs)
+
         SourceQuery = get_source(slug=source_slug)
         query_kwargs = {}
         if SourceQuery is None:
@@ -174,3 +185,121 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         is_csat_enabled = project_data.get("is_csat_enabled", False)
 
         return Response(is_csat_enabled, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="filters/contacts",
+    )
+    def search_contacts(self, request, *args, **kwargs):
+        project = self.get_object()
+
+        query_params = ListContactsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        chats_params = query_params.validated_data.copy()
+        chats_params["project"] = str(project.uuid)
+
+        chats_client = ChatsClient(project=project)
+        response = chats_client.get_contacts(query_params=chats_params)
+
+        pagination_urls = get_cursor_based_pagination_urls(request, response)
+
+        return Response(
+            {
+                "next": pagination_urls.next_url,
+                "previous": pagination_urls.previous_url,
+                "results": response.get("results"),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="filters/ticket_id",
+    )
+    def search_ticket_ids(self, request, *args, **kwargs):
+        project = self.get_object()
+        filters = {key: value for key, value in request.query_params.items()}
+
+        # Normalize filters
+        filterset = HumanSupportFilterSet(data=filters, queryset=Project.objects.none())
+        filterset.form.is_valid()
+        filterset.apply_project_timezone(project)
+        normalized = {
+            k: v
+            for k, v in filterset.form.cleaned_data.items()
+            if v not in (None, [], "")
+        }
+
+        # Build rooms query
+        rooms_filters = {
+            "project": str(project.uuid),
+            "is_active": False,
+            "limit": 10000,
+        }
+        if normalized.get("start_date"):
+            rooms_filters["ended_at__gte"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            rooms_filters["ended_at__lte"] = normalized["end_date"].isoformat()
+
+        # Get search term for filtering protocols
+        search_term = request.query_params.get("search", "").strip().lower()
+
+        try:
+            # Get rooms with ticket IDs
+            response = RoomsQueryExecutor.execute(
+                filters=rooms_filters,
+                operation="list",
+                parser=lambda x: x,
+                project=project,
+            )
+
+            # Ensure response is a dict
+            if not isinstance(response, dict):
+                logger.error(
+                    f"Unexpected response type from RoomsQueryExecutor: {type(response)}"
+                )
+                return Response({"results": []}, status=status.HTTP_200_OK)
+
+            # Extract unique protocols
+            protocols = []
+            seen = set()
+            total_rooms = len(response.get("results", []))
+            logger.info(f"Processing {total_rooms} rooms for protocols")
+
+            for room in response.get("results", []):
+                protocol = room.get("protocol")
+                # Filter out None, empty strings, and string 'None'
+                if (
+                    protocol
+                    and protocol != "None"
+                    and protocol.strip() != ""
+                    and protocol not in seen
+                ):
+                    # Apply search filter
+                    if search_term and search_term not in str(protocol).lower():
+                        continue
+
+                    seen.add(protocol)
+                    protocols.append(
+                        {
+                            "uuid": room.get("uuid"),
+                            "protocol": protocol,
+                        }
+                    )
+                    logger.debug(
+                        f"Found protocol: {protocol} for room {room.get('uuid')}"
+                    )
+
+            logger.info(
+                f"Found {len(protocols)} unique protocols out of {total_rooms} rooms"
+            )
+            return Response({"results": protocols}, status=status.HTTP_200_OK)
+        except Exception as error:
+            logger.exception(f"Error searching ticket IDs: {error}")
+            return Response(
+                {"detail": "Failed to retrieve ticket IDs"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

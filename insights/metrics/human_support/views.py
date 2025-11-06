@@ -89,3 +89,26 @@ class DetailedMonitoringStatusView(APIView):
         paginated_results = paginator.paginate_queryset(results, request)
 
         return paginator.get_paginated_response(paginated_results)
+
+
+class AnalysisDetailedMonitoringStatusView(APIView):
+    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+    feature_flag_key = "human-support-detailed-monitoring"
+
+    def get(self, request, *args, **kwargs):
+        project_uuid = request.query_params.get("project_uuid")
+        if not project_uuid:
+            return Response({"detail": "project_uuid is required"}, status=400)
+
+        project = get_object_or_404(Project, uuid=project_uuid)
+        service = HumanSupportDashboardService(project=project)
+
+        filters = {key: value for key, value in request.query_params.items()}
+        filters["user_request"] = request.user.email
+        data = service.get_analysis_detailed_monitoring_status(filters=filters)
+
+        results = data.get("results", [])
+        paginator = LimitOffsetPagination()
+        paginated_results = paginator.paginate_queryset(results, request)
+
+        return paginator.get_paginated_response(paginated_results)

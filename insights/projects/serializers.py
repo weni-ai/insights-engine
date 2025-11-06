@@ -20,3 +20,9 @@ class SetProjectAsSecondarySerializer(serializers.Serializer):
     """
 
     main_project = serializers.UUIDField(required=True, allow_null=False)
+
+
+class ListContactsQueryParamsSerializer(serializers.Serializer):
+    search = serializers.CharField(required=False)
+    page_size = serializers.IntegerField(required=False, default=10)
+    cursor = serializers.CharField(required=False)

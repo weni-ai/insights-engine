@@ -26,6 +26,11 @@ class BaseProjectViewSetTestCase(APITestCase):
         url = reverse("project-set-as-secondary", kwargs={"pk": project_uuid})
         return self.client.post(url, data, format="json")
 
+    def get_contacts(self, uuid: str, query_params: dict = None) -> Response:
+        url = reverse("project-search-contacts", kwargs={"pk": uuid})
+
+        return self.client.get(url, query_params)
+
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_project_as_anonymous_user(self):
@@ -69,6 +74,12 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
             "123e4567-e89b-12d3-a456-426614174000",
             {"main_project": "123e4567-e89b-12d3-a456-426614174000"},
         )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_contacts_as_anonymous_user(self):
+        response = self.get_contacts(str(uuid.uuid4()), {"ordering": "name"})
+
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
@@ -385,3 +396,27 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, True)
+
+    def test_get_contacts_without_permission(self):
+        response = self.get_contacts(str(self.project.uuid), {"ordering": "name"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch("insights.projects.viewsets.ChatsClient.get_contacts")
+    @with_project_auth
+    def test_get_contacts_success(self, mock_get_contacts):
+        mock_get_contacts.return_value = {
+            "next": f"http://engine-chats.stg.cloud.weni.ai/v1/internal/contacts/?cursor=cD0%3D&ordering=name&page_size=1&project={str(self.project.uuid)}",
+            "previous": None,
+            "results": [
+                {
+                    "uuid": "191ec80a-c4d5-42c3-996c-8e6507349c6b",
+                    "name": "",
+                    "external_id": "be6e76e8-1edf-494e-b9a3-3f65056f800c",
+                }
+            ],
+        }
+        response = self.get_contacts(
+            str(self.project.uuid), {"ordering": "name", "page_size": 1}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

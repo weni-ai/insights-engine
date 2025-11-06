@@ -5,6 +5,7 @@ from .views import (
     DetailedMonitoringAwaitingView,
     DetailedMonitoringAgentsView,
     DetailedMonitoringStatusView,
+    AnalysisDetailedMonitoringStatusView,
 )
 
 urlpatterns = [
@@ -23,5 +24,9 @@ urlpatterns = [
     path(
         "detailed-monitoring/status/",
         DetailedMonitoringStatusView.as_view(),
+    ),
+    path(
+        "analysis/detailed-monitoring/status/",
+        AnalysisDetailedMonitoringStatusView.as_view(),
     ),
 ]
