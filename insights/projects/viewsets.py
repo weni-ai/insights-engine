@@ -161,7 +161,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         chats_params = query_params.validated_data.copy()
         chats_params["project"] = str(project.uuid)
 
-        chats_client = ChatsClient(project=project)
+        chats_client = ChatsClient()
         response = chats_client.get_contacts(query_params=chats_params)
 
         pagination_urls = get_cursor_based_pagination_urls(request, response)

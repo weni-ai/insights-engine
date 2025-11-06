@@ -5,8 +5,7 @@ import requests
 
 
 class ChatsClient(InternalAuthentication):
-    def __init__(self, project):
-        self.project = project
+    def __init__(self):
         self.url = settings.CHATS_URL
 
     def get_contacts(self, query_params: dict):
