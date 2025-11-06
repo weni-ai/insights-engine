@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 from insights.authentication.authentication import StaticTokenAuthentication
 from insights.authentication.permissions import (
     IsServiceAuthentication,
@@ -163,38 +164,12 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         chats_client = ChatsClient(project=project)
         response = chats_client.get_contacts(query_params=chats_params)
 
-        insights_uri = request.build_absolute_uri()
-        insights_url = urlparse(insights_uri)
-        insights_endpoint = (
-            f"{insights_url.scheme}://{insights_url.netloc}{insights_url.path}"
-        )
-
-        chats_next = response.get("next")
-        chats_previous = response.get("previous")
-
-        next_url = None
-        previous_url = None
-
-        if chats_next:
-            chats_next_url = urlparse(chats_next)
-            chats_next_query_params = parse_qs(chats_next_url.query)
-            chats_next_query_params.pop("project")
-
-            next_url = f"{insights_endpoint}?{urlencode(chats_next_query_params)}"
-
-        if chats_previous:
-            chats_previous_url = urlparse(chats_previous)
-            chats_previous_query_params = parse_qs(chats_previous_url.query)
-            chats_previous_query_params.pop("project")
-
-            previous_url = (
-                f"{insights_endpoint}?{urlencode(chats_previous_query_params)}"
-            )
+        pagination_urls = get_cursor_based_pagination_urls(request, response)
 
         return Response(
             {
-                "next": next_url,
-                "previous": previous_url,
+                "next": pagination_urls.next_url,
+                "previous": pagination_urls.previous_url,
                 "results": response.get("results"),
             },
             status=status.HTTP_200_OK,

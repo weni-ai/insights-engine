@@ -354,7 +354,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
     @with_project_auth
     def test_get_contacts_success(self, mock_get_contacts):
         mock_get_contacts.return_value = {
-            "next": f"http://engine-chats.stg.cloud.weni.ai/v1/internal/contacts/?cursor=cD0%3D&ordering=name&project={str(self.project.uuid)}",
+            "next": f"http://engine-chats.stg.cloud.weni.ai/v1/internal/contacts/?cursor=cD0%3D&ordering=name&page_size=1&project={str(self.project.uuid)}",
             "previous": None,
             "results": [
                 {
@@ -364,9 +364,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
                 }
             ],
         }
-        response = self.get_contacts(str(self.project.uuid), {"ordering": "name"})
+        response = self.get_contacts(
+            str(self.project.uuid), {"ordering": "name", "page_size": 1}
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        import pdb
-
-        pdb.set_trace()
