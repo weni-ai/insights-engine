@@ -1,5 +1,23 @@
+# 1.2.0
+# Add
+  - sending conversations dashboard report link instead of attaching files to the email
+
+# 1.1.6
+# Fix
+  - conversations dashboard report service date conversion to ISO format
+  when fetching events from the datalake
+
+# 1.1.5
+# Fix
+  - add conversations dashboards report page limit environment variables
+
+# 1.1.4
+# Add
+  - conversations dashboard report email's template
+
 # 1.1.3
-  - remove formatting date logs and sentry exceptions
+# Remove
+  - formatting date logs and sentry exceptions
 
 # 1.1.2
 # Add

@@ -61,6 +61,7 @@ class DashboardViewSet(
             "finished",
             "analysis_finished_rooms_status",
             "monitoring_csat_score_by_agents",
+            "analysis_peaks_in_human_service",
         ]:
             return [
                 IsAuthenticated(),
@@ -412,6 +413,42 @@ class DashboardViewSet(
         service = HumanSupportDashboardService(project=dashboard.project)
         filters = {key: value for key, value in request.query_params.items()}
         results = service.get_peaks_in_human_service(filters=filters)
+        return Response({"results": results}, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="finished",
+    )
+    def finished(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = {key: value for key, value in request.query_params.items()}
+        data = service.get_finished_rooms(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/finished_rooms_status",
+    )
+    def analysis_finished_rooms_status(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = {key: value for key, value in request.query_params.items()}
+        data = service.get_analysis_status(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/peaks_in_human_service",
+    )
+    def analysis_peaks_in_human_service(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = {key: value for key, value in request.query_params.items()}
+        results = service.get_analysis_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
 
     @action(

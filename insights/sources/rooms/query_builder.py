@@ -44,6 +44,18 @@ class RoomSQLQueryBuilder:
         query = f"WITH hourly_data AS (SELECT EXTRACT(HOUR FROM r.{time_field} AT TIME ZONE '{timezone}') AS hour, COUNT(*) AS rooms_count FROM public.rooms_room as r {self.join_clause} WHERE {self.where_clause} GROUP BY hour) SELECT CONCAT(hours.label, 'h') AS label, COALESCE(hourly_data.rooms_count, 0) AS value FROM generate_series({time_range[0]}, {time_range[1]}) AS hours(label) LEFT JOIN hourly_data ON hours.label::int = hourly_data.hour ORDER BY value DESC FETCH FIRST {limit} ROWS ONLY;"
         return query, self.params
 
+    def timeseries_day_group_count(
+        self,
+        time_field: str = "created_on",
+        timezone: str = "UTC",
+        *args,
+        **kwargs,
+    ):
+        if not self.is_valid:
+            self.build_query()
+        query = f"SELECT DATE(r.{time_field} AT TIME ZONE '{timezone}') AS label, COUNT(*) AS value FROM public.rooms_room as r {self.join_clause} WHERE {self.where_clause} GROUP BY DATE(r.{time_field} AT TIME ZONE '{timezone}') ORDER BY label ASC;"
+        return query, self.params
+
     def count(self, *args, **kwargs):
         if not self.is_valid:
             self.build_query()
