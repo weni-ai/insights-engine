@@ -64,7 +64,7 @@ class RequestConversationsReportGenerationSerializer(
     start = serializers.DateTimeField(read_only=True)
     end = serializers.DateTimeField(read_only=True)
 
-    def _validate_dates(self, attrs: dict) -> dict:
+    def _validate_dates(self, attrs: dict) -> None:
         """
         Validate dates
         """
@@ -74,7 +74,7 @@ class RequestConversationsReportGenerationSerializer(
                 code="start_date_after_end_date",
             )
 
-    def _validate_sections_and_custom_widgets(self, attrs: dict) -> dict:
+    def _validate_sections_and_custom_widgets(self, attrs: dict) -> None:
         """
         Validate sections and custom widgets
         """
@@ -107,15 +107,10 @@ class RequestConversationsReportGenerationSerializer(
                     code="widgets_not_found",
                 )
 
-    def validate(self, attrs: dict) -> dict:
+    def _validate_sections(self, attrs: dict) -> dict:
         """
-        Validate query params
+        Validate sections
         """
-        attrs = super().validate(attrs)
-
-        self._validate_dates(attrs)
-        self._validate_sections_and_custom_widgets(attrs)
-
         sections = attrs.get("sections", [])
         attrs["source_config"] = {}
 
@@ -236,7 +231,17 @@ class RequestConversationsReportGenerationSerializer(
                     )
 
                 attrs["source_config"]["nps_human_flow_uuid"] = nps_human_flow_uuid
-                attrs["source_config"]["nps_human_op_field"] = nps_human_op_field
+                attrs["source_config"]["nps_human_op_field"] = nps_human_op_field("Sections are required")},
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        self._validate_dates(attrs)
+        self._validate_sections_and_custom_widgets(attrs)
+        attrs = self._validate_sections(attrs)
 
         timezone = (
             pytz.timezone(attrs["project"].timezone)
