@@ -705,7 +705,7 @@ class ConversationsReportService(BaseConversationsReportService):
         }
 
         for section, (worksheet_function, worksheet_args) in worksheets_mapping.items():
-            if section in report.source_config.get("sections", []):
+            if section in sections:
                 worksheets.append(worksheet_function(**worksheet_args))
 
         if custom_widgets:

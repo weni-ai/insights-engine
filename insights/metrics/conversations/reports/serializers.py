@@ -64,7 +64,7 @@ class RequestConversationsReportGenerationSerializer(
     start = serializers.DateTimeField(read_only=True)
     end = serializers.DateTimeField(read_only=True)
 
-    def _validate_dates(self, attrs: dict) -> None:
+    def _validate_dates(self, attrs: dict) -> dict:
         """
         Validate dates
         """
@@ -74,7 +74,7 @@ class RequestConversationsReportGenerationSerializer(
                 code="start_date_after_end_date",
             )
 
-    def _validate_sections_and_custom_widgets(self, attrs: dict) -> None:
+    def _validate_sections_and_custom_widgets(self, attrs: dict) -> dict:
         """
         Validate sections and custom widgets
         """
@@ -108,9 +108,6 @@ class RequestConversationsReportGenerationSerializer(
                 )
 
     def _validate_sections(self, attrs: dict) -> dict:
-        """
-        Validate sections
-        """
         sections = attrs.get("sections", [])
         attrs["source_config"] = {}
 
@@ -231,7 +228,9 @@ class RequestConversationsReportGenerationSerializer(
                     )
 
                 attrs["source_config"]["nps_human_flow_uuid"] = nps_human_flow_uuid
-                attrs["source_config"]["nps_human_op_field"] = nps_human_op_field("Sections are required")},
+                attrs["source_config"]["nps_human_op_field"] = nps_human_op_field
+
+        return attrs
 
     def validate(self, attrs: dict) -> dict:
         """
