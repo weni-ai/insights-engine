@@ -64,18 +64,20 @@ class RequestConversationsReportGenerationSerializer(
     start = serializers.DateTimeField(read_only=True)
     end = serializers.DateTimeField(read_only=True)
 
-    def validate(self, attrs: dict) -> dict:
+    def _validate_dates(self, attrs: dict) -> dict:
         """
-        Validate query params
+        Validate dates
         """
-        attrs = super().validate(attrs)
-
         if attrs["start_date"] > attrs["end_date"]:
             raise serializers.ValidationError(
                 {"error": _("Start date must be before end date")},
                 code="start_date_after_end_date",
             )
 
+    def _validate_sections_and_custom_widgets(self, attrs: dict) -> dict:
+        """
+        Validate sections and custom widgets
+        """
         if ("sections" not in attrs or not attrs["sections"]) and (
             "custom_widgets" not in attrs or not attrs["custom_widgets"]
         ):
@@ -104,6 +106,15 @@ class RequestConversationsReportGenerationSerializer(
                     },
                     code="widgets_not_found",
                 )
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        self._validate_dates(attrs)
+        self._validate_sections_and_custom_widgets(attrs)
 
         sections = attrs.get("sections", [])
         attrs["source_config"] = {}
