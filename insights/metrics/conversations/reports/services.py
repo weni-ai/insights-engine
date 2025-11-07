@@ -611,15 +611,10 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return report
 
-    def generate(self, report: Report) -> None:
+    def _update_report_status(self, report: Report) -> Report:
         """
-        Start the generation of a conversations report.
+        Update the status of a report.
         """
-        logger.info(
-            "[CONVERSATIONS REPORT SERVICE] Starting generation of conversations report %s",
-            report.uuid,
-        )
-
         fields_to_update = []
 
         if report.status == ReportStatus.PENDING:
@@ -635,20 +630,114 @@ class ConversationsReportService(BaseConversationsReportService):
         if fields_to_update:
             report.save(update_fields=fields_to_update)
 
+        return report
+
+    def _validate_dates(self, report: Report) -> tuple[datetime, datetime]:
+        """
+        Validate the dates of a report.
+        """
+        filters = report.filters or {}
+
+        start_date = filters.get("start")
+        end_date = filters.get("end")
+
+        if not start_date or not end_date:
+            raise ValueError(
+                "Start date or end date is missing for report %s" % report.uuid
+            )
+
+        return start_date, end_date
+
+    def _get_worksheets(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> list[ConversationsReportWorksheet]:
+        """
+        Get the worksheets for a report.
+        """
+        source_config = report.source_config or {}
+        sections = source_config.get("sections", [])
+        custom_widgets = source_config.get("custom_widgets", [])
+        worksheets = []
+
+        worksheets_mapping = {
+            "RESOLUTIONS": (
+                self.get_resolutions_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "TRANSFERRED": (
+                self.get_transferred_to_human_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "TOPICS_AI": (
+                self.get_topics_distribution_worksheet,
+                {
+                    "report": report,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "conversation_type": ConversationType.AI,
+                },
+            ),
+            "TOPICS_HUMAN": (
+                self.get_topics_distribution_worksheet,
+                {
+                    "report": report,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "conversation_type": ConversationType.HUMAN,
+                },
+            ),
+            "CSAT_AI": (
+                self.get_csat_ai_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "NPS_AI": (
+                self.get_nps_ai_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "CSAT_HUMAN": (
+                self.get_csat_human_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "NPS_HUMAN": (
+                self.get_nps_human_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+        }
+
+        for section, (worksheet_function, worksheet_args) in worksheets_mapping.items():
+            if section in report.source_config.get("sections", []):
+                worksheets.append(worksheet_function(**worksheet_args))
+
+        if custom_widgets:
+            widgets = Widget.objects.filter(
+                uuid__in=custom_widgets, dashboard__project=report.project
+            )
+
+            for widget in widgets:
+                worksheets.append(
+                    self.get_custom_widget_worksheet(
+                        report,
+                        widget,
+                        start_date,
+                        end_date,
+                    )
+                )
+
+        return worksheets
+
+    def generate(self, report: Report) -> None:
+        """
+        Start the generation of a conversations report.
+        """
+        logger.info(
+            "[CONVERSATIONS REPORT SERVICE] Starting generation of conversations report %s",
+            report.uuid,
+        )
+
+        report = self._update_report_status(report)
+
         try:
-            filters = report.filters or {}
-
-            start_date = filters.get("start")
-            end_date = filters.get("end")
-
-            if not start_date or not end_date:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Start date or end date is missing for report %s",
-                    report.uuid,
-                )
-                raise ValueError(
-                    "Start date or end date is missing for report %s" % report.uuid
-                )
+            start_date, end_date = self._validate_dates(report)
 
             start_date = datetime.fromisoformat(start_date)
             end_date = datetime.fromisoformat(end_date)
@@ -659,76 +748,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            source_config = report.source_config or {}
-            sections = source_config.get("sections", [])
-            custom_widgets = source_config.get("custom_widgets", [])
-
-            worksheets = []
-
-            if "RESOLUTIONS" in sections:
-                resolutions_worksheet = self.get_resolutions_worksheet(
-                    report,
-                    report.filters.get("start"),
-                    report.filters.get("end"),
-                )
-                worksheets.append(resolutions_worksheet)
-
-            if "TRANSFERRED" in sections:
-                transferred_worksheet = self.get_transferred_to_human_worksheet(
-                    report,
-                    report.filters.get("start"),
-                    report.filters.get("end"),
-                )
-                worksheets.append(transferred_worksheet)
-
-            if "TOPICS_AI" in sections:
-                topics_ai_worksheet = self.get_topics_distribution_worksheet(
-                    report=report,
-                    start_date=start_date,
-                    end_date=end_date,
-                    conversation_type=ConversationType.AI,
-                )
-                worksheets.append(topics_ai_worksheet)
-
-            if "TOPICS_HUMAN" in sections:
-                topics_human_worksheet = self.get_topics_distribution_worksheet(
-                    report=report,
-                    start_date=start_date,
-                    end_date=end_date,
-                    conversation_type=ConversationType.HUMAN,
-                )
-                worksheets.append(topics_human_worksheet)
-
-            if "CSAT_AI" in sections:
-                worksheet = self.get_csat_ai_worksheet(report, start_date, end_date)
-                worksheets.append(worksheet)
-
-            if "NPS_AI" in sections:
-                worksheet = self.get_nps_ai_worksheet(report, start_date, end_date)
-                worksheets.append(worksheet)
-
-            if "CSAT_HUMAN" in sections:
-                worksheet = self.get_csat_human_worksheet(report, start_date, end_date)
-                worksheets.append(worksheet)
-
-            if "NPS_HUMAN" in sections:
-                worksheet = self.get_nps_human_worksheet(report, start_date, end_date)
-                worksheets.append(worksheet)
-
-            if custom_widgets:
-                widgets = Widget.objects.filter(
-                    uuid__in=custom_widgets, dashboard__project=report.project
-                )
-
-                for widget in widgets:
-                    worksheets.append(
-                        self.get_custom_widget_worksheet(
-                            report,
-                            widget,
-                            start_date,
-                            end_date,
-                        )
-                    )
+            worksheets = self._get_worksheets(report, start_date, end_date)
 
             files: list[ConversationsReportFile] = []
 
