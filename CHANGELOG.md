@@ -1,3 +1,27 @@
+# 1.2.6
+# Fix
+ - change analysis peak human timeseries query to use hour instead of date
+
+# 1.2.5
+# Refactor
+  - reduce topics distribution method complexity
+
+# 1.2.4
+# Add
+  - v2 version of new human dashboard
+
+# 1.2.3
+# Fix
+  - subtopics unclassified count
+
+# 1.2.2
+# Fix
+  - conversations elasticsearch flowruns response
+
+# 1.2.1
+# Fix
+  - fetch elasticsearch with serializable project UUID and convert datetime
+
 # 1.2.0
 # Add
   - sending conversations dashboard report link instead of attaching files to the email
