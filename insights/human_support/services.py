@@ -869,6 +869,35 @@ class HumanSupportDashboardService:
             "average_conversation_duration": chat_avg,
         }
 
+    def csat_score_by_agents(
+        self, user_request: str | None = None, filters: dict | None = None
+    ) -> dict:
+        """
+        Return the csat score by agents.
+        """
+        normalized_filters = self._normalize_filters(filters) or {}
+        normalized_filters["user_request"] = user_request
+
+        if not normalized_filters.get("start_date") and not normalized_filters.get(
+            "end_date"
+        ):
+            project_timezone = (
+                pytz.timezone(self.project.timezone)
+                if self.project.timezone
+                else pytz.UTC
+            )
+            today = dj_timezone.now().astimezone(project_timezone).date()
+            normalized_filters["start_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.min.time())
+            )
+            normalized_filters["end_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.max.time())
+            )
+
+        return self.chats_client.csat_score_by_agents(
+            project_uuid=str(self.project.uuid), params=normalized_filters
+        )
+
     def get_csat_ratings(self, filters: dict | None = None) -> dict:
         normalized_filters = self._normalize_filters(filters)
 

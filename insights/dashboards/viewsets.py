@@ -486,8 +486,11 @@ class DashboardViewSet(
     def monitoring_csat_totals(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        results = service.get_csat_ratings(filters=request.query_params)
-        return Response({"results": results}, status=status.HTTP_200_OK)
+        data = service.csat_score_by_agents(
+            user_request=request.user.email, filters=request.query_params
+        )
+
+        return Response(data, status=status.HTTP_200_OK)
 
     @action(
         detail=True,
