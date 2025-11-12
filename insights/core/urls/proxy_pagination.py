@@ -16,9 +16,7 @@ def get_cursor_based_pagination_urls(
     """
     insights_uri = request.build_absolute_uri()
     insights_url = urlparse(insights_uri)
-    insights_endpoint = (
-        f"{insights_url.scheme}://{insights_url.netloc}{insights_url.path}"
-    )
+    insights_endpoint = f"https://{insights_url.netloc}{insights_url.path}"
     query_params = parse_qs(insights_url.query)
     page_size = query_params.get(page_size_param, [None])[0]
     query_params.pop(cursor_param, None)
