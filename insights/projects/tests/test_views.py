@@ -365,6 +365,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             ],
         }
         response = self.get_contacts(
-            str(self.project.uuid), {"ordering": "name", "page_size": 1}
+            str(self.project.uuid),
+            {"ordering": "name", "page_size": 1, "search": "test"},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
