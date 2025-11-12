@@ -477,3 +477,26 @@ class DashboardViewSet(
         filters = {key: value for key, value in request.query_params.items()}
         data = service.get_analysis_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/csat/totals",
+    )
+    def monitoring_csat_totals(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        results = service.get_csat_ratings(filters=request.query_params)
+        return Response({"results": results}, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/csat/ratings",
+    )
+    def monitoring_csat_ratings(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        results = service.get_csat_ratings(filters=request.query_params)
+
+        return Response(results.get("csat_ratings", {}), status=status.HTTP_200_OK)

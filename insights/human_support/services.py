@@ -6,6 +6,7 @@ from typing import Dict
 import pytz
 from django.utils import timezone as dj_timezone
 
+from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_raw_data import ChatsRawDataClient
 from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_time_metrics import (
@@ -867,3 +868,10 @@ class HumanSupportDashboardService:
             "average_response_time": message_resp_avg,
             "average_conversation_duration": chat_avg,
         }
+
+    def get_csat_ratings(self, filters: dict | None = None) -> dict:
+        normalized_filters = self._normalize_filters(filters)
+
+        return self.chats_client.csat_ratings(
+            project_uuid=str(self.project.uuid), params=normalized_filters
+        )
