@@ -7,7 +7,7 @@ from insights.internals.base import InternalAuthentication
 class CustomStatusRESTClient(InternalAuthentication):
     def __init__(self, project) -> None:
         self.project = project
-        self.url = f"{settings.CHATS_URL}/v1/internal/dashboard/{self.project.uuid}/custom_status_agent/"
+        self.url = f"{settings.CHATS_URL}/v1/internal/dashboard/{self.project.uuid}/custom-status-by-agent/"
 
     def list(self, query_filters: dict):
         if query_filters.get("created_on__gte", None):
