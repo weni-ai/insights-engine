@@ -272,7 +272,7 @@ class HumanSupportDashboardService:
 
         result = RoomsQueryExecutor.execute(
             filters=rooms_filters,
-            operation="timeseries_day_group_count",
+            operation="timeseries_hour_group_count",
             parser=lambda x: x,
             project=self.project,
             query_kwargs={
