@@ -43,7 +43,7 @@ class ChatsClient(InternalAuthentication):
         return response.json()
 
     def get_protocols(self, query_params: dict):
-        url = f"{self.url}/v1/internal/rooms/protocols/"
+        url = f"{self.base_url}/v1/internal/rooms/protocols/"
         response = requests.get(
             url, headers=self.headers, params=query_params, timeout=60
         )
