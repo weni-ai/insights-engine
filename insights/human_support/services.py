@@ -621,6 +621,11 @@ class HumanSupportDashboardService:
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
+        if normalized.get("start_date"):
+            params["start_date"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            params["end_date"] = normalized["end_date"].isoformat()
+
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
 
@@ -647,9 +652,9 @@ class HumanSupportDashboardService:
                 params["ordering"] = f"{prefix}{mapped_field}"
 
         if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].date().isoformat()
+            params["start_date"] = normalized["start_date"].isoformat()
         if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].date().isoformat()
+            params["end_date"] = normalized["end_date"].isoformat()
 
         sectors = normalized.get("sectors") or []
         if isinstance(sectors, list) and sectors:
