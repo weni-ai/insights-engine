@@ -572,18 +572,7 @@ class HumanSupportDashboardService:
             ratings_data[rating]["value"] = data.get("value")
             ratings_data[rating]["full_value"] = data.get("full_value")
 
-        ratings = []
-
-        for rating, data in ratings_data.items():
-            ratings.append(
-                {
-                    "rating": rating,
-                    "value": data.get("value"),
-                    "full_value": data.get("full_value"),
-                }
-            )
-
-        return ratings
+        return ratings_data
 
     def get_analysis_detailed_monitoring_status(
         self, filters: dict | None = None
