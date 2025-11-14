@@ -569,8 +569,8 @@ class HumanSupportDashboardService:
             if rating not in ratings_data:
                 continue
 
-            ratings_data[rating]["value"] += ratings_from_chats[rating].get("value")
-            ratings_data[rating]["full_value"] += ratings_from_chats[rating].get(
+            ratings_data[rating]["value"] = ratings_from_chats[rating].get("value")
+            ratings_data[rating]["full_value"] = ratings_from_chats[rating].get(
                 "full_value"
             )
 
