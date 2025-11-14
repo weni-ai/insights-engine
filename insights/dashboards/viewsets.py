@@ -502,4 +502,4 @@ class DashboardViewSet(
         service = HumanSupportDashboardService(project=dashboard.project)
         results = service.get_csat_ratings(filters=request.query_params)
 
-        return Response(results.get("csat_ratings", {}), status=status.HTTP_200_OK)
+        return Response(results, status=status.HTTP_200_OK)
