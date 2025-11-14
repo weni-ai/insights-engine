@@ -561,10 +561,12 @@ class HumanSupportDashboardService:
         ratings_from_chats = self.chats_client.csat_ratings(
             project_uuid=str(self.project.uuid), params=normalized_filters
         )
-        ratings_data = {rating: {"value": 0, "full_value": 0} for rating in range(1, 6)}
+        ratings_data = {
+            str(rating): {"value": 0, "full_value": 0} for rating in range(1, 6)
+        }
 
         for data in ratings_from_chats.get("csat_ratings", []):
-            rating = data.get("rating")
+            rating = str(data.get("rating"))
 
             if rating not in ratings_data:
                 continue
