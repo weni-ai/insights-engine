@@ -563,16 +563,14 @@ class HumanSupportDashboardService:
         )
         ratings_data = {rating: {"value": 0, "full_value": 0} for rating in range(1, 6)}
 
-        for rating in ratings_from_chats:
-            rating = rating.get("rating")
+        for data in ratings_from_chats.get("csat_ratings", []):
+            rating = data.get("rating")
 
             if rating not in ratings_data:
                 continue
 
-            ratings_data[rating]["value"] = ratings_from_chats[rating].get("value")
-            ratings_data[rating]["full_value"] = ratings_from_chats[rating].get(
-                "full_value"
-            )
+            ratings_data[rating]["value"] = data.get("value")
+            ratings_data[rating]["full_value"] = data.get("full_value")
 
         ratings = []
 
