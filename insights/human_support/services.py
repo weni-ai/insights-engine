@@ -923,10 +923,3 @@ class HumanSupportDashboardService:
         return self.chats_client.csat_score_by_agents(
             project_uuid=str(self.project.uuid), params=normalized_filters
         )
-
-    def get_csat_ratings(self, filters: dict | None = None) -> dict:
-        normalized_filters = self._normalize_filters(filters)
-
-        return self.chats_client.csat_ratings(
-            project_uuid=str(self.project.uuid), params=normalized_filters
-        )
