@@ -601,28 +601,26 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
     def test_get_monitoring_csat_ratings(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.get_csat_ratings.return_value = {
-            "csat_ratings": {
-                "1": {
-                    "value": 20.0,
-                    "full_value": 20,
-                },
-                "2": {
-                    "value": 20.0,
-                    "full_value": 20,
-                },
-                "3": {
-                    "value": 20.0,
-                    "full_value": 20,
-                },
-                "4": {
-                    "value": 20.0,
-                    "full_value": 20,
-                },
-                "5": {
-                    "value": 20.0,
-                    "full_value": 20,
-                },
-            }
+            "1": {
+                "value": 20.0,
+                "full_value": 20,
+            },
+            "2": {
+                "value": 20.0,
+                "full_value": 20,
+            },
+            "3": {
+                "value": 20.0,
+                "full_value": 20,
+            },
+            "4": {
+                "value": 20.0,
+                "full_value": 20,
+            },
+            "5": {
+                "value": 20.0,
+                "full_value": 20,
+            },
         }
 
         dashboard = Dashboard.objects.create(
