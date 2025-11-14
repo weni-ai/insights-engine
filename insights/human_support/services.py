@@ -629,6 +629,38 @@ class HumanSupportDashboardService:
         client = CustomStatusRESTClient(self.project)
         return client.list(params)
 
+    def get_csat_ratings(self, filters: dict | None = None) -> dict:
+        normalized_filters = self._normalize_filters(filters)
+
+        ratings_from_chats = self.chats_client.csat_ratings(
+            project_uuid=str(self.project.uuid), params=normalized_filters
+        )
+        ratings_data = {rating: {"value": 0, "full_value": 0} for rating in range(1, 6)}
+
+        for rating in ratings_from_chats:
+            rating = rating.get("rating")
+
+            if not rating in ratings_data:
+                continue
+
+            ratings_data[rating]["value"] += ratings_from_chats[rating].get("value")
+            ratings_data[rating]["full_value"] += ratings_from_chats[rating].get(
+                "full_value"
+            )
+
+        ratings = []
+
+        for rating, data in ratings_data.items():
+            ratings.append(
+                {
+                    "rating": rating,
+                    "value": data.get("value"),
+                    "full_value": data.get("full_value"),
+                }
+            )
+
+        return ratings
+
     def get_analysis_detailed_monitoring_status(
         self, filters: dict | None = None
     ) -> dict:
