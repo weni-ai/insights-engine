@@ -62,6 +62,12 @@ class QueryExecutor:
                 "previous": None,
                 "results": sorted(query_results, key=lambda x: int(x["label"][:-1])),
             }
+        elif operation == "timeseries_day_group_count":
+            paginated_results = {
+                "next": None,
+                "previous": None,
+                "results": query_results,
+            }
         else:
             paginated_results = {
                 "next": None,
