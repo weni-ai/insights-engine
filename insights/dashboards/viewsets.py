@@ -435,7 +435,14 @@ class DashboardViewSet(
     def analysis_finished_rooms_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = {
+            key: (
+                request.query_params.getlist(key)
+                if len(request.query_params.getlist(key)) > 1
+                else request.query_params.get(key)
+            )
+            for key in request.query_params
+        }
         print(
             "[analysis_finished_rooms_status view] request.query_params",
             request.query_params,
