@@ -177,7 +177,7 @@ class HumanSupportDashboardService:
             params["end_date"] = normalized["end_date"].date().isoformat()
 
         client = ChatsTimeMetricsClient(self.project)
-        response = client.retrieve(params=params)
+        response = client.retrieve_time_metrics(params=params)
 
         metrics = response or {}
 
@@ -879,7 +879,7 @@ class HumanSupportDashboardService:
             metrics_params["end_date"] = normalized["end_date"].date().isoformat()
 
         client = ChatsTimeMetricsClient(self.project)
-        response = client.retrieve(params=metrics_params)
+        response = client.retrieve_time_metrics_for_analysis(params=metrics_params)
         metrics = response or {}
 
         waiting_avg = float(metrics.get("avg_waiting_time", 0) or 0)
