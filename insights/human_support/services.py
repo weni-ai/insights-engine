@@ -245,6 +245,9 @@ class HumanSupportDashboardService:
     def get_analysis_peaks_in_human_service(self, filters: dict | None = None):
         request_params = self._normalize_filters(filters)
 
+        print("[get_analysis_peaks_in_human_service] filters", filters)
+        print("[get_analysis_peaks_in_human_service] request_params", request_params)
+
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
 
@@ -270,6 +273,8 @@ class HumanSupportDashboardService:
         if "tags" in request_params:
             rooms_filters["tags"] = request_params["tags"]
 
+        print("[get_analysis_peaks_in_human_service] rooms_filters", rooms_filters)
+
         result = RoomsQueryExecutor.execute(
             filters=rooms_filters,
             operation="timeseries_hour_group_count",
@@ -284,6 +289,9 @@ class HumanSupportDashboardService:
 
     def get_detailed_monitoring_on_going(self, filters: dict | None = None) -> dict:
         normalized = self._normalize_filters(filters)
+
+        print("[get_detailed_monitoring_on_going] filters", filters)
+        print("[get_detailed_monitoring_on_going] normalized", normalized)
 
         params: dict = {
             "is_active": True,
@@ -333,6 +341,8 @@ class HumanSupportDashboardService:
                 }
                 mapped_field = field_mapping.get(field, field)
                 params["ordering"] = f"{prefix}{mapped_field}"
+
+        print("[get_detailed_monitoring_on_going] params", params)
 
         response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
 
@@ -827,6 +837,8 @@ class HumanSupportDashboardService:
         Similar ao monitoring/list_status mas com filtros de data e tempo médio de resposta.
         """
         normalized = self._normalize_filters(filters)
+        print("[get_analysis_status] filters", filters)
+        print("[get_analysis_status] normalized", normalized)
 
         tzname = self.project.timezone or "UTC"
         project_tz = pytz.timezone(tzname)
@@ -850,6 +862,8 @@ class HumanSupportDashboardService:
             base["queue"] = normalized["queues"]
         if normalized.get("tags"):
             base["tags"] = normalized["tags"]
+
+        print("[get_analysis_status] base", base)
 
         finished = (
             RoomsQueryExecutor.execute(
@@ -877,6 +891,8 @@ class HumanSupportDashboardService:
             metrics_params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
             metrics_params["end_date"] = normalized["end_date"].date().isoformat()
+
+        print("[get_analysis_status] metrics_params", metrics_params)
 
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve_time_metrics_for_analysis(params=metrics_params)
