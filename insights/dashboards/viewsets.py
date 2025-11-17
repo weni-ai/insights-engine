@@ -436,6 +436,11 @@ class DashboardViewSet(
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
         filters = {key: value for key, value in request.query_params.items()}
+        print(
+            "[analysis_finished_rooms_status view] request.query_params",
+            request.query_params,
+        )
+        print("[analysis_finished_rooms_status view] filters", filters)
         data = service.get_analysis_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
