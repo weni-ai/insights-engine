@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.http import QueryDict
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
@@ -41,6 +42,17 @@ from .serializers import (
 from .usecases import dashboard_filters
 
 logger = logging.getLogger(__name__)
+
+
+def get_filters_from_query_params(query_params: QueryDict) -> dict:
+    return {
+        key: (
+            query_params.getlist(key)
+            if len(query_params.getlist(key)) > 1
+            else query_params.get(key)
+        )
+        for key in query_params
+    }
 
 
 class DashboardViewSet(
@@ -411,7 +423,7 @@ class DashboardViewSet(
     def monitoring_peaks_in_human_service(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         results = service.get_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
 
@@ -423,7 +435,7 @@ class DashboardViewSet(
     def finished(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_finished_rooms(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -435,19 +447,7 @@ class DashboardViewSet(
     def analysis_finished_rooms_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {
-            key: (
-                request.query_params.getlist(key)
-                if len(request.query_params.getlist(key)) > 1
-                else request.query_params.get(key)
-            )
-            for key in request.query_params
-        }
-        print(
-            "[analysis_finished_rooms_status view] request.query_params",
-            request.query_params,
-        )
-        print("[analysis_finished_rooms_status view] filters", filters)
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_analysis_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -459,7 +459,7 @@ class DashboardViewSet(
     def analysis_peaks_in_human_service(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         results = service.get_analysis_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
 
@@ -472,9 +472,7 @@ class DashboardViewSet(
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
         # Convert QueryDict properly - get first value from lists
-        filters = {}
-        for key, value in request.query_params.items():
-            filters[key] = value
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_finished_rooms(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
