@@ -28,6 +28,8 @@ from insights.widgets.usecases.get_source_data import (
     get_source_data_from_widget,
 )
 
+from insights.core.filters import get_filters_from_query_params
+
 from .serializers import (
     DashboardEditSerializer,
     DashboardIsDefaultSerializer,
@@ -38,17 +40,6 @@ from .serializers import (
 from .usecases import dashboard_filters
 
 logger = logging.getLogger(__name__)
-
-
-def get_filters_from_query_params(query_params: QueryDict) -> dict:
-    return {
-        key: (
-            query_params.getlist(key)
-            if len(query_params.getlist(key)) > 1
-            else query_params.get(key)
-        )
-        for key in query_params
-    }
 
 
 class DashboardViewSet(
