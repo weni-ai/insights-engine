@@ -912,6 +912,9 @@ class HumanSupportDashboardService:
 
         print("[get_analysis_status] base", base)
 
+        if normalized.get("agent"):
+            base["agent"] = normalized["agent"]
+
         finished = (
             RoomsQueryExecutor.execute(
                 {
