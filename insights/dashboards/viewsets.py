@@ -1,7 +1,6 @@
 import logging
 
 from django.conf import settings
-from django.http import QueryDict
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
