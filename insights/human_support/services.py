@@ -155,11 +155,17 @@ class HumanSupportDashboardService:
 
         params: dict = {}
         if normalized.get("sectors"):
-            params["sector"] = normalized["sectors"]
+            if not isinstance(normalized["sectors"], list):
+                normalized["sectors"] = [normalized["sectors"]]
+            params["sector__in"] = normalized["sectors"]
         if normalized.get("queues"):
-            params["queue"] = normalized["queues"]
+            if not isinstance(normalized["queues"], list):
+                normalized["queues"] = [normalized["queues"]]
+            params["queue__in"] = normalized["queues"]
         if normalized.get("tags"):
-            params["tags"] = normalized["tags"]
+            if not isinstance(normalized["tags"], list):
+                normalized["tags"] = [normalized["tags"]]
+            params["tags__in"] = normalized["tags"]
         if normalized.get("start_date"):
             params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
@@ -200,11 +206,17 @@ class HumanSupportDashboardService:
             "created_on__gte": start_of_day,
         }
         if "sectors" in request_params:
-            rooms_filters["sector"] = request_params["sectors"]
+            if not isinstance(request_params["sectors"], list):
+                request_params["sectors"] = [request_params["sectors"]]
+            rooms_filters["sector__in"] = request_params["sectors"]
         if "queues" in request_params:
-            rooms_filters["queue"] = request_params["queues"]
+            if not isinstance(request_params["queues"], list):
+                request_params["queues"] = [request_params["queues"]]
+            rooms_filters["queue__in"] = request_params["queues"]
         if "tags" in request_params:
-            rooms_filters["tags"] = request_params["tags"]
+            if not isinstance(request_params["tags"], list):
+                request_params["tags"] = [request_params["tags"]]
+            rooms_filters["tags__in"] = request_params["tags"]
 
         result = RoomsQueryExecutor.execute(
             filters=rooms_filters,
@@ -243,11 +255,17 @@ class HumanSupportDashboardService:
             "created_on__lte": end_datetime,
         }
         if "sectors" in request_params:
-            rooms_filters["sector"] = request_params["sectors"]
+            if not isinstance(request_params["sectors"], list):
+                request_params["sectors"] = [request_params["sectors"]]
+            rooms_filters["sector__in"] = request_params["sectors"]
         if "queues" in request_params:
-            rooms_filters["queue"] = request_params["queues"]
+            if not isinstance(request_params["queues"], list):
+                request_params["queues"] = [request_params["queues"]]
+            rooms_filters["queue__in"] = request_params["queues"]
         if "tags" in request_params:
-            rooms_filters["tags"] = request_params["tags"]
+            if not isinstance(request_params["tags"], list):
+                request_params["tags"] = [request_params["tags"]]
+            rooms_filters["tags__in"] = request_params["tags"]
 
         result = RoomsQueryExecutor.execute(
             filters=rooms_filters,
@@ -269,7 +287,19 @@ class HumanSupportDashboardService:
             "user_id__isnull": False,
             "attending": True,
         }
-        filter_to_rooms = {"sectors": "sector", "queues": "queue", "tags": "tags"}
+
+        filter_to_rooms = {
+            "sectors": "sector__in",
+            "queues": "queue__in",
+            "tags": "tags__in",
+        }
+
+        for filter_name in ("sectors", "queues", "tags"):
+            if filters.get(filter_name) and not isinstance(
+                filters.get(filter_name), list
+            ):
+                filters[filter_name] = [filters[filter_name]]
+
         for filter_key, rooms_field in filter_to_rooms.items():
             value = normalized.get(filter_key)
             if value:

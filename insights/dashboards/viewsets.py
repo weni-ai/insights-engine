@@ -273,7 +273,7 @@ class DashboardViewSet(
     def monitoring_average_time_metrics(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_time_metrics(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
