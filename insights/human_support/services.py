@@ -623,12 +623,6 @@ class HumanSupportDashboardService:
             if filters.get("created_on__lte") is not None:
                 params["created_on__lte"] = filters.get("created_on__lte")
 
-        # Add date filters from normalized
-        if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].date().isoformat()
-        if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].date().isoformat()
-
             if (ordering := filters.get("ordering")) and ordering in ordering_fields:
                 params["ordering"] = ordering
 
