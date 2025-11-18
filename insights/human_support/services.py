@@ -541,18 +541,8 @@ class HumanSupportDashboardService:
         if filters:
             if filters.get("user_request") is not None:
                 params["user_request"] = filters.get("user_request")
-            if filters.get("ordering") is not None:
-                ordering = filters.get("ordering")
-                prefix = "-" if ordering.startswith("-") else ""
-                field = ordering.lstrip("-")
-
-                field_mapping = {
-                    "Agent": "email",
-                    "agent": "email",
-                }
-
-                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-                params["ordering"] = f"{prefix}{mapped_field}"
+            if (ordering := filters.get("ordering")) and ordering in ordering_fields:
+                params["ordering"] = ordering
 
         if normalized.get("start_date"):
             params["start_date"] = normalized["start_date"].isoformat()
