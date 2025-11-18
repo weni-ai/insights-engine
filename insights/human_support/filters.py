@@ -24,9 +24,9 @@ class HumanSupportFilterSet(filters.FilterSet):
     tags = UUIDInFilter(required=False)
     start_date = filters.IsoDateTimeFilter(required=False)
     end_date = filters.IsoDateTimeFilter(required=False)
-    agent = filters.UUIDFilter(required=False)
+    agent = filters.CharFilter(required=False)
     contact = filters.UUIDFilter(required=False)
-    ticket_id = filters.UUIDFilter(required=False)
+    ticket_id = filters.CharFilter(required=False)
     page_size = filters.NumberFilter(required=False)
     cursor = filters.CharFilter(required=False)
 
