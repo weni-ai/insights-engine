@@ -611,6 +611,7 @@ class HumanSupportDashboardService:
         }
 
     def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
+        ordering_fields = {"agent", "-agent"}
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
@@ -628,34 +629,8 @@ class HumanSupportDashboardService:
         if normalized.get("end_date"):
             params["end_date"] = normalized["end_date"].date().isoformat()
 
-        if filters:
-            if filters.get("ordering") is not None:
-                ordering = filters.get("ordering")
-                prefix = "-" if ordering.startswith("-") else ""
-                field = ordering.lstrip("-")
-
-                field_mapping = {
-                    "Agent": "email",
-                    "agent": "email",
-                    "Status": "status",
-                    "status": "status",
-                    "Finished": "closed",
-                    "finished": "closed",
-                    "Closed": "closed",
-                    "closed": "closed",
-                    "Ongoing": "opened",
-                    "ongoing": "opened",
-                    "Opened": "opened",
-                    "opened": "opened",
-                    "In Progress": "opened",
-                    "Created on": "created_on",
-                    "created on": "created_on",
-                    "Created On": "created_on",
-                    "created_on": "created_on",
-                }
-
-                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-                params["ordering"] = f"{prefix}{mapped_field}"
+            if (ordering := filters.get("ordering")) and ordering in ordering_fields:
+                params["ordering"] = ordering
 
         sectors = normalized.get("sectors") or []
         if isinstance(sectors, list) and sectors:
