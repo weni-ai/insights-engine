@@ -701,6 +701,9 @@ class HumanSupportDashboardService:
     ) -> dict:
         normalized = self._normalize_filters(filters)
 
+        print("[get_analysis_detailed_monitoring_status] filters", filters)
+        print("[get_analysis_detailed_monitoring_status] normalized", normalized)
+
         params: dict = {}
         if filters:
             if filters.get("user_request") is not None:
@@ -732,6 +735,8 @@ class HumanSupportDashboardService:
 
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
+
+        print("[get_analysis_detailed_monitoring_status] params", params)
 
         client = CustomStatusRESTClient(self.project)
         response = client.list(params)
