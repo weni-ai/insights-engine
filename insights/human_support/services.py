@@ -116,11 +116,17 @@ class HumanSupportDashboardService:
             "project": str(self.project.uuid),
         }
         if normalized.get("sectors"):
-            base["sector"] = normalized["sectors"]
+            if not isinstance(normalized["sectors"], list):
+                normalized["sectors"] = [normalized["sectors"]]
+            base["sector__in"] = normalized["sectors"]
         if normalized.get("queues"):
-            base["queue"] = normalized["queues"]
+            if not isinstance(normalized["queues"], list):
+                normalized["queues"] = [normalized["queues"]]
+            base["queue__in"] = normalized["queues"]
         if normalized.get("tags"):
-            base["tags"] = normalized["tags"]
+            if not isinstance(normalized["tags"], list):
+                normalized["tags"] = [normalized["tags"]]
+            base["tags__in"] = normalized["tags"]
 
         is_waiting = (
             RoomsQueryExecutor.execute(
@@ -887,11 +893,17 @@ class HumanSupportDashboardService:
             "project": str(self.project.uuid),
         }
         if normalized.get("sectors"):
-            base["sector"] = normalized["sectors"]
+            if not isinstance(normalized["sectors"], list):
+                normalized["sectors"] = [normalized["sectors"]]
+            base["sector__in"] = normalized["sectors"]
         if normalized.get("queues"):
-            base["queue"] = normalized["queues"]
+            if not isinstance(normalized["queues"], list):
+                normalized["queues"] = [normalized["queues"]]
+            base["queue__in"] = normalized["queues"]
         if normalized.get("tags"):
-            base["tags"] = normalized["tags"]
+            if not isinstance(normalized["tags"], list):
+                normalized["tags"] = [normalized["tags"]]
+            base["tags__in"] = normalized["tags"]
 
         print("[get_analysis_status] base", base)
 
@@ -912,11 +924,17 @@ class HumanSupportDashboardService:
 
         metrics_params: dict = {}
         if normalized.get("sectors"):
-            metrics_params["sector"] = normalized["sectors"]
+            if not isinstance(normalized["sectors"], list):
+                normalized["sectors"] = [normalized["sectors"]]
+            metrics_params["sector__in"] = normalized["sectors"]
         if normalized.get("queues"):
-            metrics_params["queue"] = normalized["queues"]
+            if not isinstance(normalized["queues"], list):
+                normalized["queues"] = [normalized["queues"]]
+            metrics_params["queue__in"] = normalized["queues"]
         if normalized.get("tags"):
-            metrics_params["tags"] = normalized["tags"]
+            if not isinstance(normalized["tags"], list):
+                normalized["tags"] = [normalized["tags"]]
+            metrics_params["tags__in"] = normalized["tags"]
         if normalized.get("start_date"):
             metrics_params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):

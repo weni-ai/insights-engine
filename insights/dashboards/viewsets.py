@@ -1,7 +1,6 @@
 import logging
 
 from django.conf import settings
-from django.http import QueryDict
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
@@ -279,7 +278,7 @@ class DashboardViewSet(
     def monitoring_list_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_attendance_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
