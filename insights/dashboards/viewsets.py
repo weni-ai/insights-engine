@@ -455,19 +455,6 @@ class DashboardViewSet(
     @action(
         detail=True,
         methods=["get"],
-        url_path="finished",
-    )
-    def finished(self, request, pk=None):
-        dashboard = self.get_object()
-        service = HumanSupportDashboardService(project=dashboard.project)
-        # Convert QueryDict properly - get first value from lists
-        filters = get_filters_from_query_params(request.query_params)
-        data = service.get_finished_rooms(filters=filters)
-        return Response(data, status=status.HTTP_200_OK)
-
-    @action(
-        detail=True,
-        methods=["get"],
         url_path="monitoring/csat/totals",
     )
     def monitoring_csat_totals(self, request, pk=None):

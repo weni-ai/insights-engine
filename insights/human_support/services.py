@@ -765,7 +765,9 @@ class HumanSupportDashboardService:
         Retorna { next, previous, count, results: [...] }.
         Critérios: is_active=False.
         """
+        print("[get_finished_rooms] filters", filters)
         normalized = self._normalize_filters(filters)
+        print("[get_finished_rooms] normalized", normalized)
 
         params: dict = {
             "is_active": False,
@@ -845,6 +847,8 @@ class HumanSupportDashboardService:
                 }
                 mapped_field = field_mapping.get(field, field)
                 params["ordering"] = f"{prefix}{mapped_field}"
+
+        print("[get_finished_rooms] params", params)
 
         response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
 
