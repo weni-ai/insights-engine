@@ -27,6 +27,8 @@ from insights.widgets.usecases.get_source_data import (
     get_source_data_from_widget,
 )
 
+from insights.core.filters import get_filters_from_query_params
+
 from .serializers import (
     DashboardEditSerializer,
     DashboardIsDefaultSerializer,
@@ -258,7 +260,7 @@ class DashboardViewSet(
     def monitoring_list_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_attendance_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -270,7 +272,7 @@ class DashboardViewSet(
     def monitoring_average_time_metrics(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_time_metrics(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -374,7 +376,7 @@ class DashboardViewSet(
     def monitoring_peaks_in_human_service(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         results = service.get_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
 
@@ -386,7 +388,7 @@ class DashboardViewSet(
     def finished(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_finished_rooms(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -398,7 +400,7 @@ class DashboardViewSet(
     def analysis_finished_rooms_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_analysis_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -410,6 +412,6 @@ class DashboardViewSet(
     def analysis_peaks_in_human_service(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         results = service.get_analysis_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)

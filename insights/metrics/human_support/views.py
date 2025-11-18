@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.human_support.services import HumanSupportDashboardService
 from insights.projects.models import Project
+from insights.core.filters import get_filters_from_query_params
 
 
 class DetailedMonitoringOnGoingView(APIView):
@@ -23,7 +24,7 @@ class DetailedMonitoringOnGoingView(APIView):
         project = get_object_or_404(Project, uuid=project_uuid)
         service = HumanSupportDashboardService(project=project)
 
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_detailed_monitoring_on_going(filters=filters)
         return Response(data, status=200)
 
@@ -40,7 +41,7 @@ class DetailedMonitoringAwaitingView(APIView):
         project = get_object_or_404(Project, uuid=project_uuid)
         service = HumanSupportDashboardService(project=project)
 
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_detailed_monitoring_awaiting(filters=filters)
         return Response(data, status=200)
 
@@ -57,7 +58,7 @@ class DetailedMonitoringAgentsView(APIView):
         project = get_object_or_404(Project, uuid=project_uuid)
         service = HumanSupportDashboardService(project=project)
 
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         filters["user_request"] = request.user.email
         data = service.get_detailed_monitoring_agents(filters=filters)
 
@@ -80,7 +81,7 @@ class DetailedMonitoringStatusView(APIView):
         project = get_object_or_404(Project, uuid=project_uuid)
         service = HumanSupportDashboardService(project=project)
 
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         filters["user_request"] = request.user.email
         data = service.get_detailed_monitoring_status(filters=filters)
 
@@ -103,7 +104,7 @@ class AnalysisDetailedMonitoringStatusView(APIView):
         project = get_object_or_404(Project, uuid=project_uuid)
         service = HumanSupportDashboardService(project=project)
 
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         filters["user_request"] = request.user.email
         data = service.get_analysis_detailed_monitoring_status(filters=filters)
 
