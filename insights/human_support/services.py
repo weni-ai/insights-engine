@@ -752,6 +752,9 @@ class HumanSupportDashboardService:
         if normalized.get("tags"):
             base["tags"] = normalized["tags"]
 
+        if normalized.get("agent"):
+            base["agent"] = normalized["agent"]
+
         finished = (
             RoomsQueryExecutor.execute(
                 {
