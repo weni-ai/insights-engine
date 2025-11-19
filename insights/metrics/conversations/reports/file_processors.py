@@ -63,7 +63,8 @@ class CSVFileProcessor(FileProcessor):
 
             name = worksheet.name[: CSV_FILE_NAME_MAX_LENGTH - 4] + ".csv"
 
-            files.append(ConversationsReportFile(name=name, content=file_content))
+            file_content_bytes = file_content.encode("utf-8")
+            files.append(ConversationsReportFile(name=name, content=file_content_bytes))
 
         return files
 
