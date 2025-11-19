@@ -362,7 +362,7 @@ class DashboardViewSet(
         custom_status_client = CustomStatusRESTClient(project)
 
         query_filters = dict(request.data or request.query_params or {})
-        custom_status = custom_status_client.list(query_filters)
+        custom_status = custom_status_client.list_custom_status(query_filters)
 
         return Response(custom_status, status.HTTP_200_OK)
 
