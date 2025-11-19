@@ -668,6 +668,7 @@ class HumanSupportDashboardService:
     def get_analysis_detailed_monitoring_status(
         self, filters: dict | None = None
     ) -> dict:
+        ordering_fields = {"agent", "-agent"}
         normalized = self._normalize_filters(filters)
 
         print("[get_analysis_detailed_monitoring_status] filters", filters)
