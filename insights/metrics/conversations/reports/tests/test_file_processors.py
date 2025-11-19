@@ -6,6 +6,7 @@ from insights.metrics.conversations.reports.dataclass import (
 from insights.metrics.conversations.reports.file_processors import (
     CSVFileProcessor,
     XLSXFileProcessor,
+    get_file_processor,
 )
 from insights.projects.models import Project
 from insights.reports.choices import ReportFormat
@@ -152,3 +153,16 @@ class TestXLSXFileProcessor(TestCase):
             self.processor._ensure_unique_worksheet_name("Test (1)", used_names),
             "Test (1) (1)",
         )
+
+
+class TestGetFileProcessor(TestCase):
+    def test_get_file_processor_with_invalid_format(self):
+        with self.assertRaises(ValueError):
+            get_file_processor("MP3")
+
+    def test_get_file_processor_with_valid_format(self):
+        processor = get_file_processor(ReportFormat.CSV)
+        self.assertIsInstance(processor, CSVFileProcessor)
+
+        processor = get_file_processor(ReportFormat.XLSX)
+        self.assertIsInstance(processor, XLSXFileProcessor)
