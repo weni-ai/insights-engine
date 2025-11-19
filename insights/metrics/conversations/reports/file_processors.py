@@ -40,7 +40,7 @@ class CSVFileProcessor(FileProcessor):
 
     def process(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> ConversationsReportFile:
+    ) -> list[ConversationsReportFile]:
         """
         Process the csv for the conversations report.
         """
@@ -75,7 +75,7 @@ class XLSXFileProcessor(FileProcessor):
 
     def process(
         self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> ConversationsReportFile:
+    ) -> list[ConversationsReportFile]:
         """
         Process the xlsx for the conversations report.
         """
