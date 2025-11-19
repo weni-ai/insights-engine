@@ -642,7 +642,7 @@ class HumanSupportDashboardService:
             params["end_date"] = normalized["end_date"].isoformat()
 
         client = CustomStatusRESTClient(self.project)
-        return client.list(params)
+        return client.list_custom_status_by_agent(params)
 
     def get_csat_ratings(self, filters: dict | None = None) -> dict:
         normalized_filters = self._normalize_filters(filters)
@@ -699,7 +699,7 @@ class HumanSupportDashboardService:
         print("[get_analysis_detailed_monitoring_status] params", params)
 
         client = CustomStatusRESTClient(self.project)
-        response = client.list(params)
+        response = client.list_custom_status_by_agent(params)
 
         formatted_results = []
         for agent_data in response.get("results", []):

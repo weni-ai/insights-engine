@@ -400,7 +400,7 @@ class DashboardViewSet(
             query_filters = dict(request.data)
         else:
             query_filters = {key: value for key, value in request.query_params.items()}
-        custom_status = custom_status_client.list(query_filters)
+        custom_status = custom_status_client.list_custom_status(query_filters)
 
         return Response(custom_status, status.HTTP_200_OK)
 
