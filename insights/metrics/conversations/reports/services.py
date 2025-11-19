@@ -414,9 +414,19 @@ class ConversationsReportService(BaseConversationsReportService):
                 email.send(fail_silently=False)
         except Exception as e:
             logger.error(
-                "[CONVERSATIONS REPORT SERVICE] Failed to send email for conversations report %s. Error: %s",
+                "[CONVERSATIONS REPORT SERVICE] Failed to send email for conversations report. "
+                "Report UUID: %s, Project UUID: %s, Project Name: %s, "
+                "Recipient Email: %s, Is Error Report: %s, Event ID: %s, "
+                "Exception Type: %s, Exception Message: %s",
                 report.uuid,
-                e,
+                report.project.uuid,
+                report.project.name,
+                report.requested_by.email,
+                is_error,
+                event_id,
+                type(e).__name__,
+                str(e),
+                exc_info=True,
             )
 
             return None
