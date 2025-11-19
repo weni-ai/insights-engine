@@ -2,7 +2,6 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 from insights.metrics.conversations.reports.dataclass import (
-    ConversationsReportFile,
     ConversationsReportWorksheet,
 )
 from insights.metrics.conversations.reports.services import (
@@ -16,15 +15,6 @@ from insights.reports.choices import ReportFormat
 
 
 class MockConversationsReportService(BaseConversationsReportService):
-    def process_csv(
-        self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[ConversationsReportFile]:
-        pass
-
-    def process_xlsx(
-        self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[ConversationsReportFile]:
-        pass
 
     def send_email(self, report: Report, file_content: str) -> None:
         pass
