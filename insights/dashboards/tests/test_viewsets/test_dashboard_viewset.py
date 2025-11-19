@@ -550,14 +550,14 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
     @patch("insights.dashboards.viewsets.CustomStatusRESTClient")
     def test_get_custom_status(self, MockCustomStatusRESTClient):
         mock_client_instance = MockCustomStatusRESTClient.return_value
-        mock_client_instance.list.return_value = {"status": "ok"}
+        mock_client_instance.list_custom_status.return_value = {"status": "ok"}
 
         response = self.get_custom_status({"project": str(self.project.uuid)})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"status": "ok"})
         MockCustomStatusRESTClient.assert_called_once_with(self.project)
-        mock_client_instance.list.assert_called_once_with(
+        mock_client_instance.list_custom_status.assert_called_once_with(
             {"project": [str(self.project.uuid)]}
         )
 
