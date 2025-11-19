@@ -762,10 +762,7 @@ class HumanSupportDashboardService:
                 prefix = "-" if ordering.startswith("-") else ""
                 field = ordering.lstrip("-")
                 field_mapping = {
-                    "Agent": "agent__first_name",
-                    "agent": "agent__first_name",
-                    "Atendente": "agent__first_name",
-                    "atendente": "agent__first_name",
+                    "agent": "user_full_name",
                     "Sector": "queue__sector__name",
                     "sector": "queue__sector__name",
                     "Setor": "queue__sector__name",
