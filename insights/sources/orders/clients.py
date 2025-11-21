@@ -158,16 +158,18 @@ class VtexOrdersRestClient(VtexAuthentication):
         except ValueError:
             return None  # Retorne None se a conversão falhar
 
-    def list(self, query_filters: dict):
-        cache_key = self.get_cache_key(query_filters)
-
+    def get_cached_list(self, cache_key: str) -> dict:
         cached_data = self.cache.get(cache_key)
+
         if cached_data:
-            return json.loads(cached_data)
+            try:
+                return json.loads(cached_data)
+            except json.JSONDecodeError:
+                return None
 
-        if not query_filters.get("utm_source", None):
-            return {"error": "utm_source field is mandatory"}
+        return None
 
+    def handle_query_filters(self, query_filters: dict) -> dict:
         if query_filters.get("ended_at__gte", None):
             start_date_str = query_filters["ended_at__gte"]
             start_date = self.parse_datetime(start_date_str)
@@ -187,10 +189,18 @@ class VtexOrdersRestClient(VtexAuthentication):
         if query_filters.get("utm_source", None):
             query_filters["utm_source"] = query_filters.pop("utm_source")[0]
 
-        total_value = 0
-        total_sell = 0
-        max_value = float("-inf")
-        min_value = float("inf")
+        return query_filters
+
+    def list(self, query_filters: dict):
+        cache_key = self.get_cache_key(query_filters)
+
+        if cached_list := self.get_cached_list(cache_key):
+            return cached_list
+
+        if not query_filters.get("utm_source", None):
+            return {"error": "utm_source field is mandatory"}
+
+        query_filters = self.handle_query_filters(query_filters)
 
         response = self.get_orders_list(query_filters, 1)
         data = response.json()
@@ -201,6 +211,11 @@ class VtexOrdersRestClient(VtexAuthentication):
         pages = data["paging"]["pages"] if "paging" in data else 1
 
         currency_code = None
+
+        total_value = 0
+        total_sell = 0
+        max_value = float("-inf")
+        min_value = float("inf")
 
         # botar o max_workers em variavel de ambiente
         with ThreadPoolExecutor(max_workers=10) as executor:
@@ -217,24 +232,43 @@ class VtexOrdersRestClient(VtexAuthentication):
             for page_future in as_completed(page_futures):
                 try:
                     response = page_future.result()
-                    if response.status_code == 200:
-                        results = response.json()
-                        for result in results["list"]:
-                            if result["status"] != "canceled":
-                                total_value += result["totalValue"]
-                                total_sell += 1
-                                max_value = max(max_value, result["totalValue"])
-                                min_value = min(min_value, result["totalValue"])
 
-                                if currency_code is None:
-                                    currency_code = result["currencyCode"]
-                    else:
+                    if response.status_code != 200:
                         logger.error(
                             f"VTEX API error processing page: status={response.status_code}, response={response.text}"
                         )
+                        capture_message(
+                            f"VTEX API error processing page: status={response.status_code}, response={response.text}",
+                            level="error",
+                            extra={
+                                "response": response.text,
+                                "request": response.request.url,
+                                "headers": response.request.headers,
+                            },
+                        )
+                        return response.status_code, response.json()
+
+                    results = response.json()
+                    for result in results["list"]:
+                        if result["status"] != "canceled":
+                            total_value += result["totalValue"]
+                            total_sell += 1
+                            max_value = max(max_value, result["totalValue"])
+                            min_value = min(min_value, result["totalValue"])
+
+                            currency_code = result["currencyCode"]
                 except Exception as exc:
                     logger.error(f"VTEX API error processing page: {exc}")
-                    # Continue processing other pages instead of just printing
+                    capture_message(
+                        f"VTEX API error processing page: status={response.status_code}, response={response.text}",
+                        level="error",
+                        extra={
+                            "response": response.text,
+                            "request": response.request.url,
+                            "headers": response.request.headers,
+                        },
+                    )
+                    return 500, {"error": "Internal server error"}
 
         total_value = total_value / 100
         max_value = (max_value / 100) if max_value != float("-inf") else 0

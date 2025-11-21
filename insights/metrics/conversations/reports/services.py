@@ -1,9 +1,7 @@
 from datetime import datetime
 import io
-import csv
 import json
 from uuid import UUID
-import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
 import pytz
@@ -33,6 +31,7 @@ from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportFile,
     ConversationsReportWorksheet,
 )
+from insights.metrics.conversations.reports.file_processors import get_file_processor
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
@@ -91,24 +90,6 @@ class BaseConversationsReportService(ABC):
     """
     Base class for conversations report services.
     """
-
-    @abstractmethod
-    def process_csv(
-        self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[ConversationsReportFile]:
-        """
-        Process the csv for the conversations report.
-        """
-        raise NotImplementedError("Subclasses must implement this method")
-
-    @abstractmethod
-    def process_xlsx(
-        self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[ConversationsReportFile]:
-        """
-        Process the xlsx for the conversations report.
-        """
-        raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
     def zip_files(
@@ -279,70 +260,6 @@ class ConversationsReportService(BaseConversationsReportService):
 
         self.cache_keys = {}
 
-    def process_csv(
-        self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[ConversationsReportFile]:
-        """
-        Process the csv for the conversations report.
-        """
-        files: list[ConversationsReportFile] = []
-
-        for worksheet in worksheets:
-            if len(worksheet.data) == 0:
-                logger.info(
-                    "[CONVERSATIONS REPORT SERVICE] Worksheet %s has no data",
-                    worksheet.name,
-                )
-                continue
-
-            with io.StringIO() as csv_buffer:
-                fieldnames = list(worksheet.data[0].keys()) if worksheet.data else []
-                writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(worksheet.data)
-                file_content = csv_buffer.getvalue()
-
-            name = worksheet.name[: CSV_FILE_NAME_MAX_LENGTH - 4] + ".csv"
-
-            files.append(ConversationsReportFile(name=name, content=file_content))
-
-        return files
-
-    def _ensure_unique_worksheet_name(self, name: str, used_names: set[str]) -> str:
-        """
-        Ensure worksheet name is unique by appending a number if needed.
-
-        Args:
-            name: The original worksheet name
-            used_names: Set of already used worksheet names
-
-        Returns:
-            A unique worksheet name
-        """
-
-        name = name[:XLSX_WORKSHEET_NAME_MAX_LENGTH]
-
-        if name not in used_names:
-            used_names.add(name)
-            return name
-
-        counter = 1
-        while f"{name} ({counter})" in used_names:
-            counter += 1
-
-            if counter > 20:
-                raise ValueError("Too many unique names found")
-
-        unique_name = f"{name} ({counter})"
-
-        if len(unique_name) > XLSX_WORKSHEET_NAME_MAX_LENGTH:
-            counter_length = len(f" ({counter})")
-            new_name = name[: XLSX_WORKSHEET_NAME_MAX_LENGTH - counter_length]
-            unique_name = f"{new_name} ({counter})"
-
-        used_names.add(unique_name)
-        return unique_name
-
     def _add_cache_key(self, report_uuid: UUID, cache_key: str) -> None:
         """
         Add cache key to report.
@@ -365,45 +282,6 @@ class ConversationsReportService(BaseConversationsReportService):
                 self.cache_client.delete(cache_key)
 
             del self.cache_keys[report_uuid]
-
-    def process_xlsx(
-        self, report: Report, worksheets: list[ConversationsReportWorksheet]
-    ) -> list[ConversationsReportFile]:
-        """
-        Process the xlsx for the conversations report.
-        """
-        output = io.BytesIO()
-        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-
-        with override(report.requested_by.language):
-            file_name = gettext("Conversations dashboard report")
-
-        used_worksheet_names = set()
-        for worksheet in worksheets:
-            if len(worksheet.data) == 0:
-                logger.info(
-                    "[CONVERSATIONS REPORT SERVICE] Worksheet %s has no data",
-                    worksheet.name,
-                )
-                continue
-
-            worksheet_name = self._ensure_unique_worksheet_name(
-                worksheet.name, used_worksheet_names
-            )
-            worksheet_data = worksheet.data
-
-            xlsx_worksheet = workbook.add_worksheet(worksheet_name)
-            xlsx_worksheet.write_row(0, 0, worksheet_data[0].keys())
-
-            for row_num, row_data in enumerate(worksheet_data, start=1):
-                xlsx_worksheet.write_row(row_num, 0, row_data.values())
-
-        workbook.close()
-        output.seek(0)
-
-        return [
-            ConversationsReportFile(name=f"{file_name}.xlsx", content=output.getvalue())
-        ]
 
     def zip_files(
         self, files: list[ConversationsReportFile]
@@ -538,9 +416,19 @@ class ConversationsReportService(BaseConversationsReportService):
                 email.send(fail_silently=False)
         except Exception as e:
             logger.error(
-                "[CONVERSATIONS REPORT SERVICE] Failed to send email for conversations report %s. Error: %s",
+                "[CONVERSATIONS REPORT SERVICE] Failed to send email for conversations report. "
+                "Report UUID: %s, Project UUID: %s, Project Name: %s, "
+                "Recipient Email: %s, Is Error Report: %s, Event ID: %s, "
+                "Exception Type: %s, Exception Message: %s",
                 report.uuid,
-                e,
+                report.project.uuid,
+                report.project.name,
+                report.requested_by.email,
+                is_error,
+                event_id,
+                type(e).__name__,
+                str(e),
+                exc_info=True,
             )
 
             return None
@@ -611,15 +499,10 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return report
 
-    def generate(self, report: Report) -> None:
+    def _update_report_status(self, report: Report) -> Report:
         """
-        Start the generation of a conversations report.
+        Update the status of a report.
         """
-        logger.info(
-            "[CONVERSATIONS REPORT SERVICE] Starting generation of conversations report %s",
-            report.uuid,
-        )
-
         fields_to_update = []
 
         if report.status == ReportStatus.PENDING:
@@ -635,20 +518,115 @@ class ConversationsReportService(BaseConversationsReportService):
         if fields_to_update:
             report.save(update_fields=fields_to_update)
 
+        return report
+
+    def _validate_dates(self, report: Report) -> tuple[datetime, datetime]:
+        """
+        Validate the dates of a report.
+        """
+        filters = report.filters or {}
+
+        start_date = filters.get("start")
+        end_date = filters.get("end")
+
+        if not start_date or not end_date:
+            raise ValueError(
+                "Start date or end date is missing for report %s" % report.uuid
+            )
+
+        return start_date, end_date
+
+    def _get_worksheets(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> list[ConversationsReportWorksheet]:
+        """
+        Get the worksheets for a report.
+        """
+        source_config = report.source_config or {}
+        sections = source_config.get("sections", [])
+        custom_widgets = source_config.get("custom_widgets", [])
+        worksheets = []
+
+        worksheets_mapping = {
+            "RESOLUTIONS": (
+                self.get_resolutions_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "TRANSFERRED": (
+                self.get_transferred_to_human_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "TOPICS_AI": (
+                self.get_topics_distribution_worksheet,
+                {
+                    "report": report,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "conversation_type": ConversationType.AI,
+                },
+            ),
+            "TOPICS_HUMAN": (
+                self.get_topics_distribution_worksheet,
+                {
+                    "report": report,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "conversation_type": ConversationType.HUMAN,
+                },
+            ),
+            "CSAT_AI": (
+                self.get_csat_ai_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "NPS_AI": (
+                self.get_nps_ai_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "CSAT_HUMAN": (
+                self.get_csat_human_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "NPS_HUMAN": (
+                self.get_nps_human_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+        }
+
+        for section, (worksheet_function, worksheet_args) in worksheets_mapping.items():
+            if section in sections:
+                worksheets.append(worksheet_function(**worksheet_args))
+
+        if custom_widgets:
+            widgets = Widget.objects.filter(
+                uuid__in=custom_widgets, dashboard__project=report.project
+            )
+
+            for widget in widgets:
+                worksheets.append(
+                    self.get_custom_widget_worksheet(
+                        report,
+                        widget,
+                        start_date,
+                        end_date,
+                    )
+                )
+
+        return worksheets
+
+    def generate(self, report: Report) -> None:
+        """
+        Start the generation of a conversations report.
+        """
+        logger.info(
+            "[CONVERSATIONS REPORT SERVICE] Starting generation of conversations report %s",
+            report.uuid,
+        )
+
+        report = self._update_report_status(report)
+        file_processor = get_file_processor(report.format)
+
         try:
-            filters = report.filters or {}
-
-            start_date = filters.get("start")
-            end_date = filters.get("end")
-
-            if not start_date or not end_date:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Start date or end date is missing for report %s",
-                    report.uuid,
-                )
-                raise ValueError(
-                    "Start date or end date is missing for report %s" % report.uuid
-                )
+            start_date, end_date = self._validate_dates(report)
 
             start_date = datetime.fromisoformat(start_date)
             end_date = datetime.fromisoformat(end_date)
@@ -659,83 +637,8 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            source_config = report.source_config or {}
-            sections = source_config.get("sections", [])
-            custom_widgets = source_config.get("custom_widgets", [])
-
-            worksheets = []
-
-            if "RESOLUTIONS" in sections:
-                resolutions_worksheet = self.get_resolutions_worksheet(
-                    report,
-                    report.filters.get("start"),
-                    report.filters.get("end"),
-                )
-                worksheets.append(resolutions_worksheet)
-
-            if "TRANSFERRED" in sections:
-                transferred_worksheet = self.get_transferred_to_human_worksheet(
-                    report,
-                    report.filters.get("start"),
-                    report.filters.get("end"),
-                )
-                worksheets.append(transferred_worksheet)
-
-            if "TOPICS_AI" in sections:
-                topics_ai_worksheet = self.get_topics_distribution_worksheet(
-                    report=report,
-                    start_date=start_date,
-                    end_date=end_date,
-                    conversation_type=ConversationType.AI,
-                )
-                worksheets.append(topics_ai_worksheet)
-
-            if "TOPICS_HUMAN" in sections:
-                topics_human_worksheet = self.get_topics_distribution_worksheet(
-                    report=report,
-                    start_date=start_date,
-                    end_date=end_date,
-                    conversation_type=ConversationType.HUMAN,
-                )
-                worksheets.append(topics_human_worksheet)
-
-            if "CSAT_AI" in sections:
-                worksheet = self.get_csat_ai_worksheet(report, start_date, end_date)
-                worksheets.append(worksheet)
-
-            if "NPS_AI" in sections:
-                worksheet = self.get_nps_ai_worksheet(report, start_date, end_date)
-                worksheets.append(worksheet)
-
-            if "CSAT_HUMAN" in sections:
-                worksheet = self.get_csat_human_worksheet(report, start_date, end_date)
-                worksheets.append(worksheet)
-
-            if "NPS_HUMAN" in sections:
-                worksheet = self.get_nps_human_worksheet(report, start_date, end_date)
-                worksheets.append(worksheet)
-
-            if custom_widgets:
-                widgets = Widget.objects.filter(
-                    uuid__in=custom_widgets, dashboard__project=report.project
-                )
-
-                for widget in widgets:
-                    worksheets.append(
-                        self.get_custom_widget_worksheet(
-                            report,
-                            widget,
-                            start_date,
-                            end_date,
-                        )
-                    )
-
-            files: list[ConversationsReportFile] = []
-
-            if report.format == ReportFormat.CSV:
-                files.extend(self.process_csv(report, worksheets))
-            elif report.format == ReportFormat.XLSX:
-                files.extend(self.process_xlsx(report, worksheets))
+            worksheets = self._get_worksheets(report, start_date, end_date)
+            files = file_processor.process(report=report, worksheets=worksheets)
 
         except Exception as e:
             logger.error(
@@ -1176,15 +1079,9 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
-    def get_topics_distribution_worksheet(
-        self,
-        report: Report,
-        start_date: datetime,
-        end_date: datetime,
-        conversation_type: ConversationType,
-    ) -> ConversationsReportWorksheet:
+    def _get_topics_data(self, report: Report) -> dict:
         """
-        Get the topics distribution worksheet.
+        Get the topics data from Nexus and organize it.
         """
         nexus_topics_data = self.metrics_service.get_topics(report.project.uuid)
 
@@ -1207,6 +1104,58 @@ class ConversationsReportService(BaseConversationsReportService):
                     "name": subtopic_data.get("name"),
                     "uuid": subtopic_uuid,
                 }
+
+        return topics_data
+
+    def _process_topic_event_data(
+        self, event: dict, topics_data: dict, unclassified_label: str
+    ) -> dict:
+        """
+        Process the topic and subtopic data.
+        """
+        try:
+            metadata = json.loads(event.get("metadata", "{}"))
+        except Exception as e:
+            logger.error("Error parsing metadata for event %s: %s", event.get("id"), e)
+            capture_exception(e)
+            return None, None
+
+        topic_name = event.get("value")
+        subtopic_name = metadata.get("subtopic")
+
+        topic_uuid = (
+            str(metadata.get("topic_uuid")) if metadata.get("topic_uuid") else None
+        )
+        subtopic_uuid = (
+            str(metadata.get("subtopic_uuid"))
+            if metadata.get("subtopic_uuid")
+            else None
+        )
+
+        if not topic_uuid or topic_uuid not in topics_data:
+            topic_name = unclassified_label
+
+        if (
+            topic_uuid
+            and topic_uuid in topics_data
+            and not subtopic_uuid
+            and subtopic_uuid not in topics_data[topic_uuid]["subtopics"]
+        ) or (not topic_uuid or topic_uuid not in topics_data):
+            subtopic_name = unclassified_label
+
+        return topic_name, subtopic_name
+
+    def get_topics_distribution_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the topics distribution worksheet.
+        """
+        topics_data = self._get_topics_data(report)
 
         human_support = (
             "true" if conversation_type == ConversationType.HUMAN else "false"
@@ -1238,37 +1187,12 @@ class ConversationsReportService(BaseConversationsReportService):
         results_data = []
 
         for event in events:
-            try:
-                metadata = json.loads(event.get("metadata", "{}"))
-            except Exception as e:
-                logger.error(
-                    "Error parsing metadata for event %s: %s", event.get("id"), e
-                )
-                capture_exception(e)
+            topic_name, subtopic_name = self._process_topic_event_data(
+                event, topics_data, unclassified_label
+            )
+
+            if not topic_name or not subtopic_name:
                 continue
-
-            topic_name = event.get("value")
-            subtopic_name = metadata.get("subtopic")
-
-            topic_uuid = (
-                str(metadata.get("topic_uuid")) if metadata.get("topic_uuid") else None
-            )
-            subtopic_uuid = (
-                str(metadata.get("subtopic_uuid"))
-                if metadata.get("subtopic_uuid")
-                else None
-            )
-
-            if not topic_uuid or topic_uuid not in topics_data:
-                topic_name = unclassified_label
-
-            if (
-                topic_uuid
-                and topic_uuid in topics_data
-                and not subtopic_uuid
-                and subtopic_uuid not in topics_data[topic_uuid]["subtopics"]
-            ) or (not topic_uuid or topic_uuid not in topics_data):
-                subtopic_name = unclassified_label
 
             results_data.append(
                 {

@@ -478,28 +478,8 @@ class TestVtexOrdersRestClient(TestCase):
             page_futures_dict.keys()
         )
 
-        expected_result = {
-            "countSell": 0,
-            "accumulatedTotal": 0.0,
-            "ticketMax": 0,
-            "ticketMin": 0,
-            "medium_ticket": 0,
-            "currencyCode": None,
-        }
-
         actual_result = self.client_direct.list(query_filters.copy())
 
-        self.assertEqual(actual_result, expected_result)
+        self.assertEqual(actual_result[0], 500)
         self.assertEqual(mock_logger_error.call_count, 2)
         self.assertEqual(mock_requests_get.call_count, 2)
-
-        # The cache key for set should be based on the initial query_filters passed to list()
-        initial_query_filters_for_cache = {
-            "utm_source": ["test"],
-            "ended_at__gte": "2023-01-01T00:00:00.000000+00:00",
-        }
-        self.mock_cache_client.set.assert_called_once_with(
-            self.client_direct.get_cache_key(initial_query_filters_for_cache),
-            json.dumps(expected_result),
-            ex=3600,
-        )
