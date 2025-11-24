@@ -384,6 +384,11 @@ GROWTHBOOK_HOST_BASE_URL = env.str(
     default=env.str("GROWTHBOOK_API_HOST", default="https://cdn.growthbook.io"),
 )
 GROWTHBOOK_CLIENT_KEY = env.str("GROWTHBOOK_CLIENT_KEY", default="")
+
+if not GROWTHBOOK_CLIENT_KEY:
+    # Ensure tests/local environments always provide a key required by the
+    # weni_feature_flags package, even when feature flags are disabled.
+    GROWTHBOOK_CLIENT_KEY = "dummy-growthbook-client-key"
 GROWTHBOOK_SHORT_CACHE_KEY = env.str(
     "GROWTHBOOK_SHORT_CACHE_KEY", default="growthbook:features:short"
 )

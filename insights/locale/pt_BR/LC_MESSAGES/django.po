@@ -144,9 +144,17 @@ msgstr "Resoluções otimizadas"
 msgid "Other conclusions"
 msgstr "Outras conclusões"
 
-#: insights/metrics/conversations/reports/services.py:1119
-msgid "Transferred to Human"
-msgstr "Transferido para Humano"
+#: insights/metrics/conversations/reports/services.py:1064
+msgid "Transferred to Human Support"
+msgstr "Transferido para atendimento humano"
+
+#: insights/metrics/conversations/reports/services.py:1065
+msgid "Yes"
+msgstr "Sim"
+
+#: insights/metrics/conversations/reports/services.py:1066
+msgid "No"
+msgstr "Não"
 
 #: insights/metrics/conversations/reports/services.py:1206
 msgid "Topics Distribution AI"

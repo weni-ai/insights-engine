@@ -665,21 +665,13 @@ class ConversationsReportService(BaseConversationsReportService):
 
             worksheets = []
 
-            if "RESOLUTIONS" in sections:
+            if "RESOLUTIONS" in sections or "TRANSFERRED" in sections:
                 resolutions_worksheet = self.get_resolutions_worksheet(
                     report,
-                    report.filters.get("start"),
-                    report.filters.get("end"),
+                    start_date,
+                    end_date,
                 )
                 worksheets.append(resolutions_worksheet)
-
-            if "TRANSFERRED" in sections:
-                transferred_worksheet = self.get_transferred_to_human_worksheet(
-                    report,
-                    report.filters.get("start"),
-                    report.filters.get("end"),
-                )
-                worksheets.append(transferred_worksheet)
 
             if "TOPICS_AI" in sections:
                 topics_ai_worksheet = self.get_topics_distribution_worksheet(
@@ -1052,7 +1044,7 @@ class ConversationsReportService(BaseConversationsReportService):
         end_date: datetime,
     ) -> ConversationsReportWorksheet:
         """
-        Get the resolutions worksheet.
+        Get the resolutions worksheet merged with transferred to human data.
         """
         events = self.get_datalake_events(
             report=report,
@@ -1069,6 +1061,9 @@ class ConversationsReportService(BaseConversationsReportService):
 
             resolutions_label = gettext("Resolution")
             date_label = gettext("Date")
+            transferred_label = gettext("Transferred to Human Support")
+            yes_label = gettext("Yes")
+            no_label = gettext("No")
 
             resolved_label = gettext("Optimized Resolutions")
             unresolved_label = gettext("Other conclusions")
@@ -1082,6 +1077,21 @@ class ConversationsReportService(BaseConversationsReportService):
         data = []
 
         for event in events:
+            metadata = event.get("metadata") or {}
+
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception as e:
+                    logger.error(
+                        "[CONVERSATIONS REPORT SERVICE] Failed to deserialize metadata for event %s. Error: %s",
+                        event.get("id"),
+                        e,
+                    )
+                    metadata = {}
+
+            is_transferred = str(metadata.get("human_support", "")).lower() == "true"
+
             data.append(
                 {
                     "URN": event.get("contact_urn", ""),
@@ -1090,6 +1100,7 @@ class ConversationsReportService(BaseConversationsReportService):
                         if event.get("value") == "resolved"
                         else unresolved_label
                     ),
+                    transferred_label: yes_label if is_transferred else no_label,
                     date_label: (
                         self._format_date(event.get("date", ""), report)
                         if event.get("date")
@@ -1097,76 +1108,13 @@ class ConversationsReportService(BaseConversationsReportService):
                     ),
                 }
             )
-
-        setattr(self, "_conversation_classification_events_cache", events)
 
         if len(data) == 0:
             data = [
                 {
                     "URN": "",
                     resolutions_label: "",
-                    date_label: "",
-                }
-            ]
-
-        return ConversationsReportWorksheet(
-            name=worksheet_name,
-            data=data,
-        )
-
-    def get_transferred_to_human_worksheet(
-        self,
-        report: Report,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> ConversationsReportWorksheet:
-        """
-        Get the transferred to human worksheet.
-        """
-        if hasattr(self, "_conversation_classification_events_cache"):
-            events = getattr(self, "_conversation_classification_events_cache")
-        else:
-            events = self.get_datalake_events(
-                report=report,
-                project=report.project.uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name="weni_nexus_data",
-                key="conversation_classification",
-                table="conversation_classification",
-                metadata_key="human_support",
-                metadata_value="true",
-            )
-
-        with override(report.requested_by.language):
-            worksheet_name = gettext("Transferred to Human")
-
-            date_label = gettext("Date")
-
-        if len(events) == 0:
-            return ConversationsReportWorksheet(
-                name=worksheet_name,
-                data=[],
-            )
-
-        data = []
-
-        for event in events:
-            data.append(
-                {
-                    "URN": event.get("contact_urn", ""),
-                    date_label: (
-                        self._format_date(event.get("date", ""), report)
-                        if event.get("date")
-                        else ""
-                    ),
-                }
-            )
-
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
+                    transferred_label: "",
                     date_label: "",
                 }
             ]
