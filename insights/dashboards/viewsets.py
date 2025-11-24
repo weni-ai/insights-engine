@@ -316,10 +316,8 @@ class DashboardViewSet(
         print(f"[monitoring_csat_totals] pagination_urls: {pagination_urls}")
         response_data = {
             "results": data.get("results", []),
-            "pagination": {
-                "next": pagination_urls.next_url,
-                "previous": pagination_urls.previous_url,
-            },
+            "next": pagination_urls.next_url,
+            "previous": pagination_urls.previous_url,
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
