@@ -27,6 +27,7 @@ from insights.widgets.usecases.get_source_data import (
     get_source_data_from_widget,
 )
 from insights.core.filters import get_filters_from_query_params
+from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 
 from .serializers import (
     DashboardEditSerializer,
@@ -280,11 +281,21 @@ class DashboardViewSet(
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
         filters = get_filters_from_query_params(request.query_params)
+
         data = service.csat_score_by_agents(
             user_request=request.user.email, filters=filters
         )
 
-        return Response(data, status=status.HTTP_200_OK)
+        pagination_urls = get_cursor_based_pagination_urls(request, data)
+        response_data = {
+            "results": data.get("results", []),
+            "pagination": {
+                "next": pagination_urls.next_url,
+                "previous": pagination_urls.previous_url,
+            },
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"])
     def create_flows_dashboard(self, request, pk=None):
