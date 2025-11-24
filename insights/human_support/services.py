@@ -921,8 +921,10 @@ class HumanSupportDashboardService:
         """
         Return the csat score by agents.
         """
+        print("[csat_score_by_agents] filters", filters)
         normalized_filters = self._normalize_filters(filters) or {}
         normalized_filters["user_request"] = user_request
+        print("[csat_score_by_agents] normalized_filters", normalized_filters)
 
         if not normalized_filters.get("start_date") and not normalized_filters.get(
             "end_date"

@@ -302,6 +302,7 @@ class DashboardViewSet(
     def monitoring_csat_totals(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
+        print(f"[monitoring_csat_totals] request.query_params: {request.query_params}")
         data = service.csat_score_by_agents(
             user_request=request.user.email, filters=request.query_params
         )
