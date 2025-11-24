@@ -29,6 +29,7 @@ from insights.widgets.usecases.get_source_data import (
     get_source_data_from_widget,
 )
 from insights.core.filters import get_filters_from_query_params
+from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 
 from insights.human_support.services import HumanSupportDashboardService
 from insights.core.filters import get_filters_from_query_params
@@ -306,11 +307,22 @@ class DashboardViewSet(
         print(f"[monitoring_csat_totals] request.query_params: {request.query_params}")
         filters = get_filters_from_query_params(request.query_params)
         print(f"[monitoring_csat_totals] filters: {filters}")
+
         data = service.csat_score_by_agents(
             user_request=request.user.email, filters=filters
         )
 
-        return Response(data, status=status.HTTP_200_OK)
+        pagination_urls = get_cursor_based_pagination_urls(request, data)
+        print(f"[monitoring_csat_totals] pagination_urls: {pagination_urls}")
+        response_data = {
+            "results": data.get("results", []),
+            "pagination": {
+                "next": pagination_urls.next_url,
+                "previous": pagination_urls.previous_url,
+            },
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"])
     def create_flows_dashboard(self, request, pk=None):
