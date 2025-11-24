@@ -556,10 +556,25 @@ class HumanSupportDashboardService:
         return client.list(params)
 
     def get_csat_ratings(self, filters: dict | None = None) -> dict:
+        filters_mapping = {
+            "sectors": "sectors",
+            "queues": "queues",
+            "tags": "tags",
+            "start_date": "start_date",
+            "end_date": "end_date",
+        }
+
         normalized_filters = self._normalize_filters(filters)
 
+        params = {}
+
+        for filter_key, filter_value in filters_mapping.items():
+            value = normalized_filters.get(filter_key)
+            if value:
+                params[filter_value] = value
+
         ratings_from_chats = self.chats_client.csat_ratings(
-            project_uuid=str(self.project.uuid), params=normalized_filters
+            project_uuid=str(self.project.uuid), params=params
         )
         ratings_data = {
             str(rating): {"value": 0, "full_value": 0} for rating in range(1, 6)
