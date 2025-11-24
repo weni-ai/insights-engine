@@ -4,7 +4,6 @@ import uuid
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
-    SubtopicTopicRelation,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import ConversationType
@@ -51,7 +50,7 @@ class MockDatalakeConversationsMetricsService(BaseConversationsMetricsService):
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
-        subtopics: list[SubtopicTopicRelation],
+        current_topics_data: dict,
         output_language: str = "en",
     ) -> TopicsDistributionMetrics:
         return {

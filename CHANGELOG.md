@@ -1,5 +1,47 @@
+# 1.2.6
+# Fix
+ - change analysis peak human timeseries query to use hour instead of date
+
+# 1.2.5
+# Refactor
+  - reduce topics distribution method complexity
+
+# 1.2.4
+# Add
+  - v2 version of new human dashboard
+
+# 1.2.3
+# Fix
+  - subtopics unclassified count
+
+# 1.2.2
+# Fix
+  - conversations elasticsearch flowruns response
+
+# 1.2.1
+# Fix
+  - fetch elasticsearch with serializable project UUID and convert datetime
+
+# 1.2.0
+# Add
+  - sending conversations dashboard report link instead of attaching files to the email
+
+# 1.1.6
+# Fix
+  - conversations dashboard report service date conversion to ISO format
+  when fetching events from the datalake
+
+# 1.1.5
+# Fix
+  - add conversations dashboards report page limit environment variables
+
+# 1.1.4
+# Add
+  - conversations dashboard report email's template
+
 # 1.1.3
-  - remove formatting date logs and sentry exceptions
+# Remove
+  - formatting date logs and sentry exceptions
 
 # 1.1.2
 # Add
