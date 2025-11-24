@@ -26,6 +26,7 @@ from insights.widgets.models import Report, Widget
 from insights.widgets.usecases.get_source_data import (
     get_source_data_from_widget,
 )
+from insights.core.filters import get_filters_from_query_params
 
 from .serializers import (
     DashboardEditSerializer,
@@ -278,8 +279,9 @@ class DashboardViewSet(
     def monitoring_csat_totals(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
         data = service.csat_score_by_agents(
-            user_request=request.user.email, filters=request.query_params
+            user_request=request.user.email, filters=filters
         )
 
         return Response(data, status=status.HTTP_200_OK)
