@@ -655,6 +655,24 @@ class HumanSupportDashboardService:
 
         normalized_filters = self._normalize_filters(filters)
 
+        if (
+            "start_date" not in normalized_filters
+            and "end_date" not in normalized_filters
+        ):
+            project_timezone = (
+                pytz.timezone(self.project.timezone)
+                if self.project.timezone
+                else pytz.UTC
+            )
+
+            today = dj_timezone.now().astimezone(project_timezone).date()
+            normalized_filters["start_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.min.time())
+            )
+            normalized_filters["end_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.max.time())
+            )
+
         params = {}
 
         for filter_key, filter_value in filters_mapping.items():
