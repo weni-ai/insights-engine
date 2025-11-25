@@ -294,6 +294,7 @@ class DashboardViewSet(
         pagination_urls = get_cursor_based_pagination_urls(request, data)
         response_data = {
             "results": data.get("results", []),
+            "general": data.get("general", {}),
             "next": pagination_urls.next_url,
             "previous": pagination_urls.previous_url,
         }
