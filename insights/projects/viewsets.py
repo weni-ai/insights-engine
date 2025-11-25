@@ -17,6 +17,7 @@ from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import ProjectSerializer
 from insights.shared.viewsets import get_source
+from insights.sources.chats.clients import ChatsRESTClient
 from insights.sources.rooms.usecases.query_execute import (
     QueryExecutor as RoomsQueryExecutor,
 )
@@ -327,3 +328,17 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 {"detail": "Failed to retrieve ticket IDs"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="verify_csat",
+    )
+    def verify_csat(self, request, *args, **kwargs):
+        project = self.get_object()
+        chats_client = ChatsRESTClient()
+
+        project_data = chats_client.get_project(str(project.uuid))
+        is_csat_enabled = project_data.get("is_csat_enabled", False)
+
+        return Response(is_csat_enabled, status=status.HTTP_200_OK)
