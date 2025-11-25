@@ -856,6 +856,7 @@ class HumanSupportDashboardService:
                     "first_response_time": room.get("first_response_time"),
                     "duration": room.get("duration"),
                     "ended_at": room.get("ended_at"),
+                    "csat_rating": room.get("csat_rating"),
                     "link": room.get("link"),
                 }
             )
