@@ -61,9 +61,9 @@ class DashboardViewSet(
             "monitoring_list_status",
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
+            "monitoring_csat_score_by_agents",
             "finished",
             "analysis_finished_rooms_status",
-            "monitoring_csat_score_by_agents",
             "analysis_peaks_in_human_service",
         ]:
             return [
@@ -316,6 +316,7 @@ class DashboardViewSet(
         print(f"[monitoring_csat_totals] pagination_urls: {pagination_urls}")
         response_data = {
             "results": data.get("results", []),
+            "general": data.get("general", {}),
             "next": pagination_urls.next_url,
             "previous": pagination_urls.previous_url,
         }
