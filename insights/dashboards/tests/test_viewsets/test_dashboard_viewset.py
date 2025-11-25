@@ -596,7 +596,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
 
     @with_project_auth
     @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
-    def test_get_monitoring_csat_totals(self, MockHumanSupportDashboardService):
+    def test_get_analysis_csat_totals(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.csat_score_by_agents.return_value = {
             "general": {"rooms": 0, "reviews": 0, "avg_rating": None},
@@ -615,7 +615,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         dashboard = Dashboard.objects.create(
             name="Test Dashboard", project=self.project
         )
-        response = self.monitoring_csat_totals(
+        response = self.analysis_csat_totals(
             str(dashboard.uuid),
             {
                 "start_date": "2025-11-01",
