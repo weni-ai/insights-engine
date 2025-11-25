@@ -440,3 +440,27 @@ class DashboardViewSet(
         filters = {key: value for key, value in request.query_params.items()}
         results = service.get_analysis_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/csat/totals",
+    )
+    def analysis_csat_totals(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+
+        data = service.csat_score_by_agents(
+            user_request=request.user.email, filters=filters
+        )
+
+        pagination_urls = get_cursor_based_pagination_urls(request, data)
+        response_data = {
+            "results": data.get("results", []),
+            "general": data.get("general", {}),
+            "next": pagination_urls.next_url,
+            "previous": pagination_urls.previous_url,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
