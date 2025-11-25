@@ -2,7 +2,7 @@ from django.utils.translation import gettext_lazy as _
 
 
 from rest_framework.views import APIView
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -16,6 +16,8 @@ from insights.metrics.conversations.reports.permissions import (
 )
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.reports.serializers import (
+    AvailableReportWidgetsQueryParamsSerializer,
+    AvailableReportWidgetsResponseSerializer,
     GetConversationsReportStatusQueryParamsSerializer,
     GetConversationsReportStatusResponseSerializer,
     RequestConversationsReportGenerationSerializer,
@@ -71,13 +73,34 @@ class ConversationsReportsViewSet(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = RequestConversationsReportGenerationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except serializers.ValidationError as e:
+            if e.detail.get("error"):
+                error = e.detail.get("error")
+
+                if isinstance(error, list):
+                    error = error[0]
+
+                return Response(
+                    {"error": error},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            else:
+                return Response(
+                    e.detail,
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         if self.service.get_current_report_for_project(
             serializer.validated_data["project"]
         ):
             return Response(
-                {"error": _("A report is already being generated for this project")},
+                {
+                    "concurrent_report": _(
+                        "There is another report being processed for this project"
+                    )
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -112,3 +135,27 @@ class ConversationsReportsViewSet(APIView):
             GetConversationsReportStatusResponseSerializer(instance=report).data,
             status=status.HTTP_202_ACCEPTED,
         )
+
+
+class AvailableWidgetsViewSet(APIView):
+    service = ConversationsReportService(
+        elasticsearch_service=ConversationsElasticsearchService(
+            client=MockElasticsearchClient(),
+        ),
+        datalake_events_client=DataLakeEventsClient(),
+        metrics_service=ConversationsMetricsService(),
+        cache_client=CacheClient(),
+    )
+
+    permission_classes = [IsAuthenticated, CanCheckReportGenerationStatusPermission]
+
+    def get(self, request: Request) -> Response:
+        query_params = AvailableReportWidgetsQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+        widgets = self.service.get_available_widgets(
+            project=query_params.validated_data["project"]
+        )
+
+        return Response(AvailableReportWidgetsResponseSerializer(instance=widgets).data)

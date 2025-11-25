@@ -1189,10 +1189,23 @@ class TestConversationsReportServiceAdditional(TestCase):
             status=ReportStatus.PENDING,
         )
 
-        with self.assertRaises(ValueError) as context:
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
+        ) as mock_send_email:
+            mock_send_email.return_value = None
+
             self.service.generate(report)
 
-        self.assertIn("Start date or end date is missing", str(context.exception))
+            # Check that error email was sent
+            mock_send_email.assert_called_once()
+            call_args = mock_send_email.call_args
+            self.assertEqual(
+                call_args[0][0], report
+            )  # First argument should be the report
+            self.assertEqual(
+                call_args[0][1], []
+            )  # Second argument should be empty files list
+            self.assertTrue(call_args[1]["is_error"])  # is_error should be True
 
     def test_generate_with_missing_end_date(self):
         """Test generate method with missing end date."""
@@ -1206,10 +1219,23 @@ class TestConversationsReportServiceAdditional(TestCase):
             status=ReportStatus.PENDING,
         )
 
-        with self.assertRaises(ValueError) as context:
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
+        ) as mock_send_email:
+            mock_send_email.return_value = None
+
             self.service.generate(report)
 
-        self.assertIn("Start date or end date is missing", str(context.exception))
+            # Check that error email was sent
+            mock_send_email.assert_called_once()
+            call_args = mock_send_email.call_args
+            self.assertEqual(
+                call_args[0][0], report
+            )  # First argument should be the report
+            self.assertEqual(
+                call_args[0][1], []
+            )  # Second argument should be empty files list
+            self.assertTrue(call_args[1]["is_error"])  # is_error should be True
 
     def test_generate_with_interrupted_report(self):
         """Test generate method with interrupted report."""
@@ -1252,8 +1278,23 @@ class TestConversationsReportServiceAdditional(TestCase):
         ) as mock_get_resolutions:
             mock_get_resolutions.side_effect = Exception("Test error")
 
-            with self.assertRaises(Exception):
+            with patch(
+                "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
+            ) as mock_send_email:
+                mock_send_email.return_value = None
+
                 self.service.generate(report)
+
+                # Check that error email was sent
+                mock_send_email.assert_called_once()
+                call_args = mock_send_email.call_args
+                self.assertEqual(
+                    call_args[0][0], report
+                )  # First argument should be the report
+                self.assertEqual(
+                    call_args[0][1], []
+                )  # Second argument should be empty files list
+                self.assertTrue(call_args[1]["is_error"])  # is_error should be True
 
             report.refresh_from_db()
             self.assertEqual(report.status, ReportStatus.FAILED)
@@ -1391,6 +1432,13 @@ class TestConversationsReportServiceAdditional(TestCase):
         result = self.service._format_date("2025-01-01T12:00:00.000000Z", report)
         self.assertIn("01/01/2025", result)
 
+        # Test with timestamp in milliseconds
+        result = self.service._format_date(1759965431207, report)
+        self.assertIn("08/10/2025", result)
+
+        result = self.service._format_date(1759965431, report)
+        self.assertIn("08/10/2025", result)
+
     def test_format_date_with_invalid_format(self):
         """Test _format_date with invalid date format."""
         report = Report.objects.create(
@@ -1402,8 +1450,10 @@ class TestConversationsReportServiceAdditional(TestCase):
             requested_by=self.user,
         )
 
-        with self.assertRaises(Exception):
-            self.service._format_date("invalid-date", report)
+        result = self.service._format_date("invalid-date", report)
+
+        # Fallback to original date
+        self.assertEqual(result, "invalid-date")
 
     def test_get_resolutions_worksheet_with_no_events(self):
         """Test get_resolutions_worksheet with no events."""
@@ -2163,3 +2213,274 @@ class TestConversationsReportServiceAdditional(TestCase):
         )
 
         self.assertEqual(results, [])
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_basic_only(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with only basic widgets (no special widgets)."""
+        # Mock all special widget functions to return None
+        mock_get_csat_ai_widget.return_value = None
+        mock_get_nps_ai_widget.return_value = None
+        mock_get_csat_human_widget.return_value = None
+        mock_get_nps_human_widget.return_value = None
+        mock_get_custom_widgets.return_value = []
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should only contain basic widgets
+        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(result.custom_widgets, [])
+
+        # Verify all special widget functions were called
+        mock_get_csat_ai_widget.assert_called_once_with(self.project)
+        mock_get_nps_ai_widget.assert_called_once_with(self.project)
+        mock_get_csat_human_widget.assert_called_once_with(self.project)
+        mock_get_nps_human_widget.assert_called_once_with(self.project)
+        mock_get_custom_widgets.assert_called_once_with(self.project)
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_with_special_widgets(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with special widgets available."""
+        # Mock special widget functions to return mock widgets
+        mock_csat_ai_widget = Widget.objects.create(
+            name="CSAT AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.csat",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        mock_nps_ai_widget = Widget.objects.create(
+            name="NPS AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.nps",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        mock_csat_human_widget = Widget.objects.create(
+            name="CSAT Human Widget",
+            config={
+                "type": "flow_result",
+                "filter": {"flow": "test-flow"},
+                "op_field": "test_field",
+            },
+            source="conversations.csat",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        mock_nps_human_widget = Widget.objects.create(
+            name="NPS Human Widget",
+            config={
+                "type": "flow_result",
+                "filter": {"flow": "test-flow"},
+                "op_field": "test_field",
+            },
+            source="conversations.nps",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
+        mock_get_nps_ai_widget.return_value = mock_nps_ai_widget
+        mock_get_csat_human_widget.return_value = mock_csat_human_widget
+        mock_get_nps_human_widget.return_value = mock_nps_human_widget
+        mock_get_custom_widgets.return_value = []
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should contain basic widgets plus special widgets
+        expected_sections = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+            "CSAT_AI",
+            "CSAT_HUMAN",
+            "NPS_AI",
+            "NPS_HUMAN",
+        ]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(result.custom_widgets, [])
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_with_custom_widgets(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with custom widgets available."""
+        # Mock special widget functions to return None
+        mock_get_csat_ai_widget.return_value = None
+        mock_get_nps_ai_widget.return_value = None
+        mock_get_csat_human_widget.return_value = None
+        mock_get_nps_human_widget.return_value = None
+
+        # Create custom widgets
+        custom_widget1 = Widget.objects.create(
+            name="Custom Widget 1",
+            config={"datalake_config": {"key": "test1", "agent_uuid": "test-uuid"}},
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        custom_widget2 = Widget.objects.create(
+            name="Custom Widget 2",
+            config={"datalake_config": {"key": "test2", "agent_uuid": "test-uuid"}},
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_custom_widgets.return_value = [
+            custom_widget1.uuid,
+            custom_widget2.uuid,
+        ]
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should contain basic widgets and custom widgets
+        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(
+            result.custom_widgets, [custom_widget1.uuid, custom_widget2.uuid]
+        )
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_combined(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with all types of widgets available."""
+        # Mock special widget functions to return mock widgets
+        mock_csat_ai_widget = Widget.objects.create(
+            name="CSAT AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.csat",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        mock_nps_ai_widget = Widget.objects.create(
+            name="NPS AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.nps",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
+        mock_get_nps_ai_widget.return_value = mock_nps_ai_widget
+        mock_get_csat_human_widget.return_value = None
+        mock_get_nps_human_widget.return_value = None
+
+        # Create custom widgets
+        custom_widget = Widget.objects.create(
+            name="Custom Widget",
+            config={"datalake_config": {"key": "test", "agent_uuid": "test-uuid"}},
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_custom_widgets.return_value = [custom_widget.uuid]
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should contain basic widgets, some special widgets, and custom widgets
+        expected_sections = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+            "CSAT_AI",
+            "NPS_AI",
+        ]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(result.custom_widgets, [custom_widget.uuid])
+
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_partial_special_widgets(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+    ):
+        """Test get_available_widgets with only some special widgets available."""
+        # Mock only some special widget functions to return widgets
+        mock_csat_ai_widget = Widget.objects.create(
+            name="CSAT AI Widget",
+            config={"datalake_config": {"agent_uuid": "test-uuid"}},
+            source="conversations.csat",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
+        mock_get_nps_ai_widget.return_value = None
+        mock_get_csat_human_widget.return_value = None
+        mock_get_nps_human_widget.return_value = None
+        mock_get_custom_widgets.return_value = []
+
+        result = self.service.get_available_widgets(self.project)
+
+        # Should contain basic widgets plus only CSAT_AI
+        expected_sections = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+            "CSAT_AI",
+        ]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(result.custom_widgets, [])

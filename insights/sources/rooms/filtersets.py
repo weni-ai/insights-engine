@@ -65,6 +65,10 @@ class RoomFilterSet:
         source_field="is_active",
         table_alias="r",
     )
+    protocol = GenericSQLFilter(
+        source_field="protocol",
+        table_alias="r",
+    )
 
     def get_field(self, field_name):
         try:

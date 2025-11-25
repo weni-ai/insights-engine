@@ -6,11 +6,17 @@ from rest_framework import serializers
 
 from django.utils.translation import gettext_lazy as _
 
+from insights.metrics.conversations.reports.available_widgets import (
+    get_csat_ai_widget,
+    get_csat_human_widget,
+    get_custom_widgets,
+    get_nps_ai_widget,
+    get_nps_human_widget,
+)
 from insights.reports.choices import ReportFormat
 from insights.reports.models import Report
 from insights.metrics.conversations.reports.choices import ConversationsReportSections
 from insights.projects.models import Project
-from insights.widgets.models import Widget
 from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 
 
@@ -66,7 +72,7 @@ class RequestConversationsReportGenerationSerializer(
 
         if attrs["start_date"] > attrs["end_date"]:
             raise serializers.ValidationError(
-                {"start_date": [_("Start date must be before end date")]},
+                {"error": _("Start date must be before end date")},
                 code="start_date_after_end_date",
             )
 
@@ -74,29 +80,27 @@ class RequestConversationsReportGenerationSerializer(
             "custom_widgets" not in attrs or not attrs["custom_widgets"]
         ):
             raise serializers.ValidationError(
-                {
-                    "sections": [_("Sections or custom widgets are required")],
-                    "custom_widgets": [_("Sections or custom widgets are required")],
-                },
+                {"error": _("Sections or custom widgets are required")},
                 code="sections_or_custom_widgets_required",
             )
 
-        project_widgets = Widget.objects.filter(
-            dashboard__project=attrs["project"]
-        ).values_list("uuid", flat=True)
+        project_custom_widgets_uuids = get_custom_widgets(attrs["project"])
 
         if "custom_widgets" in attrs and attrs["custom_widgets"]:
-            not_found_widgets = set(attrs["custom_widgets"]) - set(project_widgets)
+            not_found_widgets = set(attrs["custom_widgets"]) - set(
+                project_custom_widgets_uuids
+            )
 
             if not_found_widgets:
                 raise serializers.ValidationError(
                     {
-                        "custom_widgets": [
-                            _("Widget {widget_uuid} not found").format(
-                                widget_uuid=widget_uuid
-                            )
-                            for widget_uuid in not_found_widgets
-                        ]
+                        "error": ",".join(
+                            [
+                                _("Widget %(widget_uuid)s not found")
+                                % {"widget_uuid": widget_uuid}
+                                for widget_uuid in not_found_widgets
+                            ]
+                        ),
                     },
                     code="widgets_not_found",
                 )
@@ -110,21 +114,21 @@ class RequestConversationsReportGenerationSerializer(
 
         if not dashboards_uuids:
             raise serializers.ValidationError(
-                {"sections": [_("Conversations dashboard not found")]},
+                {"error": _("Conversations dashboard not found")},
                 code="conversations_dashboard_not_found",
             )
 
         if sections:
             if "CSAT_AI" in sections:
-                widget = Widget.objects.filter(
-                    dashboard__uuid=dashboards_uuids[0],
-                    source="conversations.csat",
-                    config__datalake_config__type__iexact="CSAT",
-                ).first()
+                widget = get_csat_ai_widget(attrs["project"])
 
                 if not widget:
                     raise serializers.ValidationError(
-                        {"sections": [_("CSAT AI widget not found")]},
+                        {
+                            "error": _(
+                                "CSAT AI widget not found or not configured correctly"
+                            )
+                        },
                         code="csat_ai_widget_not_found",
                     )
 
@@ -132,22 +136,22 @@ class RequestConversationsReportGenerationSerializer(
 
                 if not agent_uuid:
                     raise serializers.ValidationError(
-                        {"sections": [_("Agent UUID not found in widget config")]},
+                        {"error": _("Agent UUID not found in widget config")},
                         code="agent_uuid_not_found_in_widget_config",
                     )
 
                 attrs["source_config"]["csat_ai_agent_uuid"] = agent_uuid
 
             if "NPS_AI" in sections:
-                widget = Widget.objects.filter(
-                    dashboard__uuid=dashboards_uuids[0],
-                    source="conversations.nps",
-                    config__datalake_config__type__iexact="NPS",
-                ).first()
+                widget = get_nps_ai_widget(attrs["project"])
 
                 if not widget:
                     raise serializers.ValidationError(
-                        {"sections": [_("NPS AI widget not found")]},
+                        {
+                            "error": _(
+                                "NPS AI widget not found or not configured correctly"
+                            )
+                        },
                         code="nps_ai_widget_not_found",
                     )
 
@@ -155,22 +159,22 @@ class RequestConversationsReportGenerationSerializer(
 
                 if not agent_uuid:
                     raise serializers.ValidationError(
-                        {"sections": [_("Agent UUID not found in widget config")]},
+                        {"error": _("Agent UUID not found in widget config")},
                         code="agent_uuid_not_found_in_widget_config",
                     )
 
                 attrs["source_config"]["nps_ai_agent_uuid"] = agent_uuid
 
             if "CSAT_HUMAN" in sections:
-                widget = Widget.objects.filter(
-                    dashboard__uuid=dashboards_uuids[0],
-                    source="conversations.csat",
-                    config__type="flow_result",
-                ).first()
+                widget = get_csat_human_widget(attrs["project"])
 
                 if not widget:
                     raise serializers.ValidationError(
-                        {"sections": [_("CSAT human widget not found")]},
+                        {
+                            "error": _(
+                                "CSAT human widget not found or not configured correctly"
+                            )
+                        },
                         code="csat_human_widget_not_found",
                     )
 
@@ -179,13 +183,13 @@ class RequestConversationsReportGenerationSerializer(
 
                 if not csat_human_flow_uuid:
                     raise serializers.ValidationError(
-                        {"sections": [_("Flow UUID not found in widget config")]},
+                        {"error": _("Flow UUID not found in widget config")},
                         code="flow_uuid_not_found_in_widget_config",
                     )
 
                 if not csat_human_op_field:
                     raise serializers.ValidationError(
-                        {"sections": [_("Op field not found in widget config")]},
+                        {"error": _("Op field not found in widget config")},
                         code="op_field_not_found_in_widget_config",
                     )
 
@@ -193,15 +197,15 @@ class RequestConversationsReportGenerationSerializer(
                 attrs["source_config"]["csat_human_op_field"] = csat_human_op_field
 
             if "NPS_HUMAN" in sections:
-                widget = Widget.objects.filter(
-                    dashboard__uuid=dashboards_uuids[0],
-                    source="conversations.nps",
-                    config__type="flow_result",
-                ).first()
+                widget = get_nps_human_widget(attrs["project"])
 
                 if not widget:
                     raise serializers.ValidationError(
-                        {"sections": [_("NPS human widget not found")]},
+                        {
+                            "error": _(
+                                "NPS human widget not found or not configured correctly"
+                            )
+                        },
                         code="nps_human_widget_not_found",
                     )
 
@@ -210,13 +214,13 @@ class RequestConversationsReportGenerationSerializer(
 
                 if not nps_human_flow_uuid:
                     raise serializers.ValidationError(
-                        {"sections": [_("Flow UUID not found in widget config")]},
+                        {"error": _("Flow UUID not found in widget config")},
                         code="flow_uuid_not_found_in_widget_config",
                     )
 
                 if not nps_human_op_field:
                     raise serializers.ValidationError(
-                        {"sections": [_("Op field not found in widget config")]},
+                        {"error": _("Op field not found in widget config")},
                         code="op_field_not_found_in_widget_config",
                     )
 
@@ -247,3 +251,14 @@ class GetConversationsReportStatusResponseSerializer(serializers.ModelSerializer
     class Meta:
         model = Report
         fields = ["email", "report_uuid", "status"]
+
+
+class AvailableReportWidgetsQueryParamsSerializer(
+    BaseConversationsReportParamsSerializer
+):
+    pass
+
+
+class AvailableReportWidgetsResponseSerializer(serializers.Serializer):
+    sections = serializers.ListField(child=serializers.CharField())
+    custom_widgets = serializers.ListField(child=serializers.UUIDField())

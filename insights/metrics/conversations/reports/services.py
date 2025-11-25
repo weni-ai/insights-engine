@@ -7,16 +7,29 @@ import xlsxwriter
 import logging
 from abc import ABC, abstractmethod
 import pytz
+import zipfile
+import boto3
+import uuid
 
+from django.utils.crypto import get_random_string
 from django.core.mail import EmailMessage
 from django.conf import settings
+from django.template.loader import render_to_string
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.reports.available_widgets import (
+    get_csat_ai_widget,
+    get_csat_human_widget,
+    get_custom_widgets,
+    get_nps_ai_widget,
+    get_nps_human_widget,
+)
 from insights.metrics.conversations.reports.dataclass import (
+    AvailableReportWidgets,
     ConversationsReportFile,
     ConversationsReportWorksheet,
 )
@@ -94,6 +107,22 @@ class BaseConversationsReportService(ABC):
     ) -> list[ConversationsReportFile]:
         """
         Process the xlsx for the conversations report.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def zip_files(
+        self, files: list[ConversationsReportFile]
+    ) -> ConversationsReportFile:
+        """
+        Zip the files into a single file.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def upload_file_to_s3(self, file: ConversationsReportFile) -> str:
+        """
+        Upload the file to S3.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -376,35 +405,145 @@ class ConversationsReportService(BaseConversationsReportService):
             ConversationsReportFile(name=f"{file_name}.xlsx", content=output.getvalue())
         ]
 
-    def send_email(self, report: Report, files: list[ConversationsReportFile]) -> None:
+    def zip_files(
+        self, files: list[ConversationsReportFile]
+    ) -> ConversationsReportFile:
+        """
+        Zip the files into a single file.
+        """
+        names_used = set()
+
+        with io.BytesIO() as zip_buffer:
+            with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+                for file in files:
+                    name = file.name
+
+                    if name in names_used:
+                        max_attempts = 10
+                        resolved = False
+
+                        for attempt in range(max_attempts):
+                            random_str = get_random_string(5)
+
+                            candidate_name = f"{random_str}_{name}"
+
+                            if candidate_name not in names_used:
+                                name = candidate_name
+                                resolved = True
+                                break
+
+                        if not resolved:
+                            raise ValueError("Failed to generate a unique name")
+
+                    names_used.add(name)
+                    zip_file.writestr(name, file.content)
+
+            zip_content = zip_buffer.getvalue()
+
+        return ConversationsReportFile(
+            name="conversations_report.zip", content=zip_content
+        )
+
+    def upload_file_to_s3(self, file: ConversationsReportFile):
+        """
+        Upload the file to S3.
+        """
+        s3 = boto3.client("s3")
+        extension = file.name.split(".")[-1]
+        obj_key = f"reports/conversations/{str(uuid.uuid4())}.{extension}"
+
+        # Wrap content in BytesIO to make it file-like
+        file_obj = io.BytesIO(file.content)
+
+        s3.upload_fileobj(
+            file_obj,
+            settings.S3_BUCKET_NAME,
+            obj_key,
+        )
+
+        return obj_key
+
+    def get_presigned_url(self, obj_key: str) -> str:
+        """
+        Get the presigned url for the file.
+        """
+        s3 = boto3.client("s3")
+
+        return s3.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": settings.S3_BUCKET_NAME, "Key": obj_key},
+            ExpiresIn=settings.CONVERSATIONS_REPORT_PRESIGNED_URL_EXPIRATION_TIME,
+        )
+
+    def send_email(
+        self,
+        report: Report,
+        files: list[ConversationsReportFile],
+        is_error: bool = False,
+        event_id: str | None = None,
+    ) -> None:
         """
         Send the email for the conversations report.
         """
-        with translation.override(report.requested_by.language):
-            subject = _("Conversations dashboard report")
-            body = _(
-                "Your conversations dashboard report is ready and attached to this email."
-            )
+        try:
+            with translation.override(report.requested_by.language):
+                subject = _("Conversations dashboard report")
 
-            email = EmailMessage(
-                subject=subject,
-                body=body,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[report.requested_by.email],
-            )
+                if len(files) > 1:
+                    reports_file = self.zip_files(files)
+                elif len(files) == 1:
+                    reports_file = files[0]
+                else:
+                    reports_file = None
 
-            for file in files:
-                email.attach(
-                    file.name,
-                    file.content,
-                    (
-                        "application/csv"
-                        if report.format == ReportFormat.CSV
-                        else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    ),
+                file_link = None
+
+                if reports_file and settings.USE_S3:
+                    obj_key = self.upload_file_to_s3(reports_file)
+                    file_link = self.get_presigned_url(obj_key)
+                    reports_file = None
+
+                if is_error:
+                    body = render_to_string(
+                        "metrics/conversations/emails/report_failed.html",
+                        {
+                            "project_name": report.project.name,
+                            "event_id": event_id,
+                        },
+                    )
+                else:
+                    body = render_to_string(
+                        "metrics/conversations/emails/report_is_ready.html",
+                        {
+                            "project_name": report.project.name,
+                            "file_link": file_link,
+                        },
+                    )
+
+                email = EmailMessage(
+                    subject=subject,
+                    body=body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[report.requested_by.email],
                 )
+                email.content_subtype = "html"
 
-            email.send(fail_silently=False)
+                if reports_file and not settings.USE_S3:
+                    email.attach(
+                        reports_file.name,
+                        reports_file.content,
+                        "application/zip",
+                    )
+
+                email.send(fail_silently=False)
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Failed to send email for conversations report %s. Error: %s",
+                report.uuid,
+                e,
+            )
+
+            return None
 
     def request_generation(
         self,
@@ -612,7 +751,12 @@ class ConversationsReportService(BaseConversationsReportService):
             report.errors = errors
             report.save(update_fields=["status", "completed_at", "errors"])
             self._clear_cache_keys(report.uuid)
-            raise e
+
+            event_id = capture_exception(e)
+
+            self.send_email(report, [], is_error=True, event_id=event_id)
+
+            return None
 
         report.refresh_from_db(fields=["config"])
 
@@ -720,6 +864,15 @@ class ConversationsReportService(BaseConversationsReportService):
         current_page = 1
         page_limit = self.page_limit
 
+        date_start = kwargs.get("date_start")
+        date_end = kwargs.get("date_end")
+
+        if date_start and isinstance(date_start, datetime):
+            kwargs["date_start"] = date_start.isoformat()
+
+        if date_end and isinstance(date_end, datetime):
+            kwargs["date_end"] = date_end.isoformat()
+
         while True:
             if current_page >= page_limit:
                 logger.error(
@@ -766,7 +919,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def _format_date(self, date_str: str, report: Report) -> str:
+    def _format_date(self, original_date: str | int, report: Report) -> str:
         """
         Format the date.
         """
@@ -774,44 +927,41 @@ class ConversationsReportService(BaseConversationsReportService):
 
         datetime_date = None
 
+        if isinstance(original_date, int):
+            if len(str(original_date)) == 13:
+                # If the date is in milliseconds, convert it to seconds
+                original_date = original_date // 1000
+
+            try:
+                datetime_date = datetime.fromtimestamp(original_date)
+            except Exception:
+                pass
+
         for _format in formats:
             try:
-                datetime_date = datetime.strptime(date_str, _format)
+                datetime_date = datetime.strptime(original_date, _format)
                 break
-            except Exception as e:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
-                    % (
-                        date_str,
-                        report.uuid,
-                        e,
-                    ),
-                )
-                capture_exception(e)
+            except Exception:
                 continue
 
         if not datetime_date:
             try:
-                datetime_date = datetime.fromisoformat(date_str)
-            except Exception as e:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Failed to format date %s for report %s. Error: %s"
-                    % (
-                        date_str,
-                        report.uuid,
-                        e,
-                    ),
-                )
-                capture_exception(e)
-                raise e
+                datetime_date = datetime.fromisoformat(original_date)
+            except Exception:
+                pass
 
-        tz_name = report.project.timezone
+        if datetime_date:
+            tz_name = report.project.timezone
 
-        if tz_name:
-            tz = pytz.timezone(tz_name)
-            datetime_date = datetime_date.astimezone(tz)
+            if tz_name:
+                tz = pytz.timezone(tz_name)
+                datetime_date = datetime_date.astimezone(tz)
 
-        return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
+            return datetime_date.strftime("%d/%m/%Y %H:%M:%S")
+
+        # Return the original date as a fallback
+        # if everything fails
+        return str(original_date)
 
     def get_flowsrun_results_by_contacts(
         self,
@@ -911,6 +1061,7 @@ class ConversationsReportService(BaseConversationsReportService):
             date_end=end_date,
             event_name="weni_nexus_data",
             key="conversation_classification",
+            table="conversation_classification",
         )
 
         with override(report.requested_by.language):
@@ -982,14 +1133,14 @@ class ConversationsReportService(BaseConversationsReportService):
                 date_end=end_date,
                 event_name="weni_nexus_data",
                 key="conversation_classification",
+                table="conversation_classification",
+                metadata_key="human_support",
+                metadata_value="true",
             )
 
         with override(report.requested_by.language):
             worksheet_name = gettext("Transferred to Human")
 
-            transferred_to_human_label = gettext("Transferred to Human")
-            yes_label = gettext("Yes")
-            no_label = gettext("No")
             date_label = gettext("Date")
 
         if len(events) == 0:
@@ -1001,13 +1152,9 @@ class ConversationsReportService(BaseConversationsReportService):
         data = []
 
         for event in events:
-            metadata = json.loads(event.get("metadata"))
             data.append(
                 {
                     "URN": event.get("contact_urn", ""),
-                    transferred_to_human_label: (
-                        yes_label if metadata.get("human_support", False) else no_label
-                    ),
                     date_label: (
                         self._format_date(event.get("date", ""), report)
                         if event.get("date")
@@ -1020,7 +1167,6 @@ class ConversationsReportService(BaseConversationsReportService):
             data = [
                 {
                     "URN": "",
-                    transferred_to_human_label: "",
                     date_label: "",
                 }
             ]
@@ -1075,6 +1221,7 @@ class ConversationsReportService(BaseConversationsReportService):
             key="topics",
             metadata_key="human_support",
             metadata_value=human_support,
+            table="topics",
         )
 
         with override(report.requested_by.language or "en"):
@@ -1171,6 +1318,7 @@ class ConversationsReportService(BaseConversationsReportService):
             metadata_value=agent_uuid,
             key="weni_csat",
             event_name="weni_nexus_data",
+            table="weni_csat",
         )
 
         with override(report.requested_by.language or "en"):
@@ -1229,6 +1377,7 @@ class ConversationsReportService(BaseConversationsReportService):
             metadata_value=agent_uuid,
             key="weni_nps",
             event_name="weni_nexus_data",
+            table="weni_nps",
         )
 
         with override(report.requested_by.language or "en"):
@@ -1461,4 +1610,33 @@ class ConversationsReportService(BaseConversationsReportService):
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
+        )
+
+    def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
+        """
+        Get available widgets.
+        """
+        available_widgets = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+        ]
+
+        special_widgets_get_functions = [
+            (get_csat_ai_widget, "CSAT_AI"),
+            (get_csat_human_widget, "CSAT_HUMAN"),
+            (get_nps_ai_widget, "NPS_AI"),
+            (get_nps_human_widget, "NPS_HUMAN"),
+        ]
+
+        for get_function, section in special_widgets_get_functions:
+            if get_function(project):
+                available_widgets.append(section)
+
+        custom_widgets = get_custom_widgets(project)
+
+        return AvailableReportWidgets(
+            sections=available_widgets,
+            custom_widgets=custom_widgets,
         )
