@@ -93,6 +93,11 @@ class BaseTestDashboardViewSet(APITestCase):
         url = reverse("dashboard-analysis-csat-ratings", kwargs={"pk": dashboard_uuid})
         return self.client.get(url, data)
 
+    def analysis_csat_totals(self, dashboard_uuid: str, data: dict) -> Response:
+        url = reverse("dashboard-analysis-csat-totals", kwargs={"pk": dashboard_uuid})
+
+        return self.client.get(url, data)
+
 
 class TestDashboardViewSetAsAnonymousUser(BaseTestDashboardViewSet):
     def test_cannot_list_dashboards_when_unauthenticated(self):
@@ -162,6 +167,11 @@ class TestDashboardViewSetAsAnonymousUser(BaseTestDashboardViewSet):
 
     def test_cannot_get_analysis_csat_ratings_when_unauthenticated(self):
         response = self.analysis_csat_ratings(uuid.uuid4(), {})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_analysis_csat_totals_when_unauthenticated(self):
+        response = self.analysis_csat_totals(uuid.uuid4(), {})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -720,3 +730,33 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
                 },
             },
         )
+
+    def test_get_analysis_csat_totals(self, MockHumanSupportDashboardService):
+        mock_service_instance = MockHumanSupportDashboardService.return_value
+        mock_service_instance.csat_score_by_agents.return_value = {
+            "general": {"rooms": 0, "reviews": 0, "avg_rating": None},
+            "next": None,
+            "previous": None,
+            "results": [
+                {
+                    "agent": {"name": "Test Agent", "email": "kallil@test.com"},
+                    "rooms": 0,
+                    "reviews": 0,
+                    "avg_rating": 0.0,
+                },
+            ],
+        }
+
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+
+        response = self.analysis_csat_totals(
+            str(dashboard.uuid),
+            {
+                "start_date": "2025-11-01",
+                "end_date": "2025-11-31",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
