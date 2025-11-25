@@ -442,7 +442,7 @@ class DashboardViewSet(
         methods=["get"],
         url_path="analysis/csat/ratings",
     )
-    def monitoring_csat_ratings(self, request, pk=None):
+    def analysis_csat_ratings(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
         results = service.get_csat_ratings(filters=request.query_params)
