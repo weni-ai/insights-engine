@@ -835,6 +835,13 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         """
         Get crosstab data from Datalake.
         """
+        logger.info(
+            "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting crosstab data for project %s with source A %s and source B %s",
+            project_uuid,
+            source_a.key,
+            source_b.key,
+        )
+
         cache_key = self._get_cache_key(
             data_type="crosstab_data",
             project_uuid=project_uuid,
@@ -847,6 +854,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         if self.cache_results and (
             cached_results := self._get_cached_results(cache_key)
         ):
+            logger.info(
+                "[DATALAKE CONVERSATIONS METRICS SERVICE] Returning crosstab cached data for project %s",
+                project_uuid,
+            )
             return cached_results
 
         common_kwargs = {
@@ -856,14 +867,48 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             "date_end": end_date,
         }
 
+        logger.info(
+            "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting source A events for project %s with source A %s",
+            project_uuid,
+            source_a.key,
+        )
         source_a_events = self.get_raw_events_data(
             key=source_a.key,
             **common_kwargs,
         )
 
+        logger.info(
+            "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting source B events for project %s with source B %s",
+            project_uuid,
+            source_b.key,
+        )
         source_b_events = self.get_raw_events_data(
             key=source_b.key,
             **common_kwargs,
         )
+
+        labels_for_source_a = set()
+        conversation_uuids_for_source_a = set()
+
+        for event in source_a_events:
+            try:
+                metadata = (
+                    json.loads(event.get("metadata")) if event.get("metadata") else {}
+                )
+            except Exception as e:
+                logger.error("Error on converting metadata to dict: %s", e)
+                continue
+
+            conversation_uuid = metadata.get("conversation_uuid")
+            conversation_uuids_for_source_a.add(conversation_uuid)
+
+            value = (
+                event.get("value")
+                if source_a.field == "value"
+                else metadata.get(source_a.field)
+            )
+
+            if value not in labels_for_source_a:
+                labels_for_source_a.add(value)
 
         # TODO
