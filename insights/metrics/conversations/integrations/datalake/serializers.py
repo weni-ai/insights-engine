@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+import json
+
+from insights.metrics.conversations.integrations.datalake.typing import EventDataType
 
 
 class AbstractSerializer(ABC):
@@ -245,3 +248,46 @@ class TopicsDistributionSerializer(BaseSerializer):
         self._calculate_topics_other_count()
 
         return self.topics_data
+
+
+class CrosstabSourceASerializer(BaseSerializer):
+    """
+    Serializer for crosstab source A
+    """
+
+    def __init__(self, events: list[EventDataType], field: str):
+        self.events = events
+        self.field = field
+
+    def serialize(self) -> dict:
+        """
+        Serialize crosstab source A to formatted data.
+        """
+        labels = set()
+        conversations_uuids = {}
+
+        for event in self.events:
+            try:
+                metadata = (
+                    json.loads(event.get("metadata")) if event.get("metadata") else {}
+                )
+            except Exception as e:
+                continue
+
+            conversation_uuid = metadata.get("conversation_uuid")
+
+            label = (
+                event.get("value")
+                if self.field == "value"
+                else metadata.get(self.field)
+            )
+
+            if label not in labels:
+                labels.add(label)
+
+            if conversation_uuid not in conversations_uuids:
+                conversations_uuids[conversation_uuid] = label
+
+        data = {key: {} for key in labels}
+
+        return data
