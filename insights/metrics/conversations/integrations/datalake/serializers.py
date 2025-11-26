@@ -301,11 +301,16 @@ class CrosstabDataSerializer(BaseSerializer):
     """
 
     def __init__(
-        self, labels: dict, conversations_uuids: dict, events: list[EventDataType]
+        self,
+        labels: dict,
+        conversations_uuids: dict,
+        events: list[EventDataType],
+        field: str,
     ):
         self.labels = labels
         self.conversations_uuids = conversations_uuids
         self.events = events
+        self.field = field
 
     def serialize(self) -> dict:
         """
@@ -334,9 +339,9 @@ class CrosstabDataSerializer(BaseSerializer):
                 else metadata.get(self.field)
             )
 
-            if label not in self.labels.get(source_a_label):
+            if label not in data.get(source_a_label):
                 data[source_a_label][label] = 0
-            else:
-                data[source_a_label][label] += 1
+
+            data[source_a_label][label] += 1
 
         return data
