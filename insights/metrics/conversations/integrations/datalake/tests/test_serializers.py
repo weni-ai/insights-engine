@@ -1,7 +1,9 @@
+import json
 import uuid
 from django.test import TestCase
 
 from insights.metrics.conversations.integrations.datalake.serializers import (
+    CrosstabLabelsSerializer,
     TopicsRelationsSerializer,
     TopicsBaseStructureSerializer,
     TopicsDistributionSerializer,
@@ -203,3 +205,46 @@ class TestTopicsDistributionSerializer(TestCase):
         self.assertEqual(data[topic_1_uuid]["subtopics"]["OTHER"]["count"], 50)
 
         self.assertEqual(data[topic_2_uuid]["count"], 20)
+
+
+class TestCrosstabLabelsSerializer(TestCase):
+    def setUp(self) -> None:
+        self.serializer_class = CrosstabLabelsSerializer
+        self.events_source_a = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "value",
+                "value": "value1",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "1234567890",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "value",
+                "value": "value2",
+                "date": 1716883200,
+                "contact_urn": "1234567891",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "1234567891",
+                    }
+                ),
+            },
+        ]
+
+    def test_serialize(self):
+        serializer = self.serializer_class(self.events_source_a, "value")
+        data = serializer.serialize()
+
+        self.assertEqual(data["labels"], {"value1", "value2"})
+        self.assertEqual(
+            data["conversations_uuids"],
+            {"1234567890": "value1", "1234567891": "value2"},
+        )
