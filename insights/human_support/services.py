@@ -393,83 +393,67 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
-    def get_detailed_monitoring_agents(self, filters: dict | None = None):
+    def get_detailed_monitoring_agents(self, filters: dict = {}):
         normalized = self._normalize_filters(filters)
 
+        filter_mapping = {
+            "sectors": ("sector", normalized),
+            "queues": ("queue", normalized),
+            "tags": ("tags", normalized),
+            "agent": ("agent", normalized),
+            "start_date": ("start_date", normalized),
+            "end_date": ("end_date", normalized),
+            "user_request": ("user_request", filters),
+            "limit": ("limit", filters),
+            "offset": ("offset", filters),
+        }
+
+        list_filters = {"sectors", "queues", "tags"}
+        date_filters = {"start_date", "end_date"}
+
         params: dict = {}
-        sectors = normalized.get("sectors")
-        if isinstance(sectors, list) and len(sectors) == 1:
-            params["sector"] = [str(sectors[0])]
-        elif isinstance(sectors, str):
-            params["sector"] = [str(sectors)]
 
-        queues = normalized.get("queues")
-        if isinstance(queues, list) and len(queues) == 1:
-            params["queue"] = queues[0]
-        elif isinstance(queues, str):
-            params["queue"] = str(queues)
+        for filter_key, filter_value in filter_mapping.items():
+            param, source = filter_value
+            value = source.get(filter_key)
 
-        tags = normalized.get("tags")
-        if tags:
-            params["tags"] = tags
+            if not value:
+                continue
 
-        if filters and filters.get("user_request"):
-            params["user_request"] = filters.get("user_request")
+            if filter_key in date_filters:
+                params[param] = value.date().isoformat()
+                continue
 
-        if normalized.get("agent"):
-            params["agent"] = str(normalized["agent"])
+            if filter_key not in list_filters:
+                params[param] = value
+                continue
 
-        if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].date().isoformat()
-        if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].date().isoformat()
+            if isinstance(value, list) and len(value) == 1:
+                params[param] = [str(value[0])]
+            elif isinstance(filter_value, str):
+                params[param] = [str(value)]
 
-        if filters:
-            if filters.get("limit") is not None:
-                params["limit"] = filters.get("limit")
-            if filters.get("offset") is not None:
-                params["offset"] = filters.get("offset")
-            if filters.get("ordering") is not None:
-                ordering = filters.get("ordering")
-                prefix = "-" if ordering.startswith("-") else ""
-                field = ordering.lstrip("-")
+        if filters.get("ordering") is not None:
+            ordering = filters.get("ordering")
+            prefix = "-" if ordering.startswith("-") else ""
+            field = ordering.lstrip("-")
 
-                field_mapping = {
-                    "Agent": "first_name",
-                    "Attendant": "first_name",
-                    "attendant": "first_name",
-                    "agent": "first_name",
-                    "Name": "first_name",
-                    "Email": "email",
-                    "Status": "status",
-                    "status": "status",
-                    "Finished": "closed",
-                    "finished": "closed",
-                    "Closed": "closed",
-                    "closed": "closed",
-                    "Ongoing": "opened",
-                    "ongoing": "opened",
-                    "Opened": "opened",
-                    "opened": "opened",
-                    "In Progress": "opened",
-                    "Average first response time": "avg_first_response_time",
-                    "average first response time": "avg_first_response_time",
-                    "average_first_response_time": "avg_first_response_time",
-                    "Average response time": "avg_message_response_time",
-                    "average response time": "avg_message_response_time",
-                    "average_response_time": "avg_message_response_time",
-                    "Average duration": "avg_interaction_time",
-                    "average duration": "avg_interaction_time",
-                    "average_duration": "avg_interaction_time",
-                    "Time in service": "time_in_service",
-                    "time in service": "time_in_service",
-                    "time_in_service": "time_in_service",
-                    "Time In Service": "time_in_service",
-                    "in_service_time": "time_in_service",
-                }
+            field_mapping = {
+                "agent": "first_name",
+                "status": "status",
+                "finished": "closed",
+                "closed": "closed",
+                "ongoing": "opened",
+                "opened": "opened",
+                "average_first_response_time": "avg_first_response_time",
+                "average_response_time": "avg_message_response_time",
+                "average_duration": "avg_interaction_time",
+                "time_in_service": "time_in_service",
+                "in_service_time": "time_in_service",
+            }
 
-                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-                params["ordering"] = f"{prefix}{mapped_field}"
+            mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
+            params["ordering"] = f"{prefix}{mapped_field}"
 
         response = AgentsRESTClient(self.project).list(params)
 
