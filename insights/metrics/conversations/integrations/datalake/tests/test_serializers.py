@@ -1,7 +1,10 @@
+import json
 import uuid
 from django.test import TestCase
 
 from insights.metrics.conversations.integrations.datalake.serializers import (
+    CrosstabDataSerializer,
+    CrosstabLabelsSerializer,
     TopicsRelationsSerializer,
     TopicsBaseStructureSerializer,
     TopicsDistributionSerializer,
@@ -203,3 +206,152 @@ class TestTopicsDistributionSerializer(TestCase):
         self.assertEqual(data[topic_1_uuid]["subtopics"]["OTHER"]["count"], 50)
 
         self.assertEqual(data[topic_2_uuid]["count"], 20)
+
+
+class TestCrosstabLabelsSerializer(TestCase):
+    def setUp(self) -> None:
+        self.serializer_class = CrosstabLabelsSerializer
+        self.events_source_a = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "value",
+                "value": "value1",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "1234567890",
+                        "metadata_abc": "value3",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "value",
+                "value": "value2",
+                "date": 1716883200,
+                "contact_urn": "1234567891",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "1234567891",
+                        "metadata_abc": "value4",
+                    }
+                ),
+            },
+        ]
+
+    def test_serialize(self):
+        serializer = self.serializer_class(self.events_source_a, "value")
+        data = serializer.serialize()
+
+        self.assertEqual(data["labels"], {"value1", "value2"})
+        self.assertEqual(
+            data["conversations_uuids"],
+            {"1234567890": "value1", "1234567891": "value2"},
+        )
+
+    def test_serialize_with_metadata_key(self):
+        serializer = self.serializer_class(self.events_source_a, "metadata_abc")
+        data = serializer.serialize()
+
+        self.assertEqual(data["labels"], {"value3", "value4"})
+        self.assertEqual(
+            data["conversations_uuids"],
+            {"1234567890": "value3", "1234567891": "value4"},
+        )
+
+
+class TestCrosstabDataSerializer(TestCase):
+    def setUp(self) -> None:
+        self.serializer_class = CrosstabDataSerializer
+        self.labels = {"Delivery", "Shopping"}
+        self.conversations_uuids = {
+            "123": "Delivery",
+            "321": "Delivery",
+            "555": "Delivery",
+            "432": "Shopping",
+            "765": "Shopping",
+        }
+        self.events = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "value",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "123",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "value",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567894",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "321",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "value",
+                "value": "Unsatisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567894",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "555",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "value",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567891",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "432",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "value",
+                "value": "Unsatisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567897",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "765",
+                    }
+                ),
+            },
+        ]
+
+    def test_serialize(self):
+        serializer = self.serializer_class(
+            self.labels, self.conversations_uuids, self.events, "value"
+        )
+        data = serializer.serialize()
+
+        self.assertEqual(
+            data,
+            {
+                "Delivery": {"Satisfied": 2, "Unsatisfied": 1},
+                "Shopping": {"Satisfied": 1, "Unsatisfied": 1},
+            },
+        )
