@@ -221,6 +221,7 @@ class TestCrosstabLabelsSerializer(TestCase):
                 "metadata": json.dumps(
                     {
                         "conversation_uuid": "1234567890",
+                        "metadata_abc": "value3",
                     }
                 ),
             },
@@ -234,6 +235,7 @@ class TestCrosstabLabelsSerializer(TestCase):
                 "metadata": json.dumps(
                     {
                         "conversation_uuid": "1234567891",
+                        "metadata_abc": "value4",
                     }
                 ),
             },
@@ -247,4 +249,14 @@ class TestCrosstabLabelsSerializer(TestCase):
         self.assertEqual(
             data["conversations_uuids"],
             {"1234567890": "value1", "1234567891": "value2"},
+        )
+
+    def test_serialize_with_metadata_key(self):
+        serializer = self.serializer_class(self.events_source_a, "metadata_abc")
+        data = serializer.serialize()
+
+        self.assertEqual(data["labels"], {"value3", "value4"})
+        self.assertEqual(
+            data["conversations_uuids"],
+            {"1234567890": "value3", "1234567891": "value4"},
         )
