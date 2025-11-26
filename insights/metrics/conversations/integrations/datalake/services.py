@@ -888,8 +888,9 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         labels_for_source_a = set()
-        conversation_uuids_for_source_a = set()
+        conversation_uuids_for_source_a = {}
 
+        # TODO: Use a dedicated serializer for this
         for event in source_a_events:
             try:
                 metadata = (
@@ -900,15 +901,46 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 continue
 
             conversation_uuid = metadata.get("conversation_uuid")
-            conversation_uuids_for_source_a.add(conversation_uuid)
 
-            value = (
+            label = (
                 event.get("value")
                 if source_a.field == "value"
                 else metadata.get(source_a.field)
             )
 
-            if value not in labels_for_source_a:
-                labels_for_source_a.add(value)
+            if label not in labels_for_source_a:
+                labels_for_source_a.add(label)
 
-        # TODO
+            if conversation_uuid not in conversation_uuids_for_source_a:
+                conversation_uuids_for_source_a[conversation_uuid] = label
+
+        data = {key: {} for key in labels_for_source_a}
+
+        # TODO: Use a dedicated serializer for this
+        for event in source_b_events:
+            try:
+                metadata = (
+                    json.loads(event.get("metadata")) if event.get("metadata") else {}
+                )
+            except Exception as e:
+                logger.error("Error on converting metadata to dict: %s", e)
+                continue
+
+            conversation_uuid = metadata.get("conversation_uuid")
+            source_a_label = conversation_uuids_for_source_a.get(conversation_uuid)
+
+            if not source_a_label:
+                continue
+
+            label = (
+                event.get("value")
+                if source_b.field == "value"
+                else metadata.get(source_b.field)
+            )
+
+            if label not in data.get(source_a_label):
+                data.get(source_a_label)[label] = 0
+
+            data.get(source_a_label)[label] += 1
+
+        return data
