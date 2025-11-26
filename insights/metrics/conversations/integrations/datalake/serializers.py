@@ -272,7 +272,7 @@ class CrosstabLabelsSerializer(BaseSerializer):
                 metadata = (
                     json.loads(event.get("metadata")) if event.get("metadata") else {}
                 )
-            except Exception as e:
+            except Exception:
                 continue
 
             conversation_uuid = metadata.get("conversation_uuid")
@@ -324,7 +324,7 @@ class CrosstabDataSerializer(BaseSerializer):
                 metadata = (
                     json.loads(event.get("metadata")) if event.get("metadata") else {}
                 )
-            except Exception as e:
+            except Exception:
                 continue
 
             conversation_uuid = metadata.get("conversation_uuid")
