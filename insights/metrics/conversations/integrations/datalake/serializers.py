@@ -250,9 +250,9 @@ class TopicsDistributionSerializer(BaseSerializer):
         return self.topics_data
 
 
-class CrosstabSourceASerializer(BaseSerializer):
+class CrosstabLabelsSerializer(BaseSerializer):
     """
-    Serializer for crosstab source A
+    Serializer for crosstab labels
     """
 
     def __init__(self, events: list[EventDataType], field: str):
@@ -261,7 +261,8 @@ class CrosstabSourceASerializer(BaseSerializer):
 
     def serialize(self) -> dict:
         """
-        Serialize crosstab source A to formatted data.
+        Serialize crosstab labels to formatted data
+        based on source A events
         """
         labels = set()
         conversations_uuids = {}
@@ -288,6 +289,54 @@ class CrosstabSourceASerializer(BaseSerializer):
             if conversation_uuid not in conversations_uuids:
                 conversations_uuids[conversation_uuid] = label
 
-        data = {key: {} for key in labels}
+        return {
+            "labels": labels,
+            "conversations_uuids": conversations_uuids,
+        }
+
+
+class CrosstabDataSerializer(BaseSerializer):
+    """
+    Serializer for crosstab data
+    """
+
+    def __init__(
+        self, labels: dict, conversations_uuids: dict, events: list[EventDataType]
+    ):
+        self.labels = labels
+        self.conversations_uuids = conversations_uuids
+        self.events = events
+
+    def serialize(self) -> dict:
+        """
+        Serialize crosstab data to formatted data.
+        """
+
+        data = {key: {} for key in self.labels}
+
+        for event in self.events:
+            try:
+                metadata = (
+                    json.loads(event.get("metadata")) if event.get("metadata") else {}
+                )
+            except Exception as e:
+                continue
+
+            conversation_uuid = metadata.get("conversation_uuid")
+            source_a_label = self.conversations_uuids.get(conversation_uuid)
+
+            if not source_a_label:
+                continue
+
+            label = (
+                event.get("value")
+                if self.field == "value"
+                else metadata.get(self.field)
+            )
+
+            if label not in self.labels.get(source_a_label):
+                data[source_a_label][label] = 0
+            else:
+                data[source_a_label][label] += 1
 
         return data
