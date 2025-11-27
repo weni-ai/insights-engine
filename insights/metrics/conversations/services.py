@@ -762,6 +762,42 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             project_uuid, source_a, source_b, start_date, end_date
         )
 
+        # STAGING ONLY:
+        return [
+            CrosstabItemData(
+                title="Delivery",
+                total=20,
+                subitems=[
+                    CrosstabSubItemData(
+                        title="Satisfied",
+                        count=10,
+                        percentage=50,
+                    ),
+                    CrosstabSubItemData(
+                        title="Unsatisfied",
+                        count=10,
+                        percentage=50,
+                    ),
+                ],
+            ),
+            CrosstabItemData(
+                title="Shopping",
+                total=20,
+                subitems=[
+                    CrosstabSubItemData(
+                        title="Satisfied",
+                        count=10,
+                        percentage=50,
+                    ),
+                    CrosstabSubItemData(
+                        title="Unsatisfied",
+                        count=10,
+                        percentage=50,
+                    ),
+                ],
+            ),
+        ]
+
         items: list[CrosstabItemData] = []
 
         for label, item in data.items():
