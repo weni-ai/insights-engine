@@ -12,12 +12,28 @@ from insights.projects.parsers import parse_dict_to_json
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
+    CrosstabItemData,
+    CrosstabSubItemData,
     NPSMetrics,
     SalesFunnelMetrics,
     SubtopicMetrics,
     TopicMetrics,
     TopicsDistributionMetrics,
     NPSMetrics,
+)
+from insights.metrics.conversations.exceptions import ConversationsMetricsError
+from insights.metrics.conversations.integrations.datalake.dataclass import (
+    CrosstabSource,
+)
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseConversationsMetricsService,
+    DatalakeConversationsMetricsService,
+)
+from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
+from insights.projects.parsers import parse_dict_to_json
+from insights.sources.cache import CacheClient
+from insights.sources.flowruns.usecases.query_execute import (
+    QueryExecutor as FlowRunsQueryExecutor,
 )
 from insights.metrics.conversations.enums import (
     ConversationType,
@@ -700,3 +716,73 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             total_orders_value=data.total_orders_value,
             currency_code=data.currency_code,
         )
+
+    def _validate_crosstab_source(self, source: str) -> CrosstabSource:
+        """
+        Validate crosstab source
+        """
+        key = source.get("key")
+        field = source.get("field", "value")
+
+        if not key:
+            raise ConversationsMetricsError("Key is required")
+
+        return CrosstabSource(key=key, field=field)
+
+    def _validate_crosstab_widget(self, widget: Widget) -> None:
+        """
+        Validate crosstab widget
+        """
+        if (
+            widget.type != "conversation.crosstab"
+            or widget.source != "conversation.crosstab"
+        ):
+            raise ConversationsMetricsError("Widget type or source is not valid")
+
+        config = widget.config or {}
+
+        source_a = self._validate_crosstab_source(config.get("source_a", {}))
+        source_b = self._validate_crosstab_source(config.get("source_b", {}))
+
+        return source_a, source_b
+
+    def get_crosstab_data(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get crosstab data
+        """
+        source_a, source_b = self._validate_crosstab_widget(widget)
+
+        data = self.datalake_service.get_crosstab_data(
+            project_uuid, source_a, source_b, start_date, end_date
+        )
+
+        items: list[CrosstabItemData] = []
+
+        for label, item in data.items():
+            total = sum(item.values())
+            subitems: list[CrosstabSubItemData] = []
+
+            for subitem_label, count in item.items():
+                subitems.append(
+                    CrosstabSubItemData(
+                        title=subitem_label,
+                        count=count,
+                        percentage=round((count / total) * 100, 2) if total else 0,
+                    )
+                )
+
+            items.append(
+                CrosstabItemData(
+                    title=label,
+                    total=total,
+                    subitems=subitems,
+                )
+            )
+
+        return items
