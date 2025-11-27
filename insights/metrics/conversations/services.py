@@ -9,6 +9,8 @@ from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
+    CrosstabItemData,
+    CrosstabSubItemData,
     NPSMetrics,
     SalesFunnelMetrics,
     SubtopicMetrics,
@@ -719,8 +721,8 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         config = widget.config or {}
 
-        source_a = self._validate_crosstab_source(config.get("source_a"))
-        source_b = self._validate_crosstab_source(config.get("source_b"))
+        source_a = self._validate_crosstab_source(config.get("source_a", {}))
+        source_b = self._validate_crosstab_source(config.get("source_b", {}))
 
         return source_a, source_b
 
@@ -736,6 +738,31 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         source_a, source_b = self._validate_crosstab_widget(widget)
 
-        return self.datalake_service.get_crosstab_data(
+        data = self.datalake_service.get_crosstab_data(
             project_uuid, source_a, source_b, start_date, end_date
         )
+
+        items: list[CrosstabItemData] = []
+
+        for label, item in data.items():
+            total = sum(item.values())
+            subitems: list[CrosstabSubItemData] = []
+
+            for subitem_label, count in item.items():
+                subitems.append(
+                    CrosstabSubItemData(
+                        title=subitem_label,
+                        count=count,
+                        percentage=round((count / total) * 100, 2) if total else 0,
+                    )
+                )
+
+            items.append(
+                CrosstabItemData(
+                    title=label,
+                    total=total,
+                    subitems=subitems,
+                )
+            )
+
+        return items
