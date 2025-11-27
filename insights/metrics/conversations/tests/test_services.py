@@ -12,6 +12,8 @@ from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
     ConversationsTotalsMetric,
+    CrosstabItemData,
+    CrosstabSubItemData,
     NPSMetrics,
     SalesFunnelMetrics,
     TopicsDistributionMetrics,
@@ -494,3 +496,180 @@ class TestConversationsMetricsService(TestCase):
         self.assertEqual(metrics.total_orders_count, 100)
         self.assertEqual(metrics.total_orders_value, 10000)
         self.assertEqual(metrics.currency_code, "BRL")
+
+    def test_get_crosstab_data_when_widget_type_is_invalid(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversation.crosstab",
+            type="invalid",
+            position=[1, 2],
+            config={
+                "source_a": {
+                    "key": "test_key",
+                },
+                "source_b": {
+                    "key": "test_key",
+                },
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_crosstab_data(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+        self.assertEqual(str(context.exception), "Widget type or source is not valid")
+
+    def test_get_crosstab_data_when_widget_source_is_invalid(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="invalid",
+            type="conversation.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {
+                    "key": "test_key",
+                },
+                "source_b": {
+                    "key": "test_key",
+                },
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_crosstab_data(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+        self.assertEqual(str(context.exception), "Widget type or source is not valid")
+
+    def test_get_crosstab_data_when_source_a_is_invalid(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversation.crosstab",
+            type="conversation.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {},
+                "source_b": {
+                    "key": "test_key",
+                },
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_crosstab_data(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+        self.assertEqual(str(context.exception), "Key is required")
+
+    def test_get_crosstab_data_when_source_b_is_invalid(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversation.crosstab",
+            type="conversation.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {
+                    "key": "test_key",
+                },
+                "source_b": {},
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_crosstab_data(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+        self.assertEqual(str(context.exception), "Key is required")
+
+    def test_get_crosstab_data(self):
+        self.mock_datalake_service.get_crosstab_data.return_value = {
+            "Delivery": {
+                "Satisfied": 10,
+                "Unsatisfied": 10,
+            },
+            "Shopping": {
+                "Satisfied": 10,
+                "Unsatisfied": 10,
+            },
+        }
+
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversation.crosstab",
+            type="conversation.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {
+                    "key": "test_key",
+                },
+                "source_b": {
+                    "key": "test_key",
+                },
+            },
+        )
+
+        data = self.service.get_crosstab_data(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(
+            data,
+            [
+                CrosstabItemData(
+                    title="Delivery",
+                    total=20,
+                    subitems=[
+                        CrosstabSubItemData(
+                            title="Satisfied",
+                            count=10,
+                            percentage=50,
+                        ),
+                        CrosstabSubItemData(
+                            title="Unsatisfied",
+                            count=10,
+                            percentage=50,
+                        ),
+                    ],
+                ),
+                CrosstabItemData(
+                    title="Shopping",
+                    total=20,
+                    subitems=[
+                        CrosstabSubItemData(
+                            title="Satisfied",
+                            count=10,
+                            percentage=50,
+                        ),
+                        CrosstabSubItemData(
+                            title="Unsatisfied",
+                            count=10,
+                            percentage=50,
+                        ),
+                    ],
+                ),
+            ],
+        )

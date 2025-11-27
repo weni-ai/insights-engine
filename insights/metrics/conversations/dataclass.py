@@ -99,3 +99,25 @@ class SalesFunnelMetrics:
             if self.total_orders_count > 0
             else 0
         )
+
+
+@dataclass(frozen=True)
+class CrosstabSubItemData:
+    """
+    Dataclass for crosstab sub item data
+    """
+
+    title: str
+    count: int
+    percentage: float
+
+
+@dataclass(frozen=True)
+class CrosstabItemData:
+    """
+    Dataclass for crosstab item data
+    """
+
+    title: str
+    total: int  # sum of all related events
+    subitems: list[CrosstabSubItemData]
