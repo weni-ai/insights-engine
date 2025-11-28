@@ -706,10 +706,62 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
+    def _get_analysis_status_finished_filters(self, normalized: dict) -> dict:
+        base: dict = {
+            "project": str(self.project.uuid),
+        }
+
+        finished_filters_mapping = {
+            "sectors": ("sector__in", list),
+            "queues": ("queue__in", list),
+            "tags": ("tags__in", list),
+            "agent": ("agent", str),
+        }
+
+        for filter_key, filter_value in finished_filters_mapping.items():
+            if not (value := normalized.get(filter_key)):
+                continue
+
+            param, param_type = filter_value
+
+            if param_type == list and not isinstance(value, list):
+                value = [value]
+
+            base[param] = value
+
+        return base
+
+    def _get_analysis_status_metrics_filters(self, normalized: dict) -> dict:
+        metrics_params: dict = {}
+
+        metrics_filters_mapping = {
+            "sectors": ("sector__in", list),
+            "queues": ("queue__in", list),
+            "tags": ("tags__in", list),
+        }
+
+        for filter_key, filter_value in metrics_filters_mapping.items():
+            if not (value := normalized.get(filter_key)):
+                continue
+
+            param, param_type = filter_value
+
+            if param_type == list and not isinstance(value, list):
+                value = [value]
+
+            metrics_params[param] = value
+
+        if normalized.get("start_date"):
+            metrics_params["start_date"] = normalized["start_date"].date().isoformat()
+        if normalized.get("end_date"):
+            metrics_params["end_date"] = normalized["end_date"].date().isoformat()
+
+        return metrics_params
+
     def get_analysis_status(self, filters: dict | None = None) -> dict:
         """
-        Retorna análise completa: contadores + métricas de tempo (incluindo avg_message_response_time).
-        Similar ao monitoring/list_status mas com filtros de data e tempo médio de resposta.
+        Returns a complete analysis: counters + time metrics (including avg_message_response_time).
+        Similar to monitoring/list_status but with date filters and average response time.
         """
         normalized = self._normalize_filters(filters)
 
@@ -726,20 +778,12 @@ class HumanSupportDashboardService:
             ).isoformat()
             now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
 
-        base: dict = {
-            "project": str(self.project.uuid),
-        }
-        if normalized.get("sectors"):
-            base["sector"] = normalized["sectors"]
-        if normalized.get("queues"):
-            base["queue"] = normalized["queues"]
-        if normalized.get("tags"):
-            base["tags"] = normalized["tags"]
+        finished_filters = self._get_analysis_status_finished_filters(normalized)
 
         finished = (
             RoomsQueryExecutor.execute(
                 {
-                    **base,
+                    **finished_filters,
                     "is_active": False,
                     "ended_at__gte": start_of_day,
                     "ended_at__lte": now_iso,
@@ -751,20 +795,10 @@ class HumanSupportDashboardService:
             or 0
         )
 
-        metrics_params: dict = {}
-        if normalized.get("sectors"):
-            metrics_params["sector"] = normalized["sectors"]
-        if normalized.get("queues"):
-            metrics_params["queue"] = normalized["queues"]
-        if normalized.get("tags"):
-            metrics_params["tags"] = normalized["tags"]
-        if normalized.get("start_date"):
-            metrics_params["start_date"] = normalized["start_date"].date().isoformat()
-        if normalized.get("end_date"):
-            metrics_params["end_date"] = normalized["end_date"].date().isoformat()
+        metrics_params = self._get_analysis_status_metrics_filters(normalized)
 
         client = ChatsTimeMetricsClient(self.project)
-        response = client.retrieve(params=metrics_params)
+        response = client.retrieve_time_metrics_for_analysis(params=metrics_params)
         metrics = response or {}
 
         waiting_avg = float(metrics.get("avg_waiting_time", 0) or 0)
