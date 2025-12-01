@@ -11,6 +11,8 @@ from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
+    CrosstabItemData,
+    CrosstabSubItemData,
     SalesFunnelMetrics,
 )
 from insights.metrics.conversations.enums import (
@@ -112,6 +114,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
+    def get_crosstab_metrics(self, query_params: dict) -> Response:
+        url = reverse("conversations-crosstab")
+
+        return self.client.get(url, query_params, format="json")
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -173,6 +180,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_sales_funnel_metrics_when_unauthenticated(self):
         response = self.get_sales_funnel_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_crosstab_metrics_when_unauthenticated(self):
+        response = self.get_crosstab_metrics({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -655,3 +667,80 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             }
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_cannot_get_crosstab_metrics_without_widget_uuid(self):
+        response = self.get_crosstab_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_get_crosstab_metrics_without_valid_widget_uuid(self):
+        response = self.get_crosstab_metrics({"widget_uuid": "invalid"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_get_crosstab_metrics_without_widget_permission(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {
+                    "key": "test_key",
+                },
+                "source_b": {
+                    "key": "test_key",
+                },
+            },
+        )
+
+        response = self.get_crosstab_metrics({"widget_uuid": widget.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_crosstab_data"
+    )
+    @with_project_auth
+    def test_get_crosstab_metrics(self, mock_get_crosstab_data):
+        mock_get_crosstab_data.return_value = [
+            CrosstabItemData(
+                title="Test Item",
+                total=100,
+                subitems=[
+                    CrosstabSubItemData(title="Test Subitem", count=10, percentage=10),
+                ],
+            ),
+        ]
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {
+                    "key": "test_key",
+                },
+                "source_b": {
+                    "key": "test_key",
+                },
+            },
+        )
+
+        response = self.get_crosstab_metrics(
+            {
+                "widget_uuid": widget.uuid,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total_rows"], 1)
+        self.assertEqual(response.data["results"][0]["title"], "Test Item")
+        self.assertEqual(response.data["results"][0]["total"], 100)
+        self.assertEqual(
+            response.data["results"][0]["events"], {"Test Subitem": {"value": 10}}
+        )
