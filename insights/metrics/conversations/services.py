@@ -758,10 +758,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         source_a, source_b = self._validate_crosstab_widget(widget)
 
-        data = self.datalake_service.get_crosstab_data(
-            project_uuid, source_a, source_b, start_date, end_date
-        )
-
         # STAGING ONLY:
         return [
             CrosstabItemData(
@@ -797,6 +793,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 ],
             ),
         ]
+
+        data = self.datalake_service.get_crosstab_data(
+            project_uuid, source_a, source_b, start_date, end_date
+        )
 
         items: list[CrosstabItemData] = []
 
