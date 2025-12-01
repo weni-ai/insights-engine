@@ -644,7 +644,7 @@ class HumanSupportDashboardService:
             params["agent"] = str(normalized["agent"])
 
         if normalized.get("contact"):
-            params["contact"] = str(normalized["contact"])
+            params["contact_external_id"] = str(normalized["contact"])
 
         if normalized.get("ticket_id"):
             params["protocol"] = str(normalized["ticket_id"])
