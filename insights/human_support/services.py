@@ -434,19 +434,26 @@ class HumanSupportDashboardService:
 
         params: dict = {}
         sectors = normalized.get("sectors")
-        if isinstance(sectors, list) and len(sectors) == 1:
-            params["sector"] = [str(sectors[0])]
-        elif isinstance(sectors, str):
-            params["sector"] = [str(sectors)]
+
+        if sectors:
+            if isinstance(sectors, str):
+                sectors = [sectors]
+
+            params["sectors"] = sectors
 
         queues = normalized.get("queues")
-        if isinstance(queues, list) and len(queues) == 1:
-            params["queue"] = queues[0]
-        elif isinstance(queues, str):
-            params["queue"] = str(queues)
+
+        if queues:
+            if isinstance(queues, str):
+                queues = [queues]
+            params["queues"] = queues
 
         tags = normalized.get("tags")
+
         if tags:
+            if isinstance(tags, str):
+                tags = [tags]
+
             params["tags"] = tags
 
         if filters and filters.get("user_request"):
