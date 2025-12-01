@@ -6,6 +6,8 @@ from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
+    CrosstabItemData,
+    CrosstabSubItemData,
     SalesFunnelMetrics,
     SubtopicMetrics,
     TopicMetrics,
@@ -17,6 +19,7 @@ from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
     ConversationTotalsMetricsSerializer,
+    CrosstabItemSerializer,
     CrosstabQueryParamsSerializer,
     CsatMetricsQueryParamsSerializer,
     SalesFunnelMetricsQueryParamsSerializer,
@@ -735,3 +738,19 @@ class TestCrosstabQueryParamsSerializer(TestCase):
         )
         self.assertTrue(serializer.is_valid())
         self.assertEqual(serializer.validated_data["widget"], self.widget)
+
+
+class TestCrosstabItemSerializer(TestCase):
+    def test_serializer(self):
+        item = CrosstabItemData(
+            title="Test Item",
+            total=100,
+            subitems=[
+                CrosstabSubItemData(title="Test Subitem", count=10, percentage=10),
+            ],
+        )
+        serializer = CrosstabItemSerializer(item)
+        self.assertEqual(serializer.data["title"], "Test Item")
+        self.assertEqual(serializer.data["total"], 100)
+
+        self.assertEqual(serializer.data["events"], {"Test Subitem": {"value": 10}})

@@ -410,6 +410,14 @@ class CrosstabQueryParamsSerializer(serializers.Serializer):
         return attrs
 
 
+class CrosstabSubItemSerializer(serializers.Serializer):
+    """
+    Serializer for crosstab sub item
+    """
+
+    value = serializers.FloatField(source="percentage")
+
+
 class CrosstabItemSerializer(serializers.Serializer):
     """
     Serializer for crosstab item
@@ -423,4 +431,6 @@ class CrosstabItemSerializer(serializers.Serializer):
         """
         Get events (subitems)
         """
-        return {item.title: item.percentage for item in obj.subitems}
+        return {
+            item.title: CrosstabSubItemSerializer(item).data for item in obj.subitems
+        }
