@@ -560,8 +560,8 @@ class TestCrosstabQueryParamsSerializer(TestCase):
         self.widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversation.crosstab",
-            type="conversation.crosstab",
+            source="conversations.crosstab",
+            type="conversations.crosstab",
             position=[1, 2],
             config={
                 "source_a": {
