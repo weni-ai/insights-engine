@@ -19,6 +19,8 @@ from insights.metrics.conversations.serializers import (
     ConversationTotalsMetricsQueryParamsSerializer,
     ConversationTotalsMetricsSerializer,
     CreateTopicSerializer,
+    CrosstabItemSerializer,
+    CrosstabQueryParamsSerializer,
     CsatMetricsQueryParamsSerializer,
     CustomMetricsQueryParamsSerializer,
     DeleteTopicSerializer,
@@ -40,6 +42,7 @@ from insights.metrics.conversations.serializers import (
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
+from insights.widgets.permissions import CanViewWidgetQueryParamPermission
 
 
 logger = logging.getLogger(__name__)
@@ -514,3 +517,45 @@ class ConversationsMetricsViewSet(GenericViewSet):
         return Response(
             SalesFunnelMetricsSerializer(metrics).data, status=status.HTTP_200_OK
         )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="crosstab",
+        url_name="crosstab",
+        permission_classes=[IsAuthenticated, CanViewWidgetQueryParamPermission],
+    )
+    def crosstab(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get crosstab metrics
+        """
+        query_params = CrosstabQueryParamsSerializer(
+            data=request.query_params, context={"request": request}
+        )
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            metrics = self.service.get_crosstab_data(
+                project_uuid=query_params.validated_data["widget"].project.uuid,
+                widget=query_params.validated_data["widget"],
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            logger.error(
+                "[ConversationsMetricsViewSet] Error getting crosstab metrics: %s",
+                e,
+                exc_info=True,
+            )
+            event_id = capture_exception(e)
+            return Response(
+                {"error": f"Internal error. Event ID: {event_id}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        response_data = {
+            "total_rows": len(metrics),
+            "results": CrosstabItemSerializer(metrics, many=True).data,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)

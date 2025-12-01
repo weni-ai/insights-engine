@@ -10,6 +10,8 @@ from insights.metrics.conversations.dataclass import (
     ConversationsTimeseriesMetrics,
     SubjectMetricData,
     SubjectsMetrics,
+    CrosstabItemData,
+    CrosstabSubItemData,
     SalesFunnelMetrics,
     SubtopicMetrics,
     TopicMetrics,
@@ -22,6 +24,7 @@ from insights.metrics.conversations.enums import (
     CsatMetricsType,
     NPSType,
 )
+from insights.projects.models import Project, ProjectAuth
 from insights.metrics.conversations.serializers import (
     ConversationBaseQueryParamsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
@@ -29,6 +32,8 @@ from insights.metrics.conversations.serializers import (
     ConversationsSubjectsMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsQueryParamsSerializer,
     ConversationsTimeseriesMetricsSerializer,
+    CrosstabItemSerializer,
+    CrosstabQueryParamsSerializer,
     CsatMetricsQueryParamsSerializer,
     NPSQueryParamsSerializer,
     NPSSerializer,
@@ -43,6 +48,7 @@ from insights.metrics.conversations.serializers import (
 )
 from insights.projects.models import Project
 from insights.widgets.models import Widget
+from insights.users.models import User
 
 
 class TestConversationBaseQueryParamsSerializer(TestCase):
@@ -1000,3 +1006,225 @@ class TestCsatMetricsQueryParamsSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("widget_uuid", serializer.errors)
         self.assertEqual(serializer.errors["widget_uuid"][0].code, "widget_not_found")
+
+
+class TestCrosstabQueryParamsSerializer(TestCase):
+    class Request:
+        def __init__(self, user):
+            self.user = user
+
+    def setUp(self):
+        self.user = User.objects.create(
+            email="test@test.com",
+            password="testpassword",
+        )
+            source="conversation.crosstab",
+            type="conversation.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {
+                    "key": "test_key",
+                },
+                "source_b": {
+                    "key": "test_key",
+                },
+            },
+        )
+        self.project_auth = ProjectAuth.objects.create(
+            user=self.user,
+            project=self.project,
+            role=1,
+        )
+
+    def test_serializer_invalid_dates(self):
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-02",
+                "end_date": "2021-01-01",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+        self.assertEqual(
+            serializer.errors["start_date"][0].code, "start_date_after_end_date"
+        )
+
+    def test_serializer_when_widget_does_not_exist(self):
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "widget_uuid": uuid.uuid4(),
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["widget_uuid"][0].code, "widget_not_found")
+
+    def test_serializer_when_widget_is_not_in_users_projects(self):
+        self.project_auth.delete()
+
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["widget_uuid"][0].code, "widget_not_found")
+
+
+    def test_serializer_when_widget_source_is_not_crosstab(self):
+        self.widget.source = "flowruns"
+        self.widget.save(update_fields=["source"])
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(
+            serializer.errors["widget_uuid"][0].code, "widget_source_not_crosstab"
+        )
+
+    def test_serializer_when_widget_type_is_not_crosstab(self):
+        self.widget.type = "flow_result"
+        self.widget.save(update_fields=["type"])
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(
+            serializer.errors["widget_uuid"][0].code, "widget_type_not_crosstab"
+        )
+
+    def test_serializer_when_widget_without_source_a(self):
+        self.widget.config = {
+            "source_b": {
+                "key": "test_key",
+            },
+        }
+        self.widget.save(update_fields=["config"])
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(
+            serializer.errors["widget_uuid"][0].code, "widget_config_not_valid"
+        )
+
+    def test_serializer_when_widget_without_source_b(self):
+        self.widget.config = {
+            "source_a": {
+                "key": "test_key",
+            },
+        }
+        self.widget.save(update_fields=["config"])
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(
+            serializer.errors["widget_uuid"][0].code, "widget_config_not_valid"
+        )
+
+    def test_serializer_when_widget_without_key_in_source_a(self):
+        self.widget.config = {
+            "source_a": {
+                "key": "test_key",
+            },
+        }
+        self.widget.save(update_fields=["config"])
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(
+            serializer.errors["widget_uuid"][0].code, "widget_config_not_valid"
+        )
+
+    def test_serializer_when_widget_without_key_in_source_b(self):
+        self.widget.config = {
+            "source_b": {
+                "key": "test_key",
+            },
+        }
+        self.widget.save(update_fields=["config"])
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("widget_uuid", serializer.errors)
+        self.assertEqual(
+            serializer.errors["widget_uuid"][0].code, "widget_config_not_valid"
+        )
+
+    def test_serializer_when_setup_correctly(self):
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["widget"], self.widget)
+
+
+class TestCrosstabItemSerializer(TestCase):
+    def test_serializer(self):
+        item = CrosstabItemData(
+            title="Test Item",
+            total=100,
+            subitems=[
+                CrosstabSubItemData(title="Test Subitem", count=10, percentage=10),
+            ],
+        )
+        serializer = CrosstabItemSerializer(item)
+        self.assertEqual(serializer.data["title"], "Test Item")
+        self.assertEqual(serializer.data["total"], 100)
+
+        self.assertEqual(serializer.data["events"], {"Test Subitem": {"value": 10}})
