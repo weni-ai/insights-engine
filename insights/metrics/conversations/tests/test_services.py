@@ -501,7 +501,7 @@ class TestConversationsMetricsService(TestCase):
         widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversation.crosstab",
+            source="conversations.crosstab",
             type="invalid",
             position=[1, 2],
             config={
@@ -529,7 +529,7 @@ class TestConversationsMetricsService(TestCase):
             name="Test Widget",
             dashboard=self.dashboard,
             source="invalid",
-            type="conversation.crosstab",
+            type="conversations.crosstab",
             position=[1, 2],
             config={
                 "source_a": {
@@ -555,8 +555,8 @@ class TestConversationsMetricsService(TestCase):
         widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversation.crosstab",
-            type="conversation.crosstab",
+            source="conversations.crosstab",
+            type="conversations.crosstab",
             position=[1, 2],
             config={
                 "source_a": {},
@@ -580,8 +580,8 @@ class TestConversationsMetricsService(TestCase):
         widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversation.crosstab",
-            type="conversation.crosstab",
+            source="conversations.crosstab",
+            type="conversations.crosstab",
             position=[1, 2],
             config={
                 "source_a": {
@@ -616,8 +616,8 @@ class TestConversationsMetricsService(TestCase):
         widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
-            source="conversation.crosstab",
-            type="conversation.crosstab",
+            source="conversations.crosstab",
+            type="conversations.crosstab",
             position=[1, 2],
             config={
                 "source_a": {
