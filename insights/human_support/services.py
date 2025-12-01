@@ -295,9 +295,9 @@ class HumanSupportDashboardService:
         }
 
         filter_to_rooms = {
-            "sectors": "sector__in",
-            "queues": "queue__in",
-            "tags": "tags__in",
+            "sectors": "sector",
+            "queues": "queue",
+            "tags": "tags",
         }
 
         for filter_name in ("sectors", "queues", "tags"):
