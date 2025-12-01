@@ -24,6 +24,11 @@ class BaseProjectViewSetTestCase(APITestCase):
 
         return self.client.get(url, query_params)
 
+    def get_ticket_ids(self, uuid: str, query_params: dict = None) -> Response:
+        url = reverse("project-search-ticket-ids", kwargs={"pk": uuid})
+
+        return self.client.get(url, query_params)
+
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_project_as_anonymous_user(self):
@@ -64,6 +69,11 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
 
     def test_cannot_get_contacts_as_anonymous_user(self):
         response = self.get_contacts(str(uuid.uuid4()), {"ordering": "name"})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_ticket_ids_as_anonymous_user(self):
+        response = self.get_ticket_ids(str(uuid.uuid4()), {"ordering": "name"})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -369,3 +379,29 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             {"ordering": "name", "page_size": 1, "search": "test"},
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_ticket_ids_without_permission(self):
+        response = self.get_ticket_ids(str(self.project.uuid))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch("insights.projects.viewsets.ChatsClient.get_protocols")
+    @with_project_auth
+    def test_get_ticket_ids_success(self, mock_get_protocols):
+        test_ticket_id = "1234567890"
+        mock_get_protocols.return_value = {
+            "next": f"http://engine-chats.stg.cloud.weni.ai/v1/internal/rooms/protocols/?cursor=cD0%3D&ordering=name&page_size=1&project={str(self.project.uuid)}",
+            "previous": None,
+            "results": [
+                {
+                    "protocol": test_ticket_id,
+                }
+            ],
+        }
+        response = self.get_ticket_ids(
+            str(self.project.uuid),
+            {"ordering": "name", "page_size": 1, "search": "test"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["ticket_id"], test_ticket_id)
