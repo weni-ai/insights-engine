@@ -540,39 +540,15 @@ class HumanSupportDashboardService:
         }
 
     def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
+        ordering_fields = {"agent", "-agent"}
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
         if filters:
             if filters.get("user_request") is not None:
                 params["user_request"] = filters.get("user_request")
-            if filters.get("ordering") is not None:
-                ordering = filters.get("ordering")
-                prefix = "-" if ordering.startswith("-") else ""
-                field = ordering.lstrip("-")
-
-                field_mapping = {
-                    "Agent": "email",
-                    "agent": "email",
-                    "Status": "status",
-                    "status": "status",
-                    "Finished": "closed",
-                    "finished": "closed",
-                    "Closed": "closed",
-                    "closed": "closed",
-                    "Ongoing": "opened",
-                    "ongoing": "opened",
-                    "Opened": "opened",
-                    "opened": "opened",
-                    "In Progress": "opened",
-                    "Created on": "created_on",
-                    "created on": "created_on",
-                    "Created On": "created_on",
-                    "created_on": "created_on",
-                }
-
-                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-                params["ordering"] = f"{prefix}{mapped_field}"
+            if (ordering := filters.get("ordering")) and ordering in ordering_fields:
+                params["ordering"] = ordering
 
         sectors = normalized.get("sectors") or []
         if isinstance(sectors, list) and sectors:
@@ -584,35 +560,31 @@ class HumanSupportDashboardService:
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
+        if normalized.get("start_date"):
+            params["start_date"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            params["end_date"] = normalized["end_date"].isoformat()
+
         client = CustomStatusRESTClient(self.project)
-        return client.list(params)
+        return client.list_custom_status_by_agent(params)
 
     def get_analysis_detailed_monitoring_status(
         self, filters: dict | None = None
     ) -> dict:
+        ordering_fields = {"agent", "-agent"}
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
         if filters:
             if filters.get("user_request") is not None:
                 params["user_request"] = filters.get("user_request")
-            if filters.get("ordering") is not None:
-                ordering = filters.get("ordering")
-                prefix = "-" if ordering.startswith("-") else ""
-                field = ordering.lstrip("-")
-
-                field_mapping = {
-                    "Agent": "email",
-                    "agent": "email",
-                }
-
-                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-                params["ordering"] = f"{prefix}{mapped_field}"
+            if (ordering := filters.get("ordering")) and ordering in ordering_fields:
+                params["ordering"] = ordering
 
         if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].date().isoformat()
+            params["start_date"] = normalized["start_date"].isoformat()
         if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].date().isoformat()
+            params["end_date"] = normalized["end_date"].isoformat()
 
         sectors = normalized.get("sectors") or []
         if isinstance(sectors, list) and sectors:
@@ -625,7 +597,7 @@ class HumanSupportDashboardService:
             params["agent"] = str(normalized["agent"])
 
         client = CustomStatusRESTClient(self.project)
-        response = client.list(params)
+        response = client.list_custom_status_by_agent(params)
 
         formatted_results = []
         for agent_data in response.get("results", []):
