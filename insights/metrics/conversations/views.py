@@ -30,6 +30,7 @@ from insights.metrics.conversations.serializers import (
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
+from insights.widgets.permissions import CanViewWidgetQueryParamPermission
 
 
 logger = logging.getLogger(__name__)
@@ -454,6 +455,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         methods=["get"],
         url_path="crosstab",
         url_name="crosstab",
+        permission_classes=[IsAuthenticated, CanViewWidgetQueryParamPermission],
     )
     def crosstab(self, request: "Request", *args, **kwargs) -> Response:
         """
@@ -466,7 +468,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
         try:
             metrics = self.service.get_crosstab_data(
-                project_uuid=query_params.validated_data["project_uuid"],
+                project_uuid=query_params.validated_data["widget"].project.uuid,
                 widget=query_params.validated_data["widget"],
                 start_date=query_params.validated_data["start_date"],
                 end_date=query_params.validated_data["end_date"],

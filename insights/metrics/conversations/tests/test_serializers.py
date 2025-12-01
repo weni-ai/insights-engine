@@ -578,6 +578,21 @@ class TestCrosstabQueryParamsSerializer(TestCase):
             role=1,
         )
 
+    def test_serializer_invalid_dates(self):
+        serializer = CrosstabQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-02",
+                "end_date": "2021-01-01",
+                "widget_uuid": self.widget.uuid,
+            },
+            context={"request": self.Request(user=self.user)},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+        self.assertEqual(
+            serializer.errors["start_date"][0].code, "start_date_after_end_date"
+        )
+
     def test_serializer_when_widget_does_not_exist(self):
         serializer = CrosstabQueryParamsSerializer(
             data={

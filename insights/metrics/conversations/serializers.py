@@ -332,6 +332,18 @@ class CrosstabQueryParamsSerializer(serializers.Serializer):
     start_date = serializers.DateTimeField(required=True)
     end_date = serializers.DateTimeField(required=True)
 
+    def _validate_dates(self, attrs: dict) -> None:
+        """
+        Validate dates
+        """
+        if attrs["start_date"] > attrs["end_date"]:
+            raise serializers.ValidationError(
+                {"start_date": "Start date must be before end date"},
+                code="start_date_after_end_date",
+            )
+
+        return attrs
+
     def _validate_widget_type_and_source(self, widget: Widget) -> None:
         """
         Validate widget type and source
@@ -405,6 +417,7 @@ class CrosstabQueryParamsSerializer(serializers.Serializer):
         Validate query params
         """
         attrs = super().validate(attrs)
+        attrs = self._validate_dates(attrs)
         attrs["widget"] = self._validate_widget(attrs)
 
         return attrs
