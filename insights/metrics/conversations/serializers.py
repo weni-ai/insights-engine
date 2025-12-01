@@ -462,13 +462,13 @@ class CrosstabQueryParamsSerializer(serializers.Serializer):
         """
         Validate widget type and source
         """
-        if widget.type != "conversation.crosstab":
+        if widget.type != "conversations.crosstab":
             raise serializers.ValidationError(
                 {"widget_uuid": _("Widget type is not crosstab")},
                 code="widget_type_not_crosstab",
             )
 
-        if widget.source != "conversation.crosstab":
+        if widget.source != "conversations.crosstab":
             raise serializers.ValidationError(
                 {"widget_uuid": _("Widget source is not crosstab")},
                 code="widget_source_not_crosstab",

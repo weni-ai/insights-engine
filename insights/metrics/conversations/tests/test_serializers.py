@@ -1018,8 +1018,19 @@ class TestCrosstabQueryParamsSerializer(TestCase):
             email="test@test.com",
             password="testpassword",
         )
-            source="conversation.crosstab",
-            type="conversation.crosstab",
+
+        self.project = Project.objects.create(
+            name="Test Project",
+        )
+        self.dashboard = Dashboard.objects.create(
+            name="Test Dashboard",
+            project=self.project,
+        )
+        self.widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.crosstab",
+            type="conversations.crosstab",
             position=[1, 2],
             config={
                 "source_a": {
@@ -1079,7 +1090,6 @@ class TestCrosstabQueryParamsSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("widget_uuid", serializer.errors)
         self.assertEqual(serializer.errors["widget_uuid"][0].code, "widget_not_found")
-
 
     def test_serializer_when_widget_source_is_not_crosstab(self):
         self.widget.source = "flowruns"

@@ -42,11 +42,9 @@ class CanViewWidgetQueryParamPermission(permissions.BasePermission):
         except ValueError:
             return False
 
-        widget_exists = Widget.objects.filter(
+        return Widget.objects.filter(
             uuid=widget_uuid,
             dashboard__project__in=ProjectAuth.objects.filter(
                 user=request.user, role=1
             ).values_list("project", flat=True),
         ).exists()
-
-        return widget_exists

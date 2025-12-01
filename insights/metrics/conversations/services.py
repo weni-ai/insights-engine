@@ -734,8 +734,8 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         Validate crosstab widget
         """
         if (
-            widget.type != "conversation.crosstab"
-            or widget.source != "conversation.crosstab"
+            widget.type != "conversations.crosstab"
+            or widget.source != "conversations.crosstab"
         ):
             raise ConversationsMetricsError("Widget type or source is not valid")
 
