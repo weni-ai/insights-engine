@@ -1,7 +1,7 @@
 from django.conf import settings
 from rest_framework.permissions import BasePermission
 from rest_framework.exceptions import ValidationError
-from weni_feature_flags.shortcuts import is_feature_active
+from weni.feature_flags.shortcuts import is_feature_active
 
 from insights.projects.models import Project, ProjectAuth
 
