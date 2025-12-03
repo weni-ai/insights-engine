@@ -163,15 +163,15 @@ class HumanSupportDashboardService:
         if normalized.get("sectors"):
             if not isinstance(normalized["sectors"], list):
                 normalized["sectors"] = [normalized["sectors"]]
-            params["sector__in"] = normalized["sectors"]
+            params["sector"] = normalized["sectors"]
         if normalized.get("queues"):
             if not isinstance(normalized["queues"], list):
                 normalized["queues"] = [normalized["queues"]]
-            params["queue__in"] = normalized["queues"]
+            params["queue"] = normalized["queues"]
         if normalized.get("tags"):
             if not isinstance(normalized["tags"], list):
                 normalized["tags"] = [normalized["tags"]]
-            params["tags__in"] = normalized["tags"]
+            params["tag"] = normalized["tags"]
         if normalized.get("start_date"):
             params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
@@ -295,9 +295,9 @@ class HumanSupportDashboardService:
         }
 
         filter_to_rooms = {
-            "sectors": "sector__in",
-            "queues": "queue__in",
-            "tags": "tags__in",
+            "sectors": "sector",
+            "queues": "queue",
+            "tags": "tags",
         }
 
         for filter_name in ("sectors", "queues", "tags"):
@@ -434,20 +434,27 @@ class HumanSupportDashboardService:
 
         params: dict = {}
         sectors = normalized.get("sectors")
-        if isinstance(sectors, list) and len(sectors) == 1:
-            params["sector"] = [str(sectors[0])]
-        elif isinstance(sectors, str):
-            params["sector"] = [str(sectors)]
+
+        if sectors:
+            if isinstance(sectors, str):
+                sectors = [sectors]
+
+            params["sector"] = sectors
 
         queues = normalized.get("queues")
-        if isinstance(queues, list) and len(queues) == 1:
-            params["queue"] = queues[0]
-        elif isinstance(queues, str):
-            params["queue"] = str(queues)
+
+        if queues:
+            if isinstance(queues, str):
+                queues = [queues]
+            params["queue"] = queues
 
         tags = normalized.get("tags")
+
         if tags:
-            params["tags"] = tags
+            if isinstance(tags, str):
+                tags = [tags]
+
+            params["tag"] = tags
 
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
