@@ -642,10 +642,19 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             payload_value = payload_value.strip('"')
 
+            count = count.get("count", 0)
+
+            if not isinstance(count, int):
+                try:
+                    count = int(count)
+                except Exception as e:
+                    logger.error("Error on converting count to int: %s" % e)
+                    raise e
+
             if payload_value in values:
-                values[payload_value] += count.get("count", 0)
+                values[payload_value] += count
             else:
-                values[payload_value] = count.get("count", 0)
+                values[payload_value] = count
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, values)
