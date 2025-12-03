@@ -462,23 +462,10 @@ class HumanSupportDashboardService:
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
-        if not normalized.get("start_date") and not normalized.get("end_date"):
-            tzname = self.project.timezone or "UTC"
-            project_tz = pytz.timezone(tzname)
-            today = dj_timezone.now().date()
-            start_datetime = (
-                project_tz.localize(datetime.combine(today, datetime.min.time()))
-                .date()
-                .isoformat()
-            )
-            end_datetime = dj_timezone.now().astimezone(project_tz).date().isoformat()
-            params["start_date"] = start_datetime
-            params["end_date"] = end_datetime
-        else:
-            if normalized.get("start_date"):
-                params["start_date"] = normalized["start_date"].date().isoformat()
-            if normalized.get("end_date"):
-                params["end_date"] = normalized["end_date"].date().isoformat()
+        if normalized.get("start_date"):
+            params["start_date"] = normalized["start_date"].date().isoformat()
+        if normalized.get("end_date"):
+            params["end_date"] = normalized["end_date"].date().isoformat()
 
         if filters:
             if filters.get("limit") is not None:
