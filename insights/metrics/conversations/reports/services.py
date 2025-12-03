@@ -997,15 +997,9 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
-    def get_topics_distribution_worksheet(
-        self,
-        report: Report,
-        start_date: datetime,
-        end_date: datetime,
-        conversation_type: ConversationType,
-    ) -> ConversationsReportWorksheet:
+    def _get_topics_data(self, report: Report) -> dict:
         """
-        Get the topics distribution worksheet.
+        Get the topics data from Nexus and organize it.
         """
         # Mock for the staging environment
         mock_urns = ["55988776655", "55988776656", "55988776657"]
@@ -1058,6 +1052,58 @@ class ConversationsReportService(BaseConversationsReportService):
                     "uuid": subtopic_uuid,
                 }
 
+        return topics_data
+
+    def _process_topic_event_data(
+        self, event: dict, topics_data: dict, unclassified_label: str
+    ) -> dict:
+        """
+        Process the topic and subtopic data.
+        """
+        try:
+            metadata = json.loads(event.get("metadata", "{}"))
+        except Exception as e:
+            logger.error("Error parsing metadata for event %s: %s", event.get("id"), e)
+            capture_exception(e)
+            return None, None
+
+        topic_name = event.get("value")
+        subtopic_name = metadata.get("subtopic")
+
+        topic_uuid = (
+            str(metadata.get("topic_uuid")) if metadata.get("topic_uuid") else None
+        )
+        subtopic_uuid = (
+            str(metadata.get("subtopic_uuid"))
+            if metadata.get("subtopic_uuid")
+            else None
+        )
+
+        if not topic_uuid or topic_uuid not in topics_data:
+            topic_name = unclassified_label
+
+        if (
+            topic_uuid
+            and topic_uuid in topics_data
+            and not subtopic_uuid
+            and subtopic_uuid not in topics_data[topic_uuid]["subtopics"]
+        ) or (not topic_uuid or topic_uuid not in topics_data):
+            subtopic_name = unclassified_label
+
+        return topic_name, subtopic_name
+
+    def get_topics_distribution_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the topics distribution worksheet.
+        """
+        topics_data = self._get_topics_data(report)
+
         human_support = (
             "true" if conversation_type == ConversationType.HUMAN else "false"
         )
@@ -1087,37 +1133,12 @@ class ConversationsReportService(BaseConversationsReportService):
         results_data = []
 
         for event in events:
-            try:
-                metadata = json.loads(event.get("metadata", "{}"))
-            except Exception as e:
-                logger.error(
-                    "Error parsing metadata for event %s: %s", event.get("id"), e
-                )
-                capture_exception(e)
+            topic_name, subtopic_name = self._process_topic_event_data(
+                event, topics_data, unclassified_label
+            )
+
+            if not topic_name or not subtopic_name:
                 continue
-
-            topic_name = event.get("value")
-            subtopic_name = metadata.get("subtopic")
-
-            topic_uuid = (
-                str(metadata.get("topic_uuid")) if metadata.get("topic_uuid") else None
-            )
-            subtopic_uuid = (
-                str(metadata.get("subtopic_uuid"))
-                if metadata.get("subtopic_uuid")
-                else None
-            )
-
-            if not topic_uuid or topic_uuid not in topics_data:
-                topic_name = unclassified_label
-
-            if (
-                topic_uuid
-                and topic_uuid in topics_data
-                and not subtopic_uuid
-                and subtopic_uuid not in topics_data[topic_uuid]["subtopics"]
-            ) or (not topic_uuid or topic_uuid not in topics_data):
-                subtopic_name = unclassified_label
 
             results_data.append(
                 {
