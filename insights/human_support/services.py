@@ -439,14 +439,14 @@ class HumanSupportDashboardService:
             if isinstance(sectors, str):
                 sectors = [sectors]
 
-            params["sectors"] = sectors
+            params["sector"] = sectors
 
         queues = normalized.get("queues")
 
         if queues:
             if isinstance(queues, str):
                 queues = [queues]
-            params["queues"] = queues
+            params["queue"] = queues
 
         tags = normalized.get("tags")
 
@@ -454,7 +454,7 @@ class HumanSupportDashboardService:
             if isinstance(tags, str):
                 tags = [tags]
 
-            params["tags"] = tags
+            params["tag"] = tags
 
         if filters and filters.get("user_request"):
             params["user_request"] = filters.get("user_request")
