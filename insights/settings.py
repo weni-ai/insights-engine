@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import json
 import os
+import sys
 from pathlib import Path
 
 import environ
@@ -25,6 +26,9 @@ environ.Env.read_env(env_file=(environ.Path(__file__) - 2)(".env"))
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
+
+# Detect if running tests
+TESTING = "test" in sys.argv or "pytest" in sys.argv[0]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -383,7 +387,11 @@ GROWTHBOOK_HOST_BASE_URL = env.str(
     "GROWTHBOOK_HOST_BASE_URL",
     default=env.str("GROWTHBOOK_API_HOST", default="https://cdn.growthbook.io"),
 )
-GROWTHBOOK_CLIENT_KEY = env.str("GROWTHBOOK_CLIENT_KEY", default="")
+# Use a test key when running tests to avoid ImproperlyConfigured error
+GROWTHBOOK_CLIENT_KEY = env.str(
+    "GROWTHBOOK_CLIENT_KEY", 
+    default="test-key-for-testing" if TESTING else ""
+)
 GROWTHBOOK_SHORT_CACHE_KEY = env.str(
     "GROWTHBOOK_SHORT_CACHE_KEY", default="growthbook:features:short"
 )

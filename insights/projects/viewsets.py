@@ -95,6 +95,14 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            if not ProjectAuth.objects.filter(
+                project__uuid=project_uuid, user=request.user, role=1
+            ).exists():
+                return Response(
+                    {"detail": "You don't have permission to access this project"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
             project = Project.objects.get(uuid=project_uuid)
 
             original_is_allowed = project.is_allowed

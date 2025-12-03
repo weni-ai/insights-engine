@@ -21,7 +21,10 @@ from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesLanguages,
 )
 from insights.metrics.meta.models import FavoriteTemplate
-from insights.metrics.meta.permissions import ProjectDashboardWABAPermission
+from insights.metrics.meta.permissions import (
+    DashboardAccessPermission,
+    ProjectDashboardWABAPermission,
+)
 from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_GENERAL_PARAMS,
     WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS,
@@ -146,7 +149,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         methods=["post"],
         url_name="add-template-to-favorites",
         url_path="add-template-to-favorites",
-        permission_classes=[IsAuthenticated],
+        permission_classes=[IsAuthenticated, DashboardAccessPermission],
     )
     def add_template_to_favorites(self, request: Request) -> Response:
         serializer = AddTemplateToFavoritesSerializer(
@@ -178,7 +181,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         methods=["post"],
         url_name="remove-template-from-favorites",
         url_path="remove-template-from-favorites",
-        permission_classes=[IsAuthenticated],
+        permission_classes=[IsAuthenticated, DashboardAccessPermission],
     )
     def remove_template_from_favorites(self, request: Request) -> Response:
         serializer = RemoveTemplateFromFavoritesSerializer(
@@ -198,7 +201,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         methods=["get"],
         url_name="favorites",
         url_path="favorites",
-        permission_classes=[IsAuthenticated],
+        permission_classes=[IsAuthenticated, DashboardAccessPermission],
     )
     def get_favorite_templates(self, request: Request) -> Response:
         serializer = FavoriteTemplatesQueryParamsSerializer(

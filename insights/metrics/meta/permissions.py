@@ -1,6 +1,8 @@
 from rest_framework.permissions import BasePermission
+from rest_framework.exceptions import ValidationError
 
 from insights.dashboards.models import Dashboard
+from insights.projects.models import ProjectAuth
 from insights.sources.integrations.clients import WeniIntegrationsClient
 
 
@@ -52,4 +54,36 @@ class ProjectDashboardWABAPermission(BasePermission):
             project__uuid=project_uuid,
             config__is_whatsapp_integration=True,
             config__waba_id=waba_id,
+        ).exists()
+
+
+class DashboardAccessPermission(BasePermission):
+    """
+    Permission that verifies if the user has access to the dashboard
+    through ProjectAuth. Replicates the logic from BaseFavoriteTemplateSerializer.
+    
+    Checks if the dashboard UUID (from request body or query params) belongs to a project
+    where the user has authorization.
+    """
+
+    def has_permission(self, request, view):
+        """
+        Check if the user has access to the dashboard via ProjectAuth
+        """
+        # Check in request body first (POST), then query params (GET)
+        dashboard_uuid = request.data.get("dashboard") or request.query_params.get(
+            "dashboard"
+        )
+
+        if not dashboard_uuid:
+            raise ValidationError(
+                {"dashboard": ["This field is required"]}, code="required"
+            )
+
+        # Check if dashboard exists and user has access to its project
+        return Dashboard.objects.filter(
+            uuid=dashboard_uuid,
+            project__in=ProjectAuth.objects.filter(
+                user=request.user
+            ).values_list("project", flat=True),
         ).exists()
