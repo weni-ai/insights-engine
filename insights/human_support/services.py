@@ -764,15 +764,15 @@ class HumanSupportDashboardService:
         if normalized.get("sectors"):
             if not isinstance(normalized["sectors"], list):
                 normalized["sectors"] = [normalized["sectors"]]
-            metrics_params["sector__in"] = normalized["sectors"]
+            metrics_params["sector"] = normalized["sectors"]
         if normalized.get("queues"):
             if not isinstance(normalized["queues"], list):
                 normalized["queues"] = [normalized["queues"]]
-            metrics_params["queue__in"] = normalized["queues"]
+            metrics_params["queue"] = normalized["queues"]
         if normalized.get("tags"):
             if not isinstance(normalized["tags"], list):
                 normalized["tags"] = [normalized["tags"]]
-            metrics_params["tags__in"] = normalized["tags"]
+            metrics_params["tag"] = normalized["tags"]
         if normalized.get("start_date"):
             metrics_params["start_date"] = normalized["start_date"].isoformat()
         if normalized.get("end_date"):
