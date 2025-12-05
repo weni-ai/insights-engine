@@ -160,18 +160,24 @@ class HumanSupportDashboardService:
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
-        if normalized.get("sectors"):
-            if not isinstance(normalized["sectors"], list):
-                normalized["sectors"] = [normalized["sectors"]]
-            params["sector"] = normalized["sectors"]
-        if normalized.get("queues"):
-            if not isinstance(normalized["queues"], list):
-                normalized["queues"] = [normalized["queues"]]
-            params["queue"] = normalized["queues"]
-        if normalized.get("tags"):
-            if not isinstance(normalized["tags"], list):
-                normalized["tags"] = [normalized["tags"]]
-            params["tag"] = normalized["tags"]
+
+        time_metrics_filters_mapping = {
+            "sectors": ("sector", list),
+            "queues": ("queue", list),
+            "tags": ("tag", list),
+        }
+
+        for filter_key, filter_value in time_metrics_filters_mapping.items():
+            if not (value := normalized.get(filter_key)):
+                continue
+
+            param, param_type = filter_value
+
+            if param_type == list and not isinstance(value, list):
+                value = [value]
+
+            params[param] = value
+
         if normalized.get("start_date"):
             params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
