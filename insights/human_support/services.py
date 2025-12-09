@@ -717,14 +717,14 @@ class HumanSupportDashboardService:
         project_tz = pytz.timezone(tzname)
 
         if normalized.get("start_date") and normalized.get("end_date"):
-            start_of_day = normalized["start_date"].isoformat()
-            now_iso = normalized["end_date"].isoformat()
+            start_date = normalized["start_date"].isoformat()
+            end_date = normalized["end_date"].isoformat()
         else:
             today = dj_timezone.now().date()
-            start_of_day = project_tz.localize(
+            start_date = project_tz.localize(
                 datetime.combine(today, datetime.min.time())
             ).isoformat()
-            now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
+            end_date = dj_timezone.now().astimezone(project_tz).isoformat()
 
         base: dict = {
             "project": str(self.project.uuid),
@@ -750,8 +750,8 @@ class HumanSupportDashboardService:
                 {
                     **base,
                     "is_active": False,
-                    "ended_at__gte": start_of_day,
-                    "ended_at__lte": now_iso,
+                    "ended_at__gte": start_date,
+                    "ended_at__lte": end_date,
                 },
                 "count",
                 lambda x: x,
@@ -764,19 +764,19 @@ class HumanSupportDashboardService:
         if normalized.get("sectors"):
             if not isinstance(normalized["sectors"], list):
                 normalized["sectors"] = [normalized["sectors"]]
-            metrics_params["sector__in"] = normalized["sectors"]
+            metrics_params["sector"] = normalized["sectors"]
         if normalized.get("queues"):
             if not isinstance(normalized["queues"], list):
                 normalized["queues"] = [normalized["queues"]]
-            metrics_params["queue__in"] = normalized["queues"]
+            metrics_params["queue"] = normalized["queues"]
         if normalized.get("tags"):
             if not isinstance(normalized["tags"], list):
                 normalized["tags"] = [normalized["tags"]]
-            metrics_params["tags__in"] = normalized["tags"]
+            metrics_params["tag"] = normalized["tags"]
         if normalized.get("start_date"):
-            metrics_params["start_date"] = normalized["start_date"].date().isoformat()
+            metrics_params["start_date"] = normalized["start_date"].isoformat()
         if normalized.get("end_date"):
-            metrics_params["end_date"] = normalized["end_date"].date().isoformat()
+            metrics_params["end_date"] = normalized["end_date"].isoformat()
 
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve_time_metrics_for_analysis(params=metrics_params)
