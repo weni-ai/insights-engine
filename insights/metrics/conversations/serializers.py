@@ -1,5 +1,6 @@
 import pytz
 from datetime import datetime, time
+import logging
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -11,6 +12,9 @@ from insights.metrics.conversations.enums import (
 )
 from insights.projects.models import Project
 from insights.widgets.models import Widget
+
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationBaseQueryParamsSerializer(serializers.Serializer):
@@ -312,10 +316,22 @@ class SalesFunnelMetricsSerializer(serializers.Serializer):
         ).data
 
     def get_purchases_made(self, obj) -> ValueAndPercentageSerializer:
-        full_value = obj.total_orders_count
-        value = (
-            round((full_value / obj.leads_count) * 100, 2) if obj.leads_count > 0 else 0
-        )
+        try:
+            full_value = (
+                obj.total_orders_count
+                if isinstance(obj.total_orders_count, int)
+                else int(obj.total_orders_count)
+            )
+            leads_count = (
+                obj.leads_count
+                if isinstance(obj.leads_count, int)
+                else int(obj.leads_count)
+            )
+        except Exception as e:
+            logger.error(f"Error on getting purchases made: {e}")
+            raise e
+
+        value = round((full_value / leads_count) * 100, 2) if leads_count > 0 else 0
 
         return ValueAndPercentageSerializer(
             {"full_value": full_value, "value": value}
