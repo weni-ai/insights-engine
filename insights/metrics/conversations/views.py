@@ -443,6 +443,17 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return Response(
-            SalesFunnelMetricsSerializer(metrics).data, status=status.HTTP_200_OK
-        )
+        try:
+            response_data = SalesFunnelMetricsSerializer(metrics).data
+        except Exception as e:
+            logger.error(
+                "[ConversationsMetricsViewSet] Error serializing sales funnel metrics: %s",
+                e,
+                exc_info=True,
+            )
+            event_id = capture_exception(e)
+            return Response(
+                {"error": f"Internal error. Event ID: {event_id}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        return Response(response_data, status=status.HTTP_200_OK)
