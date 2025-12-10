@@ -19,6 +19,7 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.enums import (
     AvailableWidgets,
+    AvailableWidgetsListType,
     ConversationType,
     CsatMetricsType,
     NpsMetricsType,
@@ -517,3 +518,23 @@ class TestConversationsMetricsService(TestCase):
         self.assertEqual(
             available_widgets.available_widgets, [AvailableWidgets.SALES_FUNNEL]
         )
+
+    def test_get_available_widgets_with_native_type(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        available_widgets = self.service.get_available_widgets(
+            self.project, AvailableWidgetsListType.NATIVE
+        )
+
+        self.assertIsInstance(available_widgets, AvailableWidgetsList)
+        self.assertEqual(
+            available_widgets.available_widgets, [AvailableWidgets.SALES_FUNNEL]
+        )
+
+    def test_get_available_widgets_with_custom_type(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        available_widgets = self.service.get_available_widgets(
+            self.project, AvailableWidgetsListType.CUSTOM
+        )
+
+        self.assertIsInstance(available_widgets, AvailableWidgetsList)
+        self.assertEqual(available_widgets.available_widgets, [])

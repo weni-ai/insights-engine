@@ -15,6 +15,7 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.enums import (
     AvailableWidgets,
+    AvailableWidgetsListType,
     ConversationType,
     CsatMetricsType,
     NpsMetricsType,
@@ -679,3 +680,33 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(
             response.data["available_widgets"], [AvailableWidgets.SALES_FUNNEL]
         )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_available_widgets"
+    )
+    @with_project_auth
+    def test_get_available_widgets_with_native_type(self, mock_get_available_widgets):
+        mock_get_available_widgets.return_value = AvailableWidgetsList(
+            available_widgets=[AvailableWidgets.SALES_FUNNEL]
+        )
+        response = self.get_available_widgets(
+            {"project_uuid": self.project.uuid, "type": AvailableWidgetsListType.NATIVE}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["available_widgets"], [AvailableWidgets.SALES_FUNNEL]
+        )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_available_widgets"
+    )
+    @with_project_auth
+    def test_get_available_widgets_with_custom_type(self, mock_get_available_widgets):
+        mock_get_available_widgets.return_value = AvailableWidgetsList(
+            available_widgets=[]
+        )
+        response = self.get_available_widgets(
+            {"project_uuid": self.project.uuid, "type": AvailableWidgetsListType.CUSTOM}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["available_widgets"], [])

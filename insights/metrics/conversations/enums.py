@@ -33,6 +33,15 @@ class ConversationsMetricsResource(TextChoices):
     SUBTOPICS = "subtopics"
 
 
+class AvailableWidgetsListType(TextChoices):
+    """
+    Available widgets list type
+    """
+
+    NATIVE = "NATIVE"
+    CUSTOM = "CUSTOM"
+
+
 class AvailableWidgets(TextChoices):
     """
     Available widgets

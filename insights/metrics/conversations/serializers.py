@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from insights.metrics.conversations.enums import (
     AvailableWidgets,
+    AvailableWidgetsListType,
     CsatMetricsType,
     ConversationType,
     NpsMetricsType,
@@ -329,6 +330,9 @@ class AvailableWidgetsQueryParamsSerializer(serializers.Serializer):
     """
 
     project_uuid = serializers.UUIDField(required=True)
+    type = serializers.ChoiceField(
+        required=False, choices=AvailableWidgetsListType.choices, allow_null=True
+    )
 
 
 class AvailableWidgetsSerializer(serializers.Serializer):
