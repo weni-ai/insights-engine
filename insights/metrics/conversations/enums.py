@@ -55,3 +55,34 @@ class NpsMetricsType(TextChoices):
 
     AI = "AI"
     HUMAN = "HUMAN"
+
+
+class ConversationType(TextChoices):
+    """
+    Conversation type
+    """
+
+    HUMAN = "HUMAN"
+    AI = "AI"
+
+
+class ConversationsMetricsResource(TextChoices):
+    TOPICS = "topics"
+    SUBTOPICS = "subtopics"
+
+
+class AvailableWidgetsListType(TextChoices):
+    """
+    Available widgets list type
+    """
+
+    NATIVE = "NATIVE"
+    CUSTOM = "CUSTOM"
+
+
+class AvailableWidgets(TextChoices):
+    """
+    Available widgets
+    """
+
+    SALES_FUNNEL = "SALES_FUNNEL"

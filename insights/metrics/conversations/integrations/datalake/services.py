@@ -8,6 +8,7 @@ import uuid
 
 
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import override, gettext
 from sentry_sdk import capture_exception
 
@@ -124,6 +125,12 @@ class BaseConversationsMetricsService(ABC):
     ) -> dict:
         """
         Get crosstab data from Datalake.
+        """
+
+    @abstractmethod
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists in Datalake.
         """
 
 
@@ -972,3 +979,21 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         ).serialize()
 
         return data
+
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists in Datalake.
+        """
+
+        events = self.events_client.get_events(
+            event_name="conversion_lead",
+            project=project_uuid,
+            date_start=settings.SALES_FUNNEL_EVENTS_START_DATE,
+            date_end=timezone.now().isoformat(),
+            limit=1,
+        )
+
+        if len(events) == 0 or events == [{}]:
+            return False
+
+        return True

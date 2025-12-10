@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
+    AvailableWidgetsList,
     ConversationsTotalsMetrics,
     ConversationsTotalsMetric,
     CrosstabItemData,
@@ -21,6 +22,8 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
+    AvailableWidgetsListType,
     ConversationType,
     CsatMetricsType,
     NpsMetricsType,
@@ -900,3 +903,44 @@ class TestConversationsMetricsService(TestCase):
                 ),
             ],
         )
+
+    def test_check_if_sales_funnel_data_exists_when_data_does_not_exist(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = (
+            False
+        )
+        results = self.service.check_if_sales_funnel_data_exists(self.project.uuid)
+        self.assertFalse(results)
+
+    def test_check_if_sales_funnel_data_exists_when_data_exists(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        results = self.service.check_if_sales_funnel_data_exists(self.project.uuid)
+        self.assertTrue(results)
+
+    def test_get_available_widgets(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        available_widgets = self.service.get_available_widgets(self.project)
+
+        self.assertIsInstance(available_widgets, AvailableWidgetsList)
+        self.assertEqual(
+            available_widgets.available_widgets, [AvailableWidgets.SALES_FUNNEL]
+        )
+
+    def test_get_available_widgets_with_native_type(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        available_widgets = self.service.get_available_widgets(
+            self.project, AvailableWidgetsListType.NATIVE
+        )
+
+        self.assertIsInstance(available_widgets, AvailableWidgetsList)
+        self.assertEqual(
+            available_widgets.available_widgets, [AvailableWidgets.SALES_FUNNEL]
+        )
+
+    def test_get_available_widgets_with_custom_type(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        available_widgets = self.service.get_available_widgets(
+            self.project, AvailableWidgetsListType.CUSTOM
+        )
+
+        self.assertIsInstance(available_widgets, AvailableWidgetsList)
+        self.assertEqual(available_widgets.available_widgets, [])

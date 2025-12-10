@@ -74,6 +74,9 @@ class RoomsByQueueMetric:
     has_more: bool
 
 
+from insights.metrics.conversations.enums import AvailableWidgets
+
+
 @dataclass(frozen=True)
 class SubtopicMetrics:
     """
@@ -197,3 +200,12 @@ class CrosstabItemData:
     title: str
     total: int  # sum of all related events
     subitems: list[CrosstabSubItemData]
+
+
+@dataclass(frozen=True)
+class AvailableWidgetsList:
+    """
+    List of available widgets
+    """
+
+    available_widgets: list[AvailableWidgets]
