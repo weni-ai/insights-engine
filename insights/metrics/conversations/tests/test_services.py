@@ -494,3 +494,15 @@ class TestConversationsMetricsService(TestCase):
         self.assertEqual(metrics.total_orders_count, 100)
         self.assertEqual(metrics.total_orders_value, 10000)
         self.assertEqual(metrics.currency_code, "BRL")
+
+    def test_check_if_sales_funnel_data_exists_when_data_does_not_exist(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = (
+            False
+        )
+        results = self.service.check_if_sales_funnel_data_exists(self.project.uuid)
+        self.assertFalse(results)
+
+    def test_check_if_sales_funnel_data_exists_when_data_exists(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        results = self.service.check_if_sales_funnel_data_exists(self.project.uuid)
+        self.assertTrue(results)

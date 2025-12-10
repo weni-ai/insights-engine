@@ -691,3 +691,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             total_orders_value=data.total_orders_value,
             currency_code=data.currency_code,
         )
+
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists in Datalake.
+        """
+        return self.datalake_service.check_if_sales_funnel_data_exists(project_uuid)
