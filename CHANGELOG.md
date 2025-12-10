@@ -1,3 +1,19 @@
+# 1.2.10
+# Fix
+ - Get analysis status filters
+
+# 1.2.9
+# Refactor
+ - Reduce conversations report complexity
+
+# 1.2.8
+# Add
+ - Update Weni Feature Flags' version and use Weni Commons
+
+# 1.2.7
+# Add
+ - Filter human support dashboard rooms by contact external id
+
 # 1.2.6
 # Fix
  - change analysis peak human timeseries query to use hour instead of date
