@@ -17,6 +17,7 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
     ConversationType,
     CsatMetricsType,
     NpsMetricsType,
@@ -506,3 +507,9 @@ class TestConversationsMetricsService(TestCase):
         self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
         results = self.service.check_if_sales_funnel_data_exists(self.project.uuid)
         self.assertTrue(results)
+
+    def test_get_available_widgets(self):
+        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        available_widgets = self.service.get_available_widgets(self.project)
+
+        self.assertEqual(available_widgets, [AvailableWidgets.SALES_FUNNEL])

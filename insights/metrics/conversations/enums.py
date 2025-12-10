@@ -31,3 +31,11 @@ class ConversationType(TextChoices):
 class ConversationsMetricsResource(TextChoices):
     TOPICS = "topics"
     SUBTOPICS = "subtopics"
+
+
+class AvailableWidgets(TextChoices):
+    """
+    Available widgets
+    """
+
+    SALES_FUNNEL = "SALES_FUNNEL"

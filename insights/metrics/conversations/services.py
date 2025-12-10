@@ -27,6 +27,7 @@ from insights.sources.flowruns.usecases.query_execute import (
     QueryExecutor as FlowRunsQueryExecutor,
 )
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
     ConversationType,
     ConversationsMetricsResource,
     CsatMetricsType,
@@ -697,3 +698,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         Check if sales funnel data exists in Datalake.
         """
         return self.datalake_service.check_if_sales_funnel_data_exists(project_uuid)
+
+    def get_available_widgets(self, project_uuid: UUID) -> list[AvailableWidgets]:
+        """
+        Get available widgets.
+        """
+        available_widgets = []
+
+        if self.check_if_sales_funnel_data_exists(project_uuid):
+            available_widgets.append(AvailableWidgets.SALES_FUNNEL)
+
+        return available_widgets
