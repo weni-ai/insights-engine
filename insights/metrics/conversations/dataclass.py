@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 
 
+from insights.metrics.conversations.enums import AvailableWidgets
+
+
 @dataclass(frozen=True)
 class SubtopicMetrics:
     """
@@ -99,3 +102,12 @@ class SalesFunnelMetrics:
             if self.total_orders_count > 0
             else 0
         )
+
+
+@dataclass(frozen=True)
+class AvailableWidgetsList:
+    """
+    List of available widgets
+    """
+
+    available_widgets: list[AvailableWidgets]

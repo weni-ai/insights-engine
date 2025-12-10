@@ -10,6 +10,7 @@ from django.core.cache import cache
 
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
+    AvailableWidgetsList,
     ConversationsTotalsMetrics,
     ConversationsTotalsMetric,
     NPSMetrics,
@@ -512,4 +513,7 @@ class TestConversationsMetricsService(TestCase):
         self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
         available_widgets = self.service.get_available_widgets(self.project)
 
-        self.assertEqual(available_widgets, [AvailableWidgets.SALES_FUNNEL])
+        self.assertIsInstance(available_widgets, AvailableWidgetsList)
+        self.assertEqual(
+            available_widgets.available_widgets, [AvailableWidgets.SALES_FUNNEL]
+        )

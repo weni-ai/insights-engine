@@ -8,6 +8,7 @@ from sentry_sdk import capture_exception, capture_message
 from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
+    AvailableWidgetsList,
     ConversationsTotalsMetrics,
     NPSMetrics,
     SalesFunnelMetrics,
@@ -699,7 +700,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         return self.datalake_service.check_if_sales_funnel_data_exists(project_uuid)
 
-    def get_available_widgets(self, project_uuid: UUID) -> list[AvailableWidgets]:
+    def get_available_widgets(self, project_uuid: UUID) -> AvailableWidgetsList:
         """
         Get available widgets.
         """
@@ -708,4 +709,4 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         if self.check_if_sales_funnel_data_exists(project_uuid):
             available_widgets.append(AvailableWidgets.SALES_FUNNEL)
 
-        return available_widgets
+        return AvailableWidgetsList(available_widgets=available_widgets)
