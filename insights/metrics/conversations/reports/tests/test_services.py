@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import uuid
 
 from django.conf import settings
@@ -9,12 +9,12 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 
 from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseConversationsMetricsService,
+)
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportWorksheet,
     ConversationsReportFile,
-)
-from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
@@ -53,7 +53,7 @@ class TestConversationsReportService(TestCase):
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
-                datalake_service=MockDatalakeConversationsMetricsService(),
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_client=MockNexusClient(),
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
@@ -1038,7 +1038,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
-                datalake_service=MockDatalakeConversationsMetricsService(),
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_client=MockNexusClient(),
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),

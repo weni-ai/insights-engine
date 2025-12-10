@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
@@ -11,14 +11,15 @@ from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
+    SalesFunnelMetrics,
 )
 from insights.metrics.conversations.enums import (
     ConversationType,
     CsatMetricsType,
     NpsMetricsType,
 )
-from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockDatalakeConversationsMetricsService,
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseConversationsMetricsService,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.views import ConversationsMetricsViewSet
@@ -36,7 +37,7 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         super().setUpClass()
         cls.original_service = ConversationsMetricsViewSet.service
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
-            datalake_service=MockDatalakeConversationsMetricsService(),
+            datalake_service=MagicMock(spec=BaseConversationsMetricsService),
             nexus_client=MockNexusClient(),
             flowruns_query_executor=MockFlowRunsQueryExecutor,
         )
@@ -625,7 +626,17 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["end_date"][0].code, "required")
 
     @with_project_auth
-    def test_get_sales_funnel_metrics(self):
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_sales_funnel_data"
+    )
+    def test_get_sales_funnel_metrics(self, mock_get_sales_funnel_data):
+        mock_get_sales_funnel_data.return_value = SalesFunnelMetrics(
+            leads_count=100,
+            total_orders_count=100,
+            total_orders_value=100,
+            currency_code="BRL",
+        )
+
         widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
