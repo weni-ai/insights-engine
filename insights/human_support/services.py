@@ -756,9 +756,9 @@ class HumanSupportDashboardService:
             metrics_params[param] = value
 
         if normalized.get("start_date"):
-            metrics_params["start_date"] = normalized["start_date"].date().isoformat()
+            metrics_params["start_date"] = normalized["start_date"].isoformat()
         if normalized.get("end_date"):
-            metrics_params["end_date"] = normalized["end_date"].date().isoformat()
+            metrics_params["end_date"] = normalized["end_date"].isoformat()
 
         return metrics_params
 
