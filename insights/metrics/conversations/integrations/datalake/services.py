@@ -17,13 +17,17 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.dataclass import (
+    CrosstabSource,
     SalesFunnelData,
 )
 from insights.metrics.conversations.integrations.datalake.serializers import (
+    CrosstabDataSerializer,
+    CrosstabLabelsSerializer,
     TopicsBaseStructureSerializer,
     TopicsDistributionSerializer,
     TopicsRelationsSerializer,
 )
+from insights.metrics.conversations.integrations.datalake.typing import EventDataType
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import (
     BaseDataLakeEventsClient,
@@ -106,6 +110,25 @@ class BaseConversationsMetricsService(ABC):
     def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
         """
         Check if sales funnel data exists in Datalake.
+        """
+
+    @abstractmethod
+    def get_raw_events_data(self, **kwargs) -> list[dict]:
+        """
+        Get raw events data from Datalake.
+        """
+
+    @abstractmethod
+    def get_crosstab_data(
+        self,
+        project_uuid: UUID,
+        source_a: CrosstabSource,
+        source_b: CrosstabSource,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get crosstab data from Datalake.
         """
 
 
@@ -801,3 +824,113 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             return False
 
         return True
+
+    def get_raw_events_data(self, **kwargs) -> list[EventDataType]:
+        """
+        Get raw events data from Datalake.
+        """
+
+        limit = settings.DATALAKE_EVENTS_PAGE_SIZE
+        offset = 0
+
+        all_events: list[EventDataType] = []
+
+        current_page = 1
+
+        while True:
+            if current_page >= settings.DATALAKE_EVENTS_MAX_PAGES:
+                raise ValueError("Max pages reached")
+
+            try:
+                events = self.events_client.get_events(
+                    **kwargs,
+                    limit=limit,
+                    offset=offset,
+                )
+            except Exception as e:
+                logger.error("Failed to get raw events data: %s", e)
+                raise e
+
+            if len(events) == 0 or events == [{}]:
+                break
+
+            all_events.extend(events)
+            offset += limit
+            current_page += 1
+
+        return all_events
+
+    def get_crosstab_data(
+        self,
+        project_uuid: UUID,
+        source_a: CrosstabSource,
+        source_b: CrosstabSource,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get crosstab data from Datalake.
+        """
+        logger.info(
+            "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting crosstab data for project %s with source A %s and source B %s",
+            project_uuid,
+            source_a.key,
+            source_b.key,
+        )
+
+        cache_key = self._get_cache_key(
+            data_type="crosstab_data",
+            project_uuid=project_uuid,
+            source_a=source_a,
+            source_b=source_b,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            logger.info(
+                "[DATALAKE CONVERSATIONS METRICS SERVICE] Returning crosstab cached data for project %s",
+                project_uuid,
+            )
+            return cached_results
+
+        common_kwargs = {
+            "event_name": self.event_name,
+            "project": project_uuid,
+            "date_start": start_date,
+            "date_end": end_date,
+        }
+
+        logger.info(
+            "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting source A events for project %s with source A %s",
+            project_uuid,
+            source_a.key,
+        )
+        source_a_events = self.get_raw_events_data(
+            key=source_a.key,
+            **common_kwargs,
+        )
+
+        logger.info(
+            "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting source B events for project %s with source B %s",
+            project_uuid,
+            source_b.key,
+        )
+        source_b_events = self.get_raw_events_data(
+            key=source_b.key,
+            **common_kwargs,
+        )
+
+        labels_data = CrosstabLabelsSerializer(
+            source_a_events, source_a.field
+        ).serialize()
+        labels = labels_data["labels"]
+        conversations_uuids = labels_data["conversations_uuids"]
+
+        data = CrosstabDataSerializer(
+            labels, conversations_uuids, source_b_events
+        ).serialize()
+
+        return data
