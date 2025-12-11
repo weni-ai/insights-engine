@@ -830,6 +830,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         Check if sales funnel data exists in Datalake.
         """
+        # Staging only:
+        return True
+
         return self.datalake_service.check_if_sales_funnel_data_exists(project_uuid)
 
     def _get_native_available_widgets(
