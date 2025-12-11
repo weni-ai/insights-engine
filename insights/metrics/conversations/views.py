@@ -589,7 +589,8 @@ class ConversationsMetricsViewSet(GenericViewSet):
         query_params.is_valid(raise_exception=True)
 
         available_widgets = self.service.get_available_widgets(
-            query_params.validated_data["project_uuid"]
+            query_params.validated_data["project_uuid"],
+            query_params.validated_data.get("widget_type"),
         )
         return Response(
             AvailableWidgetsSerializer(available_widgets).data,
