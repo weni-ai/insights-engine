@@ -6,6 +6,7 @@ from datetime import datetime
 from uuid import UUID
 
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import override, gettext
 from sentry_sdk import capture_exception
 
@@ -103,6 +104,12 @@ class BaseConversationsMetricsService(ABC):
     ) -> SalesFunnelData:
         """
         Get sales funnel data from Datalake.
+        """
+
+    @abstractmethod
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists in Datalake.
         """
 
     @abstractmethod
@@ -799,6 +806,24 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             total_orders_value=total_orders_value,
             currency_code=currency_code,
         )
+
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists in Datalake.
+        """
+
+        events = self.events_client.get_events(
+            event_name="conversion_lead",
+            project=project_uuid,
+            date_start=settings.SALES_FUNNEL_EVENTS_START_DATE,
+            date_end=timezone.now().isoformat(),
+            limit=1,
+        )
+
+        if len(events) == 0 or events == [{}]:
+            return False
+
+        return True
 
     def get_raw_events_data(self, **kwargs) -> list[EventDataType]:
         """

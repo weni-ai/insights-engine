@@ -8,6 +8,7 @@ from sentry_sdk import capture_exception, capture_message
 from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
+    AvailableWidgetsList,
     ConversationsTotalsMetrics,
     CrosstabItemData,
     CrosstabSubItemData,
@@ -32,6 +33,8 @@ from insights.sources.flowruns.usecases.query_execute import (
     QueryExecutor as FlowRunsQueryExecutor,
 )
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
+    AvailableWidgetsListType,
     ConversationType,
     ConversationsMetricsResource,
     CsatMetricsType,
@@ -696,6 +699,39 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             total_orders_value=data.total_orders_value,
             currency_code=data.currency_code,
         )
+
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists in Datalake.
+        """
+        return self.datalake_service.check_if_sales_funnel_data_exists(project_uuid)
+
+    def _get_native_available_widgets(
+        self, project_uuid: UUID
+    ) -> list[AvailableWidgets]:
+        """
+        Get native available widgets.
+        """
+        available_widgets = []
+
+        if self.check_if_sales_funnel_data_exists(project_uuid):
+            available_widgets.append(AvailableWidgets.SALES_FUNNEL)
+
+        return available_widgets
+
+    def get_available_widgets(
+        self, project_uuid: UUID, widget_type: AvailableWidgetsListType | None = None
+    ) -> AvailableWidgetsList:
+        """
+        Get available widgets.
+        """
+        available_widgets = []
+
+        if widget_type == AvailableWidgetsListType.NATIVE or widget_type is None:
+            native_available_widgets = self._get_native_available_widgets(project_uuid)
+            available_widgets.extend(native_available_widgets)
+
+        return AvailableWidgetsList(available_widgets=available_widgets)
 
     def _validate_crosstab_source(self, source: str) -> CrosstabSource:
         """
