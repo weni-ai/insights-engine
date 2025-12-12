@@ -68,6 +68,20 @@ class QueryExecutor:
                 "previous": None,
                 "results": query_results,
             }
+        elif operation == "group_by_queue_count":
+            paginated_results = {
+                "next": None,
+                "previous": None,
+                "count": len(query_results),
+                "results": query_results,
+            }
+        elif operation == "group_by_tag_count":
+            paginated_results = {
+                "next": None,
+                "previous": None,
+                "count": len(query_results),
+                "results": query_results,
+            }
         else:
             paginated_results = {
                 "next": None,

@@ -76,3 +76,61 @@ class RoomSQLQueryBuilder:
         query = f"SELECT (ROUND(COALESCE(AVG(mr.{op_field}), 0), 2)) AS value FROM public.rooms_room as r INNER JOIN public.dashboard_roommetrics AS mr ON mr.room_id=r.uuid {self.join_clause} WHERE {self.where_clause};"
 
         return query, self.params
+
+    def group_by_queue_count(self, limit: int = 5, *args, **kwargs):
+        """
+        Groups rooms by queue (queue) and returns the count of each one.
+        Returns: queue_uuid, queue_name, value (count)
+        """
+        if not self.is_valid:
+            self.build_query()
+
+        # Ensures that the join with queues_queue exists
+        queue_join = "INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id AND q.is_deleted=false"
+        if "q" not in self.joins:
+            self.join_clause = f"{queue_join} {self.join_clause}"
+
+        query = f"""
+            SELECT
+                q.uuid AS queue_uuid,
+                q.name AS queue_name,
+                COUNT(r.*) AS value
+            FROM public.rooms_room AS r
+            {self.join_clause}
+            WHERE {self.where_clause}
+            GROUP BY q.uuid, q.name
+            ORDER BY value DESC
+            LIMIT {limit};
+        """
+        return query, self.params
+
+    def group_by_tag_count(self, limit: int = 5, *args, **kwargs):
+        """
+        Groups rooms by tag and returns the count of each one.
+        Returns: tag_uuid, tag_name, sector_name, value (count)
+        """
+        if not self.is_valid:
+            self.build_query()
+
+        # Ensures that joins with rooms_room_tags, sectors_sectortag and sectors_sector exist
+        tag_joins = """
+            INNER JOIN public.rooms_room_tags AS rt ON rt.room_id=r.uuid
+            INNER JOIN public.sectors_sectortag AS stg ON stg.uuid=rt.sectortag_id
+            INNER JOIN public.sectors_sector AS sec ON sec.uuid=stg.sector_id
+        """
+
+        query = f"""
+            SELECT
+                stg.uuid AS tag_uuid,
+                stg.name AS tag_name,
+                sec.name AS sector_name,
+                COUNT(DISTINCT r.uuid) AS value
+            FROM public.rooms_room AS r
+            {tag_joins}
+            {self.join_clause}
+            WHERE {self.where_clause}
+            GROUP BY stg.uuid, stg.name, sec.name
+            ORDER BY value DESC
+            LIMIT {limit};
+        """
+        return query, self.params
