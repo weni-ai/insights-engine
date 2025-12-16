@@ -160,18 +160,24 @@ class HumanSupportDashboardService:
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
-        if normalized.get("sectors"):
-            if not isinstance(normalized["sectors"], list):
-                normalized["sectors"] = [normalized["sectors"]]
-            params["sector"] = normalized["sectors"]
-        if normalized.get("queues"):
-            if not isinstance(normalized["queues"], list):
-                normalized["queues"] = [normalized["queues"]]
-            params["queue"] = normalized["queues"]
-        if normalized.get("tags"):
-            if not isinstance(normalized["tags"], list):
-                normalized["tags"] = [normalized["tags"]]
-            params["tag"] = normalized["tags"]
+
+        time_metrics_filters_mapping = {
+            "sectors": ("sector", list),
+            "queues": ("queue", list),
+            "tags": ("tag", list),
+        }
+
+        for filter_key, filter_value in time_metrics_filters_mapping.items():
+            if not (value := normalized.get(filter_key)):
+                continue
+
+            param, param_type = filter_value
+
+            if param_type == list and not isinstance(value, list):
+                value = [value]
+
+            params[param] = value
+
         if normalized.get("start_date"):
             params["start_date"] = normalized["start_date"].date().isoformat()
         if normalized.get("end_date"):
@@ -432,46 +438,44 @@ class HumanSupportDashboardService:
     def get_detailed_monitoring_agents(self, filters: dict | None = None):
         normalized = self._normalize_filters(filters)
 
+        filter_mapping = {
+            "sectors": ("sector", normalized),
+            "queues": ("queue", normalized),
+            "tags": ("tag", normalized),
+            "agent": ("agent", normalized),
+            "start_date": ("start_date", normalized),
+            "end_date": ("end_date", normalized),
+            "user_request": ("user_request", filters),
+            "limit": ("limit", filters),
+            "offset": ("offset", filters),
+        }
+
+        list_filters = {"sectors", "queues", "tags"}
+        date_filters = {"start_date", "end_date"}
+
         params: dict = {}
-        sectors = normalized.get("sectors")
 
-        if sectors:
-            if isinstance(sectors, str):
-                sectors = [sectors]
+        for filter_key, filter_value in filter_mapping.items():
+            param, source = filter_value
+            value = source.get(filter_key)
 
-            params["sector"] = sectors
+            if not value:
+                continue
 
-        queues = normalized.get("queues")
+            if filter_key in date_filters:
+                params[param] = value.date().isoformat()
+                continue
 
-        if queues:
-            if isinstance(queues, str):
-                queues = [queues]
-            params["queue"] = queues
+            if filter_key not in list_filters:
+                params[param] = value
+                continue
 
-        tags = normalized.get("tags")
-
-        if tags:
-            if isinstance(tags, str):
-                tags = [tags]
-
-            params["tag"] = tags
-
-        if filters and filters.get("user_request"):
-            params["user_request"] = filters.get("user_request")
-
-        if normalized.get("agent"):
-            params["agent"] = str(normalized["agent"])
-
-        if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].date().isoformat()
-        if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].date().isoformat()
+            if isinstance(value, list) and len(value) == 1:
+                params[param] = [str(value[0])]
+            elif isinstance(filter_value, str):
+                params[param] = [str(value)]
 
         if filters:
-            if filters.get("limit") is not None:
-                params["limit"] = filters.get("limit")
-            if filters.get("offset") is not None:
-                params["offset"] = filters.get("offset")
             if filters.get("ordering") is not None:
                 ordering = filters.get("ordering")
                 prefix = "-" if ordering.startswith("-") else ""
@@ -706,10 +710,62 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
+    def _get_analysis_status_finished_filters(self, normalized: dict) -> dict:
+        base: dict = {
+            "project": str(self.project.uuid),
+        }
+
+        finished_filters_mapping = {
+            "sectors": ("sector__in", list),
+            "queues": ("queue__in", list),
+            "tags": ("tags__in", list),
+            "agent": ("agent", str),
+        }
+
+        for filter_key, filter_value in finished_filters_mapping.items():
+            if not (value := normalized.get(filter_key)):
+                continue
+
+            param, param_type = filter_value
+
+            if param_type == list and not isinstance(value, list):
+                value = [value]
+
+            base[param] = value
+
+        return base
+
+    def _get_analysis_status_metrics_filters(self, normalized: dict) -> dict:
+        metrics_params: dict = {}
+
+        metrics_filters_mapping = {
+            "sectors": ("sector", list),
+            "queues": ("queue", list),
+            "tags": ("tag", list),
+        }
+
+        for filter_key, filter_value in metrics_filters_mapping.items():
+            if not (value := normalized.get(filter_key)):
+                continue
+
+            param, param_type = filter_value
+
+            if param_type == list and not isinstance(value, list):
+                value = [value]
+
+            metrics_params[param] = value
+
+        if normalized.get("start_date"):
+            metrics_params["start_date"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            metrics_params["end_date"] = normalized["end_date"].isoformat()
+
+        return metrics_params
+
     def get_analysis_status(self, filters: dict | None = None) -> dict:
         """
-        Retorna análise completa: contadores + métricas de tempo (incluindo avg_message_response_time).
-        Similar ao monitoring/list_status mas com filtros de data e tempo médio de resposta.
+        Returns a complete analysis: counters + time metrics (including avg_message_response_time).
+        Similar to monitoring/list_status but with date filters and average response time.
         """
         normalized = self._normalize_filters(filters)
 
@@ -717,41 +773,24 @@ class HumanSupportDashboardService:
         project_tz = pytz.timezone(tzname)
 
         if normalized.get("start_date") and normalized.get("end_date"):
-            start_of_day = normalized["start_date"].isoformat()
-            now_iso = normalized["end_date"].isoformat()
+            start_date = normalized["start_date"].isoformat()
+            end_date = normalized["end_date"].isoformat()
         else:
             today = dj_timezone.now().date()
-            start_of_day = project_tz.localize(
+            start_date = project_tz.localize(
                 datetime.combine(today, datetime.min.time())
             ).isoformat()
-            now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
+            end_date = dj_timezone.now().astimezone(project_tz).isoformat()
 
-        base: dict = {
-            "project": str(self.project.uuid),
-        }
-        if normalized.get("sectors"):
-            if not isinstance(normalized["sectors"], list):
-                normalized["sectors"] = [normalized["sectors"]]
-            base["sector__in"] = normalized["sectors"]
-        if normalized.get("queues"):
-            if not isinstance(normalized["queues"], list):
-                normalized["queues"] = [normalized["queues"]]
-            base["queue__in"] = normalized["queues"]
-        if normalized.get("tags"):
-            if not isinstance(normalized["tags"], list):
-                normalized["tags"] = [normalized["tags"]]
-            base["tags__in"] = normalized["tags"]
-
-        if normalized.get("agent"):
-            base["agent"] = normalized["agent"]
+        finished_filters = self._get_analysis_status_finished_filters(normalized)
 
         finished = (
             RoomsQueryExecutor.execute(
                 {
-                    **base,
+                    **finished_filters,
                     "is_active": False,
-                    "ended_at__gte": start_of_day,
-                    "ended_at__lte": now_iso,
+                    "ended_at__gte": start_date,
+                    "ended_at__lte": end_date,
                 },
                 "count",
                 lambda x: x,
@@ -760,23 +799,7 @@ class HumanSupportDashboardService:
             or 0
         )
 
-        metrics_params: dict = {}
-        if normalized.get("sectors"):
-            if not isinstance(normalized["sectors"], list):
-                normalized["sectors"] = [normalized["sectors"]]
-            metrics_params["sector__in"] = normalized["sectors"]
-        if normalized.get("queues"):
-            if not isinstance(normalized["queues"], list):
-                normalized["queues"] = [normalized["queues"]]
-            metrics_params["queue__in"] = normalized["queues"]
-        if normalized.get("tags"):
-            if not isinstance(normalized["tags"], list):
-                normalized["tags"] = [normalized["tags"]]
-            metrics_params["tags__in"] = normalized["tags"]
-        if normalized.get("start_date"):
-            metrics_params["start_date"] = normalized["start_date"].date().isoformat()
-        if normalized.get("end_date"):
-            metrics_params["end_date"] = normalized["end_date"].date().isoformat()
+        metrics_params = self._get_analysis_status_metrics_filters(normalized)
 
         client = ChatsTimeMetricsClient(self.project)
         response = client.retrieve_time_metrics_for_analysis(params=metrics_params)
