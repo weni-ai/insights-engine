@@ -523,25 +523,33 @@ class HumanSupportDashboardService:
         formatted_results = []
         for agent in response.get("results", []):
             status_data = agent.get("status", {})
+            status = "offline"
+            status_label = None
+
             if isinstance(status_data, dict):
                 status = status_data.get("status", "offline")
+                if "label" in status_data:
+                    status_label = status_data.get("label")
             else:
                 status = status_data or "offline"
 
-            formatted_results.append(
-                {
-                    "agent": agent.get("agent"),
-                    "agent_email": agent.get("agent_email"),
-                    "status": status,
-                    "ongoing": agent.get("opened", 0),
-                    "finished": agent.get("closed", 0),
-                    "average_first_response_time": agent.get("avg_first_response_time"),
-                    "average_response_time": agent.get("avg_message_response_time"),
-                    "average_duration": agent.get("avg_interaction_time"),
-                    "time_in_service": agent.get("time_in_service"),
-                    "link": agent.get("link"),
-                }
-            )
+            result_data = {
+                "agent": agent.get("agent"),
+                "agent_email": agent.get("agent_email"),
+                "status": status,
+                "ongoing": agent.get("opened", 0),
+                "finished": agent.get("closed", 0),
+                "average_first_response_time": agent.get("avg_first_response_time"),
+                "average_response_time": agent.get("avg_message_response_time"),
+                "average_duration": agent.get("avg_interaction_time"),
+                "time_in_service": agent.get("time_in_service"),
+                "link": agent.get("link"),
+            }
+
+            if status_label is not None:
+                result_data["status_label"] = status_label
+
+            formatted_results.append(result_data)
 
         return {
             "next": response.get("next"),
