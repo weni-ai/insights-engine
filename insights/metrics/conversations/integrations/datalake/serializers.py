@@ -305,7 +305,7 @@ class CrosstabDataSerializer(BaseSerializer):
         labels: dict,
         conversations_uuids: dict,
         events: list[EventDataType],
-        field: str,
+        field: str = "value",
     ):
         self.labels = labels
         self.conversations_uuids = conversations_uuids
