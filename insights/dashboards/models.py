@@ -5,12 +5,14 @@ from model_utils import FieldTracker
 from insights.shared.models import BaseModel, ConfigurableModel
 
 
-HUMAN_SERVICE_DASHBOARD_NAME = "Atendimento humano"
+HUMAN_SERVICE_DASHBOARD_V1_NAME = "Atendimento humano"
+HUMAN_SERVICE_DASHBOARD_V2_NAME = "human_support_dashboard.title"
 CONVERSATIONS_DASHBOARD_NAME = "conversations_dashboard.title"
 
 PROTECTED_DASHBOARD_NAMES = [
     CONVERSATIONS_DASHBOARD_NAME,
-    HUMAN_SERVICE_DASHBOARD_NAME,
+    HUMAN_SERVICE_DASHBOARD_V1_NAME,
+    HUMAN_SERVICE_DASHBOARD_V2_NAME,
 ]
 
 
@@ -87,7 +89,7 @@ class Dashboard(BaseModel, ConfigurableModel):
 
                 with suppress(Dashboard.DoesNotExist):
                     human_service_dashboard = Dashboard.objects.get(
-                        project=self.project, name=HUMAN_SERVICE_DASHBOARD_NAME
+                        project=self.project, name=HUMAN_SERVICE_DASHBOARD_V1_NAME
                     )
                     human_service_dashboard.is_default = True
                     human_service_dashboard.save(update_fields=["is_default"])
