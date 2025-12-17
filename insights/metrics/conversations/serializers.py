@@ -7,6 +7,8 @@ from rest_framework import serializers
 
 from insights.metrics.conversations.dataclass import CrosstabItemData
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
+    AvailableWidgetsListType,
     CsatMetricsType,
     ConversationType,
     NpsMetricsType,
@@ -337,6 +339,27 @@ class SalesFunnelMetricsSerializer(serializers.Serializer):
         return ValueAndPercentageSerializer(
             {"full_value": full_value, "value": value}
         ).data
+
+
+class AvailableWidgetsQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for available widgets query params
+    """
+
+    project_uuid = serializers.UUIDField(required=True)
+    type = serializers.ChoiceField(
+        required=False, choices=AvailableWidgetsListType.choices, allow_null=True
+    )
+
+
+class AvailableWidgetsSerializer(serializers.Serializer):
+    """
+    Serializer for available widgets
+    """
+
+    available_widgets = serializers.ListField(
+        child=serializers.ChoiceField(choices=AvailableWidgets.choices)
+    )
 
 
 class CrosstabQueryParamsSerializer(serializers.Serializer):
