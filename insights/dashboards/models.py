@@ -6,11 +6,13 @@ from insights.shared.models import BaseModel, ConfigurableModel
 
 
 HUMAN_SERVICE_DASHBOARD_V1_NAME = "Atendimento humano"
+HUMAN_SERVICE_DASHBOARD_V2_NAME = "human_support_dashboard.title"
 CONVERSATIONS_DASHBOARD_NAME = "conversations_dashboard.title"
 
 PROTECTED_DASHBOARD_NAMES = [
     CONVERSATIONS_DASHBOARD_NAME,
     HUMAN_SERVICE_DASHBOARD_V1_NAME,
+    HUMAN_SERVICE_DASHBOARD_V2_NAME,
 ]
 
 
