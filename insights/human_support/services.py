@@ -525,7 +525,7 @@ class HumanSupportDashboardService:
             status_data = agent.get("status", {})
             status = "offline"
             status_label = None
-            
+
             if isinstance(status_data, dict):
                 status = status_data.get("status", "offline")
                 if "label" in status_data:
@@ -545,10 +545,10 @@ class HumanSupportDashboardService:
                 "time_in_service": agent.get("time_in_service"),
                 "link": agent.get("link"),
             }
-            
+
             if status_label is not None:
                 result_data["status_label"] = status_label
-            
+
             formatted_results.append(result_data)
 
         return {
