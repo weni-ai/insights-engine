@@ -8,7 +8,6 @@ from django.utils import timezone as dj_timezone
 
 from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_raw_data import ChatsRawDataClient
-from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_time_metrics import (
     ChatsTimeMetricsClient,
 )
