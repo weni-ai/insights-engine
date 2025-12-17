@@ -108,7 +108,9 @@ class DashboardViewSet(
             should_show_old_human_support_dashboard = True
 
         if not should_show_old_human_support_dashboard:
-            queryset = queryset.exclude(name=HUMAN_SERVICE_DASHBOARD_V1_NAME)
+            queryset = queryset.exclude(
+                name=HUMAN_SERVICE_DASHBOARD_V1_NAME, is_deletable=False
+            )
 
         queryset = queryset.order_by("created_on")
 
