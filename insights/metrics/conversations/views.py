@@ -529,7 +529,6 @@ class ConversationsMetricsViewSet(GenericViewSet):
                 {"error": f"Internal error. Event ID: {event_id}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
         return Response(response_data, status=status.HTTP_200_OK)
 
     @action(

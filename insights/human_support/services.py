@@ -607,10 +607,16 @@ class HumanSupportDashboardService:
             else:
                 # Without date filter, return status, link, ongoing and finished
                 status_data = agent.get("status", {})
+                status_label = None
                 if isinstance(status_data, dict):
                     status = status_data.get("status", "offline")
+                    if "label" in status_data:
+                        status_label = status_data.get("label")
                 else:
                     status = status_data or "offline"
+                
+                if status_label is not None:
+                    result["status_label"] = status_label
 
                 result["status"] = status
                 result["link"] = agent.get("link")
