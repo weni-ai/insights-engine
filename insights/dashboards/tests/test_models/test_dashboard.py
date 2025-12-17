@@ -2,7 +2,7 @@ import pytest
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
-from insights.dashboards.models import HUMAN_SERVICE_DASHBOARD_NAME, Dashboard
+from insights.dashboards.models import HUMAN_SERVICE_DASHBOARD_V1_NAME, Dashboard
 from insights.projects.models import Project
 
 
@@ -51,7 +51,7 @@ class TestDashboardModel(TestCase):
         self.project = Project.objects.create(name="Test Project")
         self.human_service_dashboard = Dashboard.objects.create(
             project=self.project,
-            name=HUMAN_SERVICE_DASHBOARD_NAME,
+            name=HUMAN_SERVICE_DASHBOARD_V1_NAME,
             description="Example",
             is_default=False,
         )
