@@ -716,9 +716,3 @@ msgstr "El proyecto no tiene permisos para acceder a WABA"
 #: insights/sources/vtex_conversions/usecases/query_execute.py:32
 msgid "Project does not have the credentials to access VTEX's API"
 msgstr "El proyecto no tiene las credenciales para acceder a la API de VTEX"
-
-#~ msgid "Optimized Resolutions"
-#~ msgstr "Resoluciones optimizadas"
-
-#~ msgid "Other conclusions"
-#~ msgstr "Otras conclusiones"
