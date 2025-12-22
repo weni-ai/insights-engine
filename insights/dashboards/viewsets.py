@@ -8,13 +8,11 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from weni.feature_flags.shortcuts import is_feature_active
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.filters import DashboardFilter
 from insights.dashboards.models import (
     CONVERSATIONS_DASHBOARD_NAME,
-    HUMAN_SERVICE_DASHBOARD_V1_NAME,
     Dashboard,
 )
 from insights.dashboards.usecases.flows_dashboard_creation import (
