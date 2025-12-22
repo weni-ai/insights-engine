@@ -92,26 +92,6 @@ class DashboardViewSet(
                     & ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
                 )
             )
-
-        should_show_old_human_support_dashboard = False
-        project_uuid = self.request.query_params.get("project")
-
-        if (
-            project_uuid
-            and self.request.user
-            and is_feature_active(
-                settings.INSIGHTS_SHOW_HUMAN_SUPPORT_DASHBOARD_V1_FEATURE_FLAG_KEY,
-                self.request.user.email,
-                project_uuid,
-            )
-        ):
-            should_show_old_human_support_dashboard = True
-
-        if not should_show_old_human_support_dashboard:
-            queryset = queryset.exclude(
-                name=HUMAN_SERVICE_DASHBOARD_V1_NAME, is_deletable=False
-            )
-
         queryset = queryset.order_by("created_on")
 
         return queryset
