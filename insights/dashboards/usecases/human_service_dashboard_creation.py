@@ -1,12 +1,9 @@
-import copy
-
 from django.db import transaction
 
 from insights.dashboards.models import HUMAN_SERVICE_DASHBOARD_V2_NAME, Dashboard
 from insights.dashboards.usecases.exceptions import (
     InvalidDashboardObject,
 )
-from insights.widgets.models import Report, Widget
 
 
 class CreateHumanService:
