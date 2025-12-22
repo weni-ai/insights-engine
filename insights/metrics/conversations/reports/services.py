@@ -891,8 +891,8 @@ class ConversationsReportService(BaseConversationsReportService):
             resolutions_label = gettext("Resolution")
             date_label = gettext("Date")
 
-            resolved_label = gettext("Optimized Resolutions")
-            unresolved_label = gettext("Other conclusions")
+            resolved_label = gettext("AI-Assisted")
+            unresolved_label = gettext("Not assisted")
 
         if len(events) == 0:
             return ConversationsReportWorksheet(

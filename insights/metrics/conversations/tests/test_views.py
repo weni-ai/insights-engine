@@ -231,6 +231,16 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_cannot_get_available_widgets_when_unauthenticated(self):
+        response = self.get_available_widgets({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_crosstab_metrics_when_unauthenticated(self):
+        response = self.get_crosstab_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class TestConversationsMetricsViewSetAsAuthenticatedUser(
     BaseTestConversationsMetricsViewSet
@@ -735,6 +745,59 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             }
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_available_widgets_without_project_uuid(self):
+        response = self.get_available_widgets({})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_get_available_widgets_without_permission(self):
+        response = self.get_available_widgets({"project_uuid": self.project.uuid})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_available_widgets"
+    )
+    @with_project_auth
+    def test_get_available_widgets(self, mock_get_available_widgets):
+        mock_get_available_widgets.return_value = AvailableWidgetsList(
+            available_widgets=[AvailableWidgets.SALES_FUNNEL]
+        )
+        response = self.get_available_widgets({"project_uuid": self.project.uuid})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["available_widgets"], [AvailableWidgets.SALES_FUNNEL]
+        )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_available_widgets"
+    )
+    @with_project_auth
+    def test_get_available_widgets_with_native_type(self, mock_get_available_widgets):
+        mock_get_available_widgets.return_value = AvailableWidgetsList(
+            available_widgets=[AvailableWidgets.SALES_FUNNEL]
+        )
+        response = self.get_available_widgets(
+            {"project_uuid": self.project.uuid, "type": AvailableWidgetsListType.NATIVE}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["available_widgets"], [AvailableWidgets.SALES_FUNNEL]
+        )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_available_widgets"
+    )
+    @with_project_auth
+    def test_get_available_widgets_with_custom_type(self, mock_get_available_widgets):
+        mock_get_available_widgets.return_value = AvailableWidgetsList(
+            available_widgets=[]
+        )
+        response = self.get_available_widgets(
+            {"project_uuid": self.project.uuid, "type": AvailableWidgetsListType.CUSTOM}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["available_widgets"], [])
 
     def test_cannot_get_crosstab_metrics_without_widget_uuid(self):
         response = self.get_crosstab_metrics({})

@@ -181,6 +181,15 @@ class SalesFunnelMetrics:
 
 
 @dataclass(frozen=True)
+class AvailableWidgetsList:
+    """
+    List of available widgets
+    """
+
+    available_widgets: list[AvailableWidgets]
+
+
+@dataclass(frozen=True)
 class CrosstabSubItemData:
     """
     Dataclass for crosstab sub item data
@@ -200,12 +209,3 @@ class CrosstabItemData:
     title: str
     total: int  # sum of all related events
     subitems: list[CrosstabSubItemData]
-
-
-@dataclass(frozen=True)
-class AvailableWidgetsList:
-    """
-    List of available widgets
-    """
-
-    available_widgets: list[AvailableWidgets]

@@ -455,6 +455,27 @@ class SalesFunnelMetricsSerializer(serializers.Serializer):
         ).data
 
 
+class AvailableWidgetsQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for available widgets query params
+    """
+
+    project_uuid = serializers.UUIDField(required=True)
+    type = serializers.ChoiceField(
+        required=False, choices=AvailableWidgetsListType.choices, allow_null=True
+    )
+
+
+class AvailableWidgetsSerializer(serializers.Serializer):
+    """
+    Serializer for available widgets
+    """
+
+    available_widgets = serializers.ListField(
+        child=serializers.ChoiceField(choices=AvailableWidgets.choices)
+    )
+
+
 class CrosstabQueryParamsSerializer(serializers.Serializer):
     """
     Serializer for crosstab query params
@@ -579,24 +600,3 @@ class CrosstabItemSerializer(serializers.Serializer):
         return {
             item.title: CrosstabSubItemSerializer(item).data for item in obj.subitems
         }
-
-
-class AvailableWidgetsQueryParamsSerializer(serializers.Serializer):
-    """
-    Serializer for available widgets query params
-    """
-
-    project_uuid = serializers.UUIDField(required=True)
-    type = serializers.ChoiceField(
-        required=False, choices=AvailableWidgetsListType.choices, allow_null=True
-    )
-
-
-class AvailableWidgetsSerializer(serializers.Serializer):
-    """
-    Serializer for available widgets
-    """
-
-    available_widgets = serializers.ListField(
-        child=serializers.ChoiceField(choices=AvailableWidgets.choices)
-    )

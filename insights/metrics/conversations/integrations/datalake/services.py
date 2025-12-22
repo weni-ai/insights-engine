@@ -870,6 +870,24 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             currency_code=currency_code,
         )
 
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists in Datalake.
+        """
+
+        events = self.events_client.get_events(
+            event_name="conversion_lead",
+            project=project_uuid,
+            date_start=settings.SALES_FUNNEL_EVENTS_START_DATE,
+            date_end=timezone.now().isoformat(),
+            limit=1,
+        )
+
+        if len(events) == 0 or events == [{}]:
+            return False
+
+        return True
+
     def get_raw_events_data(self, **kwargs) -> list[EventDataType]:
         """
         Get raw events data from Datalake.
@@ -979,21 +997,3 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         ).serialize()
 
         return data
-
-    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
-        """
-        Check if sales funnel data exists in Datalake.
-        """
-
-        events = self.events_client.get_events(
-            event_name="conversion_lead",
-            project=project_uuid,
-            date_start=settings.SALES_FUNNEL_EVENTS_START_DATE,
-            date_end=timezone.now().isoformat(),
-            limit=1,
-        )
-
-        if len(events) == 0 or events == [{}]:
-            return False
-
-        return True

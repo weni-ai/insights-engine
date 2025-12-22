@@ -535,6 +535,29 @@ class ConversationsMetricsViewSet(GenericViewSet):
     @action(
         detail=False,
         methods=["get"],
+        url_path="available-widgets",
+        url_name="available-widgets",
+    )
+    def available_widgets(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get available widgets
+        """
+
+        query_params = AvailableWidgetsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        available_widgets = self.service.get_available_widgets(
+            query_params.validated_data["project_uuid"],
+            query_params.validated_data.get("type"),
+        )
+        return Response(
+            AvailableWidgetsSerializer(available_widgets).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=False,
+        methods=["get"],
         url_path="crosstab",
         url_name="crosstab",
         permission_classes=[IsAuthenticated, CanViewWidgetQueryParamPermission],
@@ -573,26 +596,3 @@ class ConversationsMetricsViewSet(GenericViewSet):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
-
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="available-widgets",
-        url_name="available-widgets",
-    )
-    def available_widgets(self, request: "Request", *args, **kwargs) -> Response:
-        """
-        Get available widgets
-        """
-
-        query_params = AvailableWidgetsQueryParamsSerializer(data=request.query_params)
-        query_params.is_valid(raise_exception=True)
-
-        available_widgets = self.service.get_available_widgets(
-            query_params.validated_data["project_uuid"],
-            query_params.validated_data.get("type"),
-        )
-        return Response(
-            AvailableWidgetsSerializer(available_widgets).data,
-            status=status.HTTP_200_OK,
-        )
