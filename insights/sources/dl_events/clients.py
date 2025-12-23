@@ -61,6 +61,8 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
         else:
             method = get_events
 
+        print("[DataLakeEventsClient] get_events query_kwargs", query_kwargs)
+
         try:
             events = method(
                 **query_kwargs,
