@@ -57,14 +57,14 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
         # Test that start_date is converted to datetime at midnight
         start_date = serializer.validated_data["start_date"]
         self.assertIsInstance(start_date, datetime)
-        self.assertIsNotNone(start_date.tzinfo)  # Should be timezone-aware
-        self.assertEqual(start_date.time(), time.min)  # Should be 00:00:00
+        self.assertIsNone(start_date.tzinfo)  # Should be timezone-aware
+        self.assertEqual(start_date.time(), time(0, 00, 00))  # Should be 00:00:00
         self.assertEqual(start_date.date().isoformat(), "2021-01-01")
 
         # Test that end_date is converted to datetime at 23:59:59
         end_date = serializer.validated_data["end_date"]
         self.assertIsInstance(end_date, datetime)
-        self.assertIsNotNone(end_date.tzinfo)  # Should be timezone-aware
+        self.assertIsNone(end_date.tzinfo)  # Should be timezone-aware
         self.assertEqual(end_date.time(), time(23, 59, 59))  # Should be 23:59:59
         self.assertEqual(end_date.date().isoformat(), "2021-01-02")
 
@@ -87,12 +87,15 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
         end_date = serializer.validated_data["end_date"]
 
         # Check that timezone is correctly applied
-        self.assertEqual(str(start_date.tzinfo), "America/New_York")
-        self.assertEqual(str(end_date.tzinfo), "America/New_York")
+        self.assertIsNone(start_date.tzinfo)
+        self.assertIsNone(end_date.tzinfo)
 
-        # Check times are correct
-        self.assertEqual(start_date.time(), time.min)
-        self.assertEqual(end_date.time(), time(23, 59, 59))
+        # Check times are correct (UTC -5)
+        self.assertEqual(start_date.date().isoformat(), "2021-01-01")
+        self.assertEqual(start_date.time(), time(5, 00, 00))
+
+        self.assertEqual(end_date.date().isoformat(), "2021-01-03")
+        self.assertEqual(end_date.time(), time(4, 59, 59))
 
     def test_serializer_without_timezone(self):
         # Create a project without timezone (should default to UTC)
@@ -111,8 +114,8 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
         end_date = serializer.validated_data["end_date"]
 
         # Check that UTC timezone is applied when no timezone is set
-        self.assertEqual(str(start_date.tzinfo), "UTC")
-        self.assertEqual(str(end_date.tzinfo), "UTC")
+        self.assertIsNone(start_date.tzinfo)
+        self.assertIsNone(end_date.tzinfo)
 
     def test_serializer_invalid_start_date(self):
         serializer = ConversationBaseQueryParamsSerializer(
@@ -182,10 +185,10 @@ class TestCsatMetricsQueryParamsSerializer(TestCase):
         )
         self.assertEqual(serializer.validated_data["project"], self.project)
         self.assertEqual(
-            str(serializer.validated_data["start_date"]), "2021-01-01 00:00:00+00:00"
+            str(serializer.validated_data["start_date"]), "2021-01-01 00:00:00"
         )
         self.assertEqual(
-            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59+00:00"
+            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59"
         )
         self.assertEqual(serializer.validated_data["type"], CsatMetricsType.HUMAN)
         self.assertEqual(serializer.validated_data["widget"], self.widget)
@@ -241,10 +244,10 @@ class TestTopicsDistributionMetricsQueryParamsSerializer(TestCase):
         )
         self.assertEqual(serializer.validated_data["project"], self.project)
         self.assertEqual(
-            str(serializer.validated_data["start_date"]), "2021-01-01 00:00:00+00:00"
+            str(serializer.validated_data["start_date"]), "2021-01-01 00:00:00"
         )
         self.assertEqual(
-            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59+00:00"
+            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59"
         )
 
     def test_serializer_invalid_start_date(self):
@@ -404,10 +407,10 @@ class TestConversationTotalsMetricsQueryParamsSerializer(TestCase):
         )
         self.assertEqual(serializer.validated_data["project"], self.project)
         self.assertEqual(
-            str(serializer.validated_data["start_date"]), "2021-01-01 00:00:00+00:00"
+            str(serializer.validated_data["start_date"]), "2021-01-01 00:00:00"
         )
         self.assertEqual(
-            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59+00:00"
+            str(serializer.validated_data["end_date"]), "2021-01-02 23:59:59"
         )
 
     def test_serializer_invalid_start_date(self):
