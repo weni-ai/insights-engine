@@ -109,7 +109,10 @@ class TestConversationBaseQueryParamsSerializer(TestCase):
         self.assertIsNone(end_date.tzinfo)
 
         # Check times are correct (UTC -5)
+        self.assertEqual(start_date.date().isoformat(), "2021-01-01")
         self.assertEqual(start_date.time(), time(5, 00, 00))
+
+        self.assertEqual(end_date.date().isoformat(), "2021-01-03")
         self.assertEqual(end_date.time(), time(4, 59, 59))
 
     def test_serializer_without_timezone(self):

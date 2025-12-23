@@ -59,7 +59,7 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         start_datetime = (
             timezone.localize(start_datetime).astimezone(pytz.UTC).replace(tzinfo=None)
         )
-        attrs["start_date"] = start_datetime.replace(tzinfo=None)
+        attrs["start_date"] = start_datetime
 
         # Convert end_date to datetime at 23:59:59 in project timezone
         end_datetime = datetime.combine(attrs["end_date"].date(), time(23, 59, 59))
