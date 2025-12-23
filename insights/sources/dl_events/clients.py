@@ -82,6 +82,8 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
         else:
             method = get_events_count
 
+        print("[DataLakeEventsClient] get_events_count query_kwargs", query_kwargs)
+
         try:
             events = method(
                 **query_kwargs,
@@ -102,6 +104,11 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
             method = get_events_silver_count_by_group
         else:
             method = get_events_count_by_group
+
+        print(
+            "[DataLakeEventsClient] get_events_count_by_group query_kwargs",
+            query_kwargs,
+        )
 
         try:
             events = method(
