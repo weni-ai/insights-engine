@@ -629,6 +629,9 @@ class ConversationsReportService(BaseConversationsReportService):
             start_date = datetime.fromisoformat(start_date)
             end_date = datetime.fromisoformat(end_date)
 
+            start_date = start_date.astimezone(pytz.UTC).replace(tzinfo=None)
+            end_date = end_date.astimezone(pytz.UTC).replace(tzinfo=None)
+
             logger.info(
                 "[CONVERSATIONS REPORT SERVICE] Start date: %s, End date: %s",
                 start_date,
