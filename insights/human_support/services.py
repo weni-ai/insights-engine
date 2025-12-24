@@ -89,6 +89,31 @@ class HumanSupportDashboardService:
         cleaned_filters.pop("project_uuid", None)
         return cleaned_filters
 
+    def _decorate_room_link_with_uuid(
+        self, link: dict, room_uuid: str, closed: bool = False
+    ) -> dict:
+        """
+        Add room UUID to link URL.
+        - For ongoing rooms: adds ?uuid_room=<uuid> to the URL
+        - For finished rooms: adds /closed-chats/<uuid> to the URL
+        """
+        if not isinstance(link, dict) or not room_uuid:
+            return link
+
+        url = link.get("url", "")
+        if not url:
+            return link
+
+        updated_link = {**link}
+
+        if closed:
+            updated_link["url"] = f"{url}/closed-chats/{room_uuid}"
+        else:
+            separator = "&" if "?" in url else "?"
+            updated_link["url"] = f"{url}{separator}uuid_room={room_uuid}"
+
+        return updated_link
+
     def get_attendance_status(self, filters: dict | None = None) -> Dict[str, int]:
 
         normalized = self._normalize_filters(filters)
@@ -354,6 +379,9 @@ class HumanSupportDashboardService:
 
         formatted_results = []
         for room in response.get("results", []):
+            original_link = room.get("link")
+            room_uuid = room.get("uuid")
+
             formatted_results.append(
                 {
                     "agent": room.get("agent"),
@@ -363,7 +391,9 @@ class HumanSupportDashboardService:
                     "sector": room.get("sector"),
                     "queue": room.get("queue"),
                     "contact": room.get("contact"),
-                    "link": room.get("link"),
+                    "link": self._decorate_room_link_with_uuid(
+                        original_link, room_uuid, closed=False
+                    ),
                 }
             )
 
@@ -696,6 +726,9 @@ class HumanSupportDashboardService:
 
         formatted_results = []
         for room in response.get("results", []):
+            original_link = room.get("link")
+            room_uuid = room.get("uuid")
+
             formatted_results.append(
                 {
                     "agent": room.get("agent"),
@@ -707,7 +740,9 @@ class HumanSupportDashboardService:
                     "first_response_time": room.get("first_response_time"),
                     "duration": room.get("duration"),
                     "ended_at": room.get("ended_at"),
-                    "link": room.get("link"),
+                    "link": self._decorate_room_link_with_uuid(
+                        original_link, room_uuid, closed=True
+                    ),
                 }
             )
 
