@@ -10,6 +10,7 @@ from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.meta.enums import (
     AnalyticsGranularity,
     MetricsTypes,
+    ProductType,
 )
 from insights.metrics.meta.utils import (
     format_button_metrics_data,
@@ -123,6 +124,7 @@ class TestMetaGraphAPIClient(TestCase):
             "end": convert_date_to_unix_timestamp(end_date, use_max_time=True),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
+            "product_type": ProductType.CLOUD_API.value,
             "limit": 9999,
         }
 
@@ -217,6 +219,7 @@ class TestMetaGraphAPIClient(TestCase):
             "end": convert_date_to_unix_timestamp(end_date, use_max_time=True),
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
+            "product_type": ProductType.CLOUD_API.value,
             "limit": 9999,
         }
 
