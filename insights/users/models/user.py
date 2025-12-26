@@ -12,8 +12,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField("email", unique=True)
     language = models.CharField(
         max_length=64,
-        choices=settings.LANGUAGES,
-        default=settings.DEFAULT_LANGUAGE,
+        default="en-us",
     )
     is_active = models.BooleanField(default=True)
 
