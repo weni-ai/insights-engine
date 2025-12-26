@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
@@ -12,8 +11,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField("email", unique=True)
     language = models.CharField(
         max_length=64,
-        choices=settings.LANGUAGES,
-        default=settings.DEFAULT_LANGUAGE,
+        default="en-us",
     )
     is_active = models.BooleanField(default=True)
 

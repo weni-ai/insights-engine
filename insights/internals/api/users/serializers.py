@@ -6,9 +6,7 @@ from insights.users.models import User
 
 class ChangeUserLanguageSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
-    language = serializers.ChoiceField(
-        required=True, choices=User.language.field.choices
-    )
+    language = serializers.CharField(required=True)
 
     def validate_email(self, value):
         if not User.objects.filter(email=value).exists():
