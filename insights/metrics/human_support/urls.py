@@ -6,6 +6,10 @@ from .views import (
     DetailedMonitoringAgentsView,
     DetailedMonitoringStatusView,
     AnalysisDetailedMonitoringStatusView,
+    VolumeByQueueView,
+    AnalysisVolumeByQueueView,
+    VolumeByTagView,
+    AnalysisVolumeByTagView,
 )
 
 urlpatterns = [
@@ -28,5 +32,21 @@ urlpatterns = [
     path(
         "analysis/detailed-monitoring/status/",
         AnalysisDetailedMonitoringStatusView.as_view(),
+    ),
+    path(
+        "volume-by-queue/",
+        VolumeByQueueView.as_view(),
+    ),
+    path(
+        "analysis/volume-by-queue/",
+        AnalysisVolumeByQueueView.as_view(),
+    ),
+    path(
+        "volume-by-tag/",
+        VolumeByTagView.as_view(),
+    ),
+    path(
+        "analysis/volume-by-tag/",
+        AnalysisVolumeByTagView.as_view(),
     ),
 ]
