@@ -63,11 +63,7 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_current_report_for_project"
     )
-    @patch("insights.metrics.conversations.reports.permissions.is_feature_active")
-    def test_get_status_without_report(
-        self, mock_is_feature_active, mock_get_current_report_for_project
-    ):
-        mock_is_feature_active.return_value = True
+    def test_get_status_without_report(self, mock_get_current_report_for_project):
         mock_get_current_report_for_project.return_value = None
 
         response = self.get_status({"project_uuid": self.project.uuid})
@@ -81,11 +77,7 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_current_report_for_project"
     )
-    @patch("insights.metrics.conversations.reports.permissions.is_feature_active")
-    def test_get_status_with_report(
-        self, mock_is_feature_active, mock_get_current_report_for_project
-    ):
-        mock_is_feature_active.return_value = True
+    def test_get_status_with_report(self, mock_get_current_report_for_project):
         report = Report.objects.create(
             project=self.project,
             source=ReportSource.CONVERSATIONS_DASHBOARD,
