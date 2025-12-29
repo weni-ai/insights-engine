@@ -1,7 +1,5 @@
-from django.conf import settings
 from rest_framework.permissions import BasePermission
 from rest_framework.exceptions import ValidationError
-from weni.feature_flags.shortcuts import is_feature_active
 
 from insights.projects.models import Project, ProjectAuth
 
@@ -20,16 +18,9 @@ class CanCheckReportGenerationStatusPermission(BasePermission):
         if not project:
             return False
 
-        if not ProjectAuth.objects.filter(
+        return ProjectAuth.objects.filter(
             project__uuid=project_uuid, user=request.user, role=1
-        ).exists():
-            return False
-
-        return is_feature_active(
-            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY,
-            request.user.email,
-            project.uuid,
-        )
+        ).exists()
 
 
 class CanGenerateConversationsReportPermission(BasePermission):
@@ -46,13 +37,6 @@ class CanGenerateConversationsReportPermission(BasePermission):
         if not project:
             return False
 
-        if not ProjectAuth.objects.filter(
+        return ProjectAuth.objects.filter(
             project__uuid=project_uuid, user=request.user, role=1
-        ).exists():
-            return False
-
-        return is_feature_active(
-            settings.CONVERSATIONS_REPORT_FEATURE_FLAG_KEY,
-            request.user.email,
-            project.uuid,
-        )
+        ).exists()
