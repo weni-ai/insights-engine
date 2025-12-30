@@ -407,7 +407,7 @@ class TestGetSourceDataFromWidget(TestCase):
         mock_source_query = MagicMock()
         mock_vtex_auth_source = MagicMock()
         mock_get_source.side_effect = [mock_source_query, mock_vtex_auth_source]
-        
+
         # Simulate VtexCredentialsNotFound exception
         mock_vtex_auth_source.execute.side_effect = VtexCredentialsNotFound(
             "Credentials not found for project vtex_project_uuid"
@@ -422,11 +422,11 @@ class TestGetSourceDataFromWidget(TestCase):
 
         # Verify the error message
         self.assertIn("VTEX credentials not configured", str(context.exception.detail))
-        
+
         # Verify that get_source was called for both sources
         mock_get_source.assert_any_call(slug="test_source")
         mock_get_source.assert_any_call(slug="vtexcredentials")
-        
+
         # Verify that simple_operation was NOT called since auth failed
         mock_simple_operation.assert_not_called()
 

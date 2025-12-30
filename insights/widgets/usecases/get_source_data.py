@@ -219,9 +219,9 @@ def get_source_data_from_widget(
                     return_format="",
                     query_kwargs={},
                 )
-            except VtexCredentialsNotFound as e:
+            except VtexCredentialsNotFound:
                 raise PermissionDenied(
-                    detail=f"VTEX credentials not configured for this project. Please configure the VTEX integration first."
+                    detail="VTEX credentials not configured for this project. Please configure the VTEX integration first."
                 )
 
         operation_function = (
