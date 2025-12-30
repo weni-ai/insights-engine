@@ -5,6 +5,7 @@ from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -211,6 +212,8 @@ class DashboardViewSet(
                 user_email=request.user.email,
             )
             return Response(serialized_source, status.HTTP_200_OK)
+        except PermissionDenied:
+            raise
         except Exception as error:
             logger.exception(f"Error loading widget data: {error}")
             return Response(
@@ -257,6 +260,8 @@ class DashboardViewSet(
                 is_live=is_live,
             )
             return Response(serialized_source, status.HTTP_200_OK)
+        except PermissionDenied:
+            raise
         except Exception as error:
             logger.exception(f"Error loading report data: {error}")
             return Response(
