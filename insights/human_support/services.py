@@ -320,6 +320,12 @@ class HumanSupportDashboardService:
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
+        if normalized.get("contact"):
+            params["contact"] = str(normalized["contact"])
+
+        if normalized.get("urn"):
+            params["urn"] = str(normalized["urn"])
+
         if filters:
             limit = filters.get("limit")
             if limit is not None:
@@ -392,6 +398,12 @@ class HumanSupportDashboardService:
             value = normalized.get(filter_key)
             if value:
                 params[rooms_field] = value
+
+        if normalized.get("contact"):
+            params["contact"] = str(normalized["contact"])
+
+        if normalized.get("urn"):
+            params["urn"] = str(normalized["urn"])
 
         if filters:
             if filters.get("limit") is not None:
