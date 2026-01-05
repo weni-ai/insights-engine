@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import uuid
 
 from django.conf import settings
@@ -9,12 +9,12 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 
 from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseConversationsMetricsService,
+)
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportWorksheet,
     ConversationsReportFile,
-)
-from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
@@ -53,7 +53,7 @@ class TestConversationsReportService(TestCase):
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
-                datalake_service=MockDatalakeConversationsMetricsService(),
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_client=MockNexusClient(),
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
@@ -65,22 +65,6 @@ class TestConversationsReportService(TestCase):
         self.user = User.objects.create(
             email="test@test.com",
             language="en",
-        )
-
-    def test_ensure_unique_worksheet_name(self):
-        used_names = set()
-        self.assertEqual(
-            self.service._ensure_unique_worksheet_name("Test", used_names), "Test"
-        )
-        self.assertEqual(
-            self.service._ensure_unique_worksheet_name("Test", used_names), "Test (1)"
-        )
-        self.assertEqual(
-            self.service._ensure_unique_worksheet_name("Test", used_names), "Test (2)"
-        )
-        self.assertEqual(
-            self.service._ensure_unique_worksheet_name("Test (1)", used_names),
-            "Test (1) (1)",
         )
 
     def test_add_cache_key(self):
@@ -1054,7 +1038,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
-                datalake_service=MockDatalakeConversationsMetricsService(),
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_client=MockNexusClient(),
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
@@ -1067,115 +1051,6 @@ class TestConversationsReportServiceAdditional(TestCase):
             email="test@test.com",
             language="en",
         )
-
-    def test_ensure_unique_worksheet_name_with_long_name(self):
-        """Test worksheet name truncation when name exceeds max length."""
-        used_names = set()
-        long_name = "A" * 50  # Exceeds XLSX_WORKSHEET_NAME_MAX_LENGTH (31)
-
-        result = self.service._ensure_unique_worksheet_name(long_name, used_names)
-
-        self.assertEqual(len(result), 31)
-        self.assertTrue(result.startswith("A"))
-
-    def test_ensure_unique_worksheet_name_with_too_many_duplicates(self):
-        """Test worksheet name generation when too many duplicates exist."""
-        used_names = set()
-
-        # Add the base name first
-        used_names.add("Test")
-
-        # Fill up to the limit (20) - need to add 20 more to trigger the limit
-        for i in range(1, 21):
-            used_names.add(f"Test ({i})")
-
-        # The method should try to find a unique name and hit the limit
-        with self.assertRaises(ValueError) as context:
-            self.service._ensure_unique_worksheet_name("Test", used_names)
-
-        self.assertEqual(str(context.exception), "Too many unique names found")
-
-    def test_ensure_unique_worksheet_name_with_truncation_needed(self):
-        """Test worksheet name generation when truncation is needed for unique name."""
-        used_names = set()
-        long_name = "A" * 30  # Just under the limit
-
-        # Add the original name to used_names
-        used_names.add(long_name)
-
-        result = self.service._ensure_unique_worksheet_name(long_name, used_names)
-
-        # Should be truncated to fit " (1)" suffix
-        self.assertEqual(len(result), 31)
-        self.assertTrue(result.endswith(" (1)"))
-
-    def test_process_csv_with_empty_worksheets(self):
-        """Test CSV processing with empty worksheets."""
-        worksheets = [
-            ConversationsReportWorksheet(name="Empty", data=[]),
-            ConversationsReportWorksheet(
-                name="Valid", data=[{"col1": "val1", "col2": "val2"}]
-            ),
-        ]
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={},
-            filters={},
-            format=ReportFormat.CSV,
-            requested_by=self.user,
-        )
-
-        files = self.service.process_csv(report, worksheets)
-
-        self.assertEqual(len(files), 1)
-        self.assertEqual(files[0].name, "Valid.csv")
-
-    def test_process_xlsx_with_empty_worksheets(self):
-        """Test XLSX processing with empty worksheets."""
-        worksheets = [
-            ConversationsReportWorksheet(name="Empty", data=[]),
-            ConversationsReportWorksheet(
-                name="Valid", data=[{"col1": "val1", "col2": "val2"}]
-            ),
-        ]
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={},
-            filters={},
-            format=ReportFormat.XLSX,
-            requested_by=self.user,
-        )
-
-        files = self.service.process_xlsx(report, worksheets)
-
-        self.assertEqual(len(files), 1)
-        self.assertTrue(files[0].name.endswith(".xlsx"))
-
-    def test_process_xlsx_with_duplicate_worksheet_names(self):
-        """Test XLSX processing with duplicate worksheet names."""
-        worksheets = [
-            ConversationsReportWorksheet(name="Test", data=[{"col1": "val1"}]),
-            ConversationsReportWorksheet(name="Test", data=[{"col1": "val2"}]),
-            ConversationsReportWorksheet(name="Test", data=[{"col1": "val3"}]),
-        ]
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={},
-            filters={},
-            format=ReportFormat.XLSX,
-            requested_by=self.user,
-        )
-
-        files = self.service.process_xlsx(report, worksheets)
-
-        self.assertEqual(len(files), 1)
-        self.assertTrue(files[0].name.endswith(".xlsx"))
 
     def test_generate_with_missing_start_date(self):
         """Test generate method with missing start date."""

@@ -7,7 +7,7 @@ from insights.authentication.permissions import ProjectQueryParamPermission
 from insights.feature_flags.serializers import (
     FeatureFlagsQueryParamsSerializer,
 )
-from weni_feature_flags.services import FeatureFlagsService
+from weni.feature_flags.services import FeatureFlagsService
 
 
 class FeatureFlagsViewSet(GenericViewSet):

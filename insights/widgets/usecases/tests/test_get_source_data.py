@@ -2,6 +2,7 @@ from datetime import datetime
 from django.test import TestCase
 from unittest.mock import MagicMock, patch, PropertyMock
 from django.core.exceptions import ObjectDoesNotExist
+from rest_framework.exceptions import PermissionDenied
 
 from insights.widgets.models import Widget
 from insights.widgets.usecases.get_source_data import (
@@ -15,6 +16,7 @@ from insights.widgets.usecases.get_source_data import (
     Calculator,
 )
 from insights.projects.parsers import parse_dict_to_json
+from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
 
 
 class TestDateFunctions(TestCase):
@@ -397,6 +399,36 @@ class TestGetSourceDataFromWidget(TestCase):
             mock_simple_operation.call_args.kwargs["auth_params"],
             {"auth": "vtex_token"},
         )
+
+    def test_get_source_data_vtex_order_credentials_not_found(
+        self, mock_get_source, mock_simple_operation
+    ):
+        """Test that PermissionDenied is raised when VTEX credentials are not found"""
+        mock_source_query = MagicMock()
+        mock_vtex_auth_source = MagicMock()
+        mock_get_source.side_effect = [mock_source_query, mock_vtex_auth_source]
+
+        # Simulate VtexCredentialsNotFound exception
+        mock_vtex_auth_source.execute.side_effect = VtexCredentialsNotFound(
+            "Credentials not found for project vtex_project_uuid"
+        )
+
+        self.widget_mock.type = "vtex_order"
+        self.widget_mock.project.uuid = "vtex_project_uuid"
+
+        # Verify that PermissionDenied is raised
+        with self.assertRaises(PermissionDenied) as context:
+            get_source_data_from_widget(widget=self.widget_mock)
+
+        # Verify the error message
+        self.assertIn("VTEX credentials not configured", str(context.exception.detail))
+
+        # Verify that get_source was called for both sources
+        mock_get_source.assert_any_call(slug="test_source")
+        mock_get_source.assert_any_call(slug="vtexcredentials")
+
+        # Verify that simple_operation was NOT called since auth failed
+        mock_simple_operation.assert_not_called()
 
     def test_get_source_data_human_service_dashboard_report(
         self, mock_get_source, mock_simple_operation
