@@ -8,7 +8,7 @@ from django.conf import settings
 from rest_framework.exceptions import ValidationError, NotFound
 from sentry_sdk import capture_exception
 
-from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes
+from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes, ProductType
 from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
@@ -128,6 +128,7 @@ class MetaGraphAPIClient:
         template_id: str | list[str],
         start_date: date,
         end_date: date,
+        product_type: str = ProductType.CLOUD_API.value,
         include_data_points: bool = True,
         return_exceptions: bool = False,
     ):
@@ -165,6 +166,7 @@ class MetaGraphAPIClient:
             "end": end,
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
+            "product_type": product_type,
             "limit": 9999,
         }
 
@@ -220,6 +222,7 @@ class MetaGraphAPIClient:
         template_id: str,
         start_date: date,
         end_date: date,
+        product_type: str = ProductType.CLOUD_API.value,
     ):
         metrics_types = [
             MetricsTypes.SENT.value,
@@ -248,6 +251,7 @@ class MetaGraphAPIClient:
             "end": end,
             "metric_types": ",".join(metrics_types),
             "template_ids": template_id,
+            "product_type": product_type,
             "limit": 9999,
         }
 
