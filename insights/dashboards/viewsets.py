@@ -64,7 +64,7 @@ class DashboardViewSet(
             "monitoring_list_status",
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
-            "monitoring_csat_score_by_agents",
+            "monitoring_csat_totals",
             "finished",
             "analysis_finished_rooms_status",
             "analysis_peaks_in_human_service",
