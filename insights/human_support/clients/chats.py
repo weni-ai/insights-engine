@@ -31,7 +31,7 @@ class ChatsClient(InternalAuthentication):
         return response.json()
 
     def csat_ratings(self, project_uuid: str, params: dict | None = None) -> dict:
-        url = f"{self.base_url}/v1/internal/dashboard/{project_uuid}/csat_ratings/"
+        url = f"{self.url}/v1/internal/dashboard/{project_uuid}/csat_ratings/"
 
         response = requests.get(
             url=url,
@@ -43,7 +43,7 @@ class ChatsClient(InternalAuthentication):
         return response.json()
 
     def get_protocols(self, query_params: dict):
-        url = f"{self.base_url}/v1/internal/rooms/protocols/"
+        url = f"{self.url}/v1/internal/rooms/protocols/"
         response = requests.get(
             url, headers=self.headers, params=query_params, timeout=60
         )
