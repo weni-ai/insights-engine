@@ -64,18 +64,20 @@ class RequestConversationsReportGenerationSerializer(
     start = serializers.DateTimeField(read_only=True)
     end = serializers.DateTimeField(read_only=True)
 
-    def validate(self, attrs: dict) -> dict:
+    def _validate_dates(self, attrs: dict) -> dict:
         """
-        Validate query params
+        Validate dates
         """
-        attrs = super().validate(attrs)
-
         if attrs["start_date"] > attrs["end_date"]:
             raise serializers.ValidationError(
                 {"error": _("Start date must be before end date")},
                 code="start_date_after_end_date",
             )
 
+    def _validate_sections_and_custom_widgets(self, attrs: dict) -> dict:
+        """
+        Validate sections and custom widgets
+        """
         if ("sections" not in attrs or not attrs["sections"]) and (
             "custom_widgets" not in attrs or not attrs["custom_widgets"]
         ):
@@ -105,6 +107,119 @@ class RequestConversationsReportGenerationSerializer(
                     code="widgets_not_found",
                 )
 
+    def _validate_csat_ai_widget(self, project: Project, sections: list[str]) -> str:
+        """
+        Validate csat ai widget
+        """
+        if "CSAT_AI" not in sections:
+            return
+
+        widget = get_csat_ai_widget(project)
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"error": _("CSAT AI widget not found or not configured correctly")},
+                code="csat_ai_widget_not_found",
+            )
+
+        agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+
+        if not agent_uuid:
+            raise serializers.ValidationError(
+                {"error": _("Agent UUID not found in widget config")},
+                code="agent_uuid_not_found_in_widget_config",
+            )
+
+        return agent_uuid
+
+    def _validate_nps_ai_widget(self, project: Project, sections: list[str]) -> str:
+        if "NPS_AI" not in sections:
+            return None
+
+        widget = get_nps_ai_widget(project)
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"error": _("NPS AI widget not found or not configured correctly")},
+                code="nps_ai_widget_not_found",
+            )
+
+        agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+
+        if not agent_uuid:
+            raise serializers.ValidationError(
+                {"error": _("Agent UUID not found in widget config")},
+                code="agent_uuid_not_found_in_widget_config",
+            )
+
+        return agent_uuid
+
+    def _validate_csat_human_widget(
+        self, project: Project, sections: list[str]
+    ) -> [str, str]:
+        if "CSAT_HUMAN" not in sections:
+            return None, None
+
+        widget = get_csat_human_widget(project)
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"error": _("CSAT human widget not found or not configured correctly")},
+                code="csat_human_widget_not_found",
+            )
+
+        csat_human_flow_uuid = widget.config.get("filter", {}).get("flow")
+        csat_human_op_field = widget.config.get("op_field", None)
+
+        if not csat_human_flow_uuid:
+            raise serializers.ValidationError(
+                {"error": _("Flow UUID not found in widget config")},
+                code="flow_uuid_not_found_in_widget_config",
+            )
+
+        if not csat_human_op_field:
+            raise serializers.ValidationError(
+                {"error": _("Op field not found in widget config")},
+                code="op_field_not_found_in_widget_config",
+            )
+
+        return csat_human_flow_uuid, csat_human_op_field
+
+    def _validate_nps_human_widget(
+        self, project: Project, sections: list[str]
+    ) -> [str, str]:
+        """
+        Validate nps human widget
+        """
+        if "NPS_HUMAN" not in sections:
+            return None, None
+
+        widget = get_nps_human_widget(project)
+
+        if not widget:
+            raise serializers.ValidationError(
+                {"error": _("NPS human widget not found or not configured correctly")},
+                code="nps_human_widget_not_found",
+            )
+
+        nps_human_flow_uuid = widget.config.get("filter", {}).get("flow")
+        nps_human_op_field = widget.config.get("op_field", None)
+
+        if not nps_human_flow_uuid:
+            raise serializers.ValidationError(
+                {"error": _("Flow UUID not found in widget config")},
+                code="flow_uuid_not_found_in_widget_config",
+            )
+
+        if not nps_human_op_field:
+            raise serializers.ValidationError(
+                {"error": _("Op field not found in widget config")},
+                code="op_field_not_found_in_widget_config",
+            )
+
+        return nps_human_flow_uuid, nps_human_op_field
+
+    def _validate_sections(self, attrs: dict) -> dict:
         sections = attrs.get("sections", [])
         attrs["source_config"] = {}
 
@@ -119,113 +234,43 @@ class RequestConversationsReportGenerationSerializer(
             )
 
         if sections:
-            if "CSAT_AI" in sections:
-                widget = get_csat_ai_widget(attrs["project"])
+            if csat_agent_uuid := self._validate_csat_ai_widget(
+                attrs["project"], sections
+            ):
+                attrs["source_config"]["csat_ai_agent_uuid"] = csat_agent_uuid
 
-                if not widget:
-                    raise serializers.ValidationError(
-                        {
-                            "error": _(
-                                "CSAT AI widget not found or not configured correctly"
-                            )
-                        },
-                        code="csat_ai_widget_not_found",
-                    )
+            if nps_agent_uuid := self._validate_nps_ai_widget(
+                attrs["project"], sections
+            ):
+                attrs["source_config"]["nps_ai_agent_uuid"] = nps_agent_uuid
 
-                agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
+            csat_human_flow_uuid, csat_human_op_field = (
+                self._validate_csat_human_widget(attrs["project"], sections)
+            )
 
-                if not agent_uuid:
-                    raise serializers.ValidationError(
-                        {"error": _("Agent UUID not found in widget config")},
-                        code="agent_uuid_not_found_in_widget_config",
-                    )
-
-                attrs["source_config"]["csat_ai_agent_uuid"] = agent_uuid
-
-            if "NPS_AI" in sections:
-                widget = get_nps_ai_widget(attrs["project"])
-
-                if not widget:
-                    raise serializers.ValidationError(
-                        {
-                            "error": _(
-                                "NPS AI widget not found or not configured correctly"
-                            )
-                        },
-                        code="nps_ai_widget_not_found",
-                    )
-
-                agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
-
-                if not agent_uuid:
-                    raise serializers.ValidationError(
-                        {"error": _("Agent UUID not found in widget config")},
-                        code="agent_uuid_not_found_in_widget_config",
-                    )
-
-                attrs["source_config"]["nps_ai_agent_uuid"] = agent_uuid
-
-            if "CSAT_HUMAN" in sections:
-                widget = get_csat_human_widget(attrs["project"])
-
-                if not widget:
-                    raise serializers.ValidationError(
-                        {
-                            "error": _(
-                                "CSAT human widget not found or not configured correctly"
-                            )
-                        },
-                        code="csat_human_widget_not_found",
-                    )
-
-                csat_human_flow_uuid = widget.config.get("filter", {}).get("flow")
-                csat_human_op_field = widget.config.get("op_field", None)
-
-                if not csat_human_flow_uuid:
-                    raise serializers.ValidationError(
-                        {"error": _("Flow UUID not found in widget config")},
-                        code="flow_uuid_not_found_in_widget_config",
-                    )
-
-                if not csat_human_op_field:
-                    raise serializers.ValidationError(
-                        {"error": _("Op field not found in widget config")},
-                        code="op_field_not_found_in_widget_config",
-                    )
-
+            if csat_human_flow_uuid and csat_human_op_field:
                 attrs["source_config"]["csat_human_flow_uuid"] = csat_human_flow_uuid
                 attrs["source_config"]["csat_human_op_field"] = csat_human_op_field
 
-            if "NPS_HUMAN" in sections:
-                widget = get_nps_human_widget(attrs["project"])
+            nps_human_flow_uuid, nps_human_op_field = self._validate_nps_human_widget(
+                attrs["project"], sections
+            )
 
-                if not widget:
-                    raise serializers.ValidationError(
-                        {
-                            "error": _(
-                                "NPS human widget not found or not configured correctly"
-                            )
-                        },
-                        code="nps_human_widget_not_found",
-                    )
-
-                nps_human_flow_uuid = widget.config.get("filter", {}).get("flow")
-                nps_human_op_field = widget.config.get("op_field", None)
-
-                if not nps_human_flow_uuid:
-                    raise serializers.ValidationError(
-                        {"error": _("Flow UUID not found in widget config")},
-                        code="flow_uuid_not_found_in_widget_config",
-                    )
-
-                if not nps_human_op_field:
-                    raise serializers.ValidationError(
-                        {"error": _("Op field not found in widget config")},
-                        code="op_field_not_found_in_widget_config",
-                    )
-
+            if nps_human_flow_uuid and nps_human_op_field:
                 attrs["source_config"]["nps_human_flow_uuid"] = nps_human_flow_uuid
                 attrs["source_config"]["nps_human_op_field"] = nps_human_op_field
+
+        return attrs
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        self._validate_dates(attrs)
+        self._validate_sections_and_custom_widgets(attrs)
+        attrs = self._validate_sections(attrs)
 
         timezone = (
             pytz.timezone(attrs["project"].timezone)

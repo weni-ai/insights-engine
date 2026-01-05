@@ -1,3 +1,50 @@
+# 1.4.1
+# Add
+ - Resolutions events translations for conversations report export
+
+# 1.4.0
+# Add
+ - Create human support dashboard V2 when creating a project
+
+# 1.3.4
+# Add
+ - Available widgets endpoint
+
+# 1.3.3
+# Add
+ - New status label in agents list route
+ - Feature flag to hide human support V1 (old) dashboards from list
+
+# 1.3.2
+# Fix
+ - Sales funnel calculation when source field value is not an integer
+
+# 1.3.1
+# Fix
+ - Initialize crosstab data serializer with default field name
+
+# 1.3.0
+# Refactor
+ - Reduce human support dashboard complexity
+# Add
+ - Crosstab serialization classes and source validation
+
+# 1.2.10
+# Fix
+ - Get analysis status filters
+
+# 1.2.9
+# Refactor
+ - Reduce conversations report complexity
+
+# 1.2.8
+# Add
+ - Update Weni Feature Flags' version and use Weni Commons
+
+# 1.2.7
+# Add
+ - Filter human support dashboard rooms by contact external id
+
 # 1.2.6
 # Fix
  - change analysis peak human timeseries query to use hour instead of date

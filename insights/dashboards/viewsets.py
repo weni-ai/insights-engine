@@ -5,13 +5,19 @@ from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from weni.feature_flags.shortcuts import is_feature_active
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.filters import DashboardFilter
-from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
+from insights.dashboards.models import (
+    CONVERSATIONS_DASHBOARD_NAME,
+    HUMAN_SERVICE_DASHBOARD_V1_NAME,
+    Dashboard,
+)
 from insights.dashboards.usecases.flows_dashboard_creation import (
     CreateFlowsDashboard,
 )
@@ -56,7 +62,7 @@ class DashboardViewSet(
             "monitoring_list_status",
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
-            "monitoring_csat_score_by_agents",
+            "monitoring_csat_totals",
             "finished",
             "analysis_finished_rooms_status",
             "analysis_peaks_in_human_service",
@@ -87,6 +93,25 @@ class DashboardViewSet(
                     Q(project__is_allowed=False)
                     & ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
                 )
+            )
+
+        should_show_old_human_support_dashboard = False
+        project_uuid = self.request.query_params.get("project")
+
+        if (
+            project_uuid
+            and self.request.user
+            and is_feature_active(
+                settings.INSIGHTS_SHOW_HUMAN_SUPPORT_DASHBOARD_V1_FEATURE_FLAG_KEY,
+                self.request.user.email,
+                project_uuid,
+            )
+        ):
+            should_show_old_human_support_dashboard = True
+
+        if not should_show_old_human_support_dashboard:
+            queryset = queryset.exclude(
+                name=HUMAN_SERVICE_DASHBOARD_V1_NAME, is_deletable=False
             )
 
         queryset = queryset.order_by("created_on")
@@ -188,6 +213,8 @@ class DashboardViewSet(
                 user_email=request.user.email,
             )
             return Response(serialized_source, status.HTTP_200_OK)
+        except PermissionDenied:
+            raise
         except Exception as error:
             logger.exception(f"Error loading widget data: {error}")
             return Response(
@@ -234,6 +261,8 @@ class DashboardViewSet(
                 is_live=is_live,
             )
             return Response(serialized_source, status.HTTP_200_OK)
+        except PermissionDenied:
+            raise
         except Exception as error:
             logger.exception(f"Error loading report data: {error}")
             return Response(
@@ -261,7 +290,7 @@ class DashboardViewSet(
     def monitoring_list_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_attendance_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -273,7 +302,7 @@ class DashboardViewSet(
     def monitoring_average_time_metrics(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_time_metrics(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -389,7 +418,7 @@ class DashboardViewSet(
         custom_status_client = CustomStatusRESTClient(project)
 
         query_filters = dict(request.data or request.query_params or {})
-        custom_status = custom_status_client.list(query_filters)
+        custom_status = custom_status_client.list_custom_status(query_filters)
 
         return Response(custom_status, status.HTTP_200_OK)
 
@@ -401,7 +430,7 @@ class DashboardViewSet(
     def monitoring_peaks_in_human_service(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         results = service.get_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
 
@@ -413,7 +442,7 @@ class DashboardViewSet(
     def finished(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_finished_rooms(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -425,7 +454,7 @@ class DashboardViewSet(
     def analysis_finished_rooms_status(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         data = service.get_analysis_status(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
@@ -437,7 +466,7 @@ class DashboardViewSet(
     def analysis_peaks_in_human_service(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        filters = {key: value for key, value in request.query_params.items()}
+        filters = get_filters_from_query_params(request.query_params)
         results = service.get_analysis_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
 
