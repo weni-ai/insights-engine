@@ -24,6 +24,7 @@ class HumanSupportFilterSet(filters.FilterSet):
     start_date = filters.DateFilter(required=False)
     end_date = filters.DateFilter(required=False)
     agent = filters.CharFilter(required=False)
+    agent_email = filters.CharFilter(required=False)
     contact = filters.CharFilter(required=False)
     ticket_id = filters.CharFilter(required=False)
 
@@ -36,6 +37,7 @@ class HumanSupportFilterSet(filters.FilterSet):
             "start_date",
             "end_date",
             "agent",
+            "agent_email",
             "contact",
             "ticket_id",
         ]
