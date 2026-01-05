@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
@@ -9,16 +9,22 @@ from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
+    AvailableWidgetsList,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
+    CrosstabItemData,
+    CrosstabSubItemData,
+    SalesFunnelMetrics,
 )
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
+    AvailableWidgetsListType,
     ConversationType,
     CsatMetricsType,
     NpsMetricsType,
 )
-from insights.metrics.conversations.integrations.datalake.tests.mock_services import (
-    MockDatalakeConversationsMetricsService,
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseConversationsMetricsService,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.views import ConversationsMetricsViewSet
@@ -36,7 +42,7 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         super().setUpClass()
         cls.original_service = ConversationsMetricsViewSet.service
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
-            datalake_service=MockDatalakeConversationsMetricsService(),
+            datalake_service=MagicMock(spec=BaseConversationsMetricsService),
             nexus_client=MockNexusClient(),
             flowruns_query_executor=MockFlowRunsQueryExecutor,
         )
@@ -111,6 +117,16 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
+    def get_available_widgets(self, query_params: dict) -> Response:
+        url = reverse("conversations-available-widgets")
+
+        return self.client.get(url, query_params, format="json")
+
+    def get_crosstab_metrics(self, query_params: dict) -> Response:
+        url = reverse("conversations-crosstab")
+
+        return self.client.get(url, query_params, format="json")
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -172,6 +188,16 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_sales_funnel_metrics_when_unauthenticated(self):
         response = self.get_sales_funnel_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_available_widgets_when_unauthenticated(self):
+        response = self.get_available_widgets({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_crosstab_metrics_when_unauthenticated(self):
+        response = self.get_crosstab_metrics({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -625,7 +651,17 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["end_date"][0].code, "required")
 
     @with_project_auth
-    def test_get_sales_funnel_metrics(self):
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_sales_funnel_data"
+    )
+    def test_get_sales_funnel_metrics(self, mock_get_sales_funnel_data):
+        mock_get_sales_funnel_data.return_value = SalesFunnelMetrics(
+            leads_count=100,
+            total_orders_count=100,
+            total_orders_value=100,
+            currency_code="BRL",
+        )
+
         widget = Widget.objects.create(
             name="Test Widget",
             dashboard=self.dashboard,
@@ -644,3 +680,133 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             }
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_available_widgets_without_project_uuid(self):
+        response = self.get_available_widgets({})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_get_available_widgets_without_permission(self):
+        response = self.get_available_widgets({"project_uuid": self.project.uuid})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_available_widgets"
+    )
+    @with_project_auth
+    def test_get_available_widgets(self, mock_get_available_widgets):
+        mock_get_available_widgets.return_value = AvailableWidgetsList(
+            available_widgets=[AvailableWidgets.SALES_FUNNEL]
+        )
+        response = self.get_available_widgets({"project_uuid": self.project.uuid})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["available_widgets"], [AvailableWidgets.SALES_FUNNEL]
+        )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_available_widgets"
+    )
+    @with_project_auth
+    def test_get_available_widgets_with_native_type(self, mock_get_available_widgets):
+        mock_get_available_widgets.return_value = AvailableWidgetsList(
+            available_widgets=[AvailableWidgets.SALES_FUNNEL]
+        )
+        response = self.get_available_widgets(
+            {"project_uuid": self.project.uuid, "type": AvailableWidgetsListType.NATIVE}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["available_widgets"], [AvailableWidgets.SALES_FUNNEL]
+        )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_available_widgets"
+    )
+    @with_project_auth
+    def test_get_available_widgets_with_custom_type(self, mock_get_available_widgets):
+        mock_get_available_widgets.return_value = AvailableWidgetsList(
+            available_widgets=[]
+        )
+        response = self.get_available_widgets(
+            {"project_uuid": self.project.uuid, "type": AvailableWidgetsListType.CUSTOM}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["available_widgets"], [])
+
+    def test_cannot_get_crosstab_metrics_without_widget_uuid(self):
+        response = self.get_crosstab_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_get_crosstab_metrics_without_valid_widget_uuid(self):
+        response = self.get_crosstab_metrics({"widget_uuid": "invalid"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_get_crosstab_metrics_without_widget_permission(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {
+                    "key": "test_key",
+                },
+                "source_b": {
+                    "key": "test_key",
+                },
+            },
+        )
+
+        response = self.get_crosstab_metrics({"widget_uuid": widget.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_crosstab_data"
+    )
+    @with_project_auth
+    def test_get_crosstab_metrics(self, mock_get_crosstab_data):
+        mock_get_crosstab_data.return_value = [
+            CrosstabItemData(
+                title="Test Item",
+                total=100,
+                subitems=[
+                    CrosstabSubItemData(title="Test Subitem", count=10, percentage=10),
+                ],
+            ),
+        ]
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {
+                    "key": "test_key",
+                },
+                "source_b": {
+                    "key": "test_key",
+                },
+            },
+        )
+
+        response = self.get_crosstab_metrics(
+            {
+                "widget_uuid": widget.uuid,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total_rows"], 1)
+        self.assertEqual(response.data["results"][0]["title"], "Test Item")
+        self.assertEqual(response.data["results"][0]["total"], 100)
+        self.assertEqual(
+            response.data["results"][0]["events"], {"Test Subitem": {"value": 10}}
+        )

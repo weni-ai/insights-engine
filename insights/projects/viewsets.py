@@ -7,19 +7,23 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 from insights.authentication.authentication import StaticTokenAuthentication
 from insights.authentication.permissions import (
     IsServiceAuthentication,
     ProjectAuthPermission,
 )
-from insights.human_support.filters import HumanSupportFilterSet
+from insights.human_support.clients.chats import ChatsClient
 from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
-from insights.projects.serializers import ProjectSerializer
-from insights.shared.viewsets import get_source
-from insights.sources.rooms.usecases.query_execute import (
-    QueryExecutor as RoomsQueryExecutor,
+from insights.projects.serializers import (
+    ListContactsQueryParamsSerializer,
+    ProjectSerializer,
+    ListTicketIDsQueryParamsSerializer,
+    TicketIDSerializer,
 )
+from insights.projects.dataclass import TicketID
+from insights.shared.viewsets import get_source
 
 logger = logging.getLogger(__name__)
 
@@ -148,95 +152,26 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     )
     def search_contacts(self, request, *args, **kwargs):
         project = self.get_object()
-        filters = {key: value for key, value in request.query_params.items()}
 
-        # Normalize filters
-        filterset = HumanSupportFilterSet(data=filters, queryset=Project.objects.none())
-        filterset.form.is_valid()
-        filterset.apply_project_timezone(project)
-        normalized = {
-            k: v
-            for k, v in filterset.form.cleaned_data.items()
-            if v not in (None, [], "")
-        }
+        query_params = ListContactsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
 
-        # Build rooms query
-        rooms_filters = {
-            "project": str(project.uuid),
-            "is_active": False,
-            "limit": 10000,
-        }
-        if normalized.get("start_date"):
-            rooms_filters["ended_at__gte"] = normalized["start_date"].isoformat()
-        if normalized.get("end_date"):
-            rooms_filters["ended_at__lte"] = normalized["end_date"].isoformat()
+        chats_params = query_params.validated_data.copy()
+        chats_params["project"] = str(project.uuid)
 
-        # Get search term for filtering contacts
-        search_term = request.query_params.get("search", "").strip().lower()
+        chats_client = ChatsClient()
+        response = chats_client.get_contacts(query_params=chats_params)
 
-        try:
-            # Get rooms with contacts
-            response = RoomsQueryExecutor.execute(
-                filters=rooms_filters,
-                operation="list",
-                parser=lambda x: x,
-                project=project,
-            )
+        pagination_urls = get_cursor_based_pagination_urls(request, response)
 
-            # Ensure response is a dict
-            if not isinstance(response, dict):
-                logger.error(
-                    f"Unexpected response type from RoomsQueryExecutor: {type(response)}"
-                )
-                return Response({"results": []}, status=status.HTTP_200_OK)
-
-            # Extract unique contacts
-            contacts = {}
-            for room in response.get("results", []):
-                contact = room.get("contact")
-                if not contact:
-                    continue
-
-                # Handle both string and object formats
-                if isinstance(contact, str):
-                    # Contact is a string (name or external_id)
-                    if contact and contact.strip():
-                        # Apply search filter
-                        if search_term and search_term not in contact.lower():
-                            continue
-                        contacts[contact] = {
-                            "uuid": None,
-                            "name": contact,
-                            "external_id": contact,
-                        }
-                elif isinstance(contact, dict):
-                    # Contact is an object with uuid
-                    contact_uuid = contact.get("uuid")
-                    if contact_uuid:
-                        contact_name = contact.get("name", "")
-                        contact_external_id = contact.get("external_id", "")
-
-                        # Apply search filter (search in name or external_id)
-                        if search_term:
-                            searchable = f"{contact_name} {contact_external_id}".lower()
-                            if search_term not in searchable:
-                                continue
-
-                        contacts[contact_uuid] = {
-                            "uuid": contact_uuid,
-                            "name": contact_name,
-                            "external_id": contact_external_id,
-                        }
-
-            return Response(
-                {"results": list(contacts.values())}, status=status.HTTP_200_OK
-            )
-        except Exception as error:
-            logger.exception(f"Error searching contacts: {error}")
-            return Response(
-                {"detail": "Failed to retrieve contacts"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        return Response(
+            {
+                "next": pagination_urls.next_url,
+                "previous": pagination_urls.previous_url,
+                "results": response.get("results"),
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(
         detail=True,
@@ -245,85 +180,26 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     )
     def search_ticket_ids(self, request, *args, **kwargs):
         project = self.get_object()
-        filters = {key: value for key, value in request.query_params.items()}
 
-        # Normalize filters
-        filterset = HumanSupportFilterSet(data=filters, queryset=Project.objects.none())
-        filterset.form.is_valid()
-        filterset.apply_project_timezone(project)
-        normalized = {
-            k: v
-            for k, v in filterset.form.cleaned_data.items()
-            if v not in (None, [], "")
-        }
+        query_params = ListTicketIDsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
 
-        # Build rooms query
-        rooms_filters = {
-            "project": str(project.uuid),
-            "is_active": False,
-            "limit": 10000,
-        }
-        if normalized.get("start_date"):
-            rooms_filters["ended_at__gte"] = normalized["start_date"].isoformat()
-        if normalized.get("end_date"):
-            rooms_filters["ended_at__lte"] = normalized["end_date"].isoformat()
+        chats_params = query_params.validated_data.copy()
+        chats_params["project"] = str(project.uuid)
 
-        # Get search term for filtering protocols
-        search_term = request.query_params.get("search", "").strip().lower()
+        chats_client = ChatsClient()
+        response = chats_client.get_protocols(query_params=chats_params)
+        ticket_ids = [
+            TicketID(protocol["protocol"]) for protocol in response.get("results")
+        ]
 
-        try:
-            # Get rooms with ticket IDs
-            response = RoomsQueryExecutor.execute(
-                filters=rooms_filters,
-                operation="list",
-                parser=lambda x: x,
-                project=project,
-            )
+        pagination_urls = get_cursor_based_pagination_urls(request, response)
 
-            # Ensure response is a dict
-            if not isinstance(response, dict):
-                logger.error(
-                    f"Unexpected response type from RoomsQueryExecutor: {type(response)}"
-                )
-                return Response({"results": []}, status=status.HTTP_200_OK)
-
-            # Extract unique protocols
-            protocols = []
-            seen = set()
-            total_rooms = len(response.get("results", []))
-            logger.info(f"Processing {total_rooms} rooms for protocols")
-
-            for room in response.get("results", []):
-                protocol = room.get("protocol")
-                # Filter out None, empty strings, and string 'None'
-                if (
-                    protocol
-                    and protocol != "None"
-                    and protocol.strip() != ""
-                    and protocol not in seen
-                ):
-                    # Apply search filter
-                    if search_term and search_term not in str(protocol).lower():
-                        continue
-
-                    seen.add(protocol)
-                    protocols.append(
-                        {
-                            "uuid": room.get("uuid"),
-                            "protocol": protocol,
-                        }
-                    )
-                    logger.debug(
-                        f"Found protocol: {protocol} for room {room.get('uuid')}"
-                    )
-
-            logger.info(
-                f"Found {len(protocols)} unique protocols out of {total_rooms} rooms"
-            )
-            return Response({"results": protocols}, status=status.HTTP_200_OK)
-        except Exception as error:
-            logger.exception(f"Error searching ticket IDs: {error}")
-            return Response(
-                {"detail": "Failed to retrieve ticket IDs"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        return Response(
+            {
+                "next": pagination_urls.next_url,
+                "previous": pagination_urls.previous_url,
+                "results": TicketIDSerializer(ticket_ids, many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )

@@ -108,3 +108,6 @@ class MockDatalakeConversationsMetricsService(BaseConversationsMetricsService):
             total_orders_value=100,
             currency_code="BRL",
         )
+
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        return True

@@ -8,7 +8,10 @@ from sentry_sdk import capture_exception, capture_message
 from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
+    AvailableWidgetsList,
     ConversationsTotalsMetrics,
+    CrosstabItemData,
+    CrosstabSubItemData,
     NPSMetrics,
     SalesFunnelMetrics,
     SubtopicMetrics,
@@ -16,6 +19,9 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
+from insights.metrics.conversations.integrations.datalake.dataclass import (
+    CrosstabSource,
+)
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
     DatalakeConversationsMetricsService,
@@ -27,6 +33,8 @@ from insights.sources.flowruns.usecases.query_execute import (
     QueryExecutor as FlowRunsQueryExecutor,
 )
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
+    AvailableWidgetsListType,
     ConversationType,
     ConversationsMetricsResource,
     CsatMetricsType,
@@ -691,3 +699,106 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             total_orders_value=data.total_orders_value,
             currency_code=data.currency_code,
         )
+
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists in Datalake.
+        """
+        return self.datalake_service.check_if_sales_funnel_data_exists(project_uuid)
+
+    def _get_native_available_widgets(
+        self, project_uuid: UUID
+    ) -> list[AvailableWidgets]:
+        """
+        Get native available widgets.
+        """
+        available_widgets = []
+
+        if self.check_if_sales_funnel_data_exists(project_uuid):
+            available_widgets.append(AvailableWidgets.SALES_FUNNEL)
+
+        return available_widgets
+
+    def get_available_widgets(
+        self, project_uuid: UUID, widget_type: AvailableWidgetsListType | None = None
+    ) -> AvailableWidgetsList:
+        """
+        Get available widgets.
+        """
+        available_widgets = []
+
+        if widget_type == AvailableWidgetsListType.NATIVE or widget_type is None:
+            native_available_widgets = self._get_native_available_widgets(project_uuid)
+            available_widgets.extend(native_available_widgets)
+
+        return AvailableWidgetsList(available_widgets=available_widgets)
+
+    def _validate_crosstab_source(self, source: str) -> CrosstabSource:
+        """
+        Validate crosstab source
+        """
+        key = source.get("key")
+        field = source.get("field", "value")
+
+        if not key:
+            raise ConversationsMetricsError("Key is required")
+
+        return CrosstabSource(key=key, field=field)
+
+    def _validate_crosstab_widget(self, widget: Widget) -> None:
+        """
+        Validate crosstab widget
+        """
+        if (
+            widget.type != "conversations.crosstab"
+            or widget.source != "conversations.crosstab"
+        ):
+            raise ConversationsMetricsError("Widget type or source is not valid")
+
+        config = widget.config or {}
+
+        source_a = self._validate_crosstab_source(config.get("source_a", {}))
+        source_b = self._validate_crosstab_source(config.get("source_b", {}))
+
+        return source_a, source_b
+
+    def get_crosstab_data(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get crosstab data
+        """
+        source_a, source_b = self._validate_crosstab_widget(widget)
+
+        data = self.datalake_service.get_crosstab_data(
+            project_uuid, source_a, source_b, start_date, end_date
+        )
+
+        items: list[CrosstabItemData] = []
+
+        for label, item in data.items():
+            total = sum(item.values())
+            subitems: list[CrosstabSubItemData] = []
+
+            for subitem_label, count in item.items():
+                subitems.append(
+                    CrosstabSubItemData(
+                        title=subitem_label,
+                        count=count,
+                        percentage=round((count / total) * 100, 2) if total else 0,
+                    )
+                )
+
+            items.append(
+                CrosstabItemData(
+                    title=label,
+                    total=total,
+                    subitems=subitems,
+                )
+            )
+
+        return items

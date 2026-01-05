@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+import json
+
+from insights.metrics.conversations.integrations.datalake.typing import EventDataType
 
 
 class AbstractSerializer(ABC):
@@ -245,3 +248,100 @@ class TopicsDistributionSerializer(BaseSerializer):
         self._calculate_topics_other_count()
 
         return self.topics_data
+
+
+class CrosstabLabelsSerializer(BaseSerializer):
+    """
+    Serializer for crosstab labels
+    """
+
+    def __init__(self, events: list[EventDataType], field: str):
+        self.events = events
+        self.field = field
+
+    def serialize(self) -> dict:
+        """
+        Serialize crosstab labels to formatted data
+        based on source A events
+        """
+        labels = set()
+        conversations_uuids = {}
+
+        for event in self.events:
+            try:
+                metadata = (
+                    json.loads(event.get("metadata")) if event.get("metadata") else {}
+                )
+            except Exception:
+                continue
+
+            conversation_uuid = metadata.get("conversation_uuid")
+
+            label = (
+                event.get("value")
+                if self.field == "value"
+                else metadata.get(self.field)
+            )
+
+            if label not in labels:
+                labels.add(label)
+
+            if conversation_uuid not in conversations_uuids:
+                conversations_uuids[conversation_uuid] = label
+
+        return {
+            "labels": labels,
+            "conversations_uuids": conversations_uuids,
+        }
+
+
+class CrosstabDataSerializer(BaseSerializer):
+    """
+    Serializer for crosstab data
+    """
+
+    def __init__(
+        self,
+        labels: dict,
+        conversations_uuids: dict,
+        events: list[EventDataType],
+        field: str = "value",
+    ):
+        self.labels = labels
+        self.conversations_uuids = conversations_uuids
+        self.events = events
+        self.field = field
+
+    def serialize(self) -> dict:
+        """
+        Serialize crosstab data to formatted data.
+        """
+
+        data = {key: {} for key in self.labels}
+
+        for event in self.events:
+            try:
+                metadata = (
+                    json.loads(event.get("metadata")) if event.get("metadata") else {}
+                )
+            except Exception:
+                continue
+
+            conversation_uuid = metadata.get("conversation_uuid")
+            source_a_label = self.conversations_uuids.get(conversation_uuid)
+
+            if not source_a_label:
+                continue
+
+            label = (
+                event.get("value")
+                if self.field == "value"
+                else metadata.get(self.field)
+            )
+
+            if label not in data.get(source_a_label):
+                data[source_a_label][label] = 0
+
+            data[source_a_label][label] += 1
+
+        return data
