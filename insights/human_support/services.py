@@ -682,6 +682,7 @@ class HumanSupportDashboardService:
             "tags": "tags",
             "start_date": "start_date",
             "end_date": "end_date",
+            "agent_email": "agent",
         }
 
         normalized_filters = self._normalize_filters(filters)

@@ -4,13 +4,13 @@ from insights.internals.base import InternalAuthentication
 
 
 class ChatsClient(InternalAuthentication):
-    def __init__(self) -> None:
-        self.base_url = settings.CHATS_URL
+    def __init__(self):
+        self.url = settings.CHATS_URL
 
     def csat_score_by_agents(
         self, project_uuid: str, params: dict | None = None
     ) -> dict:
-        url = f"{self.base_url}/v1/internal/dashboard/{project_uuid}/csat-score-by-agents/"
+        url = f"{self.url}/v1/internal/dashboard/{project_uuid}/csat-score-by-agents/"
 
         response = requests.get(
             url=url,
@@ -22,7 +22,7 @@ class ChatsClient(InternalAuthentication):
         return response.json()
 
     def get_contacts(self, query_params: dict):
-        url = f"{self.base_url}/v1/internal/contacts/"
+        url = f"{self.url}/v1/internal/contacts/"
         response = requests.get(
             url, headers=self.headers, params=query_params, timeout=60
         )
