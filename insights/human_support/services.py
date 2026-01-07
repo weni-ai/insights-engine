@@ -588,6 +588,11 @@ class HumanSupportDashboardService:
         if normalized.get("end_date"):
             params["end_date"] = normalized["end_date"].isoformat()
 
+        if filters.get("limit"):
+            params["limit"] = filters.get("limit")
+        if filters.get("offset"):
+            params["offset"] = filters.get("offset")
+
         client = CustomStatusRESTClient(self.project)
         return client.list_custom_status_by_agent(params)
 
@@ -647,6 +652,11 @@ class HumanSupportDashboardService:
 
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
+
+        if filters.get("limit"):
+            params["limit"] = filters.get("limit")
+        if filters.get("offset"):
+            params["offset"] = filters.get("offset")
 
         client = CustomStatusRESTClient(self.project)
         response = client.list_custom_status_by_agent(params)
