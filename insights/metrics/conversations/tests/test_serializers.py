@@ -1232,11 +1232,13 @@ class TestCrosstabItemSerializer(TestCase):
             title="Test Item",
             total=100,
             subitems=[
-                CrosstabSubItemData(title="Test Subitem", count=10, percentage=10),
+                CrosstabSubItemData(title="Test Subitem", count=15, percentage=30),
             ],
         )
         serializer = CrosstabItemSerializer(item)
         self.assertEqual(serializer.data["title"], "Test Item")
         self.assertEqual(serializer.data["total"], 100)
 
-        self.assertEqual(serializer.data["events"], {"Test Subitem": {"value": 10}})
+        self.assertEqual(
+            serializer.data["events"], {"Test Subitem": {"value": 30, "full_value": 15}}
+        )

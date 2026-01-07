@@ -588,6 +588,7 @@ class CrosstabSubItemSerializer(serializers.Serializer):
     """
 
     value = serializers.FloatField(source="percentage")
+    full_value = serializers.IntegerField(source="count")
 
 
 class CrosstabItemSerializer(serializers.Serializer):
