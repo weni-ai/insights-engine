@@ -7,6 +7,7 @@ import pytz
 from django.utils import timezone as dj_timezone
 
 from insights.human_support.clients.chats_raw_data import ChatsRawDataClient
+from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_time_metrics import (
     ChatsTimeMetricsClient,
 )
@@ -29,9 +30,12 @@ from insights.sources.tags.usecases.query_execute import (
 
 
 class HumanSupportDashboardService:
-    def __init__(self, project: Project) -> None:
+    def __init__(
+        self, project: Project, chats_client: ChatsClient = ChatsClient()
+    ) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
+        self.chats_client = chats_client
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
@@ -586,6 +590,35 @@ class HumanSupportDashboardService:
 
         client = CustomStatusRESTClient(self.project)
         return client.list_custom_status_by_agent(params)
+
+    def csat_score_by_agents(
+        self, user_request: str | None = None, filters: dict | None = None
+    ) -> dict:
+        """
+        Return the csat score by agents.
+        """
+        normalized_filters = self._normalize_filters(filters) or {}
+        normalized_filters["user_request"] = user_request
+
+        if not normalized_filters.get("start_date") and not normalized_filters.get(
+            "end_date"
+        ):
+            project_timezone = (
+                pytz.timezone(self.project.timezone)
+                if self.project.timezone
+                else pytz.UTC
+            )
+            today = dj_timezone.now().astimezone(project_timezone).date()
+            normalized_filters["start_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.min.time())
+            )
+            normalized_filters["end_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.max.time())
+            )
+
+        return self.chats_client.csat_score_by_agents(
+            project_uuid=str(self.project.uuid), params=normalized_filters
+        )
 
     def get_analysis_detailed_monitoring_status(
         self, filters: dict | None = None

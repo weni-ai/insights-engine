@@ -25,3 +25,17 @@ class ChatsClient(InternalAuthentication):
         response.raise_for_status()
 
         return response.json()
+
+    def csat_score_by_agents(
+        self, project_uuid: str, params: dict | None = None
+    ) -> dict:
+        url = f"{self.url}/v1/internal/dashboard/{project_uuid}/csat-score-by-agents/"
+
+        response = requests.get(
+            url=url,
+            headers=self.headers,
+            params=params or {},
+        )
+        response.raise_for_status()
+
+        return response.json()
