@@ -5,10 +5,31 @@ from django.utils.timezone import get_current_timezone_name
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
+from insights.metrics.meta.enums import ProductType
 from insights.utils import convert_date_str_to_datetime_date, convert_dt_to_localized_dt
 
 MAX_ANALYTICS_DAYS_PERIOD_FILTER = 90
 ANALYTICS_REQUIRED_FIELDS = ["waba_id", "template_id", "start_date", "end_date"]
+
+
+def validate_analytics_optional_fields(filters: dict):
+    optional_fields = {}
+    product_type = filters.get("product_type")
+
+    if product_type and product_type not in [
+        ProductType.CLOUD_API.value,
+        ProductType.MM_LITE.value,
+    ]:
+        raise ValidationError(
+            {
+                "error": "Invalid product type. Must be 'CLOUD_API' or 'MARKETING_MESSAGES_LITE_API'."
+            },
+            code="invalid_product_type",
+        )
+
+    optional_fields["product_type"] = product_type
+
+    return optional_fields
 
 
 def validate_analytics_kwargs(filters: dict, timezone_name: str | None = None) -> dict:
@@ -37,6 +58,9 @@ def validate_analytics_kwargs(filters: dict, timezone_name: str | None = None) -
             {"error": f"Required fields are missing: {', '.join(missing_fields)}"},
             code="required_fields_missing",
         )
+
+    optional_fields = validate_analytics_optional_fields(filters)
+    analytics_kwargs.update(optional_fields)
 
     for dt_field in ["start_date", "end_date"]:
         try:

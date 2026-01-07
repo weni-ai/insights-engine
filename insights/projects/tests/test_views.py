@@ -19,6 +19,16 @@ class BaseProjectViewSetTestCase(APITestCase):
 
         return self.client.get(url)
 
+    def get_contacts(self, uuid: str, query_params: dict = None) -> Response:
+        url = reverse("project-search-contacts", kwargs={"pk": uuid})
+
+        return self.client.get(url, query_params)
+
+    def get_ticket_ids(self, uuid: str, query_params: dict = None) -> Response:
+        url = reverse("project-search-ticket-ids", kwargs={"pk": uuid})
+
+        return self.client.get(url, query_params)
+
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_project_as_anonymous_user(self):
@@ -56,6 +66,16 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
         url = reverse("project-get-allowed-projects")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_get_contacts_as_anonymous_user(self):
+        response = self.get_contacts(str(uuid.uuid4()), {"ordering": "name"})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_ticket_ids_as_anonymous_user(self):
+        response = self.get_ticket_ids(str(uuid.uuid4()), {"ordering": "name"})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
@@ -334,6 +354,57 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             # Verify project was reverted to original state
             project.refresh_from_db()
             self.assertFalse(project.is_allowed)
+
+    def test_get_contacts_without_permission(self):
+        response = self.get_contacts(str(self.project.uuid), {"ordering": "name"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch("insights.projects.viewsets.ChatsClient.get_contacts")
+    @with_project_auth
+    def test_get_contacts_success(self, mock_get_contacts):
+        mock_get_contacts.return_value = {
+            "next": f"http://engine-chats.stg.cloud.weni.ai/v1/internal/contacts/?cursor=cD0%3D&ordering=name&page_size=1&project={str(self.project.uuid)}",
+            "previous": None,
+            "results": [
+                {
+                    "uuid": "191ec80a-c4d5-42c3-996c-8e6507349c6b",
+                    "name": "",
+                    "external_id": "be6e76e8-1edf-494e-b9a3-3f65056f800c",
+                }
+            ],
+        }
+        response = self.get_contacts(
+            str(self.project.uuid),
+            {"ordering": "name", "page_size": 1, "search": "test"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_ticket_ids_without_permission(self):
+        response = self.get_ticket_ids(str(self.project.uuid))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch("insights.projects.viewsets.ChatsClient.get_protocols")
+    @with_project_auth
+    def test_get_ticket_ids_success(self, mock_get_protocols):
+        test_ticket_id = "1234567890"
+        mock_get_protocols.return_value = {
+            "next": f"http://engine-chats.stg.cloud.weni.ai/v1/internal/rooms/protocols/?cursor=cD0%3D&ordering=name&page_size=1&project={str(self.project.uuid)}",
+            "previous": None,
+            "results": [
+                {
+                    "protocol": test_ticket_id,
+                }
+            ],
+        }
+        response = self.get_ticket_ids(
+            str(self.project.uuid),
+            {"ordering": "name", "page_size": 1, "search": "test"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["ticket_id"], test_ticket_id)
 
     @with_project_auth
     def test_verify_csat(self):

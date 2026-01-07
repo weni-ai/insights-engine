@@ -180,8 +180,11 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["results"], [])
 
+    @patch("insights.dashboards.viewsets.is_feature_active")
     @with_project_auth
-    def test_list_dashboards_filtering_by_project(self):
+    def test_list_dashboards_filtering_by_project(self, mock_is_feature_active):
+        mock_is_feature_active.return_value = True
+
         dashboard_1 = Dashboard.objects.create(
             name="Test Dashboard 1",
             project=self.project,
@@ -528,14 +531,14 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
     @patch("insights.dashboards.viewsets.CustomStatusRESTClient")
     def test_get_custom_status(self, MockCustomStatusRESTClient):
         mock_client_instance = MockCustomStatusRESTClient.return_value
-        mock_client_instance.list.return_value = {"status": "ok"}
+        mock_client_instance.list_custom_status.return_value = {"status": "ok"}
 
         response = self.get_custom_status({"project": str(self.project.uuid)})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"status": "ok"})
         MockCustomStatusRESTClient.assert_called_once_with(self.project)
-        mock_client_instance.list.assert_called_once_with(
+        mock_client_instance.list_custom_status.assert_called_once_with(
             {"project": [str(self.project.uuid)]}
         )
 

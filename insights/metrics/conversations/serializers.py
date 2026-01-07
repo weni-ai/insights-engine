@@ -1,16 +1,23 @@
 import pytz
 from datetime import datetime, time
+import logging
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from insights.metrics.conversations.dataclass import CrosstabItemData
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
+    AvailableWidgetsListType,
     CsatMetricsType,
     ConversationType,
     NpsMetricsType,
 )
-from insights.projects.models import Project
+from insights.projects.models import Project, ProjectAuth
 from insights.widgets.models import Widget
+
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationBaseQueryParamsSerializer(serializers.Serializer):
@@ -45,11 +52,17 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
 
         # Convert start_date to datetime at midnight (00:00:00) in project timezone
         start_datetime = datetime.combine(attrs["start_date"].date(), time.min)
-        attrs["start_date"] = timezone.localize(start_datetime)
+        start_datetime = (
+            timezone.localize(start_datetime).astimezone(pytz.UTC).replace(tzinfo=None)
+        )
+        attrs["start_date"] = start_datetime
 
         # Convert end_date to datetime at 23:59:59 in project timezone
         end_datetime = datetime.combine(attrs["end_date"].date(), time(23, 59, 59))
-        attrs["end_date"] = timezone.localize(end_datetime)
+        end_datetime = (
+            timezone.localize(end_datetime).astimezone(pytz.UTC).replace(tzinfo=None)
+        )
+        attrs["end_date"] = end_datetime
 
         return attrs
 
@@ -312,11 +325,170 @@ class SalesFunnelMetricsSerializer(serializers.Serializer):
         ).data
 
     def get_purchases_made(self, obj) -> ValueAndPercentageSerializer:
-        full_value = obj.total_orders_count
-        value = (
-            round((full_value / obj.leads_count) * 100, 2) if obj.leads_count > 0 else 0
-        )
+        try:
+            full_value = (
+                obj.total_orders_count
+                if isinstance(obj.total_orders_count, int)
+                else int(obj.total_orders_count)
+            )
+            leads_count = (
+                obj.leads_count
+                if isinstance(obj.leads_count, int)
+                else int(obj.leads_count)
+            )
+        except Exception as e:
+            logger.error(f"Error on getting purchases made: {e}")
+            raise e
+
+        value = round((full_value / leads_count) * 100, 2) if leads_count > 0 else 0
 
         return ValueAndPercentageSerializer(
             {"full_value": full_value, "value": value}
         ).data
+
+
+class AvailableWidgetsQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for available widgets query params
+    """
+
+    project_uuid = serializers.UUIDField(required=True)
+    type = serializers.ChoiceField(
+        required=False, choices=AvailableWidgetsListType.choices, allow_null=True
+    )
+
+
+class AvailableWidgetsSerializer(serializers.Serializer):
+    """
+    Serializer for available widgets
+    """
+
+    available_widgets = serializers.ListField(
+        child=serializers.ChoiceField(choices=AvailableWidgets.choices)
+    )
+
+
+class CrosstabQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for crosstab query params
+    """
+
+    widget_uuid = serializers.UUIDField(required=True)
+    start_date = serializers.DateTimeField(required=True)
+    end_date = serializers.DateTimeField(required=True)
+
+    def _validate_dates(self, attrs: dict) -> None:
+        """
+        Validate dates
+        """
+        if attrs["start_date"] > attrs["end_date"]:
+            raise serializers.ValidationError(
+                {"start_date": "Start date must be before end date"},
+                code="start_date_after_end_date",
+            )
+
+        return attrs
+
+    def _validate_widget_type_and_source(self, widget: Widget) -> None:
+        """
+        Validate widget type and source
+        """
+        if widget.type != "conversations.crosstab":
+            raise serializers.ValidationError(
+                {"widget_uuid": _("Widget type is not crosstab")},
+                code="widget_type_not_crosstab",
+            )
+
+        if widget.source != "conversations.crosstab":
+            raise serializers.ValidationError(
+                {"widget_uuid": _("Widget source is not crosstab")},
+                code="widget_source_not_crosstab",
+            )
+
+    def _validate_widget_config(self, widget: Widget) -> None:
+        """
+        Validate widget config
+        """
+        config = widget.config or {}
+        source_a = config.get("source_a")
+        source_b = config.get("source_b")
+
+        if not source_a or not source_b:
+            raise serializers.ValidationError(
+                {
+                    "widget_uuid": _(
+                        "Widget config is not valid, must have source_a and source_b"
+                    )
+                },
+                code="widget_config_not_valid",
+            )
+
+        if not source_a.get("key") or not source_b.get("key"):
+            raise serializers.ValidationError(
+                {
+                    "widget_uuid": _(
+                        "Widget config is not valid, must have key for source_a and source_b"
+                    )
+                },
+                code="widget_config_not_valid",
+            )
+
+    def _validate_widget(self, attrs: dict) -> dict:
+        """
+        Validate widget
+        """
+        request = self.context.get("request")
+        user = request.user
+
+        widget = Widget.objects.filter(
+            uuid=attrs["widget_uuid"],
+            dashboard__project__in=ProjectAuth.objects.filter(
+                user=user, role=1
+            ).values_list("project", flat=True),
+        ).first()
+
+        if widget is None:
+            raise serializers.ValidationError(
+                {"widget_uuid": _("Widget not found")}, code="widget_not_found"
+            )
+
+        self._validate_widget_type_and_source(widget)
+        self._validate_widget_config(widget)
+
+        return widget
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+        attrs = self._validate_dates(attrs)
+        attrs["widget"] = self._validate_widget(attrs)
+
+        return attrs
+
+
+class CrosstabSubItemSerializer(serializers.Serializer):
+    """
+    Serializer for crosstab sub item
+    """
+
+    value = serializers.FloatField(source="percentage")
+
+
+class CrosstabItemSerializer(serializers.Serializer):
+    """
+    Serializer for crosstab item
+    """
+
+    title = serializers.CharField()
+    total = serializers.IntegerField()
+    events = serializers.SerializerMethodField()
+
+    def get_events(self, obj: CrosstabItemData) -> dict:
+        """
+        Get events (subitems)
+        """
+        return {
+            item.title: CrosstabSubItemSerializer(item).data for item in obj.subitems
+        }

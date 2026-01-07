@@ -12,3 +12,19 @@ class ProjectSerializer(serializers.ModelSerializer):
             "timezone",
             "is_active",
         ]
+
+
+class ListContactsQueryParamsSerializer(serializers.Serializer):
+    search = serializers.CharField(required=False)
+    page_size = serializers.IntegerField(required=False, default=10)
+    cursor = serializers.CharField(required=False)
+
+
+class ListTicketIDsQueryParamsSerializer(serializers.Serializer):
+    search = serializers.CharField(required=False)
+    page_size = serializers.IntegerField(required=False, default=10)
+    cursor = serializers.CharField(required=False)
+
+
+class TicketIDSerializer(serializers.Serializer):
+    ticket_id = serializers.CharField()
