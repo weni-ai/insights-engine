@@ -32,8 +32,8 @@ from insights.widgets.models import Report, Widget
 from insights.widgets.usecases.get_source_data import (
     get_source_data_from_widget,
 )
-
 from insights.core.filters import get_filters_from_query_params
+from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 
 from .serializers import (
     DashboardEditSerializer,
@@ -62,6 +62,7 @@ class DashboardViewSet(
             "monitoring_list_status",
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
+            "monitoring_csat_totals",
             "finished",
             "analysis_finished_rooms_status",
             "analysis_peaks_in_human_service",
@@ -304,6 +305,30 @@ class DashboardViewSet(
         filters = get_filters_from_query_params(request.query_params)
         data = service.get_time_metrics(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/csat/totals",
+    )
+    def monitoring_csat_totals(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+
+        data = service.csat_score_by_agents(
+            user_request=request.user.email, filters=filters
+        )
+
+        pagination_urls = get_cursor_based_pagination_urls(request, data)
+        response_data = {
+            "results": data.get("results", []),
+            "general": data.get("general", {}),
+            "next": pagination_urls.next_url,
+            "previous": pagination_urls.previous_url,
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"])
     def create_flows_dashboard(self, request, pk=None):
