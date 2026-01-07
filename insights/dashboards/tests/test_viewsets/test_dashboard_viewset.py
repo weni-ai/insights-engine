@@ -77,6 +77,12 @@ class BaseTestDashboardViewSet(APITestCase):
         url = reverse("dashboard-get-custom-status")
         return self.client.get(url, data)
 
+    def monitoring_csat_ratings(self, dashboard_uuid: str, data: dict) -> Response:
+        url = reverse(
+            "dashboard-monitoring-csat-ratings", kwargs={"pk": dashboard_uuid}
+        )
+        return self.client.get(url, data)
+
     def monitoring_csat_totals(self, dashboard_uuid: str, data: dict) -> Response:
         url = reverse("dashboard-monitoring-csat-totals", kwargs={"pk": dashboard_uuid})
 
@@ -137,6 +143,11 @@ class TestDashboardViewSetAsAnonymousUser(BaseTestDashboardViewSet):
 
     def test_cannot_get_custom_status_when_unauthenticated(self):
         response = self.get_custom_status({"project": "123"})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_monitoring_csat_ratings_when_unauthenticated(self):
+        response = self.monitoring_csat_ratings(uuid.uuid4(), {})
+
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_cannot_get_monitoring_csat_totals_when_unauthenticated(self):
@@ -586,3 +597,61 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         response = self.monitoring_csat_totals(str(dashboard.uuid), {})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @with_project_auth
+    @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
+    def test_get_monitoring_csat_ratings(self, MockHumanSupportDashboardService):
+        mock_service_instance = MockHumanSupportDashboardService.return_value
+        mock_service_instance.get_csat_ratings.return_value = {
+            "1": {
+                "value": 20.0,
+                "full_value": 20,
+            },
+            "2": {
+                "value": 20.0,
+                "full_value": 20,
+            },
+            "3": {
+                "value": 20.0,
+                "full_value": 20,
+            },
+            "4": {
+                "value": 20.0,
+                "full_value": 20,
+            },
+            "5": {
+                "value": 20.0,
+                "full_value": 20,
+            },
+        }
+
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        response = self.monitoring_csat_ratings(str(dashboard.uuid), {})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {
+                "1": {
+                    "value": 20.0,
+                    "full_value": 20,
+                },
+                "2": {
+                    "value": 20.0,
+                    "full_value": 20,
+                },
+                "3": {
+                    "value": 20.0,
+                    "full_value": 20,
+                },
+                "4": {
+                    "value": 20.0,
+                    "full_value": 20,
+                },
+                "5": {
+                    "value": 20.0,
+                    "full_value": 20,
+                },
+            },
+        )
