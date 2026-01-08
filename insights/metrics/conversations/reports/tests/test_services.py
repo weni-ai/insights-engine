@@ -183,9 +183,6 @@ class TestConversationsReportService(TestCase):
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
     )
     @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.get_transferred_to_human_worksheet"
-    )
-    @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_topics_distribution_worksheet"
     )
     @patch(
@@ -207,7 +204,6 @@ class TestConversationsReportService(TestCase):
         mock_get_nps_ai_worksheet,
         mock_get_csat_ai_worksheet,
         mock_get_topics_distribution_worksheet,
-        mock_get_transferred_to_human_worksheet,
         mock_get_resolutions_worksheet,
         mock_send_email,
     ):
@@ -215,14 +211,6 @@ class TestConversationsReportService(TestCase):
         mock_get_resolutions_worksheet.return_value = ConversationsReportWorksheet(
             name="Resolutions",
             data=[{"URN": "123", "Resolution": "Resolved", "Date": "2025-01-01"}],
-        )
-        mock_get_transferred_to_human_worksheet.return_value = (
-            ConversationsReportWorksheet(
-                name="Transferred to Human",
-                data=[
-                    {"URN": "123", "Transferred to Human": "Yes", "Date": "2025-01-01"}
-                ],
-            )
         )
         mock_get_topics_distribution_worksheet.return_value = (
             ConversationsReportWorksheet(
@@ -1366,6 +1354,16 @@ class TestConversationsReportServiceAdditional(TestCase):
                 "date": "2025-01-01T12:00:00.000000Z",
                 "value": "unresolved",
             },
+            {
+                "contact_urn": "789",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "value": "Has Chats",
+                "metadata": json.dumps(
+                    {
+                        "human_support": True,
+                    }
+                ),
+            },
         ]
 
         with patch(
@@ -1387,66 +1385,15 @@ class TestConversationsReportServiceAdditional(TestCase):
             )
 
             self.assertEqual(worksheet.name, "Resolutions")
-            self.assertEqual(len(worksheet.data), 2)
+            self.assertEqual(len(worksheet.data), 3)
             self.assertEqual(worksheet.data[0]["URN"], "123")
+            self.assertEqual(worksheet.data[0]["Resolution"], "AI-Assisted")
             self.assertEqual(worksheet.data[1]["URN"], "456")
-
-    def test_get_transferred_to_human_worksheet_with_cached_events(self):
-        """Test get_transferred_to_human_worksheet with cached events."""
-        mock_events = [
-            {
-                "contact_urn": "123",
-                "date": "2025-01-01T12:00:00.000000Z",
-                "metadata": json.dumps({"human_support": True}),
-            },
-            {
-                "contact_urn": "456",
-                "date": "2025-01-01T12:00:00.000000Z",
-                "metadata": json.dumps({"human_support": False}),
-            },
-        ]
-
-        # Set cached events
-        self.service._conversation_classification_events_cache = mock_events
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={},
-            filters={},
-            format=ReportFormat.CSV,
-            requested_by=self.user,
-        )
-
-        worksheet = self.service.get_transferred_to_human_worksheet(
-            report, "2025-01-01", "2025-01-02"
-        )
-
-        self.assertEqual(worksheet.name, "Transferred to Human")
-        self.assertEqual(len(worksheet.data), 2)
-
-    def test_get_transferred_to_human_worksheet_with_no_events(self):
-        """Test get_transferred_to_human_worksheet with no events."""
-        with patch(
-            "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
-        ) as mock_get_events:
-            mock_get_events.return_value = []
-
-            report = Report.objects.create(
-                project=self.project,
-                source=self.service.source,
-                source_config={},
-                filters={},
-                format=ReportFormat.CSV,
-                requested_by=self.user,
+            self.assertEqual(worksheet.data[1]["Resolution"], "Not assisted")
+            self.assertEqual(worksheet.data[2]["URN"], "789")
+            self.assertEqual(
+                worksheet.data[2]["Resolution"], "Transferred to human support"
             )
-
-            worksheet = self.service.get_transferred_to_human_worksheet(
-                report, "2025-01-01", "2025-01-02"
-            )
-
-            self.assertEqual(worksheet.name, "Transferred to Human")
-            self.assertEqual(len(worksheet.data), 0)  # No data when no events
 
     def test_get_topics_distribution_worksheet_for_human(self):
         """Test get_topics_distribution_worksheet for human conversations."""
