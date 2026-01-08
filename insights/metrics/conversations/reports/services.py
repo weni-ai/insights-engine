@@ -550,10 +550,6 @@ class ConversationsReportService(BaseConversationsReportService):
                 self.get_resolutions_worksheet,
                 {"report": report, "start_date": start_date, "end_date": end_date},
             ),
-            "TRANSFERRED": (
-                self.get_transferred_to_human_worksheet,
-                {"report": report, "start_date": start_date, "end_date": end_date},
-            ),
             "TOPICS_AI": (
                 self.get_topics_distribution_worksheet,
                 {
@@ -896,6 +892,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
             resolved_label = gettext("AI-Assisted")
             unresolved_label = gettext("Not assisted")
+            transferred_to_human_label = gettext("Transferred to human support")
 
         if len(events) == 0:
             return ConversationsReportWorksheet(
@@ -906,14 +903,35 @@ class ConversationsReportService(BaseConversationsReportService):
         data = []
 
         for event in events:
+            metadata = event.get("metadata")
+
+            if metadata and not isinstance(metadata, dict):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception as e:
+                    logger.error(
+                        "[CONVERSATIONS REPORT SERVICE] Failed to deserialize metadata for event %s. Error: %s",
+                        event.get("id"),
+                        e,
+                    )
+                    capture_exception(e)
+                    continue
+
+            was_transferred_to_human = (
+                metadata.get("human_support", False) if metadata else False
+            )
+
+            if was_transferred_to_human:
+                resolution_label = transferred_to_human_label
+            elif event.get("value") == "resolved":
+                resolution_label = resolved_label
+            else:
+                resolution_label = unresolved_label
+
             data.append(
                 {
                     "URN": event.get("contact_urn", ""),
-                    resolutions_label: (
-                        resolved_label
-                        if event.get("value") == "resolved"
-                        else unresolved_label
-                    ),
+                    resolutions_label: resolution_label,
                     date_label: (
                         self._format_date(event.get("date", ""), report)
                         if event.get("date")
@@ -929,68 +947,6 @@ class ConversationsReportService(BaseConversationsReportService):
                 {
                     "URN": "",
                     resolutions_label: "",
-                    date_label: "",
-                }
-            ]
-
-        return ConversationsReportWorksheet(
-            name=worksheet_name,
-            data=data,
-        )
-
-    def get_transferred_to_human_worksheet(
-        self,
-        report: Report,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> ConversationsReportWorksheet:
-        """
-        Get the transferred to human worksheet.
-        """
-        if hasattr(self, "_conversation_classification_events_cache"):
-            events = getattr(self, "_conversation_classification_events_cache")
-        else:
-            events = self.get_datalake_events(
-                report=report,
-                project=report.project.uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name="weni_nexus_data",
-                key="conversation_classification",
-                table="conversation_classification",
-                metadata_key="human_support",
-                metadata_value="true",
-            )
-
-        with override(report.requested_by.language):
-            worksheet_name = gettext("Transferred to Human")
-
-            date_label = gettext("Date")
-
-        if len(events) == 0:
-            return ConversationsReportWorksheet(
-                name=worksheet_name,
-                data=[],
-            )
-
-        data = []
-
-        for event in events:
-            data.append(
-                {
-                    "URN": event.get("contact_urn", ""),
-                    date_label: (
-                        self._format_date(event.get("date", ""), report)
-                        if event.get("date")
-                        else ""
-                    ),
-                }
-            )
-
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
                     date_label: "",
                 }
             ]

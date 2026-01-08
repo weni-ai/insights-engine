@@ -85,11 +85,7 @@ class DetailedMonitoringStatusView(APIView):
         filters["user_request"] = request.user.email
         data = service.get_detailed_monitoring_status(filters=filters)
 
-        results = data.get("results", [])
-        paginator = LimitOffsetPagination()
-        paginated_results = paginator.paginate_queryset(results, request)
-
-        return paginator.get_paginated_response(paginated_results)
+        return Response(data, status=200)
 
 
 class AnalysisDetailedMonitoringStatusView(APIView):
@@ -108,11 +104,7 @@ class AnalysisDetailedMonitoringStatusView(APIView):
         filters["user_request"] = request.user.email
         data = service.get_analysis_detailed_monitoring_status(filters=filters)
 
-        results = data.get("results", [])
-        paginator = LimitOffsetPagination()
-        paginated_results = paginator.paginate_queryset(results, request)
-
-        return paginator.get_paginated_response(paginated_results)
+        return Response(data, status=200)
 
 
 class VolumeByQueueView(APIView):

@@ -37,9 +37,6 @@ from insights.widgets.usecases.get_source_data import (
 from insights.core.filters import get_filters_from_query_params
 from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 
-from insights.human_support.services import HumanSupportDashboardService
-from insights.core.filters import get_filters_from_query_params
-
 from .serializers import (
     DashboardEditSerializer,
     DashboardIsDefaultSerializer,
@@ -67,7 +64,7 @@ class DashboardViewSet(
             "monitoring_list_status",
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
-            "monitoring_csat_score_by_agents",
+            "monitoring_csat_totals",
             "finished",
             "analysis_finished_rooms_status",
             "analysis_peaks_in_human_service",

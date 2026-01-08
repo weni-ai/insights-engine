@@ -613,7 +613,7 @@ class HumanSupportDashboardService:
                         status_label = status_data.get("label")
                 else:
                     status = status_data or "offline"
-                
+
                 if status_label is not None:
                     result["status_label"] = status_label
 
@@ -672,63 +672,13 @@ class HumanSupportDashboardService:
         if normalized.get("end_date"):
             params["end_date"] = normalized["end_date"].isoformat()
 
+        if filters.get("limit"):
+            params["limit"] = filters.get("limit")
+        if filters.get("offset"):
+            params["offset"] = filters.get("offset")
+
         client = CustomStatusRESTClient(self.project)
         return client.list_custom_status_by_agent(params)
-
-    def get_csat_ratings(self, filters: dict | None = None) -> dict:
-        filters_mapping = {
-            "sectors": "sectors",
-            "queues": "queues",
-            "tags": "tags",
-            "start_date": "start_date",
-            "end_date": "end_date",
-            "agent_email": "agent",
-        }
-
-        normalized_filters = self._normalize_filters(filters)
-
-        if (
-            "start_date" not in normalized_filters
-            and "end_date" not in normalized_filters
-        ):
-            project_timezone = (
-                pytz.timezone(self.project.timezone)
-                if self.project.timezone
-                else pytz.UTC
-            )
-
-            today = dj_timezone.now().astimezone(project_timezone).date()
-            normalized_filters["start_date"] = project_timezone.localize(
-                datetime.combine(today, datetime.min.time())
-            )
-            normalized_filters["end_date"] = project_timezone.localize(
-                datetime.combine(today, datetime.max.time())
-            )
-
-        params = {}
-
-        for filter_key, filter_value in filters_mapping.items():
-            value = normalized_filters.get(filter_key)
-            if value:
-                params[filter_value] = value
-
-        ratings_from_chats = self.chats_client.csat_ratings(
-            project_uuid=str(self.project.uuid), params=params
-        )
-        ratings_data = {
-            str(rating): {"value": 0, "full_value": 0} for rating in range(1, 6)
-        }
-
-        for data in ratings_from_chats.get("csat_ratings", []):
-            rating = str(data.get("rating"))
-
-            if rating not in ratings_data:
-                continue
-
-            ratings_data[rating]["value"] = data.get("value")
-            ratings_data[rating]["full_value"] = data.get("full_value")
-
-        return ratings_data
 
     def csat_score_by_agents(
         self, user_request: str | None = None, filters: dict | None = None
@@ -791,6 +741,11 @@ class HumanSupportDashboardService:
             params["agent"] = str(normalized["agent"])
 
         print("[get_analysis_detailed_monitoring_status] params", params)
+
+        if filters.get("limit"):
+            params["limit"] = filters.get("limit")
+        if filters.get("offset"):
+            params["offset"] = filters.get("offset")
 
         client = CustomStatusRESTClient(self.project)
         response = client.list_custom_status_by_agent(params)
@@ -1346,3 +1301,58 @@ class HumanSupportDashboardService:
             "count": result.get("count", 0),
             "results": result.get("results", []),
         }
+
+    def get_csat_ratings(self, filters: dict | None = None) -> dict:
+        filters_mapping = {
+            "sectors": "sectors",
+            "queues": "queues",
+            "tags": "tags",
+            "start_date": "start_date",
+            "end_date": "end_date",
+            "agent_email": "agent",
+        }
+
+        normalized_filters = self._normalize_filters(filters)
+
+        if (
+            "start_date" not in normalized_filters
+            and "end_date" not in normalized_filters
+        ):
+            project_timezone = (
+                pytz.timezone(self.project.timezone)
+                if self.project.timezone
+                else pytz.UTC
+            )
+
+            today = dj_timezone.now().astimezone(project_timezone).date()
+            normalized_filters["start_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.min.time())
+            )
+            normalized_filters["end_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.max.time())
+            )
+
+        params = {}
+
+        for filter_key, filter_value in filters_mapping.items():
+            value = normalized_filters.get(filter_key)
+            if value:
+                params[filter_value] = value
+
+        ratings_from_chats = self.chats_client.csat_ratings(
+            project_uuid=str(self.project.uuid), params=params
+        )
+        ratings_data = {
+            str(rating): {"value": 0, "full_value": 0} for rating in range(1, 6)
+        }
+
+        for data in ratings_from_chats.get("csat_ratings", []):
+            rating = str(data.get("rating"))
+
+            if rating not in ratings_data:
+                continue
+
+            ratings_data[rating]["value"] = data.get("value")
+            ratings_data[rating]["full_value"] = data.get("full_value")
+
+        return ratings_data
