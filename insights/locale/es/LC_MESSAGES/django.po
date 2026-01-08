@@ -145,8 +145,6 @@ msgid "Not assisted"
 msgstr "No Atendido"
 
 #: insights/metrics/conversations/reports/services.py:977
-#, fuzzy
-#| msgid "Transferred to Human"
 msgid "Transferred to human support"
 msgstr "Transferidas a soporte humano"
 
