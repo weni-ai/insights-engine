@@ -625,10 +625,9 @@ class HumanSupportDashboardService:
             project_uuid=str(self.project.uuid), params=normalized_filters
         )
 
-    def get_analysis_detailed_monitoring_status(
-        self, filters: dict | None = None
+    def _get_analysis_detailed_monitoring_status_filters(
+        self, filters: dict, ordering_fields: set
     ) -> dict:
-        ordering_fields = {"agent", "-agent"}
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
@@ -657,6 +656,14 @@ class HumanSupportDashboardService:
             params["limit"] = filters.get("limit")
         if filters.get("offset"):
             params["offset"] = filters.get("offset")
+
+    def get_analysis_detailed_monitoring_status(
+        self, filters: dict | None = None
+    ) -> dict:
+        ordering_fields = {"agent", "-agent"}
+        params = self._get_analysis_detailed_monitoring_status_filters(
+            filters, ordering_fields
+        )
 
         client = CustomStatusRESTClient(self.project)
         response = client.list_custom_status_by_agent(params)
