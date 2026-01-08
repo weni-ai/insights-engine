@@ -3,7 +3,6 @@ from django.db.models import TextChoices
 
 class ConversationsReportSections(TextChoices):
     RESOLUTIONS = "RESOLUTIONS"
-    TRANSFERRED = "TRANSFERRED"
     TOPICS_AI = "TOPICS_AI"
     TOPICS_HUMAN = "TOPICS_HUMAN"
     CSAT_AI = "CSAT_AI"
