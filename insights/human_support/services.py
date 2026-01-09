@@ -566,36 +566,37 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
-    def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
+    def get_detailed_monitoring_status(self, filters: dict = {}) -> dict:
         ordering_fields = {"agent", "-agent"}
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
-        if filters:
-            if filters.get("user_request") is not None:
-                params["user_request"] = filters.get("user_request")
-            if (ordering := filters.get("ordering")) and ordering in ordering_fields:
-                params["ordering"] = ordering
 
-        sectors = normalized.get("sectors") or []
-        if isinstance(sectors, list) and sectors:
-            params["sector"] = sectors[0]
-        queues = normalized.get("queues") or []
-        if isinstance(queues, list) and queues:
-            params["queue"] = queues[0]
+        if filters.get("user_request") is not None:
+            params["user_request"] = filters.get("user_request")
+        if (ordering := filters.get("ordering")) and ordering in ordering_fields:
+            params["ordering"] = ordering
 
-        if normalized.get("agent"):
-            params["agent"] = str(normalized["agent"])
+        for pagination_filter in ("limit", "offset"):
+            if filters.get(pagination_filter):
+                params[pagination_filter] = filters.get(pagination_filter)
 
-        if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].isoformat()
-        if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].isoformat()
+        mapping = {
+            "sectors": ("sector", list),
+            "queues": ("queue", list),
+            "agent": ("agent", str),
+            "start_date": ("start_date", str),
+            "end_date": ("end_date", str),
+        }
 
-        if filters.get("limit"):
-            params["limit"] = filters.get("limit")
-        if filters.get("offset"):
-            params["offset"] = filters.get("offset")
+        for filter_key, filter_value in mapping.items():
+            param, param_type = filter_value
+            if value := normalized.get(filter_key):
+                if param_type == list and len(value) > 0:
+                    value = value[0]
+                elif param in ("start_date", "end_date"):
+                    value = value.isoformat()
+                params[param] = str(value) if param_type == str else value
 
         client = CustomStatusRESTClient(self.project)
         return client.list_custom_status_by_agent(params)
