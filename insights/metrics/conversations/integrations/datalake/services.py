@@ -707,6 +707,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 logger.error("Error on converting metadata to dict: %s" % metadata)
                 raise e
 
+        return metadata
+
     def get_sales_funnel_data(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SalesFunnelData:
