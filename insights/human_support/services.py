@@ -631,26 +631,26 @@ class HumanSupportDashboardService:
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
-        if filters:
-            if filters.get("user_request") is not None:
-                params["user_request"] = filters.get("user_request")
-            if (ordering := filters.get("ordering")) and ordering in ordering_fields:
-                params["ordering"] = ordering
 
-        if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].isoformat()
-        if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].isoformat()
+        mapping = {
+            "user_request": ("user_request", str),
+            "start_date": ("start_date", str),
+            "end_date": ("end_date", str),
+            "sectors": ("sector", list),
+            "queues": ("queue", list),
+            "agent": ("agent", str),
+        }
 
-        sectors = normalized.get("sectors") or []
-        if isinstance(sectors, list) and sectors:
-            params["sector"] = sectors[0]
-        queues = normalized.get("queues") or []
-        if isinstance(queues, list) and queues:
-            params["queue"] = queues[0]
+        for filter_key, filter_value in mapping.items():
+            param, param_type = filter_value
+            if value := normalized.get(filter_key):
+                if param_type == list and len(value) > 0:
+                    value = value[0]
 
-        if normalized.get("agent"):
-            params["agent"] = str(normalized["agent"])
+                elif param in ("start_date", "end_date"):
+                    value = value.isoformat()
+
+                params[param] = str(value) if param_type == str else value
 
         if filters.get("limit"):
             params["limit"] = filters.get("limit")
