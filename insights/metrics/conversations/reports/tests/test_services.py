@@ -2359,3 +2359,526 @@ class TestConversationsReportServiceAdditional(TestCase):
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
+
+    def test_zip_files_with_single_file(self):
+        """Test zip_files with a single file."""
+        file = ConversationsReportFile(name="test.csv", content=b"test content")
+        result = self.service.zip_files([file])
+
+        self.assertEqual(result.name, "conversations_report.zip")
+        self.assertIsInstance(result.content, bytes)
+        self.assertGreater(len(result.content), 0)
+
+    def test_zip_files_with_multiple_files(self):
+        """Test zip_files with multiple files."""
+        file1 = ConversationsReportFile(name="test1.csv", content=b"content1")
+        file2 = ConversationsReportFile(name="test2.csv", content=b"content2")
+        result = self.service.zip_files([file1, file2])
+
+        self.assertEqual(result.name, "conversations_report.zip")
+        self.assertIsInstance(result.content, bytes)
+        self.assertGreater(len(result.content), 0)
+
+    def test_zip_files_with_duplicate_names(self):
+        """Test zip_files with duplicate file names."""
+        file1 = ConversationsReportFile(name="test.csv", content=b"content1")
+        file2 = ConversationsReportFile(name="test.csv", content=b"content2")
+        result = self.service.zip_files([file1, file2])
+
+        self.assertEqual(result.name, "conversations_report.zip")
+        self.assertIsInstance(result.content, bytes)
+        self.assertGreater(len(result.content), 0)
+
+    @patch("boto3.client")
+    def test_upload_file_to_s3(self, mock_boto3_client):
+        """Test upload_file_to_s3 method."""
+        mock_s3_client = MagicMock()
+        mock_boto3_client.return_value = mock_s3_client
+
+        file = ConversationsReportFile(name="test.csv", content=b"test content")
+        obj_key = self.service.upload_file_to_s3(file)
+
+        self.assertIsNotNone(obj_key)
+        self.assertIn("reports/conversations/", obj_key)
+        self.assertIn(".csv", obj_key)
+        mock_s3_client.upload_fileobj.assert_called_once()
+
+    @patch("boto3.client")
+    def test_get_presigned_url(self, mock_boto3_client):
+        """Test get_presigned_url method."""
+        mock_s3_client = MagicMock()
+        mock_s3_client.generate_presigned_url.return_value = "https://presigned-url.com"
+        mock_boto3_client.return_value = mock_s3_client
+
+        obj_key = "reports/conversations/test.csv"
+        url = self.service.get_presigned_url(obj_key)
+
+        self.assertEqual(url, "https://presigned-url.com")
+        mock_s3_client.generate_presigned_url.assert_called_once()
+
+    @patch("django.core.mail.EmailMessage.send")
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_presigned_url"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.upload_file_to_s3"
+    )
+    def test_send_email_with_multiple_files_and_s3(
+        self, mock_upload, mock_get_presigned, mock_send_email
+    ):
+        """Test send_email with multiple files and S3 enabled."""
+        mock_upload.return_value = "reports/conversations/test.zip"
+        mock_get_presigned.return_value = "https://presigned-url.com"
+        mock_send_email.return_value = None
+
+        with patch("django.conf.settings.USE_S3", True):
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={},
+                filters={},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+            )
+
+            files = [
+                ConversationsReportFile(name="test1.csv", content=b"content1"),
+                ConversationsReportFile(name="test2.csv", content=b"content2"),
+            ]
+
+            self.service.send_email(report, files)
+
+            mock_upload.assert_called_once()
+            mock_get_presigned.assert_called_once()
+            mock_send_email.assert_called_once()
+
+    @patch("django.core.mail.EmailMessage.send")
+    def test_send_email_with_single_file_no_s3(self, mock_send_email):
+        """Test send_email with single file and S3 disabled."""
+        mock_send_email.return_value = None
+
+        with patch("django.conf.settings.USE_S3", False):
+            report = Report.objects.create(
+                project=self.project,
+                source=self.service.source,
+                source_config={},
+                filters={},
+                format=ReportFormat.CSV,
+                requested_by=self.user,
+            )
+
+            files = [ConversationsReportFile(name="test.csv", content=b"content")]
+
+            self.service.send_email(report, files)
+
+            mock_send_email.assert_called_once()
+
+    @patch("django.core.mail.EmailMessage.send")
+    def test_send_email_with_no_files(self, mock_send_email):
+        """Test send_email with no files."""
+        mock_send_email.return_value = None
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        self.service.send_email(report, [])
+
+        mock_send_email.assert_called_once()
+
+    @patch("django.core.mail.EmailMessage.send")
+    def test_send_email_exception_handling(self, mock_send_email):
+        """Test send_email exception handling."""
+        mock_send_email.side_effect = Exception("Email send failed")
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        result = self.service.send_email(
+            report, [ConversationsReportFile(name="test.csv", content=b"content")]
+        )
+
+        self.assertIsNone(result)
+        mock_send_email.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_custom_widget_worksheet"
+    )
+    def test_get_worksheets_with_custom_widgets(self, mock_get_custom_widget):
+        """Test _get_worksheets with custom widgets."""
+        widget = Widget.objects.create(
+            name="Custom Widget",
+            config={"datalake_config": {"key": "test", "agent_uuid": "test-uuid"}},
+            source="conversations.custom",
+            type="custom",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_custom_widget.return_value = ConversationsReportWorksheet(
+            name="Custom Widget",
+            data=[{"URN": "123", "Value": "test"}],
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"custom_widgets": [str(widget.uuid)]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        worksheets = self.service._get_worksheets(
+            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+        )
+
+        self.assertEqual(len(worksheets), 1)
+        mock_get_custom_widget.assert_called_once()
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    def test_get_datalake_events_with_datetime_objects(self, mock_get_events):
+        """Test get_datalake_events with datetime objects in kwargs."""
+        mock_get_events.return_value = []
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        start_date = datetime(2025, 1, 1)
+        end_date = datetime(2025, 1, 2)
+
+        events = self.service.get_datalake_events(
+            report, date_start=start_date, date_end=end_date
+        )
+
+        self.assertEqual(events, [])
+        # Verify that datetime objects were converted to ISO format
+        call_kwargs = mock_get_events.call_args[1]
+        self.assertIsInstance(call_kwargs["date_start"], str)
+        self.assertIsInstance(call_kwargs["date_end"], str)
+
+    def test_format_date_with_timestamp_in_seconds(self):
+        """Test _format_date with timestamp in seconds."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        # Test with timestamp in seconds (not milliseconds)
+        timestamp = 1735689600  # 2025-01-01 00:00:00 UTC
+        result = self.service._format_date(timestamp, report)
+
+        self.assertIn("01/01/2025", result)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_resolutions_worksheet_with_empty_data(self, mock_get_events):
+        """Test get_resolutions_worksheet with empty data returns empty list."""
+        mock_get_events.return_value = []
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        worksheet = self.service.get_resolutions_worksheet(
+            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+        )
+
+        # Should return empty list when no events (early return)
+        self.assertEqual(len(worksheet.data), 0)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_transferred_to_human_worksheet_with_empty_data(self, mock_get_events):
+        """Test get_transferred_to_human_worksheet with empty data returns empty list."""
+        mock_get_events.return_value = []
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        worksheet = self.service.get_transferred_to_human_worksheet(
+            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+        )
+
+        # Should return empty list when no events (early return)
+        self.assertEqual(len(worksheet.data), 0)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_topics"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_topics_data_with_subtopics(self, mock_get_events, mock_get_topics):
+        """Test _get_topics_data with subtopics."""
+        topic_uuid = uuid.uuid4()
+        subtopic_uuid = uuid.uuid4()
+
+        mock_get_topics.return_value = [
+            {
+                "name": "Test Topic",
+                "uuid": topic_uuid,
+                "subtopic": [
+                    {
+                        "name": "Test Subtopic",
+                        "uuid": subtopic_uuid,
+                    }
+                ],
+            }
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        topics_data = self.service._get_topics_data(report)
+
+        self.assertIn(str(topic_uuid), topics_data)
+        self.assertIn(str(subtopic_uuid), topics_data[str(topic_uuid)]["subtopics"])
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_nps_ai_worksheet_with_empty_data(self, mock_get_events):
+        """Test get_nps_ai_worksheet with empty data triggers empty row creation."""
+        mock_get_events.return_value = []
+
+        agent_uuid = str(uuid.uuid4())
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["NPS_AI"], "nps_ai_agent_uuid": agent_uuid},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_nps_ai_worksheet(
+            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+        )
+
+        # Should have empty row when no events
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_flowsrun_results_by_contacts"
+    )
+    def test_get_csat_human_worksheet_with_empty_data(self, mock_get_results):
+        """Test get_csat_human_worksheet with empty data triggers empty row creation."""
+        mock_get_results.return_value = []
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={
+                "sections": ["CSAT_HUMAN"],
+                "csat_human_flow_uuid": str(uuid.uuid4()),
+                "csat_human_op_field": "test_field",
+            },
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_csat_human_worksheet(
+            report, "2025-01-01", "2025-01-02"
+        )
+
+        # Should have empty row when no events
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_flowsrun_results_by_contacts"
+    )
+    def test_get_nps_human_worksheet_with_empty_data(self, mock_get_results):
+        """Test get_nps_human_worksheet with empty data triggers empty row creation."""
+        mock_get_results.return_value = []
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={
+                "sections": ["NPS_HUMAN"],
+                "nps_human_flow_uuid": str(uuid.uuid4()),
+                "nps_human_op_field": "test_field",
+            },
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_nps_human_worksheet(
+            report, "2025-01-01", "2025-01-02"
+        )
+
+        # Should have empty row when no events
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "")
+
+    def test_zip_files_with_many_duplicate_names(self):
+        """Test zip_files handles many files with duplicate names successfully."""
+        # Create multiple files with the same name to test name resolution
+        files = [
+            ConversationsReportFile(name="test.csv", content=b"content")
+            for _ in range(5)
+        ]
+
+        result = self.service.zip_files(files)
+
+        self.assertEqual(result.name, "conversations_report.zip")
+        self.assertIsInstance(result.content, bytes)
+        self.assertGreater(len(result.content), 0)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_topics"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_topics_distribution_worksheet_with_invalid_metadata_skips_event(
+        self, mock_get_events, mock_get_topics
+    ):
+        """Test get_topics_distribution_worksheet skips events with invalid metadata."""
+        mock_get_topics.return_value = []
+
+        mock_get_events.return_value = [
+            {
+                "contact_urn": "1",
+                "date": "2025-01-01T00:00:00.000000Z",
+                "metadata": "invalid json",  # Invalid JSON that will cause exception
+                "value": "Test Topic",
+            },
+            {
+                "contact_urn": "2",
+                "date": "2025-01-01T00:00:00.000000Z",
+                "metadata": json.dumps({"topic_uuid": str(uuid.uuid4())}),
+                "value": "Test Topic 2",
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOPICS_AI"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            requested_by=self.user,
+        )
+
+        worksheet = self.service.get_topics_distribution_worksheet(
+            report,
+            datetime(2025, 1, 1),
+            datetime(2025, 1, 2),
+            ConversationType.AI,
+        )
+
+        # Should skip the event with invalid metadata, only process the valid one
+        self.assertIsInstance(worksheet, ConversationsReportWorksheet)
+        # Should have empty row since the valid event will be unclassified
+        self.assertEqual(len(worksheet.data), 1)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_topics"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_topics_distribution_worksheet_with_topic_but_no_subtopic_uuid(
+        self, mock_get_events, mock_get_topics
+    ):
+        """Test get_topics_distribution_worksheet with topic UUID but no subtopic UUID."""
+        topic_uuid = uuid.uuid4()
+
+        mock_get_topics.return_value = [
+            {
+                "name": "Test Topic",
+                "uuid": topic_uuid,
+                "subtopic": [
+                    {
+                        "name": "Test Subtopic",
+                        "uuid": uuid.uuid4(),
+                    }
+                ],
+            }
+        ]
+
+        mock_get_events.return_value = [
+            {
+                "contact_urn": "1",
+                "date": "2025-01-01T00:00:00.000000Z",
+                "metadata": json.dumps(
+                    {
+                        "topic_uuid": str(topic_uuid),
+                        # No subtopic_uuid - should be marked as unclassified
+                    }
+                ),
+                "value": "Test Topic",
+            }
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOPICS_AI"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            requested_by=self.user,
+        )
+
+        worksheet = self.service.get_topics_distribution_worksheet(
+            report,
+            datetime(2025, 1, 1),
+            datetime(2025, 1, 2),
+            ConversationType.AI,
+        )
+
+        self.assertIsInstance(worksheet, ConversationsReportWorksheet)
+        self.assertEqual(len(worksheet.data), 1)
+        # Subtopic should be unclassified
+        self.assertEqual(worksheet.data[0]["Subtopic"], "Unclassified")
