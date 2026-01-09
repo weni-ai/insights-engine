@@ -1,5 +1,5 @@
 import pytest
-from clients import VtexOrdersRestClient
+from insights.sources.orders.clients import VtexOrdersRestClient
 from unittest.mock import patch, Mock
 import json
 
