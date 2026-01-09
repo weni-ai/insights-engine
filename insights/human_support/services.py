@@ -439,7 +439,7 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
-    def get_detailed_monitoring_agents(self, filters: dict | None = None):
+    def _get_detailed_monitoring_agents_filters(self, filters: dict) -> dict:
         normalized = self._normalize_filters(filters)
 
         filter_mapping = {
@@ -479,48 +479,52 @@ class HumanSupportDashboardService:
             elif isinstance(filter_value, str):
                 params[param] = [str(value)]
 
-        if filters:
-            if filters.get("ordering") is not None:
-                ordering = filters.get("ordering")
-                prefix = "-" if ordering.startswith("-") else ""
-                field = ordering.lstrip("-")
+        if filters.get("ordering") is not None:
+            ordering = filters.get("ordering")
+            prefix = "-" if ordering.startswith("-") else ""
+            field = ordering.lstrip("-")
 
-                field_mapping = {
-                    "Agent": "first_name",
-                    "Attendant": "first_name",
-                    "attendant": "first_name",
-                    "agent": "first_name",
-                    "Name": "first_name",
-                    "Email": "email",
-                    "Status": "status",
-                    "status": "status",
-                    "Finished": "closed",
-                    "finished": "closed",
-                    "Closed": "closed",
-                    "closed": "closed",
-                    "Ongoing": "opened",
-                    "ongoing": "opened",
-                    "Opened": "opened",
-                    "opened": "opened",
-                    "In Progress": "opened",
-                    "Average first response time": "avg_first_response_time",
-                    "average first response time": "avg_first_response_time",
-                    "average_first_response_time": "avg_first_response_time",
-                    "Average response time": "avg_message_response_time",
-                    "average response time": "avg_message_response_time",
-                    "average_response_time": "avg_message_response_time",
-                    "Average duration": "avg_interaction_time",
-                    "average duration": "avg_interaction_time",
-                    "average_duration": "avg_interaction_time",
-                    "Time in service": "time_in_service",
-                    "time in service": "time_in_service",
-                    "time_in_service": "time_in_service",
-                    "Time In Service": "time_in_service",
-                    "in_service_time": "time_in_service",
-                }
+            field_mapping = {
+                "Agent": "first_name",
+                "Attendant": "first_name",
+                "attendant": "first_name",
+                "agent": "first_name",
+                "Name": "first_name",
+                "Email": "email",
+                "Status": "status",
+                "status": "status",
+                "Finished": "closed",
+                "finished": "closed",
+                "Closed": "closed",
+                "closed": "closed",
+                "Ongoing": "opened",
+                "ongoing": "opened",
+                "Opened": "opened",
+                "opened": "opened",
+                "In Progress": "opened",
+                "Average first response time": "avg_first_response_time",
+                "average first response time": "avg_first_response_time",
+                "average_first_response_time": "avg_first_response_time",
+                "Average response time": "avg_message_response_time",
+                "average response time": "avg_message_response_time",
+                "average_response_time": "avg_message_response_time",
+                "Average duration": "avg_interaction_time",
+                "average duration": "avg_interaction_time",
+                "average_duration": "avg_interaction_time",
+                "Time in service": "time_in_service",
+                "time in service": "time_in_service",
+                "time_in_service": "time_in_service",
+                "Time In Service": "time_in_service",
+                "in_service_time": "time_in_service",
+            }
 
-                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-                params["ordering"] = f"{prefix}{mapped_field}"
+            mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
+            params["ordering"] = f"{prefix}{mapped_field}"
+
+        return params
+
+    def get_detailed_monitoring_agents(self, filters: dict = {}):
+        params = self._get_detailed_monitoring_agents_filters(filters)
 
         response = AgentsRESTClient(self.project).list(params)
 
