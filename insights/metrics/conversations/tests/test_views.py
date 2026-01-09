@@ -775,7 +775,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                 title="Test Item",
                 total=100,
                 subitems=[
-                    CrosstabSubItemData(title="Test Subitem", count=10, percentage=10),
+                    CrosstabSubItemData(title="Test Subitem", count=15, percentage=30),
                 ],
             ),
         ]
@@ -808,5 +808,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["results"][0]["title"], "Test Item")
         self.assertEqual(response.data["results"][0]["total"], 100)
         self.assertEqual(
-            response.data["results"][0]["events"], {"Test Subitem": {"value": 10}}
+            response.data["results"][0]["events"],
+            {"Test Subitem": {"value": 30, "full_value": 15}},
         )
