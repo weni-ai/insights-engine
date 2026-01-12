@@ -9,7 +9,6 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from weni.feature_flags.shortcuts import is_feature_active
 
 from insights.authentication.permissions import (
     ProjectAuthPermission,
@@ -17,7 +16,6 @@ from insights.authentication.permissions import (
 from insights.dashboards.filters import DashboardFilter
 from insights.dashboards.models import (
     CONVERSATIONS_DASHBOARD_NAME,
-    HUMAN_SERVICE_DASHBOARD_V1_NAME,
     Dashboard,
 )
 from insights.dashboards.usecases.flows_dashboard_creation import (
@@ -96,26 +94,6 @@ class DashboardViewSet(
                     & ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
                 )
             )
-
-        should_show_old_human_support_dashboard = False
-        project_uuid = self.request.query_params.get("project")
-
-        if (
-            project_uuid
-            and self.request.user
-            and is_feature_active(
-                settings.INSIGHTS_SHOW_HUMAN_SUPPORT_DASHBOARD_V1_FEATURE_FLAG_KEY,
-                self.request.user.email,
-                project_uuid,
-            )
-        ):
-            should_show_old_human_support_dashboard = True
-
-        if not should_show_old_human_support_dashboard:
-            queryset = queryset.exclude(
-                name=HUMAN_SERVICE_DASHBOARD_V1_NAME, is_deletable=False
-            )
-
         queryset = queryset.order_by("created_on")
 
         return queryset
@@ -538,6 +516,9 @@ class DashboardViewSet(
     def analysis_csat_ratings(self, request, pk=None):
         dashboard = self.get_object()
         service = HumanSupportDashboardService(project=dashboard.project)
-        results = service.get_csat_ratings(filters=request.query_params)
+
+        filters = get_filters_from_query_params(request.query_params)
+
+        results = service.get_csat_ratings(filters=filters)
 
         return Response(results, status=status.HTTP_200_OK)

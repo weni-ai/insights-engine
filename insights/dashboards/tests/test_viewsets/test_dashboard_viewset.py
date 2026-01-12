@@ -237,11 +237,8 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["results"], [])
 
-    @patch("insights.dashboards.viewsets.is_feature_active")
     @with_project_auth
-    def test_list_dashboards_filtering_by_project(self, mock_is_feature_active):
-        mock_is_feature_active.return_value = True
-
+    def test_list_dashboards_filtering_by_project(self):
         dashboard_1 = Dashboard.objects.create(
             name="Test Dashboard 1",
             project=self.project,
