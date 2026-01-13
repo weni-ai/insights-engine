@@ -6,6 +6,7 @@ from typing import Dict
 import pytz
 from django.utils import timezone as dj_timezone
 
+from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_raw_data import ChatsRawDataClient
 from insights.human_support.clients.chats_time_metrics import (
     ChatsTimeMetricsClient,
@@ -29,9 +30,12 @@ from insights.sources.tags.usecases.query_execute import (
 
 
 class HumanSupportDashboardService:
-    def __init__(self, project: Project) -> None:
+    def __init__(
+        self, project: Project, chats_client: ChatsClient = ChatsClient()
+    ) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
+        self.chats_client = chats_client
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
@@ -435,7 +439,7 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
-    def get_detailed_monitoring_agents(self, filters: dict | None = None):
+    def _get_detailed_monitoring_agents_filters(self, filters: dict) -> dict:
         normalized = self._normalize_filters(filters)
 
         filter_mapping = {
@@ -475,48 +479,52 @@ class HumanSupportDashboardService:
             elif isinstance(filter_value, str):
                 params[param] = [str(value)]
 
-        if filters:
-            if filters.get("ordering") is not None:
-                ordering = filters.get("ordering")
-                prefix = "-" if ordering.startswith("-") else ""
-                field = ordering.lstrip("-")
+        if filters.get("ordering") is not None:
+            ordering = filters.get("ordering")
+            prefix = "-" if ordering.startswith("-") else ""
+            field = ordering.lstrip("-")
 
-                field_mapping = {
-                    "Agent": "first_name",
-                    "Attendant": "first_name",
-                    "attendant": "first_name",
-                    "agent": "first_name",
-                    "Name": "first_name",
-                    "Email": "email",
-                    "Status": "status",
-                    "status": "status",
-                    "Finished": "closed",
-                    "finished": "closed",
-                    "Closed": "closed",
-                    "closed": "closed",
-                    "Ongoing": "opened",
-                    "ongoing": "opened",
-                    "Opened": "opened",
-                    "opened": "opened",
-                    "In Progress": "opened",
-                    "Average first response time": "avg_first_response_time",
-                    "average first response time": "avg_first_response_time",
-                    "average_first_response_time": "avg_first_response_time",
-                    "Average response time": "avg_message_response_time",
-                    "average response time": "avg_message_response_time",
-                    "average_response_time": "avg_message_response_time",
-                    "Average duration": "avg_interaction_time",
-                    "average duration": "avg_interaction_time",
-                    "average_duration": "avg_interaction_time",
-                    "Time in service": "time_in_service",
-                    "time in service": "time_in_service",
-                    "time_in_service": "time_in_service",
-                    "Time In Service": "time_in_service",
-                    "in_service_time": "time_in_service",
-                }
+            field_mapping = {
+                "Agent": "first_name",
+                "Attendant": "first_name",
+                "attendant": "first_name",
+                "agent": "first_name",
+                "Name": "first_name",
+                "Email": "email",
+                "Status": "status",
+                "status": "status",
+                "Finished": "closed",
+                "finished": "closed",
+                "Closed": "closed",
+                "closed": "closed",
+                "Ongoing": "opened",
+                "ongoing": "opened",
+                "Opened": "opened",
+                "opened": "opened",
+                "In Progress": "opened",
+                "Average first response time": "avg_first_response_time",
+                "average first response time": "avg_first_response_time",
+                "average_first_response_time": "avg_first_response_time",
+                "Average response time": "avg_message_response_time",
+                "average response time": "avg_message_response_time",
+                "average_response_time": "avg_message_response_time",
+                "Average duration": "avg_interaction_time",
+                "average duration": "avg_interaction_time",
+                "average_duration": "avg_interaction_time",
+                "Time in service": "time_in_service",
+                "time in service": "time_in_service",
+                "time_in_service": "time_in_service",
+                "Time In Service": "time_in_service",
+                "in_service_time": "time_in_service",
+            }
 
-                mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
-                params["ordering"] = f"{prefix}{mapped_field}"
+            mapped_field = field_mapping.get(field, field.lower().replace(" ", "_"))
+            params["ordering"] = f"{prefix}{mapped_field}"
+
+        return params
+
+    def get_detailed_monitoring_agents(self, filters: dict = {}):
+        params = self._get_detailed_monitoring_agents_filters(filters)
 
         response = AgentsRESTClient(self.project).list(params)
 
@@ -558,62 +566,111 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
-    def get_detailed_monitoring_status(self, filters: dict | None = None) -> dict:
+    def get_detailed_monitoring_status(self, filters: dict = {}) -> dict:
         ordering_fields = {"agent", "-agent"}
         normalized = self._normalize_filters(filters)
 
         params: dict = {}
-        if filters:
-            if filters.get("user_request") is not None:
-                params["user_request"] = filters.get("user_request")
-            if (ordering := filters.get("ordering")) and ordering in ordering_fields:
-                params["ordering"] = ordering
 
-        sectors = normalized.get("sectors") or []
-        if isinstance(sectors, list) and sectors:
-            params["sector"] = sectors[0]
-        queues = normalized.get("queues") or []
-        if isinstance(queues, list) and queues:
-            params["queue"] = queues[0]
+        if filters.get("user_request") is not None:
+            params["user_request"] = filters.get("user_request")
+        if (ordering := filters.get("ordering")) and ordering in ordering_fields:
+            params["ordering"] = ordering
 
-        if normalized.get("agent"):
-            params["agent"] = str(normalized["agent"])
+        for pagination_filter in ("limit", "offset"):
+            if filters.get(pagination_filter):
+                params[pagination_filter] = filters.get(pagination_filter)
 
-        if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].isoformat()
-        if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].isoformat()
+        mapping = {
+            "sectors": ("sector", list),
+            "queues": ("queue", list),
+            "agent": ("agent", str),
+            "start_date": ("start_date", str),
+            "end_date": ("end_date", str),
+        }
+
+        for filter_key, filter_value in mapping.items():
+            param, param_type = filter_value
+            if value := normalized.get(filter_key):
+                if param_type == list and len(value) > 0:
+                    value = value[0]
+                elif param in ("start_date", "end_date"):
+                    value = value.isoformat()
+                params[param] = str(value) if param_type == str else value
 
         client = CustomStatusRESTClient(self.project)
         return client.list_custom_status_by_agent(params)
+
+    def csat_score_by_agents(
+        self, user_request: str | None = None, filters: dict | None = None
+    ) -> dict:
+        """
+        Return the csat score by agents.
+        """
+        normalized_filters = self._normalize_filters(filters) or {}
+        normalized_filters["user_request"] = user_request
+
+        if not normalized_filters.get("start_date") and not normalized_filters.get(
+            "end_date"
+        ):
+            project_timezone = (
+                pytz.timezone(self.project.timezone)
+                if self.project.timezone
+                else pytz.UTC
+            )
+            today = dj_timezone.now().astimezone(project_timezone).date()
+            normalized_filters["start_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.min.time())
+            )
+            normalized_filters["end_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.max.time())
+            )
+
+        return self.chats_client.csat_score_by_agents(
+            project_uuid=str(self.project.uuid), params=normalized_filters
+        )
+
+    def _get_analysis_detailed_monitoring_status_filters(
+        self, filters: dict, ordering_fields: set
+    ) -> dict:
+        normalized = self._normalize_filters(filters)
+
+        params: dict = {}
+
+        mapping = {
+            "user_request": ("user_request", str),
+            "start_date": ("start_date", str),
+            "end_date": ("end_date", str),
+            "sectors": ("sector", list),
+            "queues": ("queue", list),
+            "agent": ("agent", str),
+        }
+
+        for filter_key, filter_value in mapping.items():
+            param, param_type = filter_value
+            if value := normalized.get(filter_key):
+                if param_type == list and len(value) > 0:
+                    value = value[0]
+
+                elif param in ("start_date", "end_date"):
+                    value = value.isoformat()
+
+                params[param] = str(value) if param_type == str else value
+
+        if filters.get("limit"):
+            params["limit"] = filters.get("limit")
+        if filters.get("offset"):
+            params["offset"] = filters.get("offset")
+
+        return params
 
     def get_analysis_detailed_monitoring_status(
         self, filters: dict | None = None
     ) -> dict:
         ordering_fields = {"agent", "-agent"}
-        normalized = self._normalize_filters(filters)
-
-        params: dict = {}
-        if filters:
-            if filters.get("user_request") is not None:
-                params["user_request"] = filters.get("user_request")
-            if (ordering := filters.get("ordering")) and ordering in ordering_fields:
-                params["ordering"] = ordering
-
-        if normalized.get("start_date"):
-            params["start_date"] = normalized["start_date"].isoformat()
-        if normalized.get("end_date"):
-            params["end_date"] = normalized["end_date"].isoformat()
-
-        sectors = normalized.get("sectors") or []
-        if isinstance(sectors, list) and sectors:
-            params["sector"] = sectors[0]
-        queues = normalized.get("queues") or []
-        if isinstance(queues, list) and queues:
-            params["queue"] = queues[0]
-
-        if normalized.get("agent"):
-            params["agent"] = str(normalized["agent"])
+        params = self._get_analysis_detailed_monitoring_status_filters(
+            filters, ordering_fields
+        )
 
         client = CustomStatusRESTClient(self.project)
         response = client.list_custom_status_by_agent(params)
@@ -707,6 +764,7 @@ class HumanSupportDashboardService:
                     "first_response_time": room.get("first_response_time"),
                     "duration": room.get("duration"),
                     "ended_at": room.get("ended_at"),
+                    "csat_rating": room.get("csat_rating"),
                     "link": room.get("link"),
                 }
             )
@@ -825,3 +883,58 @@ class HumanSupportDashboardService:
             "average_response_time": message_resp_avg,
             "average_conversation_duration": chat_avg,
         }
+
+    def get_csat_ratings(self, filters: dict | None = None) -> dict:
+        filters_mapping = {
+            "sectors": "sectors",
+            "queues": "queues",
+            "tags": "tags",
+            "start_date": "start_date",
+            "end_date": "end_date",
+            "agent_email": "agent",
+        }
+
+        normalized_filters = self._normalize_filters(filters)
+
+        if (
+            "start_date" not in normalized_filters
+            and "end_date" not in normalized_filters
+        ):
+            project_timezone = (
+                pytz.timezone(self.project.timezone)
+                if self.project.timezone
+                else pytz.UTC
+            )
+
+            today = dj_timezone.now().astimezone(project_timezone).date()
+            normalized_filters["start_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.min.time())
+            )
+            normalized_filters["end_date"] = project_timezone.localize(
+                datetime.combine(today, datetime.max.time())
+            )
+
+        params = {}
+
+        for filter_key, filter_value in filters_mapping.items():
+            value = normalized_filters.get(filter_key)
+            if value:
+                params[filter_value] = value
+
+        ratings_from_chats = self.chats_client.csat_ratings(
+            project_uuid=str(self.project.uuid), params=params
+        )
+        ratings_data = {
+            str(rating): {"value": 0, "full_value": 0} for rating in range(1, 6)
+        }
+
+        for data in ratings_from_chats.get("csat_ratings", []):
+            rating = str(data.get("rating"))
+
+            if rating not in ratings_data:
+                continue
+
+            ratings_data[rating]["value"] = data.get("value")
+            ratings_data[rating]["full_value"] = data.get("full_value")
+
+        return ratings_data

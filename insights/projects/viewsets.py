@@ -22,6 +22,7 @@ from insights.projects.serializers import (
     ListTicketIDsQueryParamsSerializer,
     TicketIDSerializer,
 )
+from insights.sources.chats.clients import ChatsRESTClient
 from insights.projects.dataclass import TicketID
 from insights.shared.viewsets import get_source
 
@@ -203,3 +204,17 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             },
             status=status.HTTP_200_OK,
         )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="verify_csat",
+    )
+    def verify_csat(self, request, *args, **kwargs):
+        project = self.get_object()
+        chats_client = ChatsRESTClient()
+
+        project_data = chats_client.get_project(str(project.uuid))
+        is_csat_enabled = project_data.get("is_csat_enabled", False)
+
+        return Response(is_csat_enabled, status=status.HTTP_200_OK)

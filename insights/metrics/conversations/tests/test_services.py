@@ -717,3 +717,379 @@ class TestConversationsMetricsService(TestCase):
                 ),
             ],
         )
+
+    def test_get_topics_with_cache_hit(self):
+        """Test get_topics when cache is hit"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        cached_data = json.dumps([{"name": "Cached Topic", "uuid": "123"}])
+        self.mock_cache_client.get.return_value = cached_data
+
+        topics = self.service.get_topics(project_uuid)
+
+        self.assertEqual(len(topics), 1)
+        self.assertEqual(topics[0]["name"], "Cached Topic")
+        self.mock_nexus_client.get_topics.assert_not_called()
+
+    def test_get_topics_with_exception(self):
+        """Test get_topics when nexus client raises exception"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_cache_client.get.return_value = None
+        self.mock_nexus_client.get_topics.side_effect = Exception("Network error")
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_topics(project_uuid)
+
+        self.assertIn("Error fetching topics", str(context.exception))
+
+    def test_get_topics_with_json_parse_error(self):
+        """Test get_topics when response.json() fails"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_cache_client.get.return_value = None
+        mock_response = MockResponse(200, "invalid json")
+        mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
+        self.mock_nexus_client.get_topics.return_value = mock_response
+
+        topics = self.service.get_topics(project_uuid)
+
+        self.assertEqual(topics, "invalid json")
+
+    def test_get_topics_with_non_success_status(self):
+        """Test get_topics when response status is not success"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_cache_client.get.return_value = None
+        mock_response = MockResponse(500, "Internal Server Error")
+        self.mock_nexus_client.get_topics.return_value = mock_response
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_topics(project_uuid)
+
+        self.assertIn("Error fetching topics", str(context.exception))
+
+    def test_get_subtopics_with_exception(self):
+        """Test get_subtopics when nexus client raises exception"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_nexus_client.get_subtopics.side_effect = Exception("Network error")
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_subtopics(project_uuid, topic_uuid)
+
+        self.assertIn("Error fetching subtopics", str(context.exception))
+
+    def test_get_subtopics_with_json_parse_error(self):
+        """Test get_subtopics when response.json() fails"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        mock_response = MockResponse(200, "invalid json")
+        mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
+        self.mock_nexus_client.get_subtopics.return_value = mock_response
+
+        subtopics = self.service.get_subtopics(project_uuid, topic_uuid)
+
+        self.assertEqual(subtopics, "invalid json")
+
+    def test_get_subtopics_with_non_success_status(self):
+        """Test get_subtopics when response status is not success"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        mock_response = MockResponse(404, "Not Found")
+        self.mock_nexus_client.get_subtopics.return_value = mock_response
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_subtopics(project_uuid, topic_uuid)
+
+        self.assertIn("Error fetching topics", str(context.exception))
+
+    def test_create_topic_with_exception(self):
+        """Test create_topic when nexus client raises exception"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_nexus_client.create_topic.side_effect = Exception("Network error")
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.create_topic(project_uuid, "Test Topic", "Test Description")
+
+        self.assertIn("Error creating topic", str(context.exception))
+
+    def test_create_topic_with_json_parse_error(self):
+        """Test create_topic when response.json() fails"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        mock_response = MockResponse(201, "invalid json")
+        mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
+        self.mock_nexus_client.create_topic.return_value = mock_response
+
+        result = self.service.create_topic(
+            project_uuid, "Test Topic", "Test Description"
+        )
+
+        self.assertEqual(result, "invalid json")
+
+    def test_create_topic_with_non_success_status(self):
+        """Test create_topic when response status is not success"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        mock_response = MockResponse(400, "Bad Request")
+        self.mock_nexus_client.create_topic.return_value = mock_response
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.create_topic(project_uuid, "Test Topic", "Test Description")
+
+        self.assertIn("Error creating topic", str(context.exception))
+
+    def test_create_subtopic_with_exception(self):
+        """Test create_subtopic when nexus client raises exception"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_nexus_client.create_subtopic.side_effect = Exception("Network error")
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.create_subtopic(
+                project_uuid, topic_uuid, "Test Subtopic", "Test Description"
+            )
+
+        self.assertIn("Error creating subtopic", str(context.exception))
+
+    def test_create_subtopic_with_json_parse_error(self):
+        """Test create_subtopic when response.json() fails"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        mock_response = MockResponse(201, "invalid json")
+        mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
+        self.mock_nexus_client.create_subtopic.return_value = mock_response
+
+        result = self.service.create_subtopic(
+            project_uuid, topic_uuid, "Test Subtopic", "Test Description"
+        )
+
+        self.assertEqual(result, "invalid json")
+
+    def test_create_subtopic_with_non_success_status(self):
+        """Test create_subtopic when response status is not success"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        mock_response = MockResponse(400, "Bad Request")
+        self.mock_nexus_client.create_subtopic.return_value = mock_response
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.create_subtopic(
+                project_uuid, topic_uuid, "Test Subtopic", "Test Description"
+            )
+
+        self.assertIn("Error creating subtopic", str(context.exception))
+
+    def test_delete_topic_with_exception(self):
+        """Test delete_topic when nexus client raises exception"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_nexus_client.delete_topic.side_effect = Exception("Network error")
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.delete_topic(project_uuid, topic_uuid)
+
+        self.assertIn("Error deleting topic", str(context.exception))
+
+    def test_delete_topic_with_non_success_status(self):
+        """Test delete_topic when response status is not success"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        mock_response = MockResponse(404, "Not Found")
+        self.mock_nexus_client.delete_topic.return_value = mock_response
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.delete_topic(project_uuid, topic_uuid)
+
+        self.assertIn("Error deleting topic", str(context.exception))
+
+    def test_delete_subtopic_with_exception(self):
+        """Test delete_subtopic when nexus client raises exception"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        subtopic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_nexus_client.delete_subtopic.side_effect = Exception("Network error")
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.delete_subtopic(project_uuid, topic_uuid, subtopic_uuid)
+
+        self.assertIn("Error deleting subtopic", str(context.exception))
+
+    def test_delete_subtopic_with_non_success_status(self):
+        """Test delete_subtopic when response status is not success"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        subtopic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        mock_response = MockResponse(404, "Not Found")
+        self.mock_nexus_client.delete_subtopic.return_value = mock_response
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.delete_subtopic(project_uuid, topic_uuid, subtopic_uuid)
+
+        self.assertIn("Error deleting subtopic", str(context.exception))
+
+    def test_get_topics_distribution_with_exception(self):
+        """Test get_topics_distribution when datalake service raises exception"""
+        project = Project.objects.create(name="Test Project")
+        start_date = datetime(2021, 1, 1)
+        end_date = datetime(2021, 1, 2)
+
+        self.mock_datalake_service.get_topics_distribution.side_effect = Exception(
+            "Datalake error"
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_topics_distribution(
+                project, start_date, end_date, ConversationType.AI
+            )
+
+        self.assertIn("Failed to get topics distribution", str(context.exception))
+
+    def test_get_csat_metrics_missing_flow_uuid(self):
+        """Test get_csat_metrics when flow_uuid is missing"""
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {},
+                "operation": "recurrence",
+                "op_field": "result",
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_csat_metrics(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=datetime.now() - timedelta(days=30),
+                end_date=datetime.now(),
+                metric_type=CsatMetricsType.HUMAN,
+            )
+
+        self.assertIn("Flow UUID is required", str(context.exception))
+
+    def test_get_csat_metrics_missing_op_field(self):
+        """Test get_csat_metrics when op_field is missing"""
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                },
+                "operation": "recurrence",
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_csat_metrics(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=datetime.now() - timedelta(days=30),
+                end_date=datetime.now(),
+                metric_type=CsatMetricsType.HUMAN,
+            )
+
+        self.assertIn("Op field is required", str(context.exception))
+
+    def test_get_csat_metrics_missing_agent_uuid(self):
+        """Test get_csat_metrics when agent_uuid is missing for AI type"""
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "datalake_config": {},
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_csat_metrics(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=datetime.now() - timedelta(days=30),
+                end_date=datetime.now(),
+                metric_type=CsatMetricsType.AI,
+            )
+
+        self.assertIn("Agent UUID is required", str(context.exception))
+
+    def test_get_nps_metrics_missing_flow_uuid(self):
+        """Test get_nps_metrics when flow_uuid is missing"""
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {},
+                "operation": "recurrence",
+                "op_field": "result",
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_nps_metrics(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=datetime.now() - timedelta(days=30),
+                end_date=datetime.now(),
+                metric_type=NpsMetricsType.HUMAN,
+            )
+
+        self.assertIn("Flow UUID is required", str(context.exception))
+
+    def test_get_nps_metrics_missing_op_field(self):
+        """Test get_nps_metrics when op_field is missing"""
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {
+                    "flow": "123",
+                },
+                "operation": "recurrence",
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_nps_metrics(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=datetime.now() - timedelta(days=30),
+                end_date=datetime.now(),
+                metric_type=NpsMetricsType.HUMAN,
+            )
+
+        self.assertIn("Op field is required", str(context.exception))
+
+    def test_get_nps_metrics_missing_agent_uuid(self):
+        """Test get_nps_metrics when agent_uuid is missing for AI type"""
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "datalake_config": {},
+            },
+        )
+
+        with self.assertRaises(ConversationsMetricsError) as context:
+            self.service.get_nps_metrics(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=datetime.now() - timedelta(days=30),
+                end_date=datetime.now(),
+                metric_type=NpsMetricsType.AI,
+            )
+
+        self.assertIn("Agent UUID is required", str(context.exception))

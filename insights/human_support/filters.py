@@ -21,9 +21,12 @@ class HumanSupportFilterSet(filters.FilterSet):
     sectors = UUIDInFilter(required=False)
     queues = UUIDInFilter(required=False)
     tags = UUIDInFilter(required=False)
+    page_size = filters.NumberFilter(required=False)
+    cursor = filters.CharFilter(required=False)
     start_date = filters.DateFilter(required=False)
     end_date = filters.DateFilter(required=False)
     agent = filters.CharFilter(required=False)
+    agent_email = filters.CharFilter(required=False)
     contact = filters.CharFilter(required=False)
     ticket_id = filters.CharFilter(required=False)
 
@@ -33,9 +36,12 @@ class HumanSupportFilterSet(filters.FilterSet):
             "sectors",
             "queues",
             "tags",
+            "page_size",
+            "cursor",
             "start_date",
             "end_date",
             "agent",
+            "agent_email",
             "contact",
             "ticket_id",
         ]
