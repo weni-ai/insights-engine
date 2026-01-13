@@ -662,6 +662,8 @@ class HumanSupportDashboardService:
         if filters.get("offset"):
             params["offset"] = filters.get("offset")
 
+        return params
+
     def get_analysis_detailed_monitoring_status(
         self, filters: dict | None = None
     ) -> dict:

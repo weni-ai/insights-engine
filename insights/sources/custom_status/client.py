@@ -12,6 +12,7 @@ class CustomStatusRESTClient(InternalAuthentication):
 
     def list_custom_status(self, query_filters: dict):
         url = f"{self.base_url}/v1/internal/dashboard/{self.project.uuid}/custom_status_agent/"
+
         if query_filters.get("created_on__gte", None):
             query_filters["start_date"] = query_filters.pop("created_on__gte")
         if query_filters.get("created_on__lte", None):
