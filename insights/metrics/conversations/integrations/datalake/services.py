@@ -746,6 +746,24 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
         return values
 
+    def _get_metadata_from_event(self, event: dict) -> dict:
+        """
+        Get metadata from event.
+        """
+        metadata = event.get("metadata")
+
+        if not metadata:
+            return {}
+
+        if not isinstance(metadata, dict):
+            try:
+                metadata = json.loads(metadata)
+            except Exception as e:
+                logger.error("Error on converting metadata to dict: %s" % metadata)
+                raise e
+
+        return metadata
+
     def get_sales_funnel_data(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SalesFunnelData:
@@ -812,19 +830,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             total_orders_count += length
 
             for event in events:
-                metadata = event.get("metadata")
-
-                if not metadata:
-                    continue
-
-                if not isinstance(metadata, dict):
-                    try:
-                        metadata = json.loads(metadata)
-                    except Exception as e:
-                        logger.error(
-                            "Error on converting metadata to dict: %s" % metadata
-                        )
-                        raise e
+                metadata = self._get_metadata_from_event(event)
 
                 if not currency_code:
                     currency_code = metadata.get("currency")
