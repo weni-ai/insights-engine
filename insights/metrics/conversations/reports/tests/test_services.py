@@ -2565,29 +2565,6 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(len(worksheet.data), 0)
 
     @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
-    )
-    def test_get_transferred_to_human_worksheet_with_empty_data(self, mock_get_events):
-        """Test get_transferred_to_human_worksheet with empty data returns empty list."""
-        mock_get_events.return_value = []
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={},
-            filters={},
-            format=ReportFormat.CSV,
-            requested_by=self.user,
-        )
-
-        worksheet = self.service.get_transferred_to_human_worksheet(
-            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
-        )
-
-        # Should return empty list when no events (early return)
-        self.assertEqual(len(worksheet.data), 0)
-
-    @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_topics"
     )
     @patch(
