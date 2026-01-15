@@ -467,6 +467,9 @@ class HumanSupportDashboardService:
         if normalized.get("end_date"):
             params["created_on__lte"] = normalized["end_date"].isoformat()
 
+        if normalized.get("contact"):
+            params["contact"] = str(normalized["contact"])
+
         if filters:
             if filters.get("limit") is not None:
                 params["limit"] = filters.get("limit")
