@@ -324,6 +324,9 @@ class HumanSupportDashboardService:
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
+        if normalized.get("contact"):
+            params["contact"] = str(normalized["contact"])
+
         if filters:
             limit = filters.get("limit")
             if limit is not None:
