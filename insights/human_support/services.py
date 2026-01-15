@@ -378,6 +378,9 @@ class HumanSupportDashboardService:
         if normalized.get("agent"):
             params["agent"] = str(normalized["agent"])
 
+        if normalized.get("contact"):
+            params["contact"] = str(normalized["contact"])
+
         if filters:
             limit = filters.get("limit")
             if limit is not None:
@@ -733,6 +736,8 @@ class HumanSupportDashboardService:
             params["limit"] = filters.get("limit")
         if filters.get("offset"):
             params["offset"] = filters.get("offset")
+
+        return params
 
     def get_analysis_detailed_monitoring_status(
         self, filters: dict | None = None

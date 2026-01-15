@@ -1,3 +1,44 @@
+# 1.4.11
+# Fix
+ - Return parameters in HumanSupportDashboardService's _get_analysis_detailed_monitoring_status_filters
+
+# 1.4.10
+# Refactor
+ - Reduce cyclomatic complexity in the human support dashboard V2 and the conversations dashboard service
+
+# 1.4.9
+# Add
+ - Analysis CSAT ratings filters
+
+# 1.4.8
+# Add
+ - Crosstab's full value
+ - Increase test coverage
+
+# 1.4.7
+# Remove
+ - Remove human support dashboard V1 feature flag
+
+# 1.4.6
+# Remove
+ - Remove Insights pagination for detailed monitoring status (to use only Chat's pagination)
+
+# 1.4.5
+# Add
+ - Limit and offset to Chats internal call in the human support dashboard's monitoring status
+
+# 1.4.4
+# Add
+ - CSAT ratings to finished rooms
+
+# 1.4.3
+# Remove
+ - Conversations report feature flag
+
+# 1.4.2
+# Fix
+ - Conversations report range date
+
 # 1.4.1
 # Add
  - Resolutions events translations for conversations report export
