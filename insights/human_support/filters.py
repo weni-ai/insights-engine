@@ -28,6 +28,7 @@ class HumanSupportFilterSet(filters.FilterSet):
     agent = filters.CharFilter(required=False)
     agent_email = filters.CharFilter(required=False)
     contact = filters.CharFilter(required=False)
+    urn = filters.CharFilter(required=False)
     ticket_id = filters.CharFilter(required=False)
 
     class Meta:
@@ -43,6 +44,7 @@ class HumanSupportFilterSet(filters.FilterSet):
             "agent",
             "agent_email",
             "contact",
+            "urn",
             "ticket_id",
         ]
 
