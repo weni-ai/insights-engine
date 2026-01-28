@@ -1093,3 +1093,87 @@ class TestConversationsMetricsService(TestCase):
             )
 
         self.assertIn("Agent UUID is required", str(context.exception))
+
+    def test_convert_to_iso_string_with_datetime(self):
+        """Test _convert_to_iso_string with datetime object"""
+        test_datetime = datetime(2026, 1, 15, 10, 30, 0)
+        result = self.service._convert_to_iso_string(test_datetime)
+        self.assertEqual(result, "2026-01-15T10:30:00")
+        self.assertIsInstance(result, str)
+
+    def test_convert_to_iso_string_with_string(self):
+        """Test _convert_to_iso_string with string already in ISO format"""
+        test_string = "2026-01-15T10:30:00"
+        result = self.service._convert_to_iso_string(test_string)
+        self.assertEqual(result, test_string)
+        self.assertIsInstance(result, str)
+
+    def test_csat_metrics_uses_correct_filters(self):
+        """Test that CSAT metrics uses __ syntax for date filters"""
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {"flow": "test-flow-uuid"},
+                "op_field": "csat_score",
+            },
+        )
+        
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        
+        self.service.get_csat_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=start_date,
+            end_date=end_date,
+            metric_type=CsatMetricsType.HUMAN,
+        )
+        
+        # Verify the executor was called with correct filter format
+        call_args = self.mock_flowruns_query_executor.execute.call_args
+        filters = call_args[0][0]
+        
+        self.assertIn("created_on__gte", filters)
+        self.assertIn("created_on__lte", filters)
+        self.assertNotIn("created_on", filters)
+        self.assertEqual(filters["created_on__gte"], "2026-01-15T00:00:00")
+        self.assertEqual(filters["created_on__lte"], "2026-01-22T00:00:00")
+
+    def test_nps_metrics_uses_correct_filters(self):
+        """Test that NPS metrics uses __ syntax for date filters"""
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {"flow": "test-flow-uuid"},
+                "op_field": "nps_score",
+            },
+        )
+        
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        
+        self.service.get_nps_metrics(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=start_date,
+            end_date=end_date,
+            metric_type=NpsMetricsType.HUMAN,
+        )
+        
+        # Verify the executor was called with correct filter format
+        call_args = self.mock_flowruns_query_executor.execute.call_args
+        filters = call_args[0][0]
+        
+        self.assertIn("created_on__gte", filters)
+        self.assertIn("created_on__lte", filters)
+        self.assertNotIn("created_on", filters)
+        self.assertEqual(filters["created_on__gte"], "2026-01-15T00:00:00")
+        self.assertEqual(filters["created_on__lte"], "2026-01-22T00:00:00")
