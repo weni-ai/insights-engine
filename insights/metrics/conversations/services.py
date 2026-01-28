@@ -70,6 +70,12 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         self.nexus_cache_ttl = nexus_cache_ttl
         self.flowruns_query_executor = flowruns_query_executor
 
+    def _convert_to_iso_string(self, date_value: datetime | str) -> str:
+        """
+        Convert datetime to ISO string if needed for JSON serialization
+        """
+        return date_value.isoformat() if isinstance(date_value, datetime) else date_value
+
     def get_topics(self, project_uuid: UUID) -> dict:
         """
         Get conversation topics
@@ -403,10 +409,8 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         end_date: datetime,
     ) -> dict:
         filters = {
-            "modified_on": {
-                "gte": start_date,
-                "lte": end_date,
-            },
+            "created_on__gte": self._convert_to_iso_string(start_date),
+            "created_on__lte": self._convert_to_iso_string(end_date),
             "flow": flow_uuid,
         }
 
@@ -543,10 +547,8 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         Get nps metrics from flowruns
         """
         filters = {
-            "modified_on": {
-                "gte": start_date,
-                "lte": end_date,
-            },
+            "created_on__gte": self._convert_to_iso_string(start_date),
+            "created_on__lte": self._convert_to_iso_string(end_date),
             "flow": flow_uuid,
         }
 
