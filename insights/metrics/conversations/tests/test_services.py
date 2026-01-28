@@ -1121,10 +1121,10 @@ class TestConversationsMetricsService(TestCase):
                 "op_field": "csat_score",
             },
         )
-        
+
         start_date = datetime(2026, 1, 15, 0, 0, 0)
         end_date = datetime(2026, 1, 22, 0, 0, 0)
-        
+
         self.service.get_csat_metrics(
             project_uuid=self.project.uuid,
             widget=widget,
@@ -1132,11 +1132,11 @@ class TestConversationsMetricsService(TestCase):
             end_date=end_date,
             metric_type=CsatMetricsType.HUMAN,
         )
-        
+
         # Verify the executor was called with correct filter format
         call_args = self.mock_flowruns_query_executor.execute.call_args
         filters = call_args[0][0]
-        
+
         self.assertIn("created_on__gte", filters)
         self.assertIn("created_on__lte", filters)
         self.assertNotIn("created_on", filters)
@@ -1156,10 +1156,10 @@ class TestConversationsMetricsService(TestCase):
                 "op_field": "nps_score",
             },
         )
-        
+
         start_date = datetime(2026, 1, 15, 0, 0, 0)
         end_date = datetime(2026, 1, 22, 0, 0, 0)
-        
+
         self.service.get_nps_metrics(
             project_uuid=self.project.uuid,
             widget=widget,
@@ -1167,11 +1167,11 @@ class TestConversationsMetricsService(TestCase):
             end_date=end_date,
             metric_type=NpsMetricsType.HUMAN,
         )
-        
+
         # Verify the executor was called with correct filter format
         call_args = self.mock_flowruns_query_executor.execute.call_args
         filters = call_args[0][0]
-        
+
         self.assertIn("created_on__gte", filters)
         self.assertIn("created_on__lte", filters)
         self.assertNotIn("created_on", filters)
