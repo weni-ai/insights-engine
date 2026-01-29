@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-08 13:27+0000\n"
+"POT-Creation-Date: 2026-01-29 14:21+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Kallil Souza dos Santos <kallilsouza@hotmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -56,9 +56,10 @@ msgid "User does not exist"
 msgstr "Usuário não existe"
 
 #: insights/metrics/conversations/integrations/datalake/services.py:346
-#: insights/metrics/conversations/reports/services.py:1144
+#: insights/metrics/conversations/reports/services.py:979
+#: insights/metrics/conversations/reports/services.py:1150
 msgid "Unclassified"
-msgstr "Não classificadas"
+msgstr "Não classificada"
 
 #: insights/metrics/conversations/reports/file_processors.py:87
 #: insights/metrics/conversations/reports/services.py:368
@@ -126,12 +127,12 @@ msgid "Resolution"
 msgstr "Resoluções"
 
 #: insights/metrics/conversations/reports/services.py:973
-#: insights/metrics/conversations/reports/services.py:1141
-#: insights/metrics/conversations/reports/services.py:1209
-#: insights/metrics/conversations/reports/services.py:1268
-#: insights/metrics/conversations/reports/services.py:1339
-#: insights/metrics/conversations/reports/services.py:1408
-#: insights/metrics/conversations/reports/services.py:1470
+#: insights/metrics/conversations/reports/services.py:1147
+#: insights/metrics/conversations/reports/services.py:1215
+#: insights/metrics/conversations/reports/services.py:1274
+#: insights/metrics/conversations/reports/services.py:1345
+#: insights/metrics/conversations/reports/services.py:1414
+#: insights/metrics/conversations/reports/services.py:1476
 msgid "Date"
 msgstr "Data"
 
@@ -147,46 +148,46 @@ msgstr "Não atendido por IA"
 msgid "Transferred to human support"
 msgstr "Transferida para atendimento humano"
 
-#: insights/metrics/conversations/reports/services.py:1137
+#: insights/metrics/conversations/reports/services.py:1143
 msgid "Topics Distribution AI"
 msgstr "Distribuição de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1139
+#: insights/metrics/conversations/reports/services.py:1145
 msgid "Topics Distribution Human"
 msgstr "Distribuição de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1142
+#: insights/metrics/conversations/reports/services.py:1148
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1143
+#: insights/metrics/conversations/reports/services.py:1149
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1208
+#: insights/metrics/conversations/reports/services.py:1214
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1210
-#: insights/metrics/conversations/reports/services.py:1269
-#: insights/metrics/conversations/reports/services.py:1340
-#: insights/metrics/conversations/reports/services.py:1409
+#: insights/metrics/conversations/reports/services.py:1216
+#: insights/metrics/conversations/reports/services.py:1275
+#: insights/metrics/conversations/reports/services.py:1346
+#: insights/metrics/conversations/reports/services.py:1415
 msgid "Rating"
 msgstr "Avaliação"
 
-#: insights/metrics/conversations/reports/services.py:1267
+#: insights/metrics/conversations/reports/services.py:1273
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1338
+#: insights/metrics/conversations/reports/services.py:1344
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1407
+#: insights/metrics/conversations/reports/services.py:1413
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1471
+#: insights/metrics/conversations/reports/services.py:1477
 msgid "Value"
 msgstr "Valor"
 
