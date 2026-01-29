@@ -1006,7 +1006,10 @@ class ConversationsReportService(BaseConversationsReportService):
                 metadata.get("human_support", False) if metadata else False
             )
 
-            event_value: str = event.get("value").lower()
+            event_value = event.get("value")
+
+            if isinstance(event_value, str):
+                event_value = event_value.lower()
 
             if was_transferred_to_human:
                 resolution_label = transferred_to_human_label
