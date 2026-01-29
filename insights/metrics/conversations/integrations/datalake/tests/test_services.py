@@ -71,10 +71,10 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertEqual(label, "Unclassified")
 
         label = self.service._get_unclassified_label("pt-br")
-        self.assertEqual(label, "Não classificadas")
+        self.assertEqual(label, "Não classificada")
 
         label = self.service._get_unclassified_label("es")
-        self.assertEqual(label, "No clasificadas")
+        self.assertEqual(label, "No clasificada")
 
     def test_get_csat_metrics(self):
         project_uuid = uuid.uuid4()
