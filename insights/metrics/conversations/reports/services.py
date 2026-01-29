@@ -977,6 +977,7 @@ class ConversationsReportService(BaseConversationsReportService):
             transferred_to_human_label = gettext("Transferred to human support")
 
             unclassified_label = gettext("Unclassified")
+            unknown_label = gettext("Unknown")
 
         if len(events) == 0:
             return ConversationsReportWorksheet(
@@ -1005,7 +1006,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 metadata.get("human_support", False) if metadata else False
             )
 
-            event_value = event.get("value")
+            event_value: str = event.get("value").lower()
 
             if was_transferred_to_human:
                 resolution_label = transferred_to_human_label
@@ -1013,8 +1014,10 @@ class ConversationsReportService(BaseConversationsReportService):
                 resolution_label = resolved_label
             elif event_value == "unresolved":
                 resolution_label = unresolved_label
-            else:
+            elif event_value == "unclassified":
                 resolution_label = unclassified_label
+            else:
+                resolution_label = unknown_label
 
             data.append(
                 {
