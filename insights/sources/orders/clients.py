@@ -78,7 +78,7 @@ class VtexOrdersRestClient(VtexAuthentication):
             # Using IO as a proxy to get the orders list
             # because, when the app is integrated with VTEX IO, we can't make requests directly to the VTEX API
             # as we don't have the app key and app token
-            path = "/_v/orders/"
+            path = "/_v/get-orders/"
             return f"{self.base_url}{path}"
 
         path = "/api/oms/pvt/orders/"
