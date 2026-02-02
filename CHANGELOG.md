@@ -1,3 +1,23 @@
+# 1.5.1
+# Fix
+ - Add unclassified and unknown labels to the conversations resolutions report worksheet
+
+# 1.5.0
+# Fix
+ - CSAT/NPS Elasticsearch date filters
+
+# 1.4.14
+# Add
+ - Contact and urn filter in detailed monitoring
+
+# 1.4.13
+# Refactor
+ - Remove redundant test for empty data in get_transferred_to_human_worksheet
+
+# 1.4.12
+# Add
+ - Combine conversations resolutions and transfer to human in export
+
 # 1.4.11
 # Fix
  - Return parameters in HumanSupportDashboardService's _get_analysis_detailed_monitoring_status_filters
