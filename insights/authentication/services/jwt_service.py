@@ -21,6 +21,10 @@ class JWTService:
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
             "iat": datetime.now(timezone.utc),
         }
+
+        if not key:
+            key = settings.JWT_SECRET_KEY
+
         token = jwt.encode(payload, key, algorithm="RS256")
 
         return token
