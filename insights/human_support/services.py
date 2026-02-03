@@ -381,6 +381,9 @@ class HumanSupportDashboardService:
         if normalized.get("contact"):
             params["contact"] = str(normalized["contact"])
 
+        if normalized.get("urn"):
+            params["urn"] = str(normalized["urn"])
+
         if filters:
             limit = filters.get("limit")
             if limit is not None:
@@ -461,14 +464,11 @@ class HumanSupportDashboardService:
             if value:
                 params[rooms_field] = value
 
-        # Add date filters
-        if normalized.get("start_date"):
-            params["created_on__gte"] = normalized["start_date"].isoformat()
-        if normalized.get("end_date"):
-            params["created_on__lte"] = normalized["end_date"].isoformat()
-
         if normalized.get("contact"):
             params["contact"] = str(normalized["contact"])
+
+        if normalized.get("urn"):
+            params["urn"] = str(normalized["urn"])
 
         if filters:
             if filters.get("limit") is not None:
