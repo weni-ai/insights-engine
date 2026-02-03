@@ -3,6 +3,8 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from django.conf import settings
 
+from insights.authentication.services.exceptions import InvalidTokenError
+
 
 class JWTService:
     """
@@ -20,3 +22,11 @@ class JWTService:
         token = jwt.encode(payload, key, algorithm="RS256")
 
         return token
+
+    def decode_jwt_token(self, token: str, key: str = settings.JWT_PUBLIC_KEY) -> dict:
+        try:
+            return jwt.decode(token, key, algorithms=["RS256"])
+        except jwt.InvalidTokenError as e:
+            raise InvalidTokenError("Invalid token") from e
+        except Exception as e:
+            raise InvalidTokenError("Error decoding token") from e
