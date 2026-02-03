@@ -2,7 +2,6 @@ import uuid
 
 from django.test import TestCase
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
 
 from insights.authentication.services.jwt_service import JWTService
 
