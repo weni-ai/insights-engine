@@ -12,6 +12,8 @@ from mozilla_django_oidc.contrib.drf import OIDCAuthentication
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 
+from insights.authentication.services.exceptions import InvalidTokenError
+from insights.authentication.services.jwt_service import JWTService
 from insights.users.usecases import CreateUserUseCase
 
 LOGGER = logging.getLogger("weni_django_oidc")
@@ -123,3 +125,40 @@ class WeniOIDCAuthentication(OIDCAuthentication):
                 LOGGER.error("Error activating language %s: %s", user.language, e)
 
         return user, token
+
+
+class JWTAuthentication(BaseAuthentication):
+    def authenticate(self, request):
+        header = request.headers.get("Authorization")
+
+        if not header:
+            raise AuthenticationFailed("Missing Authorization header")
+
+        try:
+            header_parts = header.split(" ")
+
+            if len(header_parts) != 2 or header_parts[0] != "Bearer":
+                raise AuthenticationFailed("Invalid header format")
+
+        except Exception as e:
+            raise AuthenticationFailed("Error parsing header") from e
+
+        token = header_parts[1]
+
+        try:
+            decoded_token = JWTService().decode_jwt_token(token)
+        except InvalidTokenError as e:
+            raise AuthenticationFailed("Invalid token") from e
+
+        project_uuid = decoded_token.get("project_uuid")
+
+        if not project_uuid:
+            raise AuthenticationFailed("Invalid token")
+
+        request.project_uuid = project_uuid
+        request.jwt_payload = decoded_token
+
+        return None, None
+
+    def authenticate_header(self, request):
+        return "Bearer"
