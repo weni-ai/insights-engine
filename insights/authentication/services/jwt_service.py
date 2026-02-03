@@ -12,8 +12,10 @@ class JWTService:
     """
 
     def generate_jwt_token(
-        self, project_uuid: str | UUID, key: str = settings.JWT_SECRET_KEY
+        self, project_uuid: str | UUID, key: str | None = None
     ) -> str:
+        if key is None:
+            key = settings.JWT_SECRET_KEY
         payload = {
             "project_uuid": str(project_uuid),
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
@@ -23,10 +25,10 @@ class JWTService:
 
         return token
 
-    def decode_jwt_token(self, token: str, key: str = settings.JWT_PUBLIC_KEY) -> dict:
+    def decode_jwt_token(self, token: str, key: str | None = None) -> dict:
+        if key is None:
+            key = settings.JWT_PUBLIC_KEY
         try:
             return jwt.decode(token, key, algorithms=["RS256"])
-        except jwt.InvalidTokenError as e:
-            raise InvalidTokenError("Invalid token") from e
         except Exception as e:
             raise InvalidTokenError("Error decoding token") from e

@@ -19,7 +19,7 @@ def generate_private_key_pem(private_key: rsa.RSAPrivateKey):
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
-    )
+    ).decode("utf-8")
 
 
 def generate_public_key(private_key):
@@ -30,7 +30,7 @@ def generate_public_key_pem(public_key: rsa.RSAPublicKey):
     return public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    )
+    ).decode("utf-8")
 
 
 class JWTServiceTests(TestCase):
