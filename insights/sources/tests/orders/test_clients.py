@@ -131,7 +131,7 @@ class TestVtexOrdersRestClient(TestCase):
     def test_get_vtex_endpoint_io_proxy(self):
         query_filters = {"utm_source": "test_source"}
         page_number = 1
-        expected_url = "https://testenv.myvtex.com/_v/orders/"
+        expected_url = "https://testenv.myvtex.com/_v/get-orders/"
         self.assertEqual(
             self.client_io_proxy.get_vtex_endpoint(query_filters, page_number),
             expected_url,
