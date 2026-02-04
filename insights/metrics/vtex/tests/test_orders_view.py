@@ -164,3 +164,16 @@ class TestInternalVTEXOrdersViewAsAuthenticatedUser(BaseTestInternalVTEXOrdersVi
         self.assertIn("revenue", response.data)
         self.assertEqual(response.data["revenue"]["value"], 50.21)
         self.assertIn("orders_placed", response.data)
+
+    def test_get_metrics_from_utm_source_with_invalid_token(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer invalid_token")
+
+        query_params = {
+            "utm_source": "weniabandonedcart",
+            "start_date": "2023-09-01",
+            "end_date": "2023-09-04",
+            "project_uuid": self.project.uuid,
+        }
+        response = self.get_metrics_from_utm_source(query_params)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
