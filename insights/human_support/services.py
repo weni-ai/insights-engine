@@ -1004,23 +1004,29 @@ class HumanSupportDashboardService:
 
     def get_volume_by_queue(self, filters: dict | None = None) -> dict:
         """
-        Returns the volume (number of rooms) by queue at the moment of the request.
-        Used for real-time monitoring.
+        Returns the volume (number of rooms) by queue, grouped by sector.
+        Used for real-time monitoring (today's data).
 
         Parameters:
             filters: {
-                "status": "is_waiting" | "in_progress" | "finished",
+                "chip_name": "waiting" | "ongoing" | "closed",
                 "limit": int (default 5),
-                "sectors": list[uuid] | uuid,
                 "queues": list[uuid] | uuid,
-                "tags": list[uuid] | uuid,
             }
 
         Returns:
             {
+                "next": cursor | null,
+                "previous": cursor | null,
                 "count": int (total of queues),
                 "results": [
-                    {"queue_uuid": str, "queue_name": str, "value": int},
+                    {
+                        "sector_name": str,
+                        "queues": [
+                            {"queue_name": str, "value": int},
+                            ...
+                        ]
+                    },
                     ...
                 ]
             }
@@ -1037,16 +1043,16 @@ class HumanSupportDashboardService:
 
         base = self._build_volume_by_queue_base_filters(normalized)
 
-        status = filters.get("status") if filters else None
+        chip_name = filters.get("chip_name") if filters else None
         limit = filters.get("limit", 5) if filters else 5
 
-        if status == "is_waiting":
+        if chip_name == "waiting":
             base["is_active"] = True
             base["user_id__isnull"] = True
-        elif status == "in_progress":
+        elif chip_name == "ongoing":
             base["is_active"] = True
             base["user_id__isnull"] = False
-        elif status == "finished":
+        elif chip_name == "closed":
             base["is_active"] = False
             base["ended_at__gte"] = start_of_day
             base["ended_at__lte"] = now_iso
@@ -1059,32 +1065,35 @@ class HumanSupportDashboardService:
             query_kwargs={"limit": limit},
         )
 
-        return {
-            "count": result.get("count", 0),
-            "results": result.get("results", []),
-        }
+        return result
 
     def get_analysis_volume_by_queue(self, filters: dict | None = None) -> dict:
         """
-        Returns the volume (number of rooms) by queue with date filter.
-        Used for historical analysis.
+        Returns the volume (number of rooms) by queue, grouped by sector.
+        Used for historical analysis (date range filter).
 
         Parameters:
             filters: {
-                "status": "is_waiting" | "in_progress" | "finished",
+                "chip_name": "waiting" | "ongoing" | "closed",
                 "limit": int (default 5),
                 "start_date": datetime,
                 "end_date": datetime,
-                "sectors": list[uuid] | uuid,
                 "queues": list[uuid] | uuid,
-                "tags": list[uuid] | uuid,
             }
 
         Returns:
             {
+                "next": cursor | null,
+                "previous": cursor | null,
                 "count": int (total of queues),
                 "results": [
-                    {"queue_uuid": str, "queue_name": str, "value": int},
+                    {
+                        "sector_name": str,
+                        "queues": [
+                            {"queue_name": str, "value": int},
+                            ...
+                        ]
+                    },
                     ...
                 ]
             }
@@ -1106,20 +1115,20 @@ class HumanSupportDashboardService:
 
         base = self._build_volume_by_queue_base_filters(normalized)
 
-        status = filters.get("status") if filters else None
+        chip_name = filters.get("chip_name") if filters else None
         limit = filters.get("limit", 5) if filters else 5
 
-        if status == "is_waiting":
+        if chip_name == "waiting":
             base["is_active"] = True
             base["user_id__isnull"] = True
             base["created_on__gte"] = start_datetime
             base["created_on__lte"] = end_datetime
-        elif status == "in_progress":
+        elif chip_name == "ongoing":
             base["is_active"] = True
             base["user_id__isnull"] = False
             base["created_on__gte"] = start_datetime
             base["created_on__lte"] = end_datetime
-        elif status == "finished":
+        elif chip_name == "closed":
             base["is_active"] = False
             base["ended_at__gte"] = start_datetime
             base["ended_at__lte"] = end_datetime
@@ -1135,10 +1144,7 @@ class HumanSupportDashboardService:
             query_kwargs={"limit": limit},
         )
 
-        return {
-            "count": result.get("count", 0),
-            "results": result.get("results", []),
-        }
+        return result
 
     def _build_volume_by_tag_base_filters(self, normalized: dict) -> dict:
         """
@@ -1169,23 +1175,29 @@ class HumanSupportDashboardService:
 
     def get_volume_by_tag(self, filters: dict | None = None) -> dict:
         """
-        Returns the volume (number of rooms) by tag at the moment of the request.
-        Used for real-time monitoring.
+        Returns the volume (number of rooms) by tag, grouped by sector.
+        Used for real-time monitoring (today's data).
 
         Parameters:
             filters: {
-                "status": "is_waiting" | "in_progress" | "finished",
+                "chip_name": "ongoing" | "closed" (no "waiting" for tags),
                 "limit": int (default 5),
                 "sectors": list[uuid] | uuid,
-                "queues": list[uuid] | uuid,
-                "tags": list[uuid] | uuid,
             }
 
         Returns:
             {
+                "next": cursor | null,
+                "previous": cursor | null,
                 "count": int (total of tags),
                 "results": [
-                    {"tag_uuid": str, "tag_name": str, "sector_name": str, "value": int},
+                    {
+                        "sector_name": str,
+                        "tags": [
+                            {"tag_name": str, "value": int},
+                            ...
+                        ]
+                    },
                     ...
                 ]
             }
@@ -1202,16 +1214,13 @@ class HumanSupportDashboardService:
 
         base = self._build_volume_by_tag_base_filters(normalized)
 
-        status = filters.get("status") if filters else None
+        chip_name = filters.get("chip_name") if filters else None
         limit = filters.get("limit", 5) if filters else 5
 
-        if status == "is_waiting":
-            base["is_active"] = True
-            base["user_id__isnull"] = True
-        elif status == "in_progress":
+        if chip_name == "ongoing":
             base["is_active"] = True
             base["user_id__isnull"] = False
-        elif status == "finished":
+        elif chip_name == "closed":
             base["is_active"] = False
             base["ended_at__gte"] = start_of_day
             base["ended_at__lte"] = now_iso
@@ -1224,32 +1233,35 @@ class HumanSupportDashboardService:
             query_kwargs={"limit": limit},
         )
 
-        return {
-            "count": result.get("count", 0),
-            "results": result.get("results", []),
-        }
+        return result
 
     def get_analysis_volume_by_tag(self, filters: dict | None = None) -> dict:
         """
-        Returns the volume (number of rooms) by tag with date filter.
-        Used for historical analysis.
+        Returns the volume (number of rooms) by tag, grouped by sector.
+        Used for historical analysis (date range filter).
 
         Parameters:
             filters: {
-                "status": "is_waiting" | "in_progress" | "finished",
+                "chip_name": "ongoing" | "closed" (no "waiting" for tags),
                 "limit": int (default 5),
                 "start_date": datetime,
                 "end_date": datetime,
                 "sectors": list[uuid] | uuid,
-                "queues": list[uuid] | uuid,
-                "tags": list[uuid] | uuid,
             }
 
         Returns:
             {
+                "next": cursor | null,
+                "previous": cursor | null,
                 "count": int (total of tags),
                 "results": [
-                    {"tag_uuid": str, "tag_name": str, "sector_name": str, "value": int},
+                    {
+                        "sector_name": str,
+                        "tags": [
+                            {"tag_name": str, "value": int},
+                            ...
+                        ]
+                    },
                     ...
                 ]
             }
@@ -1271,20 +1283,15 @@ class HumanSupportDashboardService:
 
         base = self._build_volume_by_tag_base_filters(normalized)
 
-        status = filters.get("status") if filters else None
+        chip_name = filters.get("chip_name") if filters else None
         limit = filters.get("limit", 5) if filters else 5
 
-        if status == "is_waiting":
-            base["is_active"] = True
-            base["user_id__isnull"] = True
-            base["created_on__gte"] = start_datetime
-            base["created_on__lte"] = end_datetime
-        elif status == "in_progress":
+        if chip_name == "ongoing":
             base["is_active"] = True
             base["user_id__isnull"] = False
             base["created_on__gte"] = start_datetime
             base["created_on__lte"] = end_datetime
-        elif status == "finished":
+        elif chip_name == "closed":
             base["is_active"] = False
             base["ended_at__gte"] = start_datetime
             base["ended_at__lte"] = end_datetime
@@ -1359,3 +1366,4 @@ class HumanSupportDashboardService:
             ratings_data[rating]["full_value"] = data.get("full_value")
 
         return ratings_data
+        return result

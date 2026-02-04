@@ -60,7 +60,7 @@ class QueryExecutor:
             paginated_results = {
                 "next": None,
                 "previous": None,
-                "results": sorted(query_results, key=lambda x: int(x["label"][:-1])),
+                "results": sorted(query_results, key=lambda row: int(row["label"][:-1])),
             }
         elif operation == "timeseries_day_group_count":
             paginated_results = {
@@ -69,18 +69,68 @@ class QueryExecutor:
                 "results": query_results,
             }
         elif operation == "group_by_queue_count":
+            # Group by sector
+            grouped = {}
+            for row in query_results:
+                sector_uuid = row["sector_uuid"]
+                if sector_uuid not in grouped:
+                    grouped[sector_uuid] = {
+                        "sector_name": row["sector_name"],
+                        "queues": [],
+                    }
+                grouped[sector_uuid]["queues"].append(
+                    {
+                        "queue_name": row["queue_name"],
+                        "value": row["value"],
+                    }
+                )
+
+            # Sort sectors by total volume (sum of all queues values)
+            results = sorted(
+                grouped.values(),
+                key=lambda sector: sum(queue["value"] for queue in sector["queues"]),
+                reverse=True,
+            )
+            # count = total de filas (cada fila = 1 linha no gráfico)
+            total_queues = sum(len(sector["queues"]) for sector in results)
+
             paginated_results = {
                 "next": None,
                 "previous": None,
-                "count": len(query_results),
-                "results": query_results,
+                "count": total_queues,
+                "results": results,
             }
         elif operation == "group_by_tag_count":
+            # Group by sector
+            grouped = {}
+            for row in query_results:
+                sector_uuid = row["sector_uuid"]
+                if sector_uuid not in grouped:
+                    grouped[sector_uuid] = {
+                        "sector_name": row["sector_name"],
+                        "tags": [],
+                    }
+                grouped[sector_uuid]["tags"].append(
+                    {
+                        "tag_name": row["tag_name"],
+                        "value": row["value"],
+                    }
+                )
+
+            # Sort sectors by total volume (sum of all tags values)
+            results = sorted(
+                grouped.values(),
+                key=lambda sector: sum(tag["value"] for tag in sector["tags"]),
+                reverse=True,
+            )
+            # count = total de tags (cada tag = 1 linha no gráfico)
+            total_tags = sum(len(sector["tags"]) for sector in results)
+
             paginated_results = {
                 "next": None,
                 "previous": None,
-                "count": len(query_results),
-                "results": query_results,
+                "count": total_tags,
+                "results": results,
             }
         else:
             paginated_results = {

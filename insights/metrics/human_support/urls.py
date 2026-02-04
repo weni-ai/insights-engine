@@ -34,19 +34,19 @@ urlpatterns = [
         AnalysisDetailedMonitoringStatusView.as_view(),
     ),
     path(
-        "volume-by-queue/",
+        "queue_volume/",
         VolumeByQueueView.as_view(),
     ),
     path(
-        "analysis/volume-by-queue/",
+        "analysis/queue_volume/",
         AnalysisVolumeByQueueView.as_view(),
     ),
     path(
-        "volume-by-tag/",
+        "tags_volume/",
         VolumeByTagView.as_view(),
     ),
     path(
-        "analysis/volume-by-tag/",
+        "analysis/tags_volume/",
         AnalysisVolumeByTagView.as_view(),
     ),
 ]
