@@ -1,3 +1,4 @@
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
@@ -7,6 +8,17 @@ from insights.authentication.services.jwt_service import JWTService
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.projects.models import Project
+
+
+from insights.authentication.services.tests.test_jwt_service import (
+    generate_public_key_pem,
+    generate_private_key,
+    generate_private_key_pem,
+)
+
+JWT_PRIVATE_KEY = generate_private_key()
+JWT_PRIVATE_KEY_PEM = generate_private_key_pem(JWT_PRIVATE_KEY)
+JWT_PUBLIC_KEY_PEM = generate_public_key_pem(JWT_PRIVATE_KEY.public_key())
 
 
 class BaseTestVtexOrdersView(APITestCase):
@@ -115,6 +127,8 @@ class TestInternalVTEXOrdersViewAsUnauthenticatedUser(BaseTestInternalVTEXOrders
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
+@override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
+@override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)
 class TestInternalVTEXOrdersViewAsAuthenticatedUser(BaseTestInternalVTEXOrdersView):
     def setUp(self):
         self.project = Project.objects.create(name="Test Project")
