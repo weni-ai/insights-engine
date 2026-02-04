@@ -176,22 +176,23 @@ class TestAbandonedCartSkillService(TestCase):
 
         metrics = service.get_metrics()
 
+        # The numbers are doubled because we are using both Cloud API and MM Lite.
         expected_metrics = [
             {
                 "id": "sent-messages",
-                "value": 50,
+                "value": 100,
             },
             {
                 "id": "delivered-messages",
-                "value": 45,
+                "value": 90,
             },
             {
                 "id": "read-messages",
-                "value": 40,
+                "value": 80,
             },
             {
                 "id": "interactions",
-                "value": 35,
+                "value": 70,
             },
             {
                 "id": "utm-revenue",
