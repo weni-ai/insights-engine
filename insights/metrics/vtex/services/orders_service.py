@@ -12,6 +12,7 @@ from insights.sources.vtexcredentials.clients import (
     AuthRestClient as VtexAuthClient,
 )
 from insights.sources.vtexcredentials.typing import VtexCredentialsDTO
+from insights.authentication.services.jwt_service import JWTService
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,9 @@ class OrdersService:
             return VtexOrdersRestClient(
                 {
                     "domain": self.project.vtex_account,
-                    "internal_token": self._get_internal_token(),
+                    "internal_token": JWTService().generate_jwt_token(
+                        self.project.uuid
+                    ),
                 },
                 CacheClient(),
                 use_io_proxy=True,
