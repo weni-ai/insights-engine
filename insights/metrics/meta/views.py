@@ -20,6 +20,7 @@ from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesCategories,
     WhatsAppMessageTemplatesLanguages,
 )
+from insights.metrics.meta.enums import ProductType
 from insights.metrics.meta.models import FavoriteTemplate
 from insights.metrics.meta.permissions import ProjectDashboardWABAPermission
 from insights.metrics.meta.schema import (
@@ -429,6 +430,8 @@ class InternalWhatsAppMessageTemplatesView(GenericViewSet):
             "start_date": query_params_serializer.validated_data["start_date"],
             "end_date": query_params_serializer.validated_data["end_date"],
             "template_id": body_serializer.validated_data["template_ids"],
+            "product_type": body_serializer.validated_data.get("product_type")
+            or ProductType.CLOUD_API.value,
         }
 
         data = self.service.get_messages_analytics(
