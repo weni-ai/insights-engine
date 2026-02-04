@@ -223,4 +223,12 @@ class TemplatesMetricsAnalyticsQueryParamsSerializer(serializers.Serializer):
 
 class TemplatesMetricsAnalyticsBodySerializer(serializers.Serializer):
     template_ids = serializers.ListField(child=serializers.CharField())
-    product_type = serializers.ChoiceField(choices=ProductType, required=False)
+    product_type = serializers.CharField(required=False)
+
+    def validate_product_type(self, value):
+        if value not in [ProductType.CLOUD_API.value, ProductType.MM_LITE.value]:
+            raise serializers.ValidationError(
+                "Invalid product type. Must be 'CLOUD_API' or 'MARKETING_MESSAGES_LITE_API'."
+            )
+
+        return value
