@@ -86,13 +86,19 @@ class RoomSQLQueryBuilder:
         if not self.is_valid:
             self.build_query()
 
-        # Ensures that the join with queues_queue and sectors_sector exists
+        # Ensures that the join with queues_queue and sectors_sector exists (aliases q and sec)
         queue_join = """
             INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id AND q.is_deleted=false
             INNER JOIN public.sectors_sector AS sec ON sec.uuid=q.sector_id AND sec.is_deleted=false
         """
+        sector_as_sec_join = """
+            INNER JOIN public.sectors_sector AS sec ON sec.uuid=q.sector_id AND sec.is_deleted=false
+        """
         if "q" not in self.joins:
             self.join_clause = f"{queue_join} {self.join_clause}"
+        elif "sec" not in self.joins:
+            # Filters use alias "s" for sector; this query uses "sec" — add sec so SELECT is valid
+            self.join_clause = f"{sector_as_sec_join} {self.join_clause}"
 
         query = f"""
             SELECT
