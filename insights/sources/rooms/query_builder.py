@@ -97,8 +97,8 @@ class RoomSQLQueryBuilder:
         if "q" not in self.joins:
             self.join_clause = f"{queue_join} {self.join_clause}"
         elif "sec" not in self.joins:
-            # Filters use alias "s" for sector; this query uses "sec" — add sec so SELECT is valid
-            self.join_clause = f"{sector_as_sec_join} {self.join_clause}"
+            # Filters use alias "s" for sector; this query uses "sec". Add sec after join_clause so "q" is already defined.
+            self.join_clause = f"{self.join_clause} {sector_as_sec_join}"
 
         query = f"""
             SELECT
