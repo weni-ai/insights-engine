@@ -56,9 +56,13 @@ class DashboardViewSet(
             "monitoring_list_status",
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
+            "monitoring_queue_volume",
+            "monitoring_tags_volume",
             "finished",
             "analysis_finished_rooms_status",
             "analysis_peaks_in_human_service",
+            "analysis_queue_volume",
+            "analysis_tags_volume",
         ]:
             return [
                 IsAuthenticated(),
@@ -383,6 +387,30 @@ class DashboardViewSet(
     @action(
         detail=True,
         methods=["get"],
+        url_path="monitoring/queue_volume",
+    )
+    def monitoring_queue_volume(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_volume_by_queue(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/tags_volume",
+    )
+    def monitoring_tags_volume(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_volume_by_tag(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
         url_path="finished",
     )
     def finished(self, request, pk=None):
@@ -415,3 +443,27 @@ class DashboardViewSet(
         filters = get_filters_from_query_params(request.query_params)
         results = service.get_analysis_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/queue_volume",
+    )
+    def analysis_queue_volume(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_analysis_volume_by_queue(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/tags_volume",
+    )
+    def analysis_tags_volume(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_analysis_volume_by_tag(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
