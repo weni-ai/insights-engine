@@ -62,12 +62,9 @@ class DashboardViewSet(
             "monitoring_list_status",
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
-<<<<<<< HEAD
             "monitoring_csat_totals",
-=======
             "monitoring_queue_volume",
             "monitoring_tags_volume",
->>>>>>> feature/queue-and-tag-volume
             "finished",
             "analysis_finished_rooms_status",
             "analysis_peaks_in_human_service",
