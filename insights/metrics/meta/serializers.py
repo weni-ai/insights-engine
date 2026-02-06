@@ -1,6 +1,7 @@
 import uuid
 from rest_framework import serializers
 
+from insights.metrics.meta.enums import ProductType
 from insights.metrics.meta.validators import validate_analytics_selected_period
 from insights.projects.models import Project
 from django.utils.translation import gettext as _
@@ -222,3 +223,12 @@ class TemplatesMetricsAnalyticsQueryParamsSerializer(serializers.Serializer):
 
 class TemplatesMetricsAnalyticsBodySerializer(serializers.Serializer):
     template_ids = serializers.ListField(child=serializers.CharField())
+    product_type = serializers.CharField(required=False)
+
+    def validate_product_type(self, value):
+        if value not in [ProductType.CLOUD_API.value, ProductType.MM_LITE.value]:
+            raise serializers.ValidationError(
+                "Invalid product type. Must be 'CLOUD_API' or 'MARKETING_MESSAGES_LITE_API'."
+            )
+
+        return value

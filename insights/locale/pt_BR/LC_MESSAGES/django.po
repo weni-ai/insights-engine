@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-01-29 14:36+0000\n"
+"POT-Creation-Date: 2026-02-06 14:51+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Kallil Souza dos Santos <kallilsouza@hotmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,8 +23,8 @@ msgid "Our site"
 msgstr "Nosso site"
 
 #: insights/core/templates/core/emails/base.html:41
-msgid "2025 © Weni by VTEX. All rights reserved."
-msgstr "2025 © Weni by VTEX. Todos os direitos reservados."
+msgid "Weni by VTEX. All rights reserved."
+msgstr "Weni by VTEX. Todos os direitos reservados."
 
 #: insights/core/templates/core/emails/base.html:46
 msgid ""
@@ -57,7 +57,7 @@ msgstr "Usuário não existe"
 
 #: insights/metrics/conversations/integrations/datalake/services.py:346
 #: insights/metrics/conversations/reports/services.py:979
-#: insights/metrics/conversations/reports/services.py:1153
+#: insights/metrics/conversations/reports/services.py:1156
 msgid "Unclassified"
 msgstr "Não classificada"
 
@@ -127,12 +127,12 @@ msgid "Resolution"
 msgstr "Resoluções"
 
 #: insights/metrics/conversations/reports/services.py:973
-#: insights/metrics/conversations/reports/services.py:1150
-#: insights/metrics/conversations/reports/services.py:1218
-#: insights/metrics/conversations/reports/services.py:1277
-#: insights/metrics/conversations/reports/services.py:1348
-#: insights/metrics/conversations/reports/services.py:1417
-#: insights/metrics/conversations/reports/services.py:1479
+#: insights/metrics/conversations/reports/services.py:1153
+#: insights/metrics/conversations/reports/services.py:1221
+#: insights/metrics/conversations/reports/services.py:1280
+#: insights/metrics/conversations/reports/services.py:1351
+#: insights/metrics/conversations/reports/services.py:1420
+#: insights/metrics/conversations/reports/services.py:1482
 msgid "Date"
 msgstr "Data"
 
@@ -152,46 +152,46 @@ msgstr "Transferida para atendimento humano"
 msgid "Unknown"
 msgstr "Desconhecido"
 
-#: insights/metrics/conversations/reports/services.py:1146
+#: insights/metrics/conversations/reports/services.py:1149
 msgid "Topics Distribution AI"
 msgstr "Distribuição de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1148
+#: insights/metrics/conversations/reports/services.py:1151
 msgid "Topics Distribution Human"
 msgstr "Distribuição de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1151
+#: insights/metrics/conversations/reports/services.py:1154
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1152
+#: insights/metrics/conversations/reports/services.py:1155
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1217
+#: insights/metrics/conversations/reports/services.py:1220
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1219
-#: insights/metrics/conversations/reports/services.py:1278
-#: insights/metrics/conversations/reports/services.py:1349
-#: insights/metrics/conversations/reports/services.py:1418
+#: insights/metrics/conversations/reports/services.py:1222
+#: insights/metrics/conversations/reports/services.py:1281
+#: insights/metrics/conversations/reports/services.py:1352
+#: insights/metrics/conversations/reports/services.py:1421
 msgid "Rating"
 msgstr "Avaliação"
 
-#: insights/metrics/conversations/reports/services.py:1276
+#: insights/metrics/conversations/reports/services.py:1279
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1347
+#: insights/metrics/conversations/reports/services.py:1350
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1416
+#: insights/metrics/conversations/reports/services.py:1419
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1480
+#: insights/metrics/conversations/reports/services.py:1483
 msgid "Value"
 msgstr "Valor"
 
@@ -595,15 +595,15 @@ msgstr "Vietnamita"
 msgid "Zulu"
 msgstr "Zulu"
 
-#: insights/metrics/meta/serializers.py:117
+#: insights/metrics/meta/serializers.py:118
 msgid "Favorite template limit reached"
 msgstr "Limite de templates favoritados atingido"
 
-#: insights/metrics/meta/serializers.py:129
+#: insights/metrics/meta/serializers.py:130
 msgid "Template already in favorites"
 msgstr "Template já está nos favoritos"
 
-#: insights/metrics/meta/serializers.py:152
+#: insights/metrics/meta/serializers.py:153
 msgid "Template not in favorites"
 msgstr "Template não está nos favoritos"
 
@@ -611,11 +611,11 @@ msgstr "Template não está nos favoritos"
 msgid "WABA id is required"
 msgstr "O ID do WABA é obrigatório"
 
-#: insights/metrics/vtex/views.py:28
+#: insights/metrics/vtex/views.py:33
 msgid "Required"
 msgstr "Obrigatório"
 
-#: insights/metrics/vtex/views.py:45
+#: insights/metrics/vtex/views.py:50
 msgid "Invalid date format. Use YYYY-MM-DD."
 msgstr "Formato de data inválido. Use YYYY-MM-DD."
 

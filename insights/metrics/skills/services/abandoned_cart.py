@@ -9,6 +9,7 @@ from django.utils.timezone import timedelta
 from sentry_sdk import capture_exception
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
+from insights.metrics.meta.enums import ProductType
 from insights.metrics.skills.exceptions import (
     ErrorGettingOrdersMetrics,
     InvalidDateRangeError,
@@ -127,14 +128,25 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         if not template_ids or not waba_id:
             template_ids, waba_id = self._whatsapp_template_ids_and_waba
 
-        metrics = self.meta_api_client.get_messages_analytics(
+        cloud_api_metrics = self.meta_api_client.get_messages_analytics(
             waba_id=waba_id,
             template_id=template_ids,
             start_date=start_date,
             end_date=end_date,
+            product_type=ProductType.CLOUD_API.value,
+        )
+        mm_lite_metrics = self.meta_api_client.get_messages_analytics(
+            waba_id=waba_id,
+            template_id=template_ids,
+            start_date=start_date,
+            end_date=end_date,
+            product_type=ProductType.MM_LITE.value,
         )
 
-        data_points = metrics.get("data", {}).get("data_points")
+        cloud_api_data_points = cloud_api_metrics.get("data", {}).get("data_points")
+        mm_lite_data_points = mm_lite_metrics.get("data", {}).get("data_points")
+
+        data_points = [*cloud_api_data_points, *mm_lite_data_points]
 
         period_data = {
             "sent": 0,

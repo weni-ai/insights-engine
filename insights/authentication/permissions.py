@@ -125,3 +125,11 @@ class FeatureFlagPermission(permissions.BasePermission):
             return dashboard.project
 
         return None
+
+
+class HasInternalAuthenticationPermission(permissions.BasePermission):
+    def has_permission(self, request: Request, view: APIView) -> bool:
+        jwt_payload = getattr(request, "jwt_payload", None)
+        project_uuid = getattr(request, "project_uuid", None)
+
+        return jwt_payload is not None and project_uuid is not None
