@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from uuid import uuid4
 from unittest.mock import MagicMock, patch
 
@@ -30,11 +30,13 @@ class TestHumanSupportDashboardService(TestCase):
         sector_uuid = str(uuid4())
         queue_uuid = str(uuid4())
         tag_uuid = str(uuid4())
-        result = self.service._normalize_filters({
-            "sectors": [sector_uuid],
-            "queues": [queue_uuid],
-            "tags": [tag_uuid],
-        })
+        result = self.service._normalize_filters(
+            {
+                "sectors": [sector_uuid],
+                "queues": [queue_uuid],
+                "tags": [tag_uuid],
+            }
+        )
         self.assertIn("sectors", result)
         self.assertIn("queues", result)
         self.assertIn("tags", result)
@@ -140,7 +142,9 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["results"][0]["link"], "https://link/1")
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
-    def test_get_detailed_monitoring_on_going_with_filters_and_ordering(self, mock_rooms):
+    def test_get_detailed_monitoring_on_going_with_filters_and_ordering(
+        self, mock_rooms
+    ):
         mock_rooms.execute.return_value = {
             "results": [],
             "next": None,
@@ -246,7 +250,9 @@ class TestHumanSupportDashboardService(TestCase):
     def test_csat_score_by_agents_with_mock_chats_client(self):
         mock_chats = MagicMock()
         mock_chats.csat_score_by_agents.return_value = {"results": []}
-        service = HumanSupportDashboardService(project=self.project, chats_client=mock_chats)
+        service = HumanSupportDashboardService(
+            project=self.project, chats_client=mock_chats
+        )
         result = service.csat_score_by_agents(user_request="test", filters={})
         self.assertEqual(result, {"results": []})
         mock_chats.csat_score_by_agents.assert_called_once()
@@ -328,7 +334,9 @@ class TestHumanSupportDashboardService(TestCase):
                 {"rating": 5, "value": 10, "full_value": 10},
             ],
         }
-        service = HumanSupportDashboardService(project=self.project, chats_client=mock_chats)
+        service = HumanSupportDashboardService(
+            project=self.project, chats_client=mock_chats
+        )
         result = service.get_csat_ratings()
         self.assertEqual(result["1"]["value"], 2)
         self.assertEqual(result["5"]["value"], 10)
@@ -399,7 +407,9 @@ class TestHumanSupportDashboardService(TestCase):
         self.service.get_detailed_monitoring_status(
             filters={"ordering": "agent", "limit": 5, "offset": 10}
         )
-        call_args = mock_client_class.return_value.list_custom_status_by_agent.call_args[0][0]
+        call_args = (
+            mock_client_class.return_value.list_custom_status_by_agent.call_args[0][0]
+        )
         self.assertEqual(call_args.get("ordering"), "agent")
         self.assertEqual(call_args.get("limit"), 5)
         self.assertEqual(call_args.get("offset"), 10)
