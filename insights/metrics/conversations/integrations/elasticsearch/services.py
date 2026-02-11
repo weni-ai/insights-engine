@@ -31,7 +31,15 @@ class ConversationsElasticsearchService:
         end_date = self._format_date(end_date)
 
         query = {
-            "_source": "project_uuid,contact_uuid,created_on,modified_on,contact_name,contact_urn,values",
+            "_source": [
+                "project_uuid",
+                "contact_uuid",
+                "created_on",
+                "modified_on",
+                "contact_name",
+                "contact_urn",
+                "values",
+            ],
             "size": page_size,
             "query": {
                 "bool": {
