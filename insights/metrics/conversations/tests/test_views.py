@@ -4,6 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
+import json
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
@@ -36,9 +37,10 @@ from insights.projects.models import Project
 from insights.sources.flowruns.tests.mock_query_executor import (
     MockFlowRunsQueryExecutor,
 )
-from insights.sources.integrations.tests.mock_clients import MockNexusClient
+from insights.sources.integrations.tests.mock_clients import MockResponse
 from insights.widgets.models import Widget
 from insights.dashboards.models import Dashboard
+from insights.sources.integrations.clients import NexusConversationsAPIClient
 
 
 class BaseTestConversationsMetricsViewSet(APITestCase):
@@ -46,9 +48,30 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.original_service = ConversationsMetricsViewSet.service
+
+        nexus_conversations_client = MagicMock(spec=NexusConversationsAPIClient)
+        nexus_conversations_client.get_topics.return_value = MockResponse(
+            status_code=200, content=json.dumps([])
+        )
+        nexus_conversations_client.get_subtopics.return_value = MockResponse(
+            status_code=200, content=json.dumps([])
+        )
+        nexus_conversations_client.create_topic.return_value = MockResponse(
+            status_code=201, content=json.dumps({})
+        )
+        nexus_conversations_client.create_subtopic.return_value = MockResponse(
+            status_code=201, content=json.dumps({})
+        )
+        nexus_conversations_client.delete_topic.return_value = MockResponse(
+            status_code=204, content=json.dumps({})
+        )
+        nexus_conversations_client.delete_subtopic.return_value = MockResponse(
+            status_code=204, content=json.dumps({})
+        )
+
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
             datalake_service=MagicMock(spec=BaseConversationsMetricsService),
-            nexus_client=MockNexusClient(),
+            nexus_conversations_client=nexus_conversations_client,
             flowruns_query_executor=MockFlowRunsQueryExecutor,
         )
 
