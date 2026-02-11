@@ -1,5 +1,4 @@
 from datetime import datetime
-import math
 
 from insights.metrics.conversations.integrations.elasticsearch.clients import (
     ElasticsearchClient,
@@ -26,22 +25,14 @@ class ConversationsElasticsearchService:
         end_date: str,
         op_field: str,
         page_size: int,
-        page_number: int,
+        search_after: list[str] | None = None,
     ) -> list[dict]:
-        page_number = int(page_number) if page_number else 1
-        page_size = int(page_size) if page_size else 100
-        page_from = (page_number - 1) * page_size
-
-        params = {
-            "_source": "project_uuid,contact_uuid,created_on,modified_on,contact_name,contact_urn,values",
-            "from": page_from,
-            "size": page_size,
-        }
-
         start_date = self._format_date(start_date)
         end_date = self._format_date(end_date)
 
         query = {
+            "_source": "project_uuid,contact_uuid,created_on,modified_on,contact_name,contact_urn,values",
+            "size": page_size,
             "query": {
                 "bool": {
                     "must": [
@@ -64,17 +55,20 @@ class ConversationsElasticsearchService:
                     ]
                 }
             },
-            "sort": [{"modified_on": {"order": "desc"}}],
+            "sort": [
+                {"modified_on": {"order": "desc"}},
+                {"contact_uuid": {"order": "desc"}},
+            ],
         }
 
-        response = self.client.get(endpoint="_search", params=params, query=query)
+        if search_after:
+            query["search_after"] = search_after
 
-        # Handle Elasticsearch 8.x where total can be int or dict
-        total = response["hits"]["total"]
-        total_items = total if isinstance(total, int) else total["value"]
-        total_pages = math.ceil(total_items / page_size)
+        response = self.client.get(endpoint="_search", params={}, query=query)
 
         data = []
+
+        last_sort = []
 
         for hit in response["hits"]["hits"]:
             op_field_value = None
@@ -93,12 +87,11 @@ class ConversationsElasticsearchService:
             }
             data.append(formatted_hit)
 
+            last_sort = hit.get("sort", [])
+
         result = {
             "pagination": {
-                "current_page": page_number,
-                "total_pages": total_pages,
-                "page_size": page_size,
-                "total_items": total_items,
+                "sort": last_sort,
             },
             "contacts": data,
         }
