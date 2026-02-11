@@ -448,3 +448,9 @@ INSIGHTS_SHOW_HUMAN_SUPPORT_DASHBOARD_V1_FEATURE_FLAG_KEY = env.str(
 # JWT
 JWT_SECRET_KEY = env.str("JWT_SECRET_KEY", default="").replace("\\n", "\n")
 JWT_PUBLIC_KEY = env.str("JWT_PUBLIC_KEY", default="").replace("\\n", "\n")
+
+# Conversations API
+NEXUS_CONVERSATIONS_API_BASE_URL = env.str(
+    "NEXUS_CONVERSATIONS_API_BASE_URL", default=""
+)
+NEXUS_CONVERSATIONS_API_TOKEN = env.str("NEXUS_CONVERSATIONS_API_TOKEN", default="")
