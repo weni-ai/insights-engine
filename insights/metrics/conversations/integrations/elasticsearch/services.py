@@ -27,18 +27,12 @@ class ConversationsElasticsearchService:
         page_size: int,
         search_after: list[str] | None = None,
     ) -> list[dict]:
-        params = {
-            "_source": "project_uuid,contact_uuid,created_on,modified_on,contact_name,contact_urn,values",
-            "size": page_size,
-        }
-
-        if search_after:
-            params["search_after"] = search_after
-
         start_date = self._format_date(start_date)
         end_date = self._format_date(end_date)
 
         query = {
+            "_source": "project_uuid,contact_uuid,created_on,modified_on,contact_name,contact_urn,values",
+            "size": page_size,
             "query": {
                 "bool": {
                     "must": [
@@ -61,10 +55,16 @@ class ConversationsElasticsearchService:
                     ]
                 }
             },
-            "sort": [{"modified_on": {"order": "desc"}}],
+            "sort": [
+                {"modified_on": {"order": "desc"}},
+                {"contact_uuid": {"order": "desc"}},
+            ],
         }
 
-        response = self.client.get(endpoint="_search", params=params, query=query)
+        if search_after:
+            query["search_after"] = search_after
+
+        response = self.client.get(endpoint="_search", params={}, query=query)
 
         data = []
 
