@@ -895,6 +895,7 @@ class ConversationsReportService(BaseConversationsReportService):
         current_page = 1
         page_size = self.elastic_page_size
         page_limit = self.elastic_page_limit
+        search_after = None
 
         while True:
             if current_page >= page_limit:
@@ -928,11 +929,13 @@ class ConversationsReportService(BaseConversationsReportService):
                     end_date=end_date,
                     op_field=op_field,
                     page_size=page_size,
-                    page_number=current_page,
+                    search_after=search_after,
                 )
             )
 
             contacts = paginated_results.get("contacts", [])
+            pagination = paginated_results.get("pagination", {})
+            search_after = pagination.get("sort", [])
 
             if len(contacts) == 0 or contacts == [{}]:
                 break
