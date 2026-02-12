@@ -9,6 +9,7 @@ from rest_framework.exceptions import ValidationError, NotFound
 from sentry_sdk import capture_exception
 
 from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes, ProductType
+from insights.metrics.meta.exception import MarketingMessagesStatusError
 from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class MetaGraphAPIClient:
-    base_host_url = "https://graph.facebook.com/v21.0"
+    base_host_url = "https://graph.facebook.com"
     access_token = settings.WHATSAPP_API_ACCESS_TOKEN
 
     def __init__(self):
@@ -43,7 +44,7 @@ class MetaGraphAPIClient:
         language: str | None = None,
         category: str | None = None,
     ):
-        url = f"{self.base_host_url}/{waba_id}/message_templates"
+        url = f"{self.base_host_url}/v21.0/{waba_id}/message_templates"
 
         params = {
             filter_name: filter_value
@@ -93,7 +94,7 @@ class MetaGraphAPIClient:
         if cached_response := self.cache.get(cache_key):
             return json.loads(cached_response)
 
-        url = f"{self.base_host_url}/{template_id}"
+        url = f"{self.base_host_url}/v21.0/{template_id}"
 
         try:
             response = requests.get(url, headers=self.headers, timeout=60)
@@ -132,7 +133,7 @@ class MetaGraphAPIClient:
         include_data_points: bool = True,
         return_exceptions: bool = False,
     ):
-        url = f"{self.base_host_url}/{waba_id}/template_analytics?"
+        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
 
         metrics_types = [
             MetricsTypes.SENT.value,
@@ -275,7 +276,7 @@ class MetaGraphAPIClient:
         if buttons == []:
             return {"data": []}
 
-        url = f"{self.base_host_url}/{waba_id}/template_analytics?"
+        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
 
         try:
             response = requests.get(
@@ -309,3 +310,25 @@ class MetaGraphAPIClient:
         self.cache.set(cache_key, json.dumps(response, default=str), self.cache_ttl)
 
         return response
+
+    def check_marketing_messages_status(self, waba_id: str):
+        url = f"{self.base_host_url}/v24.0/{waba_id}/marketing_messages_status"
+
+        try:
+            response = requests.get(url, headers=self.headers, timeout=60)
+            response.raise_for_status()
+        except requests.HTTPError as err:
+            logger.error(
+                "Error checking marketing messages status: %s. Original exception: %s",
+                err.response.text,
+                err,
+                exc_info=True,
+            )
+            event_id = capture_exception(err)
+
+            raise MarketingMessagesStatusError(
+                {"error": f"An error has occurred. Event ID: {event_id}"},
+                code="meta_api_error",
+            ) from err
+
+        return response.json()

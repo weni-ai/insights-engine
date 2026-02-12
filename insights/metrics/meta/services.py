@@ -1,10 +1,16 @@
 from rest_framework.exceptions import ValidationError
+from sentry_sdk import capture_exception
+import logging
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
+from insights.metrics.meta.exception import MarketingMessagesStatusError
 from insights.metrics.meta.validators import (
     validate_analytics_kwargs,
     validate_list_templates_filters,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class MetaMessageTemplatesService:
@@ -70,3 +76,25 @@ class MetaMessageTemplatesService:
         valid_filters = validate_analytics_kwargs(filters, timezone_name=timezone_name)
 
         return self.client.get_buttons_analytics(**valid_filters)
+
+    def check_marketing_messages_status(self, waba_id: str):
+        """
+        Check the status of marketing messages.
+        """
+        try:
+            response = self.client.check_marketing_messages_status(waba_id=waba_id)
+        except (MarketingMessagesStatusError, Exception) as err:
+            logger.error(
+                "Error checking marketing messages status: %s. Original exception: %s",
+                err.response.text,
+                err,
+                exc_info=True,
+            )
+            capture_exception(err)
+
+            return False
+
+        status = response.get("marketing_messages_onboarding_status")
+        is_active = status == "ONBOARDED"
+
+        return is_active
