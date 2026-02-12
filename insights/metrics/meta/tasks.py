@@ -1,17 +1,68 @@
 from uuid import UUID
 from insights.celery import app
 import logging
+from datetime import datetime
 
 from insights.metrics.meta.services import MetaMessageTemplatesService
 from insights.dashboards.models import Dashboard
 from sentry_sdk import capture_exception
 from django.utils import timezone
+from django.db.models import Q
+from datetime import timedelta
+
+from insights.projects.models import Project
 
 logger = logging.getLogger(__name__)
 
 
+WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS = 15 * 60  # 15 minutes
+
+
 @app.task
-def check_meta_metrics(dashboard_uuid: UUID):
+def check_dashboards_marketing_messages_status_for_project(project_uuid: UUID):
+
+    project = Project.objects.get(uuid=project_uuid)
+
+    if not project.is_whatsapp_integration:
+        return
+
+    dashboards = Dashboard.objects.filter(
+        Q(project=project)
+        & (
+            Q(config__is_whatsapp_integration=True)
+            & (
+                Q(config__is_mm_lite_active=False)
+                | Q(config__is_mm_lite_active__isnull=True)
+            )
+        )
+    )
+
+    for dashboard in dashboards:
+        config: dict = dashboard.config or {}
+        marketing_messages_status_last_checked_at = config.get(
+            "marketing_messages_status_last_checked_at"
+        )
+
+        try:
+            dt = datetime.fromisoformat(marketing_messages_status_last_checked_at)
+
+            if dt < timezone.now() - timedelta(minutes=15):
+                check_marketing_messages_status.apply_async(
+                    args=[dashboard.uuid],
+                    expires=timezone.now() + timedelta(minutes=59),
+                )
+
+        except Exception as e:
+            event_id = capture_exception(e)
+            logger.error(
+                f"Error parsing marketing messages status last checked at: {marketing_messages_status_last_checked_at}. Event ID: {event_id}",
+                exc_info=True,
+            )
+            continue
+
+
+@app.task
+def check_marketing_messages_status(dashboard_uuid: UUID):
     """
     Check the meta metrics.
     """
