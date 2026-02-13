@@ -312,7 +312,7 @@ class MetaGraphAPIClient:
         return response
 
     def check_marketing_messages_status(self, waba_id: str):
-        url = f"{self.base_host_url}/v24.0/{waba_id}/marketing_messages_status"
+        url = f"{self.base_host_url}/v24.0/{waba_id}/"
 
         try:
             response = requests.get(url, headers=self.headers, timeout=60)
