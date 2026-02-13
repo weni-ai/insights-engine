@@ -355,8 +355,14 @@ class MetaGraphAPIClient:
     def check_marketing_messages_status(self, waba_id: str):
         url = f"{self.base_host_url}/v24.0/{waba_id}/"
 
+        params = {
+            "fields": "marketing_messages_onboarding_status",
+        }
+
         try:
-            response = requests.get(url, headers=self.headers, timeout=60)
+            response = requests.get(
+                url, headers=self.headers, params=params, timeout=60
+            )
             response.raise_for_status()
         except requests.HTTPError as err:
             logger.error(
