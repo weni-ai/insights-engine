@@ -161,3 +161,24 @@ MOCK_TEMPLATE_DAILY_ANALYTICS_INVALID_PERIOD = {
         "fbtrace_id": "XLZSJnaBAvqHAVkqlappqAK",
     }
 }
+
+MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY = {
+    "pricing_analytics": {
+        "data": [
+            {
+                "data_points": [
+                    {
+                        "pricing_category": "category1",
+                        "volume": 10,
+                        "cost": 0,
+                    },
+                    {
+                        "pricing_category": "category2",
+                        "volume": 20,
+                        "cost": 0,
+                    },
+                ],
+            },
+        ],
+    },
+}
