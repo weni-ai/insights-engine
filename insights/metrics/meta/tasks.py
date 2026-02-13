@@ -40,22 +40,25 @@ def check_dashboards_marketing_messages_status_for_project(project_uuid: UUID):
             "marketing_messages_status_last_checked_at"
         )
 
-        try:
-            dt = datetime.fromisoformat(marketing_messages_status_last_checked_at)
+        if marketing_messages_status_last_checked_at:
+            try:
+                dt = datetime.fromisoformat(marketing_messages_status_last_checked_at)
 
-            if dt < timezone.now() - timedelta(minutes=15):
-                check_marketing_messages_status.apply_async(
-                    args=[dashboard.uuid],
-                    expires=timezone.now() + timedelta(minutes=59),
+                if dt > timezone.now() - timedelta(minutes=15):
+                    continue
+
+            except Exception as e:
+                event_id = capture_exception(e)
+                logger.error(
+                    f"Error parsing marketing messages status last checked at: {marketing_messages_status_last_checked_at}. Event ID: {event_id}",
+                    exc_info=True,
                 )
+                continue
 
-        except Exception as e:
-            event_id = capture_exception(e)
-            logger.error(
-                f"Error parsing marketing messages status last checked at: {marketing_messages_status_last_checked_at}. Event ID: {event_id}",
-                exc_info=True,
-            )
-            continue
+        check_marketing_messages_status.apply_async(
+            args=[dashboard.uuid],
+            expires=timezone.now() + timedelta(minutes=59),
+        )
 
 
 @app.task
