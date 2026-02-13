@@ -10,6 +10,7 @@ from rest_framework.exceptions import ValidationError
 
 from insights.metrics.meta.services import MetaMessageTemplatesService
 from insights.metrics.meta.tests.mock import (
+    MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY,
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
     MOCK_TEMPLATES_LIST_BODY,
@@ -18,6 +19,7 @@ from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )
+from insights.utils import convert_date_to_unix_timestamp
 
 
 class TestMetaMessageTemplatesService(TestCase):
@@ -159,3 +161,30 @@ class TestMetaMessageTemplatesService(TestCase):
             }
 
             self.assertEqual(result, expected_response)
+
+    def test_get_conversations_by_category(self):
+        waba_id = "0000000000000000"
+        start_date = timezone.now().date() - timedelta(days=7)
+        end_date = timezone.now().date()
+
+        start = convert_date_to_unix_timestamp(start_date)
+        end = convert_date_to_unix_timestamp(end_date, use_max_time=True)
+
+        base_url = f"https://graph.facebook.com/v24.0/{waba_id}/"
+        fields = f"pricing_analytics.start({start}).end({end}).granularity(DAILY).dimensions(['PRICING_CATEGORY'])"
+        url = f"{base_url}?fields={fields}"
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                url,
+                status=status.HTTP_200_OK,
+                content_type="application/json",
+                body=json.dumps(MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY),
+            )
+
+            result = self.service.get_conversations_by_category(
+                waba_id=waba_id, start_date=start_date, end_date=end_date
+            )
+
+            self.assertEqual(result, {"category1": 10, "category2": 20})
