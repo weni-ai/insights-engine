@@ -23,9 +23,6 @@ def check_dashboards_marketing_messages_status_for_project(project_uuid: UUID):
 
     project = Project.objects.get(uuid=project_uuid)
 
-    if not project.is_whatsapp_integration:
-        return
-
     dashboards = Dashboard.objects.filter(
         Q(project=project)
         & (
