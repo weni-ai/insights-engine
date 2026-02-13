@@ -368,8 +368,7 @@ class MetaGraphAPIClient:
             event_id = capture_exception(err)
 
             raise MarketingMessagesStatusError(
-                {"error": f"An error has occurred. Event ID: {event_id}"},
-                code="meta_api_error",
+                f"An error has occurred. Event ID: {event_id}"
             ) from err
 
         return response.json()
