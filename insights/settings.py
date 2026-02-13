@@ -448,3 +448,9 @@ INSIGHTS_SHOW_HUMAN_SUPPORT_DASHBOARD_V1_FEATURE_FLAG_KEY = env.str(
 # JWT
 JWT_SECRET_KEY = env.str("JWT_SECRET_KEY", default="").replace("\\n", "\n")
 JWT_PUBLIC_KEY = env.str("JWT_PUBLIC_KEY", default="").replace("\\n", "\n")
+
+
+# Marketing messages status
+WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS = env.int(
+    "WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS", default=15 * 60
+)
