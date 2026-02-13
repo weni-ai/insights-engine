@@ -1,6 +1,7 @@
 import json
 import responses
 
+from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase
 from rest_framework import status
@@ -31,7 +32,8 @@ from insights.utils import (
 
 class TestMetaGraphAPIClient(TestCase):
     def setUp(self):
-        self.base_host_url = "https://graph.facebook.com"
+        self.base_host_url = settings.META_GRAPH_API_BASE_HOST_URL
+        self.version = settings.META_GRAPH_API_VERSION
         self.client: MetaGraphAPIClient = MetaGraphAPIClient()
         cache.clear()
 
@@ -40,7 +42,7 @@ class TestMetaGraphAPIClient(TestCase):
 
     def test_list_templates(self):
         waba_id = "1234567890987654"
-        url = f"{self.base_host_url}/v21.0/{waba_id}/message_templates"
+        url = f"{self.base_host_url}/{self.version}/{waba_id}/message_templates"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -57,7 +59,7 @@ class TestMetaGraphAPIClient(TestCase):
 
     def test_get_template_preview(self):
         template_id = "1234567890987654"
-        url = f"{self.base_host_url}/v21.0/{template_id}"
+        url = f"{self.base_host_url}/{self.version}/{template_id}"
 
         cache_key = self.client.get_template_preview_cache_key(template_id=template_id)
 
@@ -88,7 +90,7 @@ class TestMetaGraphAPIClient(TestCase):
 
     def test_cannot_get_template_preview_when_template_does_not_exist(self):
         template_id = "1234567890987654"
-        url = f"{self.base_host_url}/v21.0/{template_id}"
+        url = f"{self.base_host_url}/{self.version}/{template_id}"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -106,7 +108,7 @@ class TestMetaGraphAPIClient(TestCase):
     def test_get_template_daily_analytics(self):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
-        url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics"
+        url = f"{self.base_host_url}/{self.version}/0000000000000000/template_analytics"
 
         metrics_types = [
             MetricsTypes.SENT.value,
@@ -178,7 +180,7 @@ class TestMetaGraphAPIClient(TestCase):
     def test_cannot_get_template_daily_analytics_when_an_error_has_occurred(self):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
-        url = f"{self.base_host_url}/v21.0/0000000000000000/template_analytics"
+        url = f"{self.base_host_url}/{self.version}/0000000000000000/template_analytics"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -232,14 +234,14 @@ class TestMetaGraphAPIClient(TestCase):
         with responses.RequestsMock() as rsps:
             rsps.add(
                 responses.GET,
-                f"{self.base_host_url}/v21.0/{template_id}",
+                f"{self.base_host_url}/{self.version}/{template_id}",
                 status=status.HTTP_200_OK,
                 content_type="application/json",
                 body=json.dumps(MOCK_SUCCESS_RESPONSE_BODY),
             )
             rsps.add(
                 responses.GET,
-                f"{self.base_host_url}/v21.0/0000000000000000/template_analytics",
+                f"{self.base_host_url}/{self.version}/0000000000000000/template_analytics",
                 status=status.HTTP_200_OK,
                 content_type="application/json",
                 body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
