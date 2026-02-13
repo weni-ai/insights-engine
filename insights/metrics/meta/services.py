@@ -244,10 +244,7 @@ class MetaMessageTemplatesService:
             response = self.client.check_marketing_messages_status(waba_id=waba_id)
         except (MarketingMessagesStatusError, Exception) as err:
             logger.error(
-                "Error checking marketing messages status: %s. Original exception: %s",
-                err.response.text,
-                err,
-                exc_info=True,
+                "Error checking marketing messages status: %s", err, exc_info=True
             )
             capture_exception(err)
 
