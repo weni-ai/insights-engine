@@ -47,7 +47,8 @@ class ProjectDashboardWABAPermission(BasePermission):
         Check if the user has access to the waba_id by checking the dashboard
         config
         """
-        project_uuid = request.query_params.get("project_uuid")
+        project_uuid_field = getattr(view, "project_uuid_field", "project_uuid")
+        project_uuid = request.query_params.get(project_uuid_field)
         waba_id = request.query_params.get("waba_id")
 
         if not project_uuid or not waba_id:

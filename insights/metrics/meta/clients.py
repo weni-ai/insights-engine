@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 class MetaGraphAPIClient:
-    base_host_url = "https://graph.facebook.com"
+    base_host_url = settings.META_GRAPH_API_BASE_HOST_URL
     access_token = settings.WHATSAPP_API_ACCESS_TOKEN
+    version = settings.META_GRAPH_API_VERSION
 
     def __init__(self):
         self.cache = CacheClient()
@@ -44,7 +45,7 @@ class MetaGraphAPIClient:
         language: str | None = None,
         category: str | None = None,
     ):
-        url = f"{self.base_host_url}/v21.0/{waba_id}/message_templates"
+        url = f"{self.base_host_url}/{self.version}/{waba_id}/message_templates"
 
         params = {
             filter_name: filter_value
@@ -94,7 +95,7 @@ class MetaGraphAPIClient:
         if cached_response := self.cache.get(cache_key):
             return json.loads(cached_response)
 
-        url = f"{self.base_host_url}/v21.0/{template_id}"
+        url = f"{self.base_host_url}/{self.version}/{template_id}"
 
         try:
             response = requests.get(url, headers=self.headers, timeout=60)
@@ -133,7 +134,7 @@ class MetaGraphAPIClient:
         include_data_points: bool = True,
         return_exceptions: bool = False,
     ):
-        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
+        url = f"{self.base_host_url}/{self.version}/{waba_id}/template_analytics?"
 
         metrics_types = [
             MetricsTypes.SENT.value,
@@ -281,7 +282,7 @@ class MetaGraphAPIClient:
         if buttons == []:
             return {"data": []}
 
-        url = f"{self.base_host_url}/v21.0/{waba_id}/template_analytics?"
+        url = f"{self.base_host_url}/{self.version}/{waba_id}/template_analytics?"
 
         try:
             response = requests.get(
@@ -330,7 +331,7 @@ class MetaGraphAPIClient:
             else convert_date_to_unix_timestamp(end_date, use_max_time=True)
         )
 
-        url = f"{self.base_host_url}/v24.0/{waba_id}/"
+        url = f"{self.base_host_url}/{self.version}/{waba_id}/"
         params = {
             "fields": f"pricing_analytics.start({start}).end({end}).granularity(DAILY).dimensions(['PRICING_CATEGORY'])"
         }

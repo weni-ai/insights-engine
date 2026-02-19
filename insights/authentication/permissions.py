@@ -29,11 +29,13 @@ class ProjectAuthPermission(permissions.BasePermission):
 
 class ProjectAuthQueryParamPermission(permissions.BasePermission):
     def has_permission(self, request, view):
-        project_uuid = request.query_params.get("project_uuid")
+        project_uuid_field = getattr(view, "project_uuid_field", "project_uuid")
+
+        project_uuid = request.query_params.get(project_uuid_field)
 
         if not project_uuid:
             raise ValidationError(
-                {"project_uuid": ["This field is required"]}, code="required"
+                {project_uuid_field: ["This field is required"]}, code="required"
             )
 
         return ProjectAuth.objects.filter(

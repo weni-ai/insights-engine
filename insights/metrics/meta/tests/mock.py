@@ -168,12 +168,12 @@ MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY = {
             {
                 "data_points": [
                     {
-                        "pricing_category": "category1",
+                        "pricing_category": "SERVICE",
                         "volume": 10,
                         "cost": 0,
                     },
                     {
-                        "pricing_category": "category2",
+                        "pricing_category": "MARKETING",
                         "volume": 20,
                         "cost": 0,
                     },

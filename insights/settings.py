@@ -478,3 +478,9 @@ NEXUS_CONVERSATIONS_API_BASE_URL = env.str(
     "NEXUS_CONVERSATIONS_API_BASE_URL", default=""
 )
 NEXUS_CONVERSATIONS_API_TOKEN = env.str("NEXUS_CONVERSATIONS_API_TOKEN", default="")
+
+# Meta Graph API
+META_GRAPH_API_BASE_HOST_URL = env.str(
+    "META_GRAPH_API_BASE_HOST_URL", default="https://graph.facebook.com"
+)
+META_GRAPH_API_VERSION = env.str("META_GRAPH_API_VERSION", default="v24.0")

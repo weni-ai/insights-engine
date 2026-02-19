@@ -31,6 +31,7 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
 from insights.metrics.meta.serializers import (
+    ConversationsByCategoryQueryParamsSerializer,
     TemplatesMetricsAnalyticsBodySerializer,
     TemplatesMetricsAnalyticsQueryParamsSerializer,
     WhatsappIntegrationWebhookRemoveSerializer,
@@ -61,6 +62,14 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         ProjectAuthQueryParamPermission,
         ProjectDashboardWABAPermission,
     ]
+
+    @property
+    def project_uuid_field(self):
+        """Set project_uuid_field based on the action"""
+        action_field_map = {
+            "get_conversations_by_category": "project",
+        }
+        return action_field_map.get(self.action, "project_uuid")
 
     @extend_schema(parameters=WHATSAPP_MESSAGE_TEMPLATES_LIST_TEMPLATES_PARAMS)
     @action(
@@ -298,6 +307,26 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
             {"results": WabaSerializer(wabas_data, many=True).data},
             status=status.HTTP_200_OK,
         )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="conversations-by-category",
+        url_path="conversations-by-category",
+    )
+    def get_conversations_by_category(self, request: Request) -> Response:
+        serializer = ConversationsByCategoryQueryParamsSerializer(
+            data=request.query_params
+        )
+        serializer.is_valid(raise_exception=True)
+
+        categories_data = self.service.get_conversations_by_category(
+            waba_id=serializer.validated_data["waba_id"],
+            start_date=serializer.validated_data["start_date"],
+            end_date=serializer.validated_data["end_date"],
+        )
+
+        return Response({"templates": categories_data}, status=status.HTTP_200_OK)
 
 
 class WhatsappIntegrationWebhookView(APIView):

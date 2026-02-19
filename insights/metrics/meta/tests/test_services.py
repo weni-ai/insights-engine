@@ -1,6 +1,7 @@
 import json
 import responses
 
+from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
@@ -32,7 +33,7 @@ class TestMetaMessageTemplatesService(TestCase):
 
     def test_get_templates_list(self):
         waba_id = "12345678"
-        url = f"https://graph.facebook.com/v21.0/{waba_id}/message_templates"
+        url = f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{waba_id}/message_templates"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -55,7 +56,7 @@ class TestMetaMessageTemplatesService(TestCase):
 
     def test_get_template_preview(self):
         template_id = "12345678"
-        url = f"https://graph.facebook.com/v21.0/{template_id}"
+        url = f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{template_id}"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -81,7 +82,7 @@ class TestMetaMessageTemplatesService(TestCase):
     def test_get_template_analytics(self):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
-        url = f"https://graph.facebook.com/v21.0/{waba_id}/template_analytics"
+        url = f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{waba_id}/template_analytics"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -124,14 +125,14 @@ class TestMetaMessageTemplatesService(TestCase):
         with responses.RequestsMock() as rsps:
             rsps.add(
                 responses.GET,
-                f"https://graph.facebook.com/v21.0/{template_id}",
+                f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{template_id}",
                 status=status.HTTP_200_OK,
                 content_type="application/json",
                 body=json.dumps(MOCK_SUCCESS_RESPONSE_BODY),
             )
             rsps.add(
                 responses.GET,
-                f"https://graph.facebook.com/v21.0/{waba_id}/template_analytics",
+                f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{waba_id}/template_analytics",
                 status=status.HTTP_200_OK,
                 content_type="application/json",
                 body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
@@ -187,4 +188,4 @@ class TestMetaMessageTemplatesService(TestCase):
                 waba_id=waba_id, start_date=start_date, end_date=end_date
             )
 
-            self.assertEqual(result, {"category1": 10, "category2": 20})
+            self.assertEqual(result, {"SERVICE": 10, "MARKETING": 20})
