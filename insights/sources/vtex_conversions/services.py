@@ -7,7 +7,9 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 from sentry_sdk import capture_message
 
+from insights.dashboards.models import Dashboard
 from insights.metrics.meta.clients import MetaGraphAPIClient
+from insights.metrics.meta.enums import ProductType
 from insights.projects.models import Project
 from insights.sources.integrations.clients import WeniIntegrationsClient
 from insights.sources.orders.clients import VtexOrdersRestClient
@@ -68,6 +70,7 @@ class VTEXOrdersConversionsService:
         template_id: str,
         start_date: date,
         end_date: date,
+        product_type: str = ProductType.CLOUD_API.value,
     ) -> OrdersConversionsGraphData:
         """
         Get message metrics from Meta Graph API.
@@ -86,7 +89,7 @@ class VTEXOrdersConversionsService:
 
         metrics_data = (
             self.meta_api_client.get_messages_analytics(
-                waba_id, template_id, start_date, end_date
+                waba_id, template_id, start_date, end_date, product_type=product_type
             )
             .get("data", {})
             .get("status_count")
@@ -144,19 +147,61 @@ class VTEXOrdersConversionsService:
         start_date = serializer.validated_data["start_date"]
         end_date = serializer.validated_data["end_date"]
 
-        metrics_data = self.get_message_metrics(
-            serializer.validated_data["waba_id"],
+        waba_id = serializer.validated_data["waba_id"]
+
+        use_mm_lite = Dashboard.objects.filter(
+            project=self.project,
+            config__is_whatsapp_integration=True,
+            config__waba_id=waba_id,
+            config__is_mm_lite_active=True,
+        ).exists()
+
+        cloud_api_metrics_data = self.get_message_metrics(
+            waba_id,
             serializer.validated_data["template_id"],
             start_date.date(),
             end_date.date(),
         )
 
-        graph_data_fields = {}
+        raw_graph_data_fields = {}
+        sent_total = 0
+
         for status in ("sent", "delivered", "read", "clicked"):
-            status_data = metrics_data.get(status, {})
+            status_data = cloud_api_metrics_data.get(status, {})
+
+            raw_graph_data_fields[status] = {
+                "value": status_data.get("value", 0),
+            }
+
+            if status == "sent":
+                sent_total += status_data.get("value", 0)
+
+        if use_mm_lite:
+            mm_lite_metrics_data = self.get_message_metrics(
+                waba_id,
+                serializer.validated_data["template_id"],
+                start_date.date(),
+                end_date.date(),
+                product_type=ProductType.MM_LITE.value,
+            )
+
+            for status in ("sent", "delivered", "read", "clicked"):
+                status_data = mm_lite_metrics_data.get(status, {})
+                raw_graph_data_fields[status]["value"] += status_data.get("value", 0)
+
+                if status == "sent":
+                    sent_total += status_data.get("value", 0)
+
+        graph_data_fields = {}
+
+        for status, data in raw_graph_data_fields.items():
             graph_data_fields[status] = OrdersConversionsGraphDataField(
-                value=status_data.get("value", 0),
-                percentage=status_data.get("percentage", 0),
+                value=data["value"],
+                percentage=(
+                    round((data["value"] / sent_total) * 100, 2)
+                    if sent_total > 0
+                    else 0
+                ),
             )
 
         orders_data = self.get_orders_metrics(
