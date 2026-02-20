@@ -282,7 +282,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
 
         # Staging only:
         dashboards = Dashboard.objects.filter(
-            project_uuid=project_uuid, config__is_whatsapp_integration=True
+            project_id=project_uuid, config__is_whatsapp_integration=True
         )
         wabas_data = []
 
