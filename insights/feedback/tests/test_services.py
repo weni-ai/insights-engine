@@ -1,3 +1,4 @@
+from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 from datetime import datetime
 
@@ -8,7 +9,7 @@ from django.utils.timezone import timedelta
 from django.test import override_settings
 from insights.dashboards.models import Dashboard
 from insights.feedback.dataclass import SurveyStatus
-from insights.feedback.models import Feedback, Survey
+from insights.feedback.models import Feedback, FeedbackAnswer, Survey
 from insights.feedback.services import FeedbackService
 from insights.users.models import User
 from insights.projects.models import Project
@@ -70,10 +71,10 @@ class TestFeedbackService(TestCase):
         self.assertEqual(survey, survey)
 
     @override_settings(VTEX_INTERNAL_DOMAINS=["vtex.com"])
-    def get_survey_status_when_user_is_vtex_internal(self):
+    def test_get_survey_status_when_user_is_vtex_internal(self):
         user = self.create_user(email="test@vtex.com")
         dashboard = self.create_dashboard()
-        survey = self.create_survey()
+        self.create_survey()
 
         survey_status = self.service.get_survey_status(user, dashboard)
 
@@ -117,3 +118,59 @@ class TestFeedbackService(TestCase):
             survey_status,
             SurveyStatus(is_active=True, user_answered=True, uuid=survey.uuid),
         )
+
+    def test_create_feedback_when_survey_is_not_active(self):
+        user = self.create_user(email="test@email.com")
+        dashboard = self.create_dashboard()
+        survey = self.create_survey(
+            start=timezone.now() + timedelta(days=1),
+            end=timezone.now() + timedelta(days=2),
+        )
+        with self.assertRaises(PermissionDenied):
+            self.service.create_feedback(
+                user, dashboard, survey, DashboardTypes.CONVERSATIONAL, {}
+            )
+
+    def test_create_feedback_when_user_has_already_answered_the_survey(self):
+        user = self.create_user(email="test@email.com")
+        dashboard = self.create_dashboard()
+        survey = self.create_survey()
+        Feedback.objects.create(
+            survey=survey,
+            user=user,
+            dashboard=dashboard,
+            dashboard_type=DashboardTypes.CONVERSATIONAL,
+        )
+        with self.assertRaises(PermissionDenied):
+            self.service.create_feedback(
+                user, dashboard, survey, DashboardTypes.CONVERSATIONAL, {}
+            )
+
+    def test_create_feedback(self):
+        user = self.create_user(email="test@email.com")
+        dashboard = self.create_dashboard()
+        survey = self.create_survey()
+        data = {
+            "answers": [
+                {"reference": "TRUST", "answer": "1", "type": "SCORE_1_5"},
+                {"reference": "MAKE_DECISION", "answer": "1", "type": "SCORE_1_5"},
+                {"reference": "ROI", "answer": "1", "type": "SCORE_1_5"},
+                {"reference": "COMMENT", "answer": "test", "type": "TEXT"},
+            ]
+        }
+        feedback = self.service.create_feedback(
+            user, dashboard, survey, DashboardTypes.CONVERSATIONAL, data
+        )
+        self.assertIsNotNone(feedback)
+        self.assertEqual(feedback.survey, survey)
+        self.assertEqual(feedback.user, user)
+        self.assertEqual(feedback.dashboard, dashboard)
+        self.assertEqual(feedback.dashboard_type, DashboardTypes.CONVERSATIONAL)
+
+        answers = FeedbackAnswer.objects.filter(feedback=feedback)
+        self.assertEqual(answers.count(), 4)
+
+        self.assertEqual(answers.get(reference="TRUST").answer, "1")
+        self.assertEqual(answers.get(reference="MAKE_DECISION").answer, "1")
+        self.assertEqual(answers.get(reference="ROI").answer, "1")
+        self.assertEqual(answers.get(reference="COMMENT").answer, "test")

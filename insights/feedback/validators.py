@@ -28,7 +28,7 @@ class FeedbackDataValidator(BaseFeedbackDataValidator):
         parsed_data = {}
 
         for answer in answers:
-            if not "reference" in answer:
+            if "reference" not in answer:
                 raise serializers.ValidationError(
                     _("Reference is required"), code="required"
                 )
