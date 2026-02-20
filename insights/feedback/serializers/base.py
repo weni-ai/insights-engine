@@ -25,7 +25,7 @@ class TextAnswerSerializer(serializers.Serializer):
     answer = serializers.CharField()
 
     def validate_answer(self, value: str):
-        max_length = 255
+        max_length = 1000
 
         if len(value) > max_length:
             raise serializers.ValidationError(

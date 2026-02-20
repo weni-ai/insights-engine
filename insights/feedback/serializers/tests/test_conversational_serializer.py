@@ -24,7 +24,7 @@ class TestConversationalFeedbackSerializer(TestCase):
                 "TRUST": {"answer": "0", "type": "SCORE_1_5"},
                 "MAKE_DECISION": {"answer": "6", "type": "SCORE_1_5"},
                 "ROI": {"answer": "bla", "type": "SCORE_1_5"},
-                "COMMENT": {"answer": "test" * 256, "type": "TEXT"},
+                "COMMENT": {"answer": "test" * 1001, "type": "TEXT"},
             }
         )
 

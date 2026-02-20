@@ -53,6 +53,8 @@ class TestTextAnswerSerializer(TestCase):
         self.assertEqual(serializer.errors["type"][0].code, "invalid_choice")
 
     def test_validate_answer_with_invalid_answer(self):
-        serializer = TextAnswerSerializer(data={"answer": "test" * 256, "type": "TEXT"})
+        serializer = TextAnswerSerializer(
+            data={"answer": "test" * 1001, "type": "TEXT"}
+        )
         self.assertFalse(serializer.is_valid())
         self.assertEqual(serializer.errors["answer"][0].code, "invalid_answer")
