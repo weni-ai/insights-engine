@@ -8,6 +8,7 @@ from insights.dashboards.models import Dashboard
 from django.utils import timezone
 
 from insights.feedback.models import Feedback, Survey
+from insights.feedback.choices import DashboardTypes
 
 
 class BaseFeedbackService(ABC):
@@ -51,3 +52,13 @@ class FeedbackService(BaseFeedbackService):
         return SurveyStatus(
             is_active=True, user_answered=user_has_feedback, uuid=current_survey.uuid
         )
+
+    def create_feedback(
+        self,
+        user: User,
+        dashboard: Dashboard,
+        survey: Survey,
+        dashboard_type: DashboardTypes,
+        data: dict,
+    ):
+        pass
