@@ -18,7 +18,7 @@ class AnswerTypes(models.TextChoices):
     TEXT = "TEXT"
 
 
-class AnswerReference(models.TextChoices):
+class ConversationalAnswerReferences(models.TextChoices):
     """
     This choice is used to define the reference of the answer.
     """

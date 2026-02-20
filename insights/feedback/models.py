@@ -2,7 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from insights.feedback.choices import AnswerReference, AnswerTypes, DashboardTypes
+from insights.feedback.choices import AnswerTypes, DashboardTypes
 from insights.shared.models import BaseModel
 from insights.dashboards.models import Dashboard
 from insights.users.models import User
@@ -63,7 +63,6 @@ class FeedbackAnswer(BaseModel):
     reference = models.CharField(
         verbose_name=_("Reference"),
         max_length=255,
-        choices=AnswerReference.choices,
     )
     answer = models.TextField(
         verbose_name=_("Answer"),
