@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import Optional
 
+from insights.core.internal_domains import is_vtex_internal_domain
 from insights.feedback.dataclass import SurveyStatus
 from insights.users.models import User
 from insights.dashboards.models import Dashboard
@@ -32,6 +33,9 @@ class FeedbackService(BaseFeedbackService):
         """
         Get the survey status for a user and a dashboard.
         """
+
+        if is_vtex_internal_domain(user.email):
+            return SurveyStatus(is_active=False, user_answered=False)
 
         current_survey = self.get_current_survey()
 
