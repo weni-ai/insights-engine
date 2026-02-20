@@ -280,14 +280,27 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
     def wabas(self, request: Request) -> Response:
         project_uuid = request.query_params.get("project_uuid")
 
-        if wabas_mock := getattr(settings, "PROJECT_WABAS_MOCK", None):
-            # Temporary: just for testing purposes in the development and staging environments
-            wabas_data = json.loads(wabas_mock).get("data", [])
+        # Staging only:
+        dashboards = Dashboard.objects.filter(
+            project_uuid=project_uuid, config__is_whatsapp_integration=True
+        )
+        wabas_data = []
 
-            return Response(
-                {"results": WabaSerializer(wabas_data, many=True).data},
-                status=status.HTTP_200_OK,
+        for dashboard in dashboards:
+            config = dashboard.config or {}
+            wabas_data.append(
+                {
+                    "id": config.get("waba_id"),
+                    "phone_number": config.get("phone_number").get(
+                        "display_phone_number"
+                    ),
+                }
             )
+
+        return Response(
+            {"results": WabaSerializer(wabas_data, many=True).data},
+            status=status.HTTP_200_OK,
+        )
 
         try:
             wabas_data = WeniIntegrationsClient().get_wabas_for_project(project_uuid)
