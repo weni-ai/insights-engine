@@ -290,7 +290,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
             config = dashboard.config or {}
             wabas_data.append(
                 {
-                    "id": config.get("waba_id"),
+                    "waba_id": config.get("waba_id"),
                     "phone_number": config.get("phone_number").get(
                         "display_phone_number"
                     ),
