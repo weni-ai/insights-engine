@@ -1,8 +1,11 @@
+from datetime import date
 from rest_framework.exceptions import ValidationError
 from sentry_sdk import capture_exception
 import logging
 
+from insights.metrics.meta.aggregations import ConversationsByCategoryAggregations
 from insights.metrics.meta.clients import MetaGraphAPIClient
+from insights.metrics.meta.typing import PricingDataPoint
 from insights.metrics.meta.exception import MarketingMessagesStatusError
 from insights.metrics.meta.validators import (
     validate_analytics_kwargs,
@@ -76,6 +79,27 @@ class MetaMessageTemplatesService:
         valid_filters = validate_analytics_kwargs(filters, timezone_name=timezone_name)
 
         return self.client.get_buttons_analytics(**valid_filters)
+
+    def get_conversations_by_category(
+        self, waba_id: int, start_date: date, end_date: date
+    ) -> dict:
+        """
+        Get conversations by category.
+        """
+
+        response: dict = self.client.get_conversations_by_category(
+            waba_id=waba_id, start_date=start_date, end_date=end_date
+        )
+
+        data_points: list[PricingDataPoint] = (
+            response.get("pricing_analytics", {})
+            .get("data", [{}])[0]
+            .get("data_points", [])
+        )
+
+        return ConversationsByCategoryAggregations().aggregate_volume_by_category(
+            data_points
+        )
 
     def check_marketing_messages_status(self, waba_id: str):
         """

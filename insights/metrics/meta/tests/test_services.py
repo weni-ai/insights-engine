@@ -1,6 +1,7 @@
 import json
 import responses
 
+from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
@@ -10,6 +11,7 @@ from rest_framework.exceptions import ValidationError
 
 from insights.metrics.meta.services import MetaMessageTemplatesService
 from insights.metrics.meta.tests.mock import (
+    MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY,
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
     MOCK_TEMPLATES_LIST_BODY,
@@ -18,6 +20,7 @@ from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
 )
+from insights.utils import convert_date_to_unix_timestamp
 
 
 class TestMetaMessageTemplatesService(TestCase):
@@ -30,7 +33,7 @@ class TestMetaMessageTemplatesService(TestCase):
 
     def test_get_templates_list(self):
         waba_id = "12345678"
-        url = f"https://graph.facebook.com/v21.0/{waba_id}/message_templates"
+        url = f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{waba_id}/message_templates"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -53,7 +56,7 @@ class TestMetaMessageTemplatesService(TestCase):
 
     def test_get_template_preview(self):
         template_id = "12345678"
-        url = f"https://graph.facebook.com/v21.0/{template_id}"
+        url = f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{template_id}"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -79,7 +82,7 @@ class TestMetaMessageTemplatesService(TestCase):
     def test_get_template_analytics(self):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
-        url = f"https://graph.facebook.com/v21.0/{waba_id}/template_analytics"
+        url = f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{waba_id}/template_analytics"
 
         with responses.RequestsMock() as rsps:
             rsps.add(
@@ -122,14 +125,14 @@ class TestMetaMessageTemplatesService(TestCase):
         with responses.RequestsMock() as rsps:
             rsps.add(
                 responses.GET,
-                f"https://graph.facebook.com/v21.0/{template_id}",
+                f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{template_id}",
                 status=status.HTTP_200_OK,
                 content_type="application/json",
                 body=json.dumps(MOCK_SUCCESS_RESPONSE_BODY),
             )
             rsps.add(
                 responses.GET,
-                f"https://graph.facebook.com/v21.0/{waba_id}/template_analytics",
+                f"{settings.META_GRAPH_API_BASE_HOST_URL}/{settings.META_GRAPH_API_VERSION}/{waba_id}/template_analytics",
                 status=status.HTTP_200_OK,
                 content_type="application/json",
                 body=json.dumps(MOCK_TEMPLATE_DAILY_ANALYTICS),
@@ -159,3 +162,30 @@ class TestMetaMessageTemplatesService(TestCase):
             }
 
             self.assertEqual(result, expected_response)
+
+    def test_get_conversations_by_category(self):
+        waba_id = "0000000000000000"
+        start_date = timezone.now().date() - timedelta(days=7)
+        end_date = timezone.now().date()
+
+        start = convert_date_to_unix_timestamp(start_date)
+        end = convert_date_to_unix_timestamp(end_date, use_max_time=True)
+
+        base_url = f"https://graph.facebook.com/v24.0/{waba_id}/"
+        fields = f"pricing_analytics.start({start}).end({end}).granularity(DAILY).dimensions(['PRICING_CATEGORY'])"
+        url = f"{base_url}?fields={fields}"
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                url,
+                status=status.HTTP_200_OK,
+                content_type="application/json",
+                body=json.dumps(MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY),
+            )
+
+            result = self.service.get_conversations_by_category(
+                waba_id=waba_id, start_date=start_date, end_date=end_date
+            )
+
+            self.assertEqual(result, {"category1": 10, "category2": 20})
