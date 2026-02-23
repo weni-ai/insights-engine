@@ -48,21 +48,11 @@ class VTEXOrdersConversionsService:
         """
         Check if the project has permission to access the WABA.
         """
-
-        if test_waba_id := getattr(settings, "WHATSAPP_ABANDONED_CART_WABA_ID", None):
-            # TEMPORARY, this should be used only in the development and staging environments
-            return waba_id == test_waba_id
-
-        try:
-            project_wabas = self.integrations_client.get_wabas_for_project(
-                self.project.uuid
-            )
-        except Exception as e:
-            raise e
-
-        wabas = [waba.get("waba_id") for waba in project_wabas if waba.get("waba_id")]
-
-        return waba_id in wabas
+        return Dashboard.objects.filter(
+            project=self.project,
+            config__is_whatsapp_integration=True,
+            config__waba_id=waba_id,
+        ).exists()
 
     def get_message_metrics(
         self,
