@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 from rest_framework import serializers
 
+from insights.dashboards.models import Dashboard
 from insights.metrics.meta.tests.mock import MOCK_TEMPLATE_DAILY_ANALYTICS
 from insights.metrics.meta.utils import format_messages_metrics_data
 from insights.projects.models import Project
@@ -96,6 +97,11 @@ class VTEXConversionsServiceTestCase(TestCase):
             "ended_at__gte": (timezone.now() - timedelta(days=7)).strftime("%Y-%m-%d"),
             "ended_at__lte": (timezone.now()).strftime("%Y-%m-%d"),
         }
+
+        Dashboard.objects.create(
+            project=self.project,
+            config={"is_whatsapp_integration": True, "waba_id": waba_id},
+        )
 
         metrics = self.service.get_metrics(filters)
 
