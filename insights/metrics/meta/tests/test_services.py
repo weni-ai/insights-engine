@@ -188,4 +188,4 @@ class TestMetaMessageTemplatesService(TestCase):
                 waba_id=waba_id, start_date=start_date, end_date=end_date
             )
 
-            self.assertEqual(result, {"category1": 10, "category2": 20})
+            self.assertEqual(result, {"SERVICE": 10, "MARKETING": 20})
