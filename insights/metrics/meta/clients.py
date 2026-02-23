@@ -9,6 +9,7 @@ from rest_framework.exceptions import ValidationError, NotFound
 from sentry_sdk import capture_exception
 
 from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes, ProductType
+from insights.metrics.meta.exception import MarketingMessagesStatusError
 from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
@@ -344,5 +345,33 @@ class MetaGraphAPIClient:
             )
 
             raise err
+
+        return response.json()
+
+    def check_marketing_messages_status(self, waba_id: str):
+        url = f"{self.base_host_url}/{self.version}/{waba_id}/"
+
+        params = {
+            "fields": "marketing_messages_onboarding_status",
+        }
+
+        try:
+            response = requests.get(
+                url, headers=self.headers, params=params, timeout=60
+            )
+            response.raise_for_status()
+        except requests.HTTPError as err:
+            logger.error(
+                "Error checking marketing messages status: %s. Original exception: %s",
+                err.response.text,
+                err,
+                exc_info=True,
+            )
+
+            event_id = capture_exception(err)
+
+            raise MarketingMessagesStatusError(
+                f"An error has occurred. Event ID: {event_id}"
+            ) from err
 
         return response.json()
