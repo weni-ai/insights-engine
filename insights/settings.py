@@ -454,3 +454,8 @@ JWT_PUBLIC_KEY = env.str("JWT_PUBLIC_KEY", default="").replace("\\n", "\n")
 WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS = env.int(
     "WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS", default=15 * 60
 )
+
+# Internal domains
+VTEX_INTERNAL_DOMAINS = env.list(
+    "VTEX_INTERNAL_DOMAINS", default=["vtex.com", "weni.ai"]
+)
