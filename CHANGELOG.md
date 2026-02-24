@@ -1,3 +1,26 @@
+# 1.6.4
+# Fix
+ - Query source on elasticsearch flowrun results
+
+# 1.6.3
+# Fix
+ - Simplify query construction in ConversationsElasticsearchService by integrating search_after directly into the query and removing redundant params
+ - Update pagination handling in ConversationsElasticsearchService to use search_after instead of page_number
+
+# 1.6.2
+# Add
+ - Add validation for product_type in TemplatesMetricsAnalyticsBodySerializer to ensure only valid options are accepted
+# Fix
+ - Change product_type field in TemplatesMetricsAnalyticsBodySerializer from ChoiceField to CharField for improved flexibility
+
+# 1.6.1
+# Fix
+ - Orders API endpoint path in VtexOrdersRestClient
+
+# 1.6.0
+# Add
+ - Internal jwt authentication
+
 # 1.5.1
 # Fix
  - Add unclassified and unknown labels to the conversations resolutions report worksheet
