@@ -5,6 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import patch
 
 from insights.feedback.choices import DashboardTypes
 from insights.feedback.models import Feedback, Survey
@@ -352,3 +353,38 @@ class TestFeedbackViewSetAsAuthenticatedUser(BaseTestFeedbackViewSet):
         self.assertEqual(response.data["ROI"][0].code, "required")
         self.assertEqual(response.data["TRUST"][0].code, "required")
         self.assertNotIn("COMMENT", response.data)
+
+    @patch("insights.feedback.views.FeedbackService.create_feedback")
+    @patch("insights.feedback.views.capture_exception")
+    def test_create_feedback_when_an_internal_error_occurs(
+        self, mock_capture_exception, mock_create_feedback
+    ):
+        mock_create_feedback.side_effect = Exception("Test error")
+        mock_capture_exception.return_value = 123456
+
+        project = Project.objects.create(name="Test Project")
+        dashboard = Dashboard.objects.create(name="Test Dashboard", project=project)
+
+        ProjectAuth.objects.create(project=project, user=self.user, role=1)
+
+        survey = Survey.objects.create(
+            start=timezone.now() - timedelta(days=1),
+            end=timezone.now() + timedelta(days=1),
+        )
+
+        response = self.create_feedback(
+            {
+                "type": DashboardTypes.CONVERSATIONAL,
+                "dashboard": dashboard.uuid,
+                "survey": survey.uuid,
+                "answers": [],
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(
+            response.data["error"], "An unexpected error occurred. Event ID: 123456"
+        )
+
+        mock_create_feedback.assert_called_once()
+        mock_capture_exception.assert_called_once()
