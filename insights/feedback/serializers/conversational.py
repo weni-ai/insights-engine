@@ -11,4 +11,4 @@ class ConversationalFeedbackSerializer(serializers.Serializer):
     TRUST = Score1To5AnswerSerializer(required=True, allow_null=False)
     MAKE_DECISION = Score1To5AnswerSerializer(required=True, allow_null=False)
     ROI = Score1To5AnswerSerializer(required=True, allow_null=False)
-    COMMENT = TextAnswerSerializer(required=True, allow_null=False)
+    COMMENT = TextAnswerSerializer(required=False, allow_null=True)
