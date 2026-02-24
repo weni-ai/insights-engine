@@ -2,7 +2,6 @@ import pytz
 from datetime import date, datetime
 from logging import getLogger
 
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 from sentry_sdk import capture_message

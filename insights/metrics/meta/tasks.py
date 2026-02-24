@@ -3,6 +3,8 @@ from insights.celery import app
 import logging
 from datetime import datetime
 
+from django.conf import settings
+
 from insights.metrics.meta.services import MetaMessageTemplatesService
 from insights.dashboards.models import Dashboard
 from sentry_sdk import capture_exception
@@ -15,7 +17,9 @@ from insights.projects.models import Project
 logger = logging.getLogger(__name__)
 
 
-WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS = 15 * 60  # 15 minutes
+WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS = (
+    settings.WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS
+)
 
 
 @app.task

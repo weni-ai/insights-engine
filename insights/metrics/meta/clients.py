@@ -354,7 +354,7 @@ class MetaGraphAPIClient:
         return response.json()
 
     def check_marketing_messages_status(self, waba_id: str):
-        url = f"{self.base_host_url}/v24.0/{waba_id}/"
+        url = f"{self.base_host_url}/{self.version}/{waba_id}/"
 
         params = {
             "fields": "marketing_messages_onboarding_status",
