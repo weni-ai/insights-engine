@@ -649,8 +649,10 @@ class HumanSupportDashboardService:
 
         params: dict = {}
 
+        if filters.get("user_request") is not None:
+            params["user_request"] = filters.get("user_request")
+
         mapping = {
-            "user_request": ("user_request", str),
             "start_date": ("start_date", str),
             "end_date": ("end_date", str),
             "sectors": ("sector", list),
