@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "insights.metrics.conversations",
     "insights.reports",
     "insights.core",
+    "insights.feedback",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -484,3 +485,8 @@ META_GRAPH_API_BASE_HOST_URL = env.str(
     "META_GRAPH_API_BASE_HOST_URL", default="https://graph.facebook.com"
 )
 META_GRAPH_API_VERSION = env.str("META_GRAPH_API_VERSION", default="v24.0")
+
+# Internal domains
+VTEX_INTERNAL_DOMAINS = env.list(
+    "VTEX_INTERNAL_DOMAINS", default=["vtex.com", "weni.ai"]
+)

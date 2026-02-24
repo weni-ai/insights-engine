@@ -30,6 +30,7 @@ from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
 from insights.widgets.viewsets import WidgetViewSet
 from insights.feature_flags.views import FeatureFlagsViewSet
+from insights.feedback.views import FeedbackViewSet
 
 urlpatterns = []
 
@@ -39,6 +40,8 @@ router.register(r"widgets", WidgetViewSet, basename="widget")
 router.register(r"dashboards", DashboardViewSet, basename="dashboard")
 router.register(r"projects", ProjectViewSet, basename="project")
 router.register(r"feature_flags", FeatureFlagsViewSet, basename="feature_flags")
+router.register(r"feedback", FeedbackViewSet, basename="feedback")
+
 
 urlpatterns += [
     path("", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
