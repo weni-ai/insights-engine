@@ -1,3 +1,11 @@
+# 1.7.1
+# Add
+  - Getting user request for analysis 
+  
+# 1.7.0
+# Add
+  - Endpoint for template message
+  
 # 1.6.4
 # Fix
  - Query source on elasticsearch flowrun results
