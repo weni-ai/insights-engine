@@ -89,7 +89,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS", default=["https://insights-engine.stg.cloud.weni.ai"]
+)
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
