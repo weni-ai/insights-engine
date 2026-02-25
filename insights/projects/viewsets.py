@@ -7,27 +7,29 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 from insights.authentication.authentication import StaticTokenAuthentication
 from insights.authentication.permissions import (
     IsServiceAuthentication,
     ProjectAuthPermission,
     InternalAuthenticationPermission,
 )
+from insights.core.urls.proxy_pagination import (
+    get_cursor_based_pagination_urls,
+)
 from insights.human_support.clients.chats import ChatsClient
+from insights.projects.dataclass import TicketID
 from insights.projects.models import Project
 from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import (
-    ProjectSerializer,
     SetProjectAsSecondarySerializer,
     ListContactsQueryParamsSerializer,
     ListTicketIDsQueryParamsSerializer,
+    ProjectSerializer,
     TicketIDSerializer,
 )
-from insights.sources.chats.clients import ChatsRESTClient
-from insights.projects.dataclass import TicketID
 from insights.shared.viewsets import get_source
 from insights.sources.chats.clients import ChatsRESTClient
+from insights.sources.custom_status.client import CustomStatusRESTClient
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,8 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             return self.search_contacts(request, *args, **kwargs)
         elif source_slug == "ticket_id":
             return self.search_ticket_ids(request, *args, **kwargs)
+        elif source_slug == "custom_status":
+            return self.search_custom_status_types(request, *args, **kwargs)
 
         SourceQuery = get_source(slug=source_slug)
         query_kwargs = {}
@@ -246,6 +250,17 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             },
             status=status.HTTP_200_OK,
         )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="filters/custom_status",
+    )
+    def search_custom_status_types(self, request, *args, **kwargs):
+        project = self.get_object()
+        client = CustomStatusRESTClient(project)
+        results = client.list_custom_status_types()
+        return Response(results, status=status.HTTP_200_OK)
 
     @action(
         detail=True,
