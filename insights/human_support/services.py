@@ -489,7 +489,7 @@ class HumanSupportDashboardService:
 
             if isinstance(value, list) and len(value) == 1:
                 params[param] = [str(value[0])]
-            elif isinstance(filter_value, str):
+            elif isinstance(value, str):
                 params[param] = [str(value)]
 
         if filters.get("ordering") is not None:
