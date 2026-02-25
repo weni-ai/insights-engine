@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "insights.metrics.conversations",
     "insights.reports",
     "insights.core",
+    "insights.feedback",
     # 3rd party apps
     "django_filters",
     "corsheaders",
