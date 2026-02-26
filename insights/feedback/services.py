@@ -103,11 +103,15 @@ class FeedbackService(BaseFeedbackService):
             feedback_answers = []
 
             for reference, answer in validated_data.items():
+                answer_value = answer["answer"]
+                if answer_value is None or answer_value == "":
+                    continue
+
                 feedback_answers.append(
                     FeedbackAnswer(
                         feedback=feedback,
                         reference=reference,
-                        answer=answer["answer"],
+                        answer=answer_value,
                         answer_type=answer["type"],
                     )
                 )
