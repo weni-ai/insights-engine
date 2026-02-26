@@ -548,8 +548,8 @@ class HumanSupportDashboardService:
                 params[param] = value
                 continue
 
-            if isinstance(value, list) and len(value) == 1:
-                params[param] = [str(value[0])]
+            if isinstance(value, list):
+                params[param] = [str(v) for v in value]
             elif isinstance(value, str):
                 params[param] = [str(value)]
 
