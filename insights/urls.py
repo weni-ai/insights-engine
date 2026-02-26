@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import include, path
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -29,6 +30,7 @@ from insights.dashboards.viewsets import DashboardViewSet
 from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
 from insights.widgets.viewsets import WidgetViewSet
+from insights.feedback.views import FeedbackViewSet
 
 urlpatterns = []
 
@@ -38,6 +40,8 @@ router.register(r"widgets", WidgetViewSet, basename="widget")
 router.register(r"dashboards", DashboardViewSet, basename="dashboard")
 router.register(r"projects", ProjectViewSet, basename="project")
 router.register(r"feature_flags", FeatureFlagsViewSet, basename="feature_flags")
+router.register(r"feedback", FeedbackViewSet, basename="feedback")
+
 
 urlpatterns += [
     path("", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
@@ -65,3 +69,6 @@ if settings.ADMIN_ENABLED is True:
     urlpatterns += [
         path("admin/", admin.site.urls),
     ]
+
+if settings.STATIC_URL and settings.STATIC_ROOT:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
