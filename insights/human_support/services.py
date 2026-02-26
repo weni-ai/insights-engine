@@ -459,6 +459,7 @@ class HumanSupportDashboardService:
             "queues": ("queue", normalized),
             "tags": ("tag", normalized),
             "agent": ("agent", normalized),
+            "status": ("status", filters),
             "start_date": ("start_date", normalized),
             "end_date": ("end_date", normalized),
             "user_request": ("user_request", filters),
@@ -466,7 +467,7 @@ class HumanSupportDashboardService:
             "offset": ("offset", filters),
         }
 
-        list_filters = {"sectors", "queues", "tags"}
+        list_filters = {"sectors", "queues", "tags", "status"}
         date_filters = {"start_date", "end_date"}
 
         params: dict = {}
@@ -486,9 +487,9 @@ class HumanSupportDashboardService:
                 params[param] = value
                 continue
 
-            if isinstance(value, list) and len(value) == 1:
-                params[param] = [str(value[0])]
-            elif isinstance(filter_value, str):
+            if isinstance(value, list):
+                params[param] = [str(v) for v in value]
+            elif isinstance(value, str):
                 params[param] = [str(value)]
 
         if filters.get("ordering") is not None:
@@ -577,6 +578,10 @@ class HumanSupportDashboardService:
             "count": response.get("count"),
             "results": formatted_results,
         }
+
+    def get_detailed_monitoring_agents_totals(self, filters: dict = {}) -> dict:
+        params = self._get_detailed_monitoring_agents_filters(filters)
+        return AgentsRESTClient(self.project).agents_totals(params)
 
     def get_detailed_monitoring_status(self, filters: dict = {}) -> dict:
         ordering_fields = {"agent", "-agent"}
