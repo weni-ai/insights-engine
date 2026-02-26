@@ -22,7 +22,7 @@ class Score1To5AnswerSerializer(serializers.Serializer):
 
 class TextAnswerSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=["TEXT"])
-    answer = serializers.CharField()
+    answer = serializers.CharField(allow_blank=True, allow_null=True)
 
     def validate_answer(self, value: str):
         max_length = 1000
