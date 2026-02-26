@@ -521,6 +521,7 @@ class HumanSupportDashboardService:
             "tags": ("tag", normalized),
             "agent": ("agent", normalized),
             "status": ("status", filters),
+            "custom_status": ("custom_status", filters),
             "start_date": ("start_date", normalized),
             "end_date": ("end_date", normalized),
             "user_request": ("user_request", filters),
@@ -528,7 +529,7 @@ class HumanSupportDashboardService:
             "offset": ("offset", filters),
         }
 
-        list_filters = {"sectors", "queues", "tags", "status"}
+        list_filters = {"sectors", "queues", "tags", "status", "custom_status"}
         date_filters = {"start_date", "end_date"}
 
         params: dict = {}
@@ -548,8 +549,8 @@ class HumanSupportDashboardService:
                 params[param] = value
                 continue
 
-            if isinstance(value, list) and len(value) == 1:
-                params[param] = [str(value[0])]
+            if isinstance(value, list):
+                params[param] = [str(v) for v in value]
             elif isinstance(value, str):
                 params[param] = [str(value)]
 
