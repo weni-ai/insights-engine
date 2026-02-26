@@ -460,6 +460,7 @@ class HumanSupportDashboardService:
             "tags": ("tag", normalized),
             "agent": ("agent", normalized),
             "status": ("status", filters),
+            "custom_status": ("custom_status", filters),
             "start_date": ("start_date", normalized),
             "end_date": ("end_date", normalized),
             "user_request": ("user_request", filters),
@@ -467,7 +468,7 @@ class HumanSupportDashboardService:
             "offset": ("offset", filters),
         }
 
-        list_filters = {"sectors", "queues", "tags", "status"}
+        list_filters = {"sectors", "queues", "tags", "status", "custom_status"}
         date_filters = {"start_date", "end_date"}
 
         params: dict = {}
