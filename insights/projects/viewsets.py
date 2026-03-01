@@ -109,17 +109,46 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
             original_is_allowed = project.is_allowed
 
+            rollback_needed = False
+            webhook_error = False
             project.is_allowed = True
             project.save()
 
-            webhook_url = settings.WEBHOOK_URL
-            payload = {"project_uuid": project_uuid}
-            headers = {"Authorization": f"Bearer {settings.STATIC_TOKEN}"}
             try:
+                project.is_allowed = True
+                project.save()
+                rollback_needed = True
+
+                webhook_url = settings.WEBHOOK_URL
+                payload = {"project_uuid": project_uuid}
+                headers = {"Authorization": f"Bearer {settings.STATIC_TOKEN}"}
+
                 response = requests.post(webhook_url, json=payload, headers=headers)
                 response.raise_for_status()
+
+                rollback_needed = False
+
             except requests.exceptions.RequestException as error:
                 logger.error(f"Failed to call webhook: {error}")
+                webhook_error = True
+                raise
+            except Exception as error:
+                logger.error(f"Error during webhook process: {error}")
+                raise
+            finally:
+                if rollback_needed:
+                    try:
+                        project.is_allowed = original_is_allowed
+                        project.save()
+                        logger.info(
+                            f"Rolled back is_allowed status for project {project_uuid}"
+                        )
+                    except Exception as rollback_error:
+                        logger.error(
+                            f"Critical: Failed to rollback project state for {project_uuid}: {rollback_error}"
+                        )
+
+            if webhook_error:
                 project.is_allowed = original_is_allowed
                 project.save()
                 return Response(
