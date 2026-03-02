@@ -26,6 +26,7 @@ from drf_spectacular.views import (
 from rest_framework.routers import DefaultRouter
 from weni.feature_flags.views import FeatureFlagsWebhookView
 
+from insights.authentication.admin_sso import admin_oidc_login, admin_oidc_logout
 from insights.dashboards.viewsets import DashboardViewSet
 from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
@@ -45,6 +46,14 @@ router.register(r"feedback", FeedbackViewSet, basename="feedback")
 
 urlpatterns += [
     path("", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+]
+
+if getattr(settings, "OIDC_ENABLED", False):
+    urlpatterns += [
+        path("oidc/", include("mozilla_django_oidc.urls")),
+    ]
+
+urlpatterns += [
     path(
         "swagger/",
         SpectacularSwaggerView.as_view(url_name="schema"),
@@ -66,9 +75,18 @@ urlpatterns += [
 if settings.ADMIN_ENABLED is True:
     from django.contrib import admin
 
-    urlpatterns += [
-        path("admin/", admin.site.urls),
-    ]
+    admin_urls = []
+    if getattr(settings, "OIDC_ENABLED", False):
+        # Must be before admin/ so /admin/keycloak-login/ is not caught by admin (which requires login)
+        admin_urls.append(
+            path("admin/keycloak-login/", admin_oidc_login, name="admin_keycloak_login"),
+        )
+        # Use OIDC logout for admin so "Log out" redirects to IdP end-session
+        admin_urls.append(
+            path("admin/logout/", admin_oidc_logout, name="admin_oidc_logout"),
+        )
+    admin_urls.append(path("admin/", admin.site.urls))
+    urlpatterns += admin_urls
 
 if settings.STATIC_URL and settings.STATIC_ROOT:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -94,6 +94,8 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
+SESSION_COOKIE_SAMESITE = "Lax"
+
 ROOT_URLCONF = "insights.urls"
 
 TEMPLATES = [
@@ -246,6 +248,29 @@ if OIDC_ENABLED:
     # TODO: Set admin permission to Chats client and remove the follow variables
     OIDC_ADMIN_CLIENT_ID = env.str("OIDC_ADMIN_CLIENT_ID")
     OIDC_ADMIN_CLIENT_SECRET = env.str("OIDC_ADMIN_CLIENT_SECRET")
+    OIDC_AUTH_REQUEST_EXTRA_PARAMS = {
+        "prompt": "login",
+    }
+    LOGIN_URL = "oidc_authentication_init"
+    LOGIN_REDIRECT_URL = "/admin/"
+    LOGOUT_REDIRECT_URL = "/admin/"
+    OIDC_OP_LOGOUT_URL_METHOD = "insights.authentication.admin_sso.get_oidc_logout_url"
+
+    # Admin SSO: Keycloak login via button on admin login page.
+    # Only users with is_staff=True (set manually) can log in.
+    if ADMIN_ENABLED:
+        AUTHENTICATION_BACKENDS = (
+            "django.contrib.auth.backends.ModelBackend",
+            "insights.authentication.admin_sso.AdminOIDCAuthenticationBackend",
+        )
+        LOGIN_URL = "/admin/login/"
+        LOGIN_REDIRECT_URL = "/admin/"
+        LOGOUT_REDIRECT_URL = "/admin/"
+        LOGIN_REDIRECT_URL_FAILURE = "/admin/login/"
+        OIDC_REDIRECT_ALLOWED_HOSTS = env.list(
+            "OIDC_REDIRECT_ALLOWED_HOSTS", default=[]
+        )
+        TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "insights", "templates")]
 
 OIDC_CACHE_TOKEN = env.bool(
     "OIDC_CACHE_TOKEN", default=False
