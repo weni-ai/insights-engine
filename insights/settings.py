@@ -270,7 +270,9 @@ if OIDC_ENABLED:
         OIDC_REDIRECT_ALLOWED_HOSTS = env.list(
             "OIDC_REDIRECT_ALLOWED_HOSTS", default=[]
         )
-        TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "insights", "templates")]
+        base_dirs = list(TEMPLATES[0].get("DIRS", []))
+        base_dirs.append(os.path.join(BASE_DIR, "insights", "templates"))
+        TEMPLATES[0]["DIRS"] = base_dirs
 
 OIDC_CACHE_TOKEN = env.bool(
     "OIDC_CACHE_TOKEN", default=False
