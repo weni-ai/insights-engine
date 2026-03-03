@@ -76,3 +76,73 @@ class RoomSQLQueryBuilder:
         query = f"SELECT (ROUND(COALESCE(AVG(mr.{op_field}), 0), 2)) AS value FROM public.rooms_room as r INNER JOIN public.dashboard_roommetrics AS mr ON mr.room_id=r.uuid {self.join_clause} WHERE {self.where_clause};"
 
         return query, self.params
+        
+    def group_by_queue_count(self, limit: int = 5, *args, **kwargs):
+        """
+        Groups rooms by queue, organized by sector.
+        Returns: sector_uuid, sector_name, queue_uuid, queue_name, value (count)
+        Sorted by value DESC, then queue_name ASC (alphabetical tie-breaker)
+        """
+        if not self.is_valid:
+            self.build_query()
+
+        # Ensures that the join with queues_queue and sectors_sector exists (aliases q and sec)
+        queue_join = """
+            INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id AND q.is_deleted=false
+            INNER JOIN public.sectors_sector AS sec ON sec.uuid=q.sector_id AND sec.is_deleted=false
+        """
+        sector_as_sec_join = """
+            INNER JOIN public.sectors_sector AS sec ON sec.uuid=q.sector_id AND sec.is_deleted=false
+        """
+        if "q" not in self.joins:
+            self.join_clause = f"{queue_join} {self.join_clause}"
+        elif "sec" not in self.joins:
+            # Filters use alias "s" for sector; this query uses "sec". Add sec after join_clause so "q" is already defined.
+            self.join_clause = f"{self.join_clause} {sector_as_sec_join}"
+
+        query = f"""
+            SELECT
+                sec.uuid AS sector_uuid,
+                sec.name AS sector_name,
+                q.uuid AS queue_uuid,
+                q.name AS queue_name,
+                COUNT(r.*) AS value
+            FROM public.rooms_room AS r
+            {self.join_clause}
+            WHERE {self.where_clause}
+            GROUP BY sec.uuid, sec.name, q.uuid, q.name
+            ORDER BY value DESC, queue_name ASC;
+        """
+        return query, self.params
+
+    def group_by_tag_count(self, limit: int = 5, *args, **kwargs):
+        """
+        Groups rooms by tag, organized by sector.
+        Returns: sector_uuid, sector_name, tag_uuid, tag_name, value (count)
+        Sorted by value DESC, then tag_name ASC (alphabetical tie-breaker)
+        """
+        if not self.is_valid:
+            self.build_query()
+
+        # Ensures that joins with rooms_room_tags, sectors_sectortag and sectors_sector exist
+        tag_joins = """
+            INNER JOIN public.rooms_room_tags AS rt ON rt.room_id=r.uuid
+            INNER JOIN public.sectors_sectortag AS stg ON stg.uuid=rt.sectortag_id
+            INNER JOIN public.sectors_sector AS sec ON sec.uuid=stg.sector_id AND sec.is_deleted=false
+        """
+
+        query = f"""
+            SELECT
+                sec.uuid AS sector_uuid,
+                sec.name AS sector_name,
+                stg.uuid AS tag_uuid,
+                stg.name AS tag_name,
+                COUNT(DISTINCT r.uuid) AS value
+            FROM public.rooms_room AS r
+            {tag_joins}
+            {self.join_clause}
+            WHERE {self.where_clause}
+            GROUP BY sec.uuid, sec.name, stg.uuid, stg.name
+            ORDER BY value DESC, tag_name ASC;
+        """
+        return query, self.params

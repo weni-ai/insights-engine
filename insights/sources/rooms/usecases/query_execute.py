@@ -68,10 +68,68 @@ class QueryExecutor:
                 "previous": None,
                 "results": query_results,
             }
+        elif operation == "group_by_queue_count":
+            grouped = {}
+            for row in query_results:
+                sector_uuid = row["sector_uuid"]
+                if sector_uuid not in grouped:
+                    grouped[sector_uuid] = {
+                        "sector_name": row["sector_name"],
+                        "queues": [],
+                    }
+                grouped[sector_uuid]["queues"].append(
+                    {
+                        "queue_name": row["queue_name"],
+                        "value": row["value"],
+                    }
+                )
+
+            results = sorted(
+                grouped.values(),
+                key=lambda sector: sum(queue["value"] for queue in sector["queues"]),
+                reverse=True,
+            )
+            total_queues = sum(len(sector["queues"]) for sector in results)
+
+            paginated_results = {
+                "next": None,
+                "previous": None,
+                "count": total_queues,
+                "results": results,
+            }
+        elif operation == "group_by_tag_count":
+            grouped = {}
+            for row in query_results:
+                sector_uuid = row["sector_uuid"]
+                if sector_uuid not in grouped:
+                    grouped[sector_uuid] = {
+                        "sector_name": row["sector_name"],
+                        "tags": [],
+                    }
+                grouped[sector_uuid]["tags"].append(
+                    {
+                        "tag_name": row["tag_name"],
+                        "value": row["value"],
+                    }
+                )
+
+            results = sorted(
+                grouped.values(),
+                key=lambda sector: sum(tag["value"] for tag in sector["tags"]),
+                reverse=True,
+            )
+            total_tags = sum(len(sector["tags"]) for sector in results)
+
+            paginated_results = {
+                "next": None,
+                "previous": None,
+                "count": total_tags,
+                "results": results,
+            }
         else:
             paginated_results = {
                 "next": None,
                 "previous": None,
                 "results": query_results,
             }
-        return paginated_results  # parser(paginated_results)
+        return paginated_results
