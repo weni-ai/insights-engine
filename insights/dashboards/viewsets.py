@@ -434,7 +434,7 @@ class DashboardViewSet(
         filters = get_filters_from_query_params(request.query_params)
         results = service.get_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
-    
+
     @action(
         detail=True,
         methods=["get"],

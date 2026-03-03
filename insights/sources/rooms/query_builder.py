@@ -76,7 +76,7 @@ class RoomSQLQueryBuilder:
         query = f"SELECT (ROUND(COALESCE(AVG(mr.{op_field}), 0), 2)) AS value FROM public.rooms_room as r INNER JOIN public.dashboard_roommetrics AS mr ON mr.room_id=r.uuid {self.join_clause} WHERE {self.where_clause};"
 
         return query, self.params
-        
+
     def group_by_queue_count(self, limit: int = 5, *args, **kwargs):
         """
         Groups rooms by queue, organized by sector.
