@@ -16,6 +16,9 @@ from insights.authentication.permissions import (
 from insights.core.urls.proxy_pagination import (
     get_cursor_based_pagination_urls,
 )
+from insights.core.urls.proxy_pagination import (
+    get_cursor_based_pagination_urls,
+)
 from insights.human_support.clients.chats import ChatsClient
 from insights.projects.dataclass import TicketID
 from insights.projects.models import Project
