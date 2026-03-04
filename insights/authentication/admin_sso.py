@@ -60,3 +60,6 @@ class AdminOIDCAuthenticationBackend(WeniOIDCAuthenticationBackend):
     def filter_users_by_claims(self, claims):
         users = super().filter_users_by_claims(claims)
         return users.filter(is_staff=True)
+
+    def create_user(self, claims):
+        return None
