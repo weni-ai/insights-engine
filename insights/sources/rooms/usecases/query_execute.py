@@ -60,7 +60,9 @@ class QueryExecutor:
             paginated_results = {
                 "next": None,
                 "previous": None,
-                "results": sorted(query_results, key=lambda row: int(row["label"][:-1])),
+                "results": sorted(
+                    query_results, key=lambda row: int(row["label"][:-1])
+                ),
             }
         elif operation == "timeseries_day_group_count":
             paginated_results = {
@@ -138,4 +140,4 @@ class QueryExecutor:
                 "previous": None,
                 "results": query_results,
             }
-        return paginated_results  # parser(paginated_results)
+        return paginated_results

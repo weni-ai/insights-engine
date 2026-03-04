@@ -8,5 +8,8 @@ class SurveyAdmin(admin.ModelAdmin):
     search_fields = ("start", "end")
     list_filter = ("start", "end")
 
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 admin.site.register(Survey, SurveyAdmin)
