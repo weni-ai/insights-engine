@@ -242,6 +242,7 @@ if OIDC_ENABLED:
         "OIDC_DRF_AUTH_BACKEND",
         default="insights.authentication.authentication.WeniOIDCAuthenticationBackend",
     )
+    OIDC_OP_LOGOUT_ENDPOINT = env.str("OIDC_OP_LOGOUT_ENDPOINT", default="")
 
     OIDC_RP_SCOPES = env.str("OIDC_RP_SCOPES", default="openid email")
 
