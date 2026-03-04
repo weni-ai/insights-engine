@@ -811,3 +811,19 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             response.data["results"][0]["events"],
             {"Test Subitem": {"value": 30, "full_value": 15}},
         )
+
+
+class BaseTestInternalConversationsMetricsViewSet(APITestCase):
+    def get_project_ai_csat_metrics(self, query_params: dict) -> Response:
+        url = reverse("internal_api:internal-ai-csat-metrics-project-ai-csat-metrics")
+
+        return self.client.get(url, query_params, format="json")
+
+
+class TestInternalConversationsMetricsViewSetAsAnonymousUser(
+    BaseTestInternalConversationsMetricsViewSet
+):
+    def test_cannot_get_project_ai_csat_metrics_when_unauthenticated(self):
+        response = self.get_project_ai_csat_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

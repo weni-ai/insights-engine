@@ -9,7 +9,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from sentry_sdk import capture_exception
 
-from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.authentication.authentication import JWTAuthentication
+from insights.authentication.permissions import (
+    HasInternalAuthenticationPermission,
+    ProjectAuthQueryParamPermission,
+)
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
     AvailableWidgetsQueryParamsSerializer,
@@ -32,6 +36,7 @@ from insights.metrics.conversations.serializers import (
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
+from insights.widgets.models import Widget
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
 
 
@@ -527,3 +532,50 @@ class ConversationsMetricsViewSet(GenericViewSet):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class InternalConversationsMetricsViewSet(GenericViewSet):
+    """
+    ViewSet to get conversations metrics
+    """
+
+    service = ConversationsMetricsService()
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [HasInternalAuthenticationPermission]
+
+    @action(
+        detail=False,
+        methods=["get"],
+    )
+    def project_ai_csat_metrics(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get project csat metrics
+        """
+        project_uuid = request.project_uuid
+
+        widget = Widget.objects.filter(
+            dashboard__project=project_uuid,
+            source="conversations.csat",
+        ).first()
+
+        if not widget:
+            return Response(
+                {"error": "AI CSAT metrics not found for this project"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            metrics = self.service.get_csat_metrics(
+                project_uuid=project_uuid,
+                widget=widget,
+                start_date=request.query_params.get("start_date"),
+                end_date=request.query_params.get("end_date"),
+                metric_type=request.query_params.get("type"),
+            )
+        except ConversationsMetricsError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(metrics, status=status.HTTP_200_OK)

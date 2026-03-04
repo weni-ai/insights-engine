@@ -493,3 +493,9 @@ class CrosstabItemSerializer(serializers.Serializer):
         return {
             item.title: CrosstabSubItemSerializer(item).data for item in obj.subitems
         }
+
+
+class InternalCsatMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for internal csat metrics query params
+    """
