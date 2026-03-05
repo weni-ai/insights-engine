@@ -14,6 +14,7 @@ from insights.authentication.permissions import (
     HasInternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
+from insights.metrics.conversations.enums import CsatMetricsType
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
     AvailableWidgetsQueryParamsSerializer,
@@ -27,6 +28,7 @@ from insights.metrics.conversations.serializers import (
     CustomMetricsQueryParamsSerializer,
     DeleteTopicSerializer,
     GetTopicsQueryParamsSerializer,
+    InternalCsatMetricsQueryParamsSerializer,
     NpsMetricsQueryParamsSerializer,
     SalesFunnelMetricsQueryParamsSerializer,
     SalesFunnelMetricsSerializer,
@@ -551,7 +553,22 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
         """
         Get project csat metrics
         """
-        project_uuid = request.project_uuid
+        query_params = InternalCsatMetricsQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+
+        project_uuid = query_params.validated_data["project_uuid"]
+        start_date = query_params.validated_data["start_date"]
+        end_date = query_params.validated_data["end_date"]
+
+        if str(project_uuid) != str(request.project_uuid):
+            return Response(
+                {
+                    "error": "Project UUID does not match with the one used in the JWT token"
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         widget = Widget.objects.filter(
             dashboard__project=project_uuid,
@@ -568,9 +585,9 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
             metrics = self.service.get_csat_metrics(
                 project_uuid=project_uuid,
                 widget=widget,
-                start_date=request.query_params.get("start_date"),
-                end_date=request.query_params.get("end_date"),
-                metric_type=request.query_params.get("type"),
+                start_date=start_date,
+                end_date=end_date,
+                metric_type=CsatMetricsType.AI,
             )
         except ConversationsMetricsError as e:
             return Response(
