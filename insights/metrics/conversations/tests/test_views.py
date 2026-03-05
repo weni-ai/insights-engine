@@ -860,27 +860,8 @@ class TestInternalConversationsMetricsViewSetAsAuthenticatedUser(
         response = self.get_project_ai_csat_metrics({})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["project_uuid"][0].code, "required")
         self.assertEqual(response.data["start_date"][0].code, "required")
         self.assertEqual(response.data["end_date"][0].code, "required")
-
-    def test_cannot_get_project_ai_csat_metrics_when_project_uuid_does_not_match_jwt(
-        self,
-    ):
-        project = Project.objects.create(name="Test Project")
-        response = self.get_project_ai_csat_metrics(
-            {
-                "project_uuid": project.uuid,
-                "start_date": "2024-01-01",
-                "end_date": "2024-01-31",
-            }
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(
-            response.data["error"],
-            "Project UUID does not match with the one used in the JWT token",
-        )
 
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_csat_metrics"

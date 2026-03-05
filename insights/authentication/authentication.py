@@ -14,6 +14,7 @@ from rest_framework.exceptions import AuthenticationFailed
 
 from insights.authentication.services.exceptions import InvalidTokenError
 from insights.authentication.services.jwt_service import JWTService
+from insights.projects.models import Project
 from insights.users.usecases import CreateUserUseCase
 
 LOGGER = logging.getLogger("weni_django_oidc")
@@ -157,6 +158,13 @@ class JWTAuthentication(BaseAuthentication):
 
         request.project_uuid = project_uuid
         request.jwt_payload = decoded_token
+
+        project = Project.objects.filter(uuid=project_uuid).first()
+
+        if not project:
+            raise AuthenticationFailed("Project not found")
+
+        request.project = project
 
         return None, None
 
