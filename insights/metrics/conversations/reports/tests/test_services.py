@@ -10,7 +10,7 @@ from django.utils.timezone import timedelta
 
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
+    BaseDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportWorksheet,
@@ -53,7 +53,9 @@ class TestConversationsReportService(TestCase):
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
-                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
+                datalake_service=MagicMock(
+                    spec=BaseDatalakeConversationsMetricsService
+                ),
                 nexus_client=MockNexusClient(),
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
@@ -1026,7 +1028,9 @@ class TestConversationsReportServiceAdditional(TestCase):
             page_limit=5,
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
-                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
+                datalake_service=MagicMock(
+                    spec=BaseDatalakeConversationsMetricsService
+                ),
                 nexus_client=MockNexusClient(),
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
