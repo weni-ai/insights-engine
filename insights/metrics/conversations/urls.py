@@ -25,7 +25,7 @@ urlpatterns = [
 
 internal_router = DefaultRouter()
 internal_router.register(
-    "ai-csat-metrics",
+    "",
     InternalConversationsMetricsViewSet,
     basename="internal-ai-csat-metrics",
 )
