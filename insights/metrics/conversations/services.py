@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -51,7 +52,113 @@ if TYPE_CHECKING:
     from insights.projects.models import Project
 
 
-class ConversationsMetricsService(ConversationsServiceCachingMixin):
+class BaseConversationsMetricsService(ABC):
+    """
+    Base class for conversations metrics services.
+    """
+
+    @abstractmethod
+    def get_topics(self, project_uuid: UUID) -> dict:
+        """
+        Get conversation topics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
+        """
+        Get conversation subtopics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
+        """
+        Create a conversation topic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def create_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
+    ) -> dict:
+        """
+        Create a conversation subtopic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
+        """
+        Delete a conversation topic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def delete_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
+    ) -> dict:
+        """
+        Delete a conversation subtopic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_topics_distribution(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+        output_language: str = "en",
+    ) -> TopicsDistributionMetrics:
+        """
+        Get topics distribution
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_sales_funnel_data(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SalesFunnelMetrics:
+        """
+        Get sales funnel data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_available_widgets(
+        self, project_uuid: UUID, widget_type: AvailableWidgetsListType | None = None
+    ) -> AvailableWidgetsList:
+        """
+        Get available widgets
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_crosstab_data(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get crosstab data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+
+class ConversationsMetricsService(
+    ConversationsServiceCachingMixin, BaseConversationsMetricsService
+):
     """
     Service to get conversations metrics
     """
@@ -74,7 +181,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         Convert datetime to ISO string if needed for JSON serialization
         """
-        return date_value.isoformat() if isinstance(date_value, datetime) else date_value
+        return (
+            date_value.isoformat() if isinstance(date_value, datetime) else date_value
+        )
 
     def get_topics(self, project_uuid: UUID) -> dict:
         """
