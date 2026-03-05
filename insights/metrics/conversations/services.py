@@ -24,7 +24,7 @@ from insights.metrics.conversations.integrations.datalake.dataclass import (
     CrosstabSource,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
+    BaseDatalakeConversationsMetricsService,
     DatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
@@ -118,6 +118,15 @@ class BaseConversationsMetricsService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_totals(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations totals
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_sales_funnel_data(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SalesFunnelMetrics:
@@ -165,7 +174,7 @@ class ConversationsMetricsService(
 
     def __init__(
         self,
-        datalake_service: BaseConversationsMetricsService = DatalakeConversationsMetricsService(),
+        datalake_service: BaseDatalakeConversationsMetricsService = DatalakeConversationsMetricsService(),
         nexus_client: NexusClient = NexusClient(),
         cache_client: CacheClient = CacheClient(),
         nexus_cache_ttl: int = 60,

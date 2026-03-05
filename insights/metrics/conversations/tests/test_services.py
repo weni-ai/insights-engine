@@ -30,7 +30,7 @@ from insights.metrics.conversations.integrations.datalake.dataclass import (
     SalesFunnelData,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
+    BaseDatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.services import ConversationsMetricsService
@@ -68,7 +68,7 @@ class TestConversationsMetricsService(TestCase):
         )
 
         # Create mocks with proper specs for type safety
-        self.mock_datalake_service = Mock(spec=BaseConversationsMetricsService)
+        self.mock_datalake_service = Mock(spec=BaseDatalakeConversationsMetricsService)
         self.mock_nexus_client = Mock(spec=NexusClient)
         self.mock_cache_client = Mock(spec=CacheClient)
         self.mock_flowruns_query_executor = Mock(spec=FlowRunsQueryExecutor)
