@@ -171,7 +171,7 @@ class ConversationsMetricsService(
         nexus_cache_ttl: int = 60,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
     ):
-        self.datalake_service = datalake_service
+        self.datalake_service: DatalakeConversationsMetricsService = datalake_service
         self.nexus_client = nexus_client
         self.cache_client = cache_client
         self.nexus_cache_ttl = nexus_cache_ttl
