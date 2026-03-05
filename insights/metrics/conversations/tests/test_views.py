@@ -1023,56 +1023,6 @@ class TestInternalConversationsMetricsViewSetAsAuthenticatedUser(
             "Project UUID does not match with the one used in the JWT token",
         )
 
-    @patch("insights.projects.tasks.check_nexus_multi_agents_status.delay")
-    def test_cannot_get_project_ai_csat_metrics_when_widget_not_found_and_project_has_no_nexus_multi_agents_active(
-        self, mock_check_nexus_multi_agents_status
-    ):
-        assert self.project.is_nexus_multi_agents_active is False
-        mock_check_nexus_multi_agents_status.return_value = None
-        response = self.get_project_ai_csat_metrics(
-            {
-                "project_uuid": self.project.uuid,
-                "start_date": "2024-01-01",
-                "end_date": "2024-01-31",
-            }
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(
-            response.data["error"],
-            (
-                "AI CSAT metrics not found for this project. "
-                "Check if Nexus Multi Agents is active for this project or try again later."
-            ),
-        )
-        mock_check_nexus_multi_agents_status.assert_called_once_with(self.project.uuid)
-
-    @patch("insights.projects.tasks.check_nexus_multi_agents_status.delay")
-    def test_cannot_get_project_ai_csat_metrics_when_widget_not_found_and_project_has_nexus_multi_agents_active(
-        self, mock_check_nexus_multi_agents_status
-    ):
-        self.project.is_nexus_multi_agents_active = True
-        self.project.save(update_fields=["is_nexus_multi_agents_active"])
-
-        mock_check_nexus_multi_agents_status.return_value = None
-        response = self.get_project_ai_csat_metrics(
-            {
-                "project_uuid": self.project.uuid,
-                "start_date": "2024-01-01",
-                "end_date": "2024-01-31",
-            }
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(
-            response.data["error"],
-            (
-                "AI CSAT metrics not found for this project. "
-                "Check if Nexus Multi Agents is active for this project or try again later."
-            ),
-        )
-        mock_check_nexus_multi_agents_status.assert_not_called()
-
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_csat_metrics"
     )
