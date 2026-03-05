@@ -38,6 +38,7 @@ from insights.metrics.conversations.serializers import (
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
+from insights.projects.tasks import check_nexus_multi_agents_status
 from insights.widgets.models import Widget
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
 
@@ -570,14 +571,24 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        project = query_params.validated_data["project"]
+
         widget = Widget.objects.filter(
             dashboard__project=project_uuid,
             source="conversations.csat",
         ).first()
 
         if not widget:
+            if not project.is_nexus_multi_agents_active:
+                check_nexus_multi_agents_status.delay(project_uuid)
+
             return Response(
-                {"error": "AI CSAT metrics not found for this project"},
+                {
+                    "error": (
+                        "AI CSAT metrics not found for this project. "
+                        "Check if Nexus Multi Agents is active for this project or try again later."
+                    ),
+                },
                 status=status.HTTP_404_NOT_FOUND,
             )
 
