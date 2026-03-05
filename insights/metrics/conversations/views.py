@@ -14,6 +14,12 @@ from sentry_sdk import capture_exception
 
 from django.conf import settings
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.authentication.authentication import JWTAuthentication
+from insights.authentication.permissions import (
+    HasInternalAuthenticationPermission,
+    ProjectAuthQueryParamPermission,
+)
+from insights.metrics.conversations.enums import CsatMetricsType
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
     AvailableWidgetsQueryParamsSerializer,
@@ -27,23 +33,18 @@ from insights.metrics.conversations.serializers import (
     CustomMetricsQueryParamsSerializer,
     DeleteTopicSerializer,
     GetTopicsQueryParamsSerializer,
+    InternalCsatMetricsQueryParamsSerializer,
     NpsMetricsQueryParamsSerializer,
     SalesFunnelMetricsQueryParamsSerializer,
     SalesFunnelMetricsSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
     TopicsDistributionMetricsSerializer,
-    ConversationsSubjectsMetricsQueryParamsSerializer,
-    ConversationsTimeseriesMetricsQueryParamsSerializer,
-    ConversationsTimeseriesMetricsSerializer,
-    NPSQueryParamsSerializer,
-    NPSSerializer,
-    RoomsByQueueMetricQueryParamsSerializer,
-    RoomsByQueueMetricSerializer,
-    SubjectsMetricsSerializer,
     NpsMetricsSerializer,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
+from insights.projects.tasks import check_nexus_multi_agents_status
+from insights.widgets.models import Widget
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
 
 
@@ -596,3 +597,75 @@ class ConversationsMetricsViewSet(GenericViewSet):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class InternalConversationsMetricsViewSet(GenericViewSet):
+    """
+    ViewSet to get conversations metrics
+    """
+
+    service = ConversationsMetricsService()
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [HasInternalAuthenticationPermission]
+
+    @action(
+        detail=False,
+        methods=["get"],
+    )
+    def project_ai_csat_metrics(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get project csat metrics
+        """
+        query_params = InternalCsatMetricsQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+
+        project_uuid = query_params.validated_data["project_uuid"]
+        start_date = query_params.validated_data["start_date"]
+        end_date = query_params.validated_data["end_date"]
+
+        if str(project_uuid) != str(request.project_uuid):
+            return Response(
+                {
+                    "error": "Project UUID does not match with the one used in the JWT token"
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        project = query_params.validated_data["project"]
+
+        widget = Widget.objects.filter(
+            dashboard__project=project_uuid,
+            source="conversations.csat",
+        ).first()
+
+        if not widget:
+            if not project.is_nexus_multi_agents_active:
+                check_nexus_multi_agents_status.delay(project_uuid)
+
+            return Response(
+                {
+                    "error": (
+                        "AI CSAT metrics not found for this project. "
+                        "Check if Nexus Multi Agents is active for this project or try again later."
+                    ),
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            metrics = self.service.get_csat_metrics(
+                project_uuid=project_uuid,
+                widget=widget,
+                start_date=start_date,
+                end_date=end_date,
+                metric_type=CsatMetricsType.AI,
+            )
+        except ConversationsMetricsError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(metrics, status=status.HTTP_200_OK)
