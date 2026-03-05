@@ -611,6 +611,8 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
     @action(
         detail=False,
         methods=["get"],
+        url_path="project-ai-csat-metrics",
+        url_name="project-ai-csat-metrics",
     )
     def project_ai_csat_metrics(self, request: "Request", *args, **kwargs) -> Response:
         """

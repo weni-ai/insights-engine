@@ -970,6 +970,9 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
 class BaseTestInternalConversationsMetricsViewSet(APITestCase):
     def get_project_ai_csat_metrics(self, query_params: dict) -> Response:
         url = reverse("internal_api:internal-ai-csat-metrics-project-ai-csat-metrics")
+        self.assertEqual(
+            url, "/v1/internal/metrics/conversations/project-ai-csat-metrics/"
+        )
 
         return self.client.get(url, query_params, format="json")
 
