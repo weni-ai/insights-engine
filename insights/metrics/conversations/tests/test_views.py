@@ -1,5 +1,6 @@
 import uuid
 from unittest.mock import MagicMock, patch
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
@@ -34,6 +35,17 @@ from insights.sources.flowruns.tests.mock_query_executor import (
 )
 from insights.sources.integrations.tests.mock_clients import MockNexusClient
 from insights.widgets.models import Widget
+
+from insights.authentication.services.tests.test_jwt_service import (
+    generate_private_key,
+    generate_private_key_pem,
+    generate_public_key_pem,
+)
+from insights.authentication.services.jwt_service import JWTService
+
+JWT_PRIVATE_KEY = generate_private_key()
+JWT_PRIVATE_KEY_PEM = generate_private_key_pem(JWT_PRIVATE_KEY)
+JWT_PUBLIC_KEY_PEM = generate_public_key_pem(JWT_PRIVATE_KEY.public_key())
 
 
 class BaseTestConversationsMetricsViewSet(APITestCase):
@@ -811,3 +823,26 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             response.data["results"][0]["events"],
             {"Test Subitem": {"value": 30, "full_value": 15}},
         )
+
+
+@override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
+@override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)
+class TestConversationsMetricsViewSetAsInternalUser(
+    BaseTestConversationsMetricsViewSet
+):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        token = JWTService().generate_jwt_token(self.project.uuid)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_can_get_totals_with_jwt_token(self):
+        response = self.get_totals(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

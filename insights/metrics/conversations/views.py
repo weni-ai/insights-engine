@@ -9,7 +9,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from sentry_sdk import capture_exception
 
-from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.authentication.decorators import flag_as_internal_jwt_enabled
+from insights.authentication.mixins import AllowJWTInternalAuthMixin
+from insights.authentication.permissions import (
+    HasInternalAuthenticationPermission,
+    ProjectAuthQueryParamPermission,
+)
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
     AvailableWidgetsQueryParamsSerializer,
@@ -44,7 +49,7 @@ if TYPE_CHECKING:
     from rest_framework.request import Request
 
 
-class ConversationsMetricsViewSet(GenericViewSet):
+class ConversationsMetricsViewSet(AllowJWTInternalAuthMixin, GenericViewSet):
     """
     ViewSet to get conversations metrics
     """
@@ -353,10 +358,15 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @flag_as_internal_jwt_enabled
     @action(
         detail=False,
         methods=["get"],
         serializer_class=ConversationTotalsMetricsSerializer,
+        permission_classes=[
+            HasInternalAuthenticationPermission
+            | (ProjectAuthQueryParamPermission & IsAuthenticated),
+        ],
     )
     def totals(self, request: "Request", *args, **kwargs) -> Response:
         """
