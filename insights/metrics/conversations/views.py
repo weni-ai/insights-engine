@@ -9,8 +9,19 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from sentry_sdk import capture_exception
 
-from insights.authentication.permissions import ProjectAuthQueryParamPermission
-from insights.metrics.conversations.exceptions import ConversationsMetricsError
+from insights.authentication.authentication import JWTAuthentication
+from insights.authentication.permissions import (
+    HasInternalAuthenticationPermission,
+    InternalAuthenticationPermission,
+    ProjectAuthQueryParamPermission,
+)
+from insights.metrics.conversations.exceptions import (
+    ConversationsMetricsError,
+    GetProjectAiCsatMetricsError,
+)
+from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import (
+    GetProjectAiCsatMetricsUseCase,
+)
 from insights.metrics.conversations.serializers import (
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
@@ -23,6 +34,7 @@ from insights.metrics.conversations.serializers import (
     CustomMetricsQueryParamsSerializer,
     DeleteTopicSerializer,
     GetTopicsQueryParamsSerializer,
+    InternalCsatMetricsQueryParamsSerializer,
     NpsMetricsQueryParamsSerializer,
     SalesFunnelMetricsQueryParamsSerializer,
     SalesFunnelMetricsSerializer,
@@ -527,3 +539,59 @@ class ConversationsMetricsViewSet(GenericViewSet):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class InternalConversationsMetricsViewSet(GenericViewSet):
+    """
+    ViewSet to get conversations metrics
+    """
+
+    service = ConversationsMetricsService()
+    permission_classes = [
+        HasInternalAuthenticationPermission
+        | (IsAuthenticated & InternalAuthenticationPermission)
+    ]
+
+    @property
+    def authentication_classes(self):
+        classes = super().authentication_classes
+
+        if JWTAuthentication not in classes:
+            classes.append(JWTAuthentication)
+        return classes
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="project-ai-csat-metrics",
+        url_name="project-ai-csat-metrics",
+    )
+    def project_ai_csat_metrics(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get project AI CSAT metrics. Validates input, delegates to use case, returns response.
+        """
+        query_params = InternalCsatMetricsQueryParamsSerializer(
+            data=request.query_params,
+            context={"project": getattr(request, "project", None)},
+        )
+        query_params.is_valid(raise_exception=True)
+
+        if not (project_uuid := getattr(request, "project_uuid", None)):
+            project_uuid = query_params.validated_data.get("project_uuid")
+
+        start_date = query_params.validated_data["start_date"]
+        end_date = query_params.validated_data["end_date"]
+
+        try:
+            metrics = GetProjectAiCsatMetricsUseCase().execute(
+                project_uuid=project_uuid,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        except GetProjectAiCsatMetricsError as e:
+            return Response(
+                {"error": f"Internal error. Event ID: {e.event_id}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(metrics, status=status.HTTP_200_OK)
