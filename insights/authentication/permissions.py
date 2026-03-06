@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from weni.feature_flags.shortcuts import is_feature_active
 
 from insights.dashboards.models import Dashboard
-from insights.projects.models import Project, ProjectAuth
+from insights.projects.models import Project, ProjectAuth, Roles
 
 
 class ProjectAuthPermission(permissions.BasePermission):
@@ -126,6 +126,24 @@ class FeatureFlagPermission(permissions.BasePermission):
             return dashboard.project
 
         return None
+
+
+class IsProjectAdminPermission(permissions.BasePermission):
+    """
+    Restricts access to users with ADMIN role on the project
+    identified by the 'project' query parameter.
+    """
+
+    def has_permission(self, request, view):
+        project_uuid = request.query_params.get("project")
+        if not project_uuid:
+            return False
+
+        return ProjectAuth.objects.filter(
+            project__uuid=project_uuid,
+            user=request.user,
+            role=Roles.ADMIN,
+        ).exists()
 
 
 class HasInternalAuthenticationPermission(permissions.BasePermission):

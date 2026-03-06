@@ -8,7 +8,7 @@ from unittest.mock import patch
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.dashboards.models import Dashboard
-from insights.projects.models import Project, ProjectAuth
+from insights.projects.models import Project, ProjectAuth, Roles
 from insights.widgets.models import Widget, Report
 
 
@@ -202,7 +202,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             ),
         )
 
-        response = self.list()
+        response = self.list({"project": str(self.project.uuid)})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -211,15 +211,54 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertIn(str(dashboard_1.uuid), response_dashboards)
         self.assertNotIn(str(dashboard_2.uuid), response_dashboards)
 
-    def test_list_dashboards_without_project_auth(self):
+    def test_list_dashboards_without_project_auth_returns_forbidden(self):
         Dashboard.objects.create(
             name="Test Dashboard 1",
             project=self.project,
         )
+        response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_dashboards_without_project_param_returns_forbidden(self):
         response = self.list()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_dashboards_as_non_admin_returns_forbidden(self):
+        ProjectAuth.objects.create(
+            project=self.project, user=self.user, role=Roles.NOT_SETTED
+        )
+        Dashboard.objects.create(
+            name="Test Dashboard 1",
+            project=self.project,
+        )
+        response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_list_dashboards_admin_does_not_see_non_admin_projects(self):
+        dashboard_admin = Dashboard.objects.create(
+            name="Admin Dashboard",
+            project=self.project,
+        )
+
+        other_project = Project.objects.create(name="Other Project")
+        ProjectAuth.objects.create(
+            project=other_project, user=self.user, role=Roles.NOT_SETTED
+        )
+        dashboard_non_admin = Dashboard.objects.create(
+            name="Non Admin Dashboard",
+            project=other_project,
+        )
+
+        response = self.list({"project": str(self.project.uuid)})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["results"], [])
+
+        response_dashboards = {d["uuid"] for d in response.data["results"]}
+        self.assertIn(str(dashboard_admin.uuid), response_dashboards)
+        self.assertNotIn(str(dashboard_non_admin.uuid), response_dashboards)
 
     @with_project_auth
     def test_list_dashboards_filtering_by_project(self):

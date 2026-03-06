@@ -11,7 +11,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from insights.authentication.permissions import ProjectAuthPermission
+from insights.authentication.permissions import (
+    IsProjectAdminPermission,
+    ProjectAuthPermission,
+)
 from insights.dashboards.filters import DashboardFilter
 from insights.dashboards.models import (
     CONVERSATIONS_DASHBOARD_NAME,
@@ -25,7 +28,7 @@ from insights.human_support.services import HumanSupportDashboardService
 from insights.metrics.meta.tasks import (
     check_dashboards_marketing_messages_status_for_project,
 )
-from insights.projects.models import Project
+from insights.projects.models import Project, Roles
 from insights.projects.tasks import check_nexus_multi_agents_status
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.sources.contacts.clients import FlowsContactsRestClient
@@ -60,6 +63,11 @@ class DashboardViewSet(
     filterset_class = DashboardFilter
 
     def get_permissions(self):
+        if self.action == "list":
+            return [
+                IsAuthenticated(),
+                IsProjectAdminPermission(),
+            ]
         if self.action in [
             "monitoring_list_status",
             "monitoring_average_time_metrics",
@@ -81,7 +89,10 @@ class DashboardViewSet(
 
     def get_queryset(self):
         queryset = (
-            Dashboard.objects.filter(project__authorizations__user=self.request.user)
+            Dashboard.objects.filter(
+                project__authorizations__user=self.request.user,
+                project__authorizations__role=Roles.ADMIN,
+            )
             .exclude(
                 Q(name="Resultados de fluxos")
                 & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
