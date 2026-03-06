@@ -833,6 +833,16 @@ class TestConversationsMetricsViewSetAsInternalUser(
 
         self.client.force_authenticate(self.user)
 
+    def test_cannot_get_totals_without_internal_auth(self):
+        response = self.get_totals(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     @with_internal_auth
     def test_can_get_totals_with_internal_auth(self):
         response = self.get_totals(
