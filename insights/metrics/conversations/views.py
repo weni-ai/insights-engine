@@ -9,7 +9,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from sentry_sdk import capture_exception
 
-from insights.authentication.permissions import ProjectAuthQueryParamPermission
+from insights.authentication.permissions import (
+    InternalAuthenticationPermission,
+    ProjectAuthQueryParamPermission,
+)
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.serializers import (
     AvailableWidgetsQueryParamsSerializer,
@@ -357,6 +360,10 @@ class ConversationsMetricsViewSet(GenericViewSet):
         detail=False,
         methods=["get"],
         serializer_class=ConversationTotalsMetricsSerializer,
+        permission_classes=[
+            IsAuthenticated,
+            (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
+        ],
     )
     def totals(self, request: "Request", *args, **kwargs) -> Response:
         """

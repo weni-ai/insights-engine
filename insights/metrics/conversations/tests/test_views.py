@@ -6,7 +6,10 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from insights.authentication.authentication import User
-from insights.authentication.tests.decorators import with_project_auth
+from insights.authentication.tests.decorators import (
+    with_internal_auth,
+    with_project_auth,
+)
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     AvailableWidgetsList,
@@ -811,3 +814,35 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             response.data["results"][0]["events"],
             {"Test Subitem": {"value": 30, "full_value": 15}},
         )
+
+
+class TestConversationsMetricsViewSetAsInternalUser(
+    BaseTestConversationsMetricsViewSet
+):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.user = User.objects.create(email="internal@vtex.com")
+
+        self.client.force_authenticate(self.user)
+
+    def test_cannot_get_totals_without_internal_auth(self):
+        response = self.get_totals(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_internal_auth
+    def test_can_get_totals_with_internal_auth(self):
+        response = self.get_totals(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
