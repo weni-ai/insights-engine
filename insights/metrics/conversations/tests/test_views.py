@@ -7,7 +7,10 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from insights.authentication.authentication import User
-from insights.authentication.tests.decorators import with_project_auth
+from insights.authentication.tests.decorators import (
+    with_internal_auth,
+    with_project_auth,
+)
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     AvailableWidgetsList,
@@ -42,10 +45,6 @@ from insights.authentication.services.tests.test_jwt_service import (
     generate_public_key_pem,
 )
 from insights.authentication.services.jwt_service import JWTService
-
-JWT_PRIVATE_KEY = generate_private_key()
-JWT_PRIVATE_KEY_PEM = generate_private_key_pem(JWT_PRIVATE_KEY)
-JWT_PUBLIC_KEY_PEM = generate_public_key_pem(JWT_PRIVATE_KEY.public_key())
 
 
 class BaseTestConversationsMetricsViewSet(APITestCase):
@@ -825,18 +824,17 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
 
-@override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
-@override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)
 class TestConversationsMetricsViewSetAsInternalUser(
     BaseTestConversationsMetricsViewSet
 ):
     def setUp(self):
         self.project = Project.objects.create(name="Test Project")
-        token = JWTService().generate_jwt_token(self.project.uuid)
+        self.user = User.objects.create(email="internal@vtex.com")
 
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        self.client.force_authenticate(self.user)
 
-    def test_can_get_totals_with_jwt_token(self):
+    @with_internal_auth
+    def test_can_get_totals_with_internal_auth(self):
         response = self.get_totals(
             {
                 "project_uuid": self.project.uuid,
