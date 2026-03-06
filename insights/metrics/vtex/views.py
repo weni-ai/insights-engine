@@ -12,6 +12,7 @@ from rest_framework.request import Request
 from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
     HasInternalAuthenticationPermission,
+    InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
 from insights.metrics.vtex.serializers import InternalVTEXOrdersRequestSerializer
@@ -68,15 +69,28 @@ class VtexOrdersViewSet(viewsets.ViewSet):
 
 
 class InternalVTEXOrdersViewSet(viewsets.ViewSet):
-    permission_classes = [HasInternalAuthenticationPermission]
-    authentication_classes = [JWTAuthentication]
+    permission_classes = [
+        HasInternalAuthenticationPermission
+        | (IsAuthenticated & InternalAuthenticationPermission)
+    ]
+
+    @property
+    def authentication_classes(self):
+        # Default authentication (token or OIDC, depending on the settings) + JWTAuthentication
+        classes = super().authentication_classes
+
+        if JWTAuthentication not in classes:
+            classes.append(JWTAuthentication)
+
+        return classes
 
     @action(methods=["get"], detail=False)
     def from_utm_source(self, request: Request) -> Response:
-        project_uuid = request.project_uuid
-
         serializer = InternalVTEXOrdersRequestSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
+
+        if not (project_uuid := getattr(request, "project_uuid", None)):
+            project_uuid = serializer.validated_data.get("project_uuid", None)
 
         utm_source = serializer.validated_data.get("utm_source", None)
         start_date_str = serializer.data.get("start_date", None)
