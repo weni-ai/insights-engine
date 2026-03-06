@@ -14,7 +14,10 @@ from insights.authentication.services.tests.test_jwt_service import (
     generate_private_key_pem,
     generate_public_key_pem,
 )
-from insights.authentication.tests.decorators import with_project_auth
+from insights.authentication.tests.decorators import (
+    with_internal_auth,
+    with_project_auth,
+)
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     AvailableWidgetsList,
@@ -847,7 +850,7 @@ class TestInternalConversationsMetricsViewSetAsAnonymousUser(
 
 @override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
 @override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)
-class TestInternalConversationsMetricsViewSetAsAuthenticatedUser(
+class TestInternalConversationsMetricsViewSetWithJWTAuthentication(
     BaseTestInternalConversationsMetricsViewSet
 ):
     def setUp(self):
@@ -863,6 +866,68 @@ class TestInternalConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["start_date"][0].code, "required")
         self.assertEqual(response.data["end_date"][0].code, "required")
 
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_csat_metrics"
+    )
+    def test_get_project_ai_csat_metrics(self, mock_get_csat_metrics):
+        mock_get_csat_metrics.return_value = {
+            "results": [
+                {
+                    "label": "1",
+                    "value": 100,
+                    "full_value": 100,
+                }
+            ],
+        }
+
+        Widget.objects.create(
+            name="Test Widget",
+            dashboard=Dashboard.objects.create(
+                project=self.project, name="Test Dashboard"
+            ),
+            source="conversations.csat",
+            type="conversations.csat",
+            position=[1, 2],
+            config={"datalake_config": {"agent_uuid": str(uuid.uuid4())}},
+        )
+
+        response = self.get_project_ai_csat_metrics(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"][0]["label"], "1")
+        self.assertEqual(response.data["results"][0]["value"], 100)
+        self.assertEqual(response.data["results"][0]["full_value"], 100)
+
+
+class TestInternalConversationsMetricsViewSetWithInternalAuthentication(
+    BaseTestInternalConversationsMetricsViewSet
+):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.user = User.objects.create(email="internal@vtex.com")
+        self.client.force_authenticate(self.user)
+
+    def test_cannot_get_project_ai_csat_metrics_without_permission(self):
+        response = self.get_project_ai_csat_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_internal_auth
+    def test_cannot_get_project_ai_csat_metrics_without_required_fields(self):
+        response = self.get_project_ai_csat_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    @with_internal_auth
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_csat_metrics"
     )

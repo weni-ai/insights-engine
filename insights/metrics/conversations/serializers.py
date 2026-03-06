@@ -488,8 +488,21 @@ class InternalCsatMetricsQueryParamsSerializer(serializers.Serializer):
     Serializer for internal csat metrics query params
     """
 
+    project_uuid = serializers.UUIDField(required=False)
     start_date = serializers.DateTimeField()
     end_date = serializers.DateTimeField()
+
+    def get_fields(self):
+        fields = super().get_fields()
+
+        project_from_context = self.context.get("project")
+
+        if not project_from_context:
+            fields["project_uuid"] = serializers.UUIDField(
+                required=True, allow_null=False
+            )
+
+        return fields
 
     def validate(self, attrs: dict) -> dict:
         """
@@ -497,8 +510,16 @@ class InternalCsatMetricsQueryParamsSerializer(serializers.Serializer):
         """
         attrs = super().validate(attrs)
 
-        project: Project = self.context.get("project")
-        assert project is not None
+        if not (project := self.context.get("project")):
+            project = Project.objects.filter(uuid=attrs["project_uuid"]).first()
+
+            if not project:
+                raise serializers.ValidationError(
+                    {"project_uuid": "Project not found"},
+                    code="project_not_found",
+                )
+
+        attrs["project"] = project
 
         validator = ConversationsDatesValidator(
             project=project,

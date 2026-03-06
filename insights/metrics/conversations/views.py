@@ -12,6 +12,7 @@ from sentry_sdk import capture_exception
 from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
     HasInternalAuthenticationPermission,
+    InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
 from insights.metrics.conversations.exceptions import (
@@ -546,8 +547,18 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
     """
 
     service = ConversationsMetricsService()
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [HasInternalAuthenticationPermission]
+    permission_classes = [
+        HasInternalAuthenticationPermission
+        | (IsAuthenticated & InternalAuthenticationPermission)
+    ]
+
+    @property
+    def authentication_classes(self):
+        classes = super().authentication_classes
+
+        if JWTAuthentication not in classes:
+            classes.append(JWTAuthentication)
+        return classes
 
     @action(
         detail=False,
@@ -560,16 +571,20 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
         Get project AI CSAT metrics. Validates input, delegates to use case, returns response.
         """
         query_params = InternalCsatMetricsQueryParamsSerializer(
-            data=request.query_params, context={"project": request.project}
+            data=request.query_params,
+            context={"project": getattr(request, "project", None)},
         )
         query_params.is_valid(raise_exception=True)
+
+        if not (project_uuid := getattr(request, "project_uuid", None)):
+            project_uuid = query_params.validated_data.get("project_uuid")
 
         start_date = query_params.validated_data["start_date"]
         end_date = query_params.validated_data["end_date"]
 
         try:
             metrics = GetProjectAiCsatMetricsUseCase().execute(
-                project_uuid=request.project.uuid,
+                project_uuid=project_uuid,
                 start_date=start_date,
                 end_date=end_date,
             )
