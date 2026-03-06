@@ -1,6 +1,5 @@
 import uuid
 from unittest.mock import MagicMock, patch
-from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
@@ -38,13 +37,6 @@ from insights.sources.flowruns.tests.mock_query_executor import (
 )
 from insights.sources.integrations.tests.mock_clients import MockNexusClient
 from insights.widgets.models import Widget
-
-from insights.authentication.services.tests.test_jwt_service import (
-    generate_private_key,
-    generate_private_key_pem,
-    generate_public_key_pem,
-)
-from insights.authentication.services.jwt_service import JWTService
 
 
 class BaseTestConversationsMetricsViewSet(APITestCase):
