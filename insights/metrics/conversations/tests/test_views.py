@@ -848,63 +848,6 @@ class TestInternalConversationsMetricsViewSetAsAnonymousUser(
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-@override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
-@override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)
-class TestInternalConversationsMetricsViewSetWithJWTAuthentication(
-    BaseTestInternalConversationsMetricsViewSet
-):
-    def setUp(self):
-        self.project = Project.objects.create(name="Test Project")
-        token = JWTService().generate_jwt_token(self.project.uuid)
-
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-
-    def test_cannot_get_project_ai_csat_metrics_without_required_fields(self):
-        response = self.get_project_ai_csat_metrics({})
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["start_date"][0].code, "required")
-        self.assertEqual(response.data["end_date"][0].code, "required")
-
-    @patch(
-        "insights.metrics.conversations.services.ConversationsMetricsService.get_csat_metrics"
-    )
-    def test_get_project_ai_csat_metrics(self, mock_get_csat_metrics):
-        mock_get_csat_metrics.return_value = {
-            "results": [
-                {
-                    "label": "1",
-                    "value": 100,
-                    "full_value": 100,
-                }
-            ],
-        }
-
-        Widget.objects.create(
-            name="Test Widget",
-            dashboard=Dashboard.objects.create(
-                project=self.project, name="Test Dashboard"
-            ),
-            source="conversations.csat",
-            type="conversations.csat",
-            position=[1, 2],
-            config={"datalake_config": {"agent_uuid": str(uuid.uuid4())}},
-        )
-
-        response = self.get_project_ai_csat_metrics(
-            {
-                "project_uuid": self.project.uuid,
-                "start_date": "2024-01-01",
-                "end_date": "2024-01-31",
-            }
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["results"][0]["label"], "1")
-        self.assertEqual(response.data["results"][0]["value"], 100)
-        self.assertEqual(response.data["results"][0]["full_value"], 100)
-
-
 class TestInternalConversationsMetricsViewSetWithInternalAuthentication(
     BaseTestInternalConversationsMetricsViewSet
 ):

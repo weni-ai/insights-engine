@@ -76,12 +76,10 @@ class InternalVTEXOrdersViewSet(viewsets.ViewSet):
 
     @property
     def authentication_classes(self):
-        # Default authentication (token or OIDC, depending on the settings) + JWTAuthentication
-        classes = super().authentication_classes
-
+        # Try JWT first so Bearer JWT tokens are accepted before OIDC (which would raise on invalid OIDC token)
+        classes = list(super().authentication_classes)
         if JWTAuthentication not in classes:
-            classes.append(JWTAuthentication)
-
+            classes.insert(0, JWTAuthentication)
         return classes
 
     @action(methods=["get"], detail=False)
