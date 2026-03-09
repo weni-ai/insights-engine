@@ -90,7 +90,7 @@ class InternalVTEXOrdersViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
 
         if not (project_uuid := getattr(request, "project_uuid", None)):
-            project_uuid = serializer.validated_data.get("project_uuid", None)
+            project_uuid = serializer.validated_data["project_uuid"]
 
         utm_source = serializer.validated_data.get("utm_source", None)
         start_date_str = serializer.data.get("start_date", None)
