@@ -369,6 +369,10 @@ class ConversationsMetricsViewSet(GenericViewSet):
         detail=False,
         methods=["get"],
         serializer_class=ConversationTotalsMetricsSerializer,
+        permission_classes=[
+            IsAuthenticated,
+            (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
+        ],
     )
     def totals(self, request: "Request", *args, **kwargs) -> Response:
         """

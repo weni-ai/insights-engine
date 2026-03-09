@@ -965,3 +965,35 @@ class TestInternalConversationsMetricsViewSetWithInternalAuthentication(
         self.assertEqual(response.data["results"][0]["label"], "1")
         self.assertEqual(response.data["results"][0]["value"], 100)
         self.assertEqual(response.data["results"][0]["full_value"], 100)
+
+
+class TestConversationsMetricsViewSetAsInternalUser(
+    BaseTestConversationsMetricsViewSet
+):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.user = User.objects.create(email="internal@vtex.com")
+
+        self.client.force_authenticate(self.user)
+
+    def test_cannot_get_totals_without_internal_auth(self):
+        response = self.get_totals(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_internal_auth
+    def test_can_get_totals_with_internal_auth(self):
+        response = self.get_totals(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
