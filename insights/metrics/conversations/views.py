@@ -9,9 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from sentry_sdk import capture_exception
 
-from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
-    HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
@@ -551,18 +549,7 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
     """
 
     service = ConversationsMetricsService()
-    permission_classes = [
-        HasInternalAuthenticationPermission
-        | (IsAuthenticated & InternalAuthenticationPermission)
-    ]
-
-    @property
-    def authentication_classes(self):
-        classes = super().authentication_classes
-
-        if JWTAuthentication not in classes:
-            classes.append(JWTAuthentication)
-        return classes
+    permission_classes = [IsAuthenticated, InternalAuthenticationPermission]
 
     @action(
         detail=False,

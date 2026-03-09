@@ -133,23 +133,22 @@ class JWTAuthentication(BaseAuthentication):
         header = request.headers.get("Authorization")
 
         if not header:
-            raise AuthenticationFailed("Missing Authorization header")
+            return None
 
         try:
             header_parts = header.split(" ")
-
             if len(header_parts) != 2 or header_parts[0] != "Bearer":
-                raise AuthenticationFailed("Invalid header format")
-
-        except Exception as e:
-            raise AuthenticationFailed("Error parsing header") from e
+                return None
+        except Exception:
+            return None
 
         token = header_parts[1]
 
         try:
             decoded_token = JWTService().decode_jwt_token(token)
-        except InvalidTokenError as e:
-            raise AuthenticationFailed("Invalid token") from e
+        except InvalidTokenError:
+            # Not a valid JWT (e.g. OIDC token); let other authenticators try
+            return None
 
         project_uuid = decoded_token.get("project_uuid")
 
