@@ -17,11 +17,16 @@ from django.conf import settings
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
-    HasInternalAuthenticationPermission,
+    InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
-from insights.metrics.conversations.enums import CsatMetricsType
-from insights.metrics.conversations.exceptions import ConversationsMetricsError
+from insights.metrics.conversations.exceptions import (
+    ConversationsMetricsError,
+    GetProjectAiCsatMetricsError,
+)
+from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import (
+    GetProjectAiCsatMetricsUseCase,
+)
 from insights.metrics.conversations.serializers import (
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
@@ -44,7 +49,6 @@ from insights.metrics.conversations.serializers import (
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
-from insights.widgets.models import Widget
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
 
 
@@ -339,6 +343,10 @@ class ConversationsMetricsViewSet(GenericViewSet):
         detail=False,
         methods=["get"],
         serializer_class=ConversationTotalsMetricsSerializer,
+        permission_classes=[
+            IsAuthenticated,
+            (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
+        ],
     )
     def totals(self, request: "Request", *args, **kwargs) -> Response:
         """
@@ -605,8 +613,7 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
     """
 
     service = ConversationsMetricsService()
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [HasInternalAuthenticationPermission]
+    permission_classes = [IsAuthenticated, InternalAuthenticationPermission]
 
     @action(
         detail=False,
@@ -616,44 +623,29 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
     )
     def project_ai_csat_metrics(self, request: "Request", *args, **kwargs) -> Response:
         """
-        Get project csat metrics
+        Get project AI CSAT metrics. Validates input, delegates to use case, returns response.
         """
         query_params = InternalCsatMetricsQueryParamsSerializer(
-            data=request.query_params
+            data=request.query_params,
+            context={"project": getattr(request, "project", None)},
         )
         query_params.is_valid(raise_exception=True)
 
-        project_uuid = query_params.validated_data["project_uuid"]
+        if not (project_uuid := getattr(request, "project_uuid", None)):
+            project_uuid = query_params.validated_data.get("project_uuid")
+
         start_date = query_params.validated_data["start_date"]
         end_date = query_params.validated_data["end_date"]
 
-        if str(project_uuid) != str(request.project_uuid):
-            return Response(
-                {
-                    "error": "Project UUID does not match with the one used in the JWT token"
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        widget = Widget(
-            config={
-                "datalake_config": {
-                    "agent_uuid": settings.CONVERSATIONS_DASHBOARD_NATIVE_CSAT_AGENT_UUID
-                }
-            }
-        )
-
         try:
-            metrics = self.service.get_csat_metrics(
+            metrics = GetProjectAiCsatMetricsUseCase().execute(
                 project_uuid=project_uuid,
-                widget=widget,
                 start_date=start_date,
                 end_date=end_date,
-                metric_type=CsatMetricsType.AI,
             )
-        except ConversationsMetricsError as e:
+        except GetProjectAiCsatMetricsError as e:
             return Response(
-                {"error": str(e)},
+                {"error": f"Internal error. Event ID: {e.event_id}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
