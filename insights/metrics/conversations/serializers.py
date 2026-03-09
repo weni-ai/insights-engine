@@ -1,5 +1,3 @@
-import pytz
-from datetime import datetime, time
 import logging
 
 from django.utils.translation import gettext_lazy as _
@@ -13,6 +11,7 @@ from insights.metrics.conversations.enums import (
     ConversationType,
     NpsMetricsType,
 )
+from insights.metrics.conversations.validators import ConversationsDatesValidator
 from insights.projects.models import Project, ProjectAuth
 from insights.widgets.models import Widget
 
@@ -33,36 +32,25 @@ class ConversationBaseQueryParamsSerializer(serializers.Serializer):
         """
         Validate query params
         """
-        if attrs["start_date"] > attrs["end_date"]:
-            raise serializers.ValidationError(
-                {"start_date": "Start date must be before end date"},
-                code="start_date_after_end_date",
-            )
 
         project = Project.objects.filter(uuid=attrs["project_uuid"]).first()
 
         if not project:
             raise serializers.ValidationError(
-                {"project_uuid": "Project not found"}, code="project_not_found"
+                {"project_uuid": _("Project not found")}, code="project_not_found"
             )
 
         attrs["project"] = project
 
-        timezone = pytz.timezone(project.timezone) if project.timezone else pytz.UTC
-
-        # Convert start_date to datetime at midnight (00:00:00) in project timezone
-        start_datetime = datetime.combine(attrs["start_date"].date(), time.min)
-        start_datetime = (
-            timezone.localize(start_datetime).astimezone(pytz.UTC).replace(tzinfo=None)
+        validator = ConversationsDatesValidator(
+            project=project,
+            start_date=attrs["start_date"],
+            end_date=attrs["end_date"],
         )
-        attrs["start_date"] = start_datetime
+        start_date, end_date = validator.validate()
 
-        # Convert end_date to datetime at 23:59:59 in project timezone
-        end_datetime = datetime.combine(attrs["end_date"].date(), time(23, 59, 59))
-        end_datetime = (
-            timezone.localize(end_datetime).astimezone(pytz.UTC).replace(tzinfo=None)
-        )
-        attrs["end_date"] = end_datetime
+        attrs["start_date"] = start_date
+        attrs["end_date"] = end_date
 
         return attrs
 
@@ -493,3 +481,54 @@ class CrosstabItemSerializer(serializers.Serializer):
         return {
             item.title: CrosstabSubItemSerializer(item).data for item in obj.subitems
         }
+
+
+class InternalCsatMetricsQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for internal csat metrics query params
+    """
+
+    project_uuid = serializers.UUIDField(required=False)
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
+
+    def get_fields(self):
+        fields = super().get_fields()
+
+        project_from_context = self.context.get("project")
+
+        if not project_from_context:
+            fields["project_uuid"] = serializers.UUIDField(
+                required=True, allow_null=False
+            )
+
+        return fields
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        if not (project := self.context.get("project")):
+            project = Project.objects.filter(uuid=attrs["project_uuid"]).first()
+
+            if not project:
+                raise serializers.ValidationError(
+                    {"project_uuid": "Project not found"},
+                    code="project_not_found",
+                )
+
+        attrs["project"] = project
+
+        validator = ConversationsDatesValidator(
+            project=project,
+            start_date=attrs["start_date"],
+            end_date=attrs["end_date"],
+        )
+        start_date, end_date = validator.validate()
+
+        attrs["start_date"] = start_date
+        attrs["end_date"] = end_date
+
+        return attrs
