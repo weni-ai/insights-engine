@@ -940,3 +940,53 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         ).serialize()
 
         return data
+
+    def get_event_count(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get event count from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="event_count",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            agent_uuid=agent_uuid,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            if not isinstance(cached_results, int):
+                try:
+                    cached_results = int(cached_results)
+                except Exception as e:
+                    logger.error("Failed to convert cached results to int: %s", e)
+                    capture_exception(e)
+
+            return cached_results
+
+        try:
+            event_count = self.events_client.get_events_count(
+                event_name=event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                metadata_key="agent_uuid",
+                metadata_value=agent_uuid,
+            )[0].get("count", 0)
+        except Exception as e:
+            logger.error("Failed to get event count: %s", e)
+            raise e
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, event_count)
+
+        return event_count

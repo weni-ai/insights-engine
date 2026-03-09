@@ -913,3 +913,51 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         project_uuid = uuid.uuid4()
         results = self.service.check_if_sales_funnel_data_exists(project_uuid)
         self.assertTrue(results)
+
+    def test_get_event_count(self):
+        project_uuid = uuid.uuid4()
+        event_name = "test_event"
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+
+        results = self.service.get_event_count(
+            project_uuid, event_name, start_date, end_date, agent_uuid
+        )
+        self.assertEqual(results, 10)
+        self.mock_events_client.get_events_count.assert_called_once_with(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+        )
+
+    def test_get_event_count_with_cache(self):
+        project_uuid = uuid.uuid4()
+        event_name = "test_event"
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+        self.mock_cache_client.get.return_value = json.dumps(10)
+
+        results = self.service.get_event_count(
+            project_uuid, event_name, start_date, end_date, agent_uuid
+        )
+        self.assertEqual(results, 10)
+        self.mock_events_client.get_events_count.assert_not_called()
+        self.mock_cache_client.get.assert_called_once_with(
+            self.service._get_cache_key(
+                data_type="event_count",
+                project_uuid=project_uuid,
+                event_name=event_name,
+                start_date=start_date,
+                end_date=end_date,
+                agent_uuid=agent_uuid,
+            )
+        )
