@@ -3,6 +3,7 @@ from dataclasses import asdict
 import json
 import logging
 from datetime import datetime
+from typing import Optional, Type, TypeVar
 from uuid import UUID
 
 from django.conf import settings
@@ -36,6 +37,8 @@ from insights.sources.dl_events.clients import (
 
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 CACHE_RESULTS = settings.CACHE_DATALAKE_EVENTS_RESULTS
 CACHE_TTL = settings.CACHE_DATALAKE_EVENTS_RESULTS_TTL
@@ -172,9 +175,14 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         except Exception as e:
             logger.warning("Failed to save results to cache: %s", e)
 
-    def _get_cached_results(self, key: str) -> dict:
+    def _get_cached_results(
+        self, key: str, result_type: Optional[Type[T]] = None
+    ) -> Optional[T]:
         """
         Get results from cache with JSON deserialization.
+
+        If result_type is provided (e.g. int, str, dict), the cached value
+        is converted to that type when possible. Conversion failures return None.
         """
         try:
             cached_data = self.cache_client.get(key)
@@ -186,6 +194,17 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 # Parse the JSON data and reconstruct the objects
                 if not isinstance(cached_data, dict):
                     cached_data = json.loads(cached_data)
+
+                if result_type is not None:
+                    try:
+                        return result_type(cached_data)
+                    except (TypeError, ValueError) as e:
+                        logger.warning(
+                            "Failed to convert cached data to %s: %s",
+                            result_type.__name__,
+                            e,
+                        )
+                        return None
 
                 return cached_data
             return None
@@ -964,15 +983,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key)
+            cached_results := self._get_cached_results(cache_key, int)
         ):
-            if not isinstance(cached_results, int):
-                try:
-                    cached_results = int(cached_results)
-                except Exception as e:
-                    logger.error("Failed to convert cached results to int: %s", e)
-                    capture_exception(e)
-
             return cached_results
 
         try:
@@ -1017,15 +1029,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key)
+            cached_results := self._get_cached_results(cache_key, int)
         ):
-            if not isinstance(cached_results, int):
-                try:
-                    cached_results = int(cached_results)
-                except Exception as e:
-                    logger.error("Failed to convert cached results to int: %s", e)
-                    capture_exception(e)
-
             return cached_results
 
         # TODO: Dependency not yet implemented
@@ -1056,15 +1061,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key)
+            cached_results := self._get_cached_results(cache_key, int)
         ):
-            if not isinstance(cached_results, int):
-                try:
-                    cached_results = int(cached_results)
-                except Exception as e:
-                    logger.error("Failed to convert cached results to int: %s", e)
-                    capture_exception(e)
-
             return cached_results
 
         # TODO: Dependency not yet implemented
@@ -1094,15 +1092,8 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key)
+            cached_results := self._get_cached_results(cache_key, int)
         ):
-            if not isinstance(cached_results, int):
-                try:
-                    cached_results = int(cached_results)
-                except Exception as e:
-                    logger.error("Failed to convert cached results to int: %s", e)
-                    capture_exception(e)
-
             return cached_results
 
         # TODO: Dependency not yet implemented
@@ -1130,16 +1121,10 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             key=key,
             agent_uuid=agent_uuid,
         )
-        if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key)
-        ):
-            if not isinstance(cached_results, int):
-                try:
-                    cached_results = int(cached_results)
-                except Exception as e:
-                    logger.error("Failed to convert cached results to int: %s", e)
-                    capture_exception(e)
 
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key, int)
+        ):
             return cached_results
 
         # TODO: Dependency not yet implemented
