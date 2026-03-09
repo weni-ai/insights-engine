@@ -947,6 +947,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         event_name: str,
         start_date: datetime,
         end_date: datetime,
+        key: str,
         agent_uuid: str,
     ) -> int:
         """
@@ -958,6 +959,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             event_name=event_name,
             start_date=start_date,
             end_date=end_date,
+            key=key,
             agent_uuid=agent_uuid,
         )
 
@@ -979,6 +981,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
                 project=project_uuid,
                 date_start=start_date,
                 date_end=end_date,
+                key=key,
                 metadata_key="agent_uuid",
                 metadata_value=agent_uuid,
             )[0].get("count", 0)
@@ -990,3 +993,155 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
             self._save_results_to_cache(cache_key, event_count)
 
         return event_count
+
+    def get_events_values_sum(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values sum from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="events_values_sum",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            if not isinstance(cached_results, int):
+                try:
+                    cached_results = int(cached_results)
+                except Exception as e:
+                    logger.error("Failed to convert cached results to int: %s", e)
+                    capture_exception(e)
+
+            return cached_results
+
+        # TODO: Dependency not yet implemented
+
+        return 0
+
+    def get_events_values_average(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values average from Datalake.
+        """
+
+        cache_key = self._get_cache_key(
+            data_type="events_values_average",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            if not isinstance(cached_results, int):
+                try:
+                    cached_results = int(cached_results)
+                except Exception as e:
+                    logger.error("Failed to convert cached results to int: %s", e)
+                    capture_exception(e)
+
+            return cached_results
+
+        # TODO: Dependency not yet implemented
+
+        return 0
+
+    def get_events_highest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events highest value from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="events_highest_value",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            if not isinstance(cached_results, int):
+                try:
+                    cached_results = int(cached_results)
+                except Exception as e:
+                    logger.error("Failed to convert cached results to int: %s", e)
+                    capture_exception(e)
+
+            return cached_results
+
+        # TODO: Dependency not yet implemented
+
+        return 0
+
+    def get_events_lowest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events lowest value from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="events_lowest_value",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+        )
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            if not isinstance(cached_results, int):
+                try:
+                    cached_results = int(cached_results)
+                except Exception as e:
+                    logger.error("Failed to convert cached results to int: %s", e)
+                    capture_exception(e)
+
+            return cached_results
+
+        # TODO: Dependency not yet implemented
+
+        return 0

@@ -919,12 +919,13 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         event_name = "test_event"
         start_date = datetime.now() - timedelta(days=1)
         end_date = datetime.now()
+        key = "test_key"
         agent_uuid = str(uuid.uuid4())
 
         self.mock_events_client.get_events_count.return_value = [{"count": 10}]
 
         results = self.service.get_event_count(
-            project_uuid, event_name, start_date, end_date, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
         )
         self.assertEqual(results, 10)
         self.mock_events_client.get_events_count.assert_called_once_with(
@@ -932,6 +933,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             project=project_uuid,
             date_start=start_date,
             date_end=end_date,
+            key=key,
             metadata_key="agent_uuid",
             metadata_value=agent_uuid,
         )
@@ -942,12 +944,13 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         start_date = datetime.now() - timedelta(days=1)
         end_date = datetime.now()
         agent_uuid = str(uuid.uuid4())
+        key = "test_key"
 
         self.mock_events_client.get_events_count.return_value = [{"count": 10}]
         self.mock_cache_client.get.return_value = json.dumps(10)
 
         results = self.service.get_event_count(
-            project_uuid, event_name, start_date, end_date, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
         )
         self.assertEqual(results, 10)
         self.mock_events_client.get_events_count.assert_not_called()
@@ -958,6 +961,23 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 event_name=event_name,
                 start_date=start_date,
                 end_date=end_date,
+                key=key,
                 agent_uuid=agent_uuid,
             )
         )
+
+    def test_get_events_values_sum(self):
+        # TODO: Dependency not yet implemented
+        pass
+
+    def test_get_events_values_average(self):
+        # TODO: Dependency not yet implemented
+        pass
+
+    def test_get_events_highest_value(self):
+        # TODO: Dependency not yet implemented
+        pass
+
+    def test_get_events_lowest_value(self):
+        # TODO: Dependency not yet implemented
+        pass
