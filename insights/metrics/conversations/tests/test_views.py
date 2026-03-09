@@ -1,14 +1,12 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
-from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
 from rest_framework import status
 
 from insights.authentication.authentication import User
-from insights.authentication.services.jwt_service import JWTService
 from insights.authentication.services.tests.test_jwt_service import (
     generate_private_key,
     generate_private_key_pem,
