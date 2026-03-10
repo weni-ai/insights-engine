@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from django.db.models import QuerySet
@@ -31,10 +32,13 @@ class WidgetViewSet(
         return [IsAuthenticated, ProjectAuthPermission]
 
     def get_queryset(self) -> QuerySet[Widget]:
+        project_auths = ProjectAuth.objects.filter(
+            user=self.request.user, role=1
+        ).values_list("project", flat=True)
+
         return self.queryset.filter(
-            dashboard__project__in=ProjectAuth.objects.filter(
-                user=self.request.user, role=1
-            ).values_list("project", flat=True)
+            Q(dashboard__project__in=project_auths)
+            | Q(parent__dashboard__project__in=project_auths),
         )
 
     def _update(self, widget, update_data, partial):
