@@ -426,6 +426,7 @@ class HumanSupportDashboardService:
             formatted_results.append(
                 {
                     "agent": room.get("agent"),
+                    "agent_email": room.get("user_email"),
                     "duration": room.get("duration"),
                     "awaiting_time": room.get("waiting_time"),
                     "first_response_time": room.get("first_response_time"),
