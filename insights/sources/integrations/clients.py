@@ -148,6 +148,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
 
     def __init__(self):
         self.base_url = settings.NEXUS_CONVERSATIONS_API_BASE_URL
+        self.path_prefix = settings.NEXUS_CONVERSATIONS_API_PATH_PREFIX
         self.headers = {
             "Authorization": f"Bearer {settings.NEXUS_CONVERSATIONS_API_TOKEN}",
         }
@@ -157,7 +158,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         """
         Get conversation topics for a project.
         """
-        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/"
+        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/"
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -166,7 +167,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Get subtopics for a topic.
         """
 
-        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/{topic_uuid}/subtopics/"
+        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -175,7 +176,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Create a topic for a project.
         """
 
-        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/"
+        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/"
 
         body = {
             "name": name,
@@ -193,7 +194,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Create a subtopic for a project.
         """
 
-        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/{topic_uuid}/subtopics/"
+        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         body = {
             "name": name,
@@ -209,7 +210,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Delete a topic for a project.
         """
 
-        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/{topic_uuid}/"
+        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/{topic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -220,6 +221,6 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Delete a subtopic for a project.
         """
 
-        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
+        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
