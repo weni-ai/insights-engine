@@ -12,9 +12,10 @@ class AgentSQLQueryGenerator(GenericSQLQueryGenerator):
 class AgentsRESTClient(InternalAuthentication):
     def __init__(self, project) -> None:
         self.project = project
-        self.url = (
-            f"{settings.CHATS_URL}/v1/internal/dashboard/{self.project.uuid}/agent/"
+        self.base_url = (
+            f"{settings.CHATS_URL}/v1/internal/dashboard/{self.project.uuid}"
         )
+        self.url = f"{self.base_url}/agent/"
 
     def list(self, query_filters: dict):
         if query_filters.get("created_on__gte", None):
@@ -24,5 +25,12 @@ class AgentsRESTClient(InternalAuthentication):
 
         response = requests.get(
             url=self.url, headers=self.headers, params=query_filters
+        )
+        return response.json()
+
+    def agents_totals(self, query_filters: dict):
+        url = f"{self.base_url}/agents_totals/"
+        response = requests.get(
+            url=url, headers=self.headers, params=query_filters
         )
         return response.json()

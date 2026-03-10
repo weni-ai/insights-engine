@@ -23,6 +23,20 @@ class CustomStatusRESTClient(InternalAuthentication):
         )
         return response.json()
 
+    def list_custom_status_types(self):
+        url = f"{self.base_url}/v1/custom_status_type/"
+        response = requests.get(
+            url=url,
+            headers=self.headers,
+            params={"project": str(self.project.uuid)},
+            timeout=self.timeout,
+        )
+        data = response.json()
+        return [
+            {"uuid": item["uuid"], "name": item["name"]}
+            for item in data.get("results", [])
+        ]
+
     def list_custom_status_by_agent(self, query_filters: dict):
         url = f"{self.base_url}/v1/internal/dashboard/{self.project.uuid}/custom-status-by-agent/"
         if query_filters.get("created_on__gte", None):

@@ -1988,7 +1988,9 @@ class TestConversationsReportServiceAdditional(TestCase):
             return {
                 "hits": {
                     "total": {"value": 10},
-                    "hits": [{"_source": {"contact_urn": "123"}}],
+                    "hits": [
+                        {"_source": {"contact_urn": "123", "sort": ["123", "456"]}}
+                    ],
                 }
             }
 

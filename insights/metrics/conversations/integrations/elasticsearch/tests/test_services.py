@@ -52,16 +52,11 @@ class TestConversationsElasticsearchService(TestCase):
             end_date="2025-01-02",
             op_field=op_field,
             page_size=10,
-            page_number=1,
         )
 
         self.assertIsInstance(results, dict)
         self.assertIn("pagination", results)
         self.assertIn("contacts", results)
-        self.assertEqual(results["pagination"]["current_page"], 1)
-        self.assertEqual(results["pagination"]["total_pages"], 1)
-        self.assertEqual(results["pagination"]["page_size"], 10)
-        self.assertEqual(results["pagination"]["total_items"], 10)
         self.assertEqual(len(results["contacts"]), 1)
         self.assertEqual(results["contacts"][0]["contact"]["name"], "John Doe")
         self.assertEqual(results["contacts"][0]["urn"], "1234567890")

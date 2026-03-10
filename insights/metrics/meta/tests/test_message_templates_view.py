@@ -31,6 +31,7 @@ from insights.metrics.meta.utils import (
     format_messages_metrics_data,
 )
 from insights.metrics.meta.tests.mock import (
+    MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY,
     MOCK_SUCCESS_RESPONSE_BODY,
     MOCK_TEMPLATE_DAILY_ANALYTICS,
     MOCK_TEMPLATES_LIST_BODY,
@@ -101,6 +102,11 @@ class BaseTestMetaMessageTemplatesView(APITestCase):
 
         return self.client.post(url_to_call, data, format="json")
 
+    def get_conversations_by_category(self, query_params: dict) -> Response:
+        url = "/v1/metrics/meta/whatsapp-message-templates/conversations-by-category/"
+
+        return self.client.get(url, query_params)
+
 
 class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesView):
     def test_cannot_get_list_templates_when_not_authenticated(self):
@@ -150,6 +156,11 @@ class TestMetaMessageTemplatesViewAsAnonymousUser(BaseTestMetaMessageTemplatesVi
 
     def test_cannot_get_wabas_when_not_authenticated(self):
         response = self.get_wabas({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_conversations_by_category_when_not_authenticated(self):
+        response = self.get_conversations_by_category({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -932,3 +943,44 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data["error"], "Error fetching wabas")
+
+    @with_project_auth
+    def test_cannot_get_conversations_by_category_when_dashboard_is_not_related_to_project(
+        self,
+    ):
+        response = self.get_conversations_by_category(
+            {
+                "project": self.project.uuid,
+                "waba_id": "1234567890987654",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.meta.clients.MetaGraphAPIClient.get_conversations_by_category"
+    )
+    def test_get_conversations_by_category(self, mock_get_conversations_by_category):
+        mock_get_conversations_by_category.return_value = (
+            MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY
+        )
+
+        waba_id = "1234567890987654"
+        self._create_dashboard(waba_id)
+        response = self.get_conversations_by_category(
+            {
+                "project": self.project.uuid,
+                "waba_id": waba_id,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {"templates": {"SERVICE": 10, "MARKETING": 20}},
+        )

@@ -232,3 +232,10 @@ class TemplatesMetricsAnalyticsBodySerializer(serializers.Serializer):
             )
 
         return value
+
+
+class ConversationsByCategoryQueryParamsSerializer(serializers.Serializer):
+    project = serializers.UUIDField(required=True, allow_null=False)
+    waba_id = serializers.CharField(required=True, allow_null=False)
+    start_date = serializers.DateField(required=True, allow_null=False)
+    end_date = serializers.DateField(required=True, allow_null=False)

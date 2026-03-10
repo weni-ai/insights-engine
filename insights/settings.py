@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "insights.metrics.conversations",
     "insights.reports",
     "insights.core",
+    "insights.feedback",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -79,6 +80,7 @@ if ADMIN_ENABLED is True:
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -87,6 +89,12 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+SESSION_COOKIE_SAMESITE = "Lax"
 
 ROOT_URLCONF = "insights.urls"
 
@@ -234,12 +242,38 @@ if OIDC_ENABLED:
         "OIDC_DRF_AUTH_BACKEND",
         default="insights.authentication.authentication.WeniOIDCAuthenticationBackend",
     )
+    OIDC_OP_LOGOUT_ENDPOINT = env.str("OIDC_OP_LOGOUT_ENDPOINT", default="")
 
     OIDC_RP_SCOPES = env.str("OIDC_RP_SCOPES", default="openid email")
 
     # TODO: Set admin permission to Chats client and remove the follow variables
     OIDC_ADMIN_CLIENT_ID = env.str("OIDC_ADMIN_CLIENT_ID")
     OIDC_ADMIN_CLIENT_SECRET = env.str("OIDC_ADMIN_CLIENT_SECRET")
+    OIDC_AUTH_REQUEST_EXTRA_PARAMS = {
+        "prompt": "login",
+    }
+    LOGIN_URL = "oidc_authentication_init"
+    LOGIN_REDIRECT_URL = "/admin/"
+    LOGOUT_REDIRECT_URL = "/admin/"
+    OIDC_OP_LOGOUT_URL_METHOD = "insights.authentication.admin_sso.get_oidc_logout_url"
+
+    # Admin SSO: Keycloak login via button on admin login page.
+    # Only users with is_staff=True (set manually) can log in.
+    if ADMIN_ENABLED:
+        AUTHENTICATION_BACKENDS = (
+            "django.contrib.auth.backends.ModelBackend",
+            "insights.authentication.admin_sso.AdminOIDCAuthenticationBackend",
+        )
+        LOGIN_URL = "/admin/login/"
+        LOGIN_REDIRECT_URL = "/admin/"
+        LOGOUT_REDIRECT_URL = "/admin/"
+        LOGIN_REDIRECT_URL_FAILURE = "/admin/login/"
+        OIDC_REDIRECT_ALLOWED_HOSTS = env.list(
+            "OIDC_REDIRECT_ALLOWED_HOSTS", default=[]
+        )
+        base_dirs = list(TEMPLATES[0].get("DIRS", []))
+        base_dirs.append(os.path.join(BASE_DIR, "insights", "templates"))
+        TEMPLATES[0]["DIRS"] = base_dirs
 
 OIDC_CACHE_TOKEN = env.bool(
     "OIDC_CACHE_TOKEN", default=False
@@ -431,6 +465,9 @@ CONVERSATIONS_DASHBOARD_EXCLUDE_FROM_LIST_IF_INDEXER_IS_NOT_ACTIVE = env.bool(
 CONVERSATIONS_DASHBOARD_USE_SILVER_TABLES = env.bool(
     "CONVERSATIONS_DASHBOARD_USE_SILVER_TABLES", default=False
 )
+CONVERSATIONS_DASHBOARD_NATIVE_CSAT_AGENT_UUID = env.str(
+    "CONVERSATIONS_DASHBOARD_NATIVE_CSAT_AGENT_UUID", default=""
+)
 
 # Sales Funnel
 SALES_FUNNEL_EVENTS_MAX_PAGES = env.int("SALES_FUNNEL_EVENTS_MAX_PAGES", default=200)
@@ -454,3 +491,19 @@ NEXUS_CONVERSATIONS_API_BASE_URL = env.str(
     "NEXUS_CONVERSATIONS_API_BASE_URL", default=""
 )
 NEXUS_CONVERSATIONS_API_TOKEN = env.str("NEXUS_CONVERSATIONS_API_TOKEN", default="")
+
+# Meta Graph API
+META_GRAPH_API_BASE_HOST_URL = env.str(
+    "META_GRAPH_API_BASE_HOST_URL", default="https://graph.facebook.com"
+)
+META_GRAPH_API_VERSION = env.str("META_GRAPH_API_VERSION", default="v24.0")
+
+# Marketing messages status
+WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS = env.int(
+    "WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS", default=15 * 60
+)
+
+# Internal domains
+VTEX_INTERNAL_DOMAINS = env.list(
+    "VTEX_INTERNAL_DOMAINS", default=["vtex.com", "weni.ai"]
+)

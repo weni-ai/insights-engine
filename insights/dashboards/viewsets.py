@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from django.conf import settings
 from django.db.models import Q
@@ -21,6 +22,9 @@ from insights.dashboards.usecases.flows_dashboard_creation import (
 )
 from insights.dashboards.utils import DefaultPagination
 from insights.human_support.services import HumanSupportDashboardService
+from insights.metrics.meta.tasks import (
+    check_dashboards_marketing_messages_status_for_project,
+)
 from insights.projects.models import Project
 from insights.projects.tasks import check_nexus_multi_agents_status
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
@@ -60,10 +64,14 @@ class DashboardViewSet(
             "monitoring_list_status",
             "monitoring_average_time_metrics",
             "monitoring_peaks_in_human_service",
+            "monitoring_queue_volume",
+            "monitoring_tags_volume",
             "monitoring_csat_totals",
             "finished",
             "analysis_finished_rooms_status",
             "analysis_peaks_in_human_service",
+            "analysis_queue_volume",
+            "analysis_tags_volume",
         ]:
             return [
                 IsAuthenticated(),
@@ -96,6 +104,19 @@ class DashboardViewSet(
 
         return queryset
 
+    def _check_marketing_messages_status(self, project_uuid: UUID):
+        should_check_marketing_messages_status = Dashboard.objects.filter(
+            Q(project__uuid=project_uuid)
+            & Q(config__is_whatsapp_integration=True)
+            & (
+                Q(config__is_mm_lite_active=False)
+                | Q(config__is_mm_lite_active__isnull=True)
+            ),
+        ).exists()
+
+        if should_check_marketing_messages_status:
+            check_dashboards_marketing_messages_status_for_project.delay(project_uuid)
+
     def list(self, request, *args, **kwargs):
         if project_uuid := request.query_params.get("project"):
             is_nexus_multi_agents_active = (
@@ -106,6 +127,8 @@ class DashboardViewSet(
 
             if not is_nexus_multi_agents_active:
                 check_nexus_multi_agents_status.delay(project_uuid)
+
+            self._check_marketing_messages_status(project_uuid)
 
         return super().list(request, *args, **kwargs)
 
@@ -415,6 +438,30 @@ class DashboardViewSet(
     @action(
         detail=True,
         methods=["get"],
+        url_path="monitoring/queue_volume",
+    )
+    def monitoring_queue_volume(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_volume_by_queue(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/tags_volume",
+    )
+    def monitoring_tags_volume(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_volume_by_tag(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
         url_path="finished",
     )
     def finished(self, request, pk=None):
@@ -447,6 +494,30 @@ class DashboardViewSet(
         filters = get_filters_from_query_params(request.query_params)
         results = service.get_analysis_peaks_in_human_service(filters=filters)
         return Response({"results": results}, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/queue_volume",
+    )
+    def analysis_queue_volume(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_analysis_volume_by_queue(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/tags_volume",
+    )
+    def analysis_tags_volume(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_analysis_volume_by_tag(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
 
     @action(
         detail=True,

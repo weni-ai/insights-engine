@@ -4,6 +4,7 @@ from .views import (
     DetailedMonitoringOnGoingView,
     DetailedMonitoringAwaitingView,
     DetailedMonitoringAgentsView,
+    DetailedMonitoringAgentsTotalsView,
     DetailedMonitoringStatusView,
     AnalysisDetailedMonitoringStatusView,
 )
@@ -20,6 +21,10 @@ urlpatterns = [
     path(
         "detailed-monitoring/agents/",
         DetailedMonitoringAgentsView.as_view(),
+    ),
+    path(
+        "detailed-monitoring/agents_totals/",
+        DetailedMonitoringAgentsTotalsView.as_view(),
     ),
     path(
         "detailed-monitoring/status/",

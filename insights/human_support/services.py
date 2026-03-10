@@ -459,6 +459,8 @@ class HumanSupportDashboardService:
             "queues": ("queue", normalized),
             "tags": ("tag", normalized),
             "agent": ("agent", normalized),
+            "status": ("status", filters),
+            "custom_status": ("custom_status", filters),
             "start_date": ("start_date", normalized),
             "end_date": ("end_date", normalized),
             "user_request": ("user_request", filters),
@@ -466,7 +468,7 @@ class HumanSupportDashboardService:
             "offset": ("offset", filters),
         }
 
-        list_filters = {"sectors", "queues", "tags"}
+        list_filters = {"sectors", "queues", "tags", "status", "custom_status"}
         date_filters = {"start_date", "end_date"}
 
         params: dict = {}
@@ -486,9 +488,9 @@ class HumanSupportDashboardService:
                 params[param] = value
                 continue
 
-            if isinstance(value, list) and len(value) == 1:
-                params[param] = [str(value[0])]
-            elif isinstance(filter_value, str):
+            if isinstance(value, list):
+                params[param] = [str(v) for v in value]
+            elif isinstance(value, str):
                 params[param] = [str(value)]
 
         if filters.get("ordering") is not None:
@@ -578,6 +580,10 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
+    def get_detailed_monitoring_agents_totals(self, filters: dict = {}) -> dict:
+        params = self._get_detailed_monitoring_agents_filters(filters)
+        return AgentsRESTClient(self.project).agents_totals(params)
+
     def get_detailed_monitoring_status(self, filters: dict = {}) -> dict:
         ordering_fields = {"agent", "-agent"}
         normalized = self._normalize_filters(filters)
@@ -649,8 +655,10 @@ class HumanSupportDashboardService:
 
         params: dict = {}
 
+        if filters.get("user_request") is not None:
+            params["user_request"] = filters.get("user_request")
+
         mapping = {
-            "user_request": ("user_request", str),
             "start_date": ("start_date", str),
             "end_date": ("end_date", str),
             "sectors": ("sector", list),
@@ -950,3 +958,249 @@ class HumanSupportDashboardService:
             ratings_data[rating]["full_value"] = data.get("full_value")
 
         return ratings_data
+
+    def _build_volume_by_queue_base_filters(self, normalized: dict) -> dict:
+        """
+        Builds the base filters for volume queries by queue.
+        """
+        base: dict = {
+            "project": str(self.project.uuid),
+        }
+
+        volume_filters_mapping = {
+            "sectors": ("sector__in", list),
+            "queues": ("queue__in", list),
+            "tags": ("tags__in", list),
+        }
+
+        for filter_key, filter_value in volume_filters_mapping.items():
+            if not (value := normalized.get(filter_key)):
+                continue
+
+            param, param_type = filter_value
+
+            if param_type == list and not isinstance(value, list):
+                value = [value]
+
+            base[param] = value
+
+        return base
+
+    def get_volume_by_queue(self, filters: dict | None = None) -> dict:
+        """
+        Returns the volume (number of rooms) by queue, grouped by sector.
+        Used for real-time monitoring (today's data).
+
+        Parameters:
+            filters: {
+                "chip_name": "waiting" | "ongoing" | "closed",
+                "limit": int (default 5),
+                "queues": list[uuid] | uuid,
+            }
+
+        Returns:
+            {
+                "next": cursor | null,
+                "previous": cursor | null,
+                "count": int (total of queues),
+                "results": [
+                    {
+                        "sector_name": str,
+                        "queues": [
+                            {"queue_name": str, "value": int},
+                            ...
+                        ]
+                    },
+                    ...
+                ]
+            }
+        """
+        normalized = self._normalize_filters(filters)
+
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+        today = dj_timezone.now().date()
+        start_of_day = project_tz.localize(
+            datetime.combine(today, datetime.min.time())
+        ).isoformat()
+        now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base = self._build_volume_by_queue_base_filters(normalized)
+
+        chip_name = filters.get("chip_name") if filters else None
+        limit = filters.get("limit", 5) if filters else 5
+
+        if chip_name == "waiting":
+            base["is_active"] = True
+            base["user_id__isnull"] = True
+        elif chip_name == "ongoing":
+            base["is_active"] = True
+            base["user_id__isnull"] = False
+        elif chip_name == "closed":
+            base["is_active"] = False
+            base["ended_at__gte"] = start_of_day
+            base["ended_at__lte"] = now_iso
+
+        result = RoomsQueryExecutor.execute(
+            filters=base,
+            operation="group_by_queue_count",
+            parser=lambda x: x,
+            project=self.project,
+            query_kwargs={"limit": limit},
+        )
+
+        return result
+
+    def get_analysis_volume_by_queue(self, filters: dict | None = None) -> dict:
+        normalized = self._normalize_filters(filters)
+
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+
+        if normalized.get("start_date") and normalized.get("end_date"):
+            start_datetime = normalized["start_date"].isoformat()
+            end_datetime = normalized["end_date"].isoformat()
+        else:
+            today = dj_timezone.now().date()
+            start_datetime = project_tz.localize(
+                datetime.combine(today, datetime.min.time())
+            ).isoformat()
+            end_datetime = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base = self._build_volume_by_queue_base_filters(normalized)
+
+        chip_name = filters.get("chip_name") if filters else None
+        limit = filters.get("limit", 5) if filters else 5
+
+        if chip_name == "waiting":
+            base["is_active"] = True
+            base["user_id__isnull"] = True
+            base["created_on__gte"] = start_datetime
+            base["created_on__lte"] = end_datetime
+        elif chip_name == "ongoing":
+            base["is_active"] = True
+            base["user_id__isnull"] = False
+            base["created_on__gte"] = start_datetime
+            base["created_on__lte"] = end_datetime
+        elif chip_name == "closed":
+            base["is_active"] = False
+            base["ended_at__gte"] = start_datetime
+            base["ended_at__lte"] = end_datetime
+        else:
+            base["created_on__gte"] = start_datetime
+            base["created_on__lte"] = end_datetime
+
+        result = RoomsQueryExecutor.execute(
+            filters=base,
+            operation="group_by_queue_count",
+            parser=lambda x: x,
+            project=self.project,
+            query_kwargs={"limit": limit},
+        )
+
+        return result
+
+    def _build_volume_by_tag_base_filters(self, normalized: dict) -> dict:
+        """
+        Builds base filters for volume by tag queries.
+        """
+        base: dict = {
+            "project": str(self.project.uuid),
+        }
+
+        volume_filters_mapping = {
+            "sectors": ("sector__in", list),
+            "queues": ("queue__in", list),
+            "tags": ("tags__in", list),
+        }
+
+        for filter_key, filter_value in volume_filters_mapping.items():
+            if not (value := normalized.get(filter_key)):
+                continue
+
+            param, param_type = filter_value
+
+            if param_type == list and not isinstance(value, list):
+                value = [value]
+
+            base[param] = value
+
+        return base
+
+    def get_volume_by_tag(self, filters: dict | None = None) -> dict:
+        normalized = self._normalize_filters(filters)
+
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+        today = dj_timezone.now().date()
+        start_of_day = project_tz.localize(
+            datetime.combine(today, datetime.min.time())
+        ).isoformat()
+        now_iso = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base = self._build_volume_by_tag_base_filters(normalized)
+
+        chip_name = filters.get("chip_name") if filters else None
+        limit = filters.get("limit", 5) if filters else 5
+
+        if chip_name == "ongoing":
+            base["is_active"] = True
+            base["user_id__isnull"] = False
+        elif chip_name == "closed":
+            base["is_active"] = False
+            base["ended_at__gte"] = start_of_day
+            base["ended_at__lte"] = now_iso
+
+        result = RoomsQueryExecutor.execute(
+            filters=base,
+            operation="group_by_tag_count",
+            parser=lambda x: x,
+            project=self.project,
+            query_kwargs={"limit": limit},
+        )
+
+        return result
+
+    def get_analysis_volume_by_tag(self, filters: dict | None = None) -> dict:
+        normalized = self._normalize_filters(filters)
+
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+
+        if normalized.get("start_date") and normalized.get("end_date"):
+            start_datetime = normalized["start_date"].isoformat()
+            end_datetime = normalized["end_date"].isoformat()
+        else:
+            today = dj_timezone.now().date()
+            start_datetime = project_tz.localize(
+                datetime.combine(today, datetime.min.time())
+            ).isoformat()
+            end_datetime = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base = self._build_volume_by_tag_base_filters(normalized)
+
+        chip_name = filters.get("chip_name") if filters else None
+        limit = filters.get("limit", 5) if filters else 5
+
+        if chip_name == "ongoing":
+            base["is_active"] = True
+            base["user_id__isnull"] = False
+            base["created_on__gte"] = start_datetime
+            base["created_on__lte"] = end_datetime
+        elif chip_name == "closed":
+            base["is_active"] = False
+            base["ended_at__gte"] = start_datetime
+            base["ended_at__lte"] = end_datetime
+        else:
+            base["created_on__gte"] = start_datetime
+            base["created_on__lte"] = end_datetime
+
+        result = RoomsQueryExecutor.execute(
+            filters=base,
+            operation="group_by_tag_count",
+            parser=lambda x: x,
+            project=self.project,
+            query_kwargs={"limit": limit},
+        )
+
+        return result

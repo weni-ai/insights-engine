@@ -6,7 +6,10 @@ from unittest.mock import patch
 
 from insights.authentication.services.jwt_service import JWTService
 from insights.authentication.authentication import User
-from insights.authentication.tests.decorators import with_project_auth
+from insights.authentication.tests.decorators import (
+    with_internal_auth,
+    with_project_auth,
+)
 from insights.projects.models import Project
 
 
@@ -129,7 +132,7 @@ class TestInternalVTEXOrdersViewAsUnauthenticatedUser(BaseTestInternalVTEXOrders
 
 @override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
 @override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)
-class TestInternalVTEXOrdersViewAsAuthenticatedUser(BaseTestInternalVTEXOrdersView):
+class TestInternalVTEXOrdersViewWithJWTAuthentication(BaseTestInternalVTEXOrdersView):
     def setUp(self):
         self.project = Project.objects.create(name="Test Project")
         token = JWTService().generate_jwt_token(self.project.uuid)
@@ -191,3 +194,47 @@ class TestInternalVTEXOrdersViewAsAuthenticatedUser(BaseTestInternalVTEXOrdersVi
         response = self.get_metrics_from_utm_source(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestInternalVTEXOrdersViewWithInternalAuthentication(
+    BaseTestInternalVTEXOrdersView
+):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.user = User.objects.create(email="test@test.com")
+        self.client.force_authenticate(self.user)
+
+    def test_cannot_get_metrics_from_utm_source_without_permission(self):
+        response = self.get_metrics_from_utm_source({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_internal_auth
+    @patch(
+        "insights.metrics.vtex.services.orders_service.OrdersService.get_metrics_from_utm_source"
+    )
+    def test_can_get_metrics_from_utm_source_with_internal_authentication(
+        self, mock_get_metrics_from_utm_source
+    ):
+        mock_get_metrics_from_utm_source.return_value = {
+            "revenue": {
+                "value": 50.21,
+                "currency_code": "BRL",
+                "increase_percentage": 10,
+            },
+            "orders_placed": {"value": 10, "increase_percentage": 10},
+        }
+
+        query_params = {
+            "utm_source": "weniabandonedcart",
+            "start_date": "2023-09-01",
+            "end_date": "2023-09-04",
+            "project_uuid": self.project.uuid,
+        }
+        response = self.get_metrics_from_utm_source(query_params)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("revenue", response.data)
+        self.assertEqual(response.data["revenue"]["value"], 50.21)
+        self.assertIn("orders_placed", response.data)
