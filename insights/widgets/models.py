@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 
 from insights.shared.models import BaseModel, ConfigurableModel
 
@@ -24,7 +25,11 @@ class BaseWidget(BaseModel, ConfigurableModel):
 
 class Widget(BaseWidget):
     dashboard = models.ForeignKey(
-        "dashboards.Dashboard", related_name="widgets", on_delete=models.CASCADE
+        "dashboards.Dashboard",
+        related_name="widgets",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
     position = models.JSONField("Widget position")
     parent = models.ForeignKey(
@@ -34,6 +39,17 @@ class Widget(BaseWidget):
         null=True,
         blank=True,
     )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (Q(parent__isnull=True) & Q(dashboard__isnull=False))
+                    | (Q(parent__isnull=False) & Q(dashboard__isnull=True))
+                ),
+                name="widget_parent_xor_dashboard",
+            ),
+        ]
 
     def __str__(self):
         return self.name

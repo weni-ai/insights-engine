@@ -2,6 +2,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from django.db.models import QuerySet
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.projects.models import ProjectAuth
@@ -94,4 +95,18 @@ class WidgetViewSet(
         }
         report.save()
 
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="children", url_name="list-children")
+    def list_children(self, request, pk=None):
+        widget = self.get_object()
+        children = widget.children.all()
+
+        page = self.paginate_queryset(children)
+
+        if page is not None:
+            serializer = WidgetSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = WidgetSerializer(children, many=True)
         return Response(serializer.data)

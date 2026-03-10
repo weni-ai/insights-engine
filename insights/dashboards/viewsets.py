@@ -180,10 +180,7 @@ class DashboardViewSet(
     def list_widgets(self, request, pk=None):
         dashboard = self.get_object()
 
-        # We only want to list the parent widgets, not the children
-        widgets = Widget.objects.filter(
-            dashboard=dashboard, parent__isnull=True
-        ).order_by("created_on")
+        widgets = Widget.objects.filter(dashboard=dashboard).order_by("created_on")
 
         paginator = DefaultPagination()
         result_page = paginator.paginate_queryset(widgets, request)
