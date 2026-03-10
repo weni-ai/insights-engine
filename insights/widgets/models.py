@@ -27,6 +27,13 @@ class Widget(BaseWidget):
         "dashboards.Dashboard", related_name="widgets", on_delete=models.CASCADE
     )
     position = models.JSONField("Widget position")
+    parent = models.ForeignKey(
+        "widgets.Widget",
+        related_name="children",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
 
     def __str__(self):
         return self.name
