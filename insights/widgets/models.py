@@ -8,10 +8,10 @@ from insights.shared.models import BaseModel, ConfigurableModel
 class BaseWidget(BaseModel, ConfigurableModel):
     name = models.CharField("Name", max_length=255, null=False, blank=True, default="")
     type = models.CharField(
-        "Widget Type", max_length=50, null=False, blank=True, default=None
+        "Widget Type", max_length=50, null=True, blank=True, default=None
     )
     source = models.CharField(
-        "Data Source", max_length=50, null=False, blank=True, default=None
+        "Data Source", max_length=50, null=True, blank=True, default=None
     )
     # config needs to be required in widget
     config = models.JSONField("Widget Configuration", blank=True, default=dict)
