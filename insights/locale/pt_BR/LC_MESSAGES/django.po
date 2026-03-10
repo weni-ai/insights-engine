@@ -836,12 +836,12 @@ msgstr[1] ""
 
 #: insights/templates/admin/login.html:55
 msgid "Forgotten your password or username?"
-msgstr ""
+msgstr "Esqueceu sua senha ou username?"
 
 #: insights/templates/admin/login.html:59
 msgid "Log in"
-msgstr ""
+msgstr "Entrar"
 
 #: insights/templates/admin/login.html:64
 msgid "Login with Keycloak"
-msgstr ""
+msgstr "Entrar com Keycloak"
