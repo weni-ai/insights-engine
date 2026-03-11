@@ -74,7 +74,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         Convert datetime to ISO string if needed for JSON serialization
         """
-        return date_value.isoformat() if isinstance(date_value, datetime) else date_value
+        return (
+            date_value.isoformat() if isinstance(date_value, datetime) else date_value
+        )
 
     def get_topics(self, project_uuid: UUID) -> dict:
         """
@@ -804,3 +806,88 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         return items
+
+    def get_event_count(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get event count from Datalake.
+        """
+
+        return self.datalake_service.get_event_count(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+    def get_events_values_sum(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values sum from Datalake.
+        """
+
+        return self.datalake_service.get_events_values_sum(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+    def get_events_values_average(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values average from Datalake.
+        """
+
+        return self.datalake_service.get_events_values_average(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+    def get_events_highest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events highest value from Datalake.
+        """
+
+        return self.datalake_service.get_events_highest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+    def get_events_lowest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events lowest value from Datalake.
+        """
+
+        return self.datalake_service.get_events_lowest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
