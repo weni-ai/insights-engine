@@ -486,6 +486,20 @@ INSIGHTS_SHOW_HUMAN_SUPPORT_DASHBOARD_V1_FEATURE_FLAG_KEY = env.str(
 JWT_SECRET_KEY = env.str("JWT_SECRET_KEY", default="").replace("\\n", "\n")
 JWT_PUBLIC_KEY = env.str("JWT_PUBLIC_KEY", default="").replace("\\n", "\n")
 
+# Conversations API
+NEXUS_CONVERSATIONS_API_BASE_URL = env.str(
+    "NEXUS_CONVERSATIONS_API_BASE_URL", default=""
+)
+NEXUS_CONVERSATIONS_API_TOKEN = env.str("NEXUS_CONVERSATIONS_API_TOKEN", default="")
+NEXUS_CONVERSATIONS_CACHE_TTL = env.int("NEXUS_CONVERSATIONS_CACHE_TTL", default=60)
+USE_NEXUS_CONVERSATIONS_API_FEATURE_FLAG_KEY = env.str(
+    "USE_NEXUS_CONVERSATIONS_API_FEATURE_FLAG_KEY",
+    default="insightsUseNexusConversationsApi",
+)
+FORCE_USE_NEXUS_CONVERSATIONS_API = env.bool(
+    "FORCE_USE_NEXUS_CONVERSATIONS_API", default=False
+)
+
 # Meta Graph API
 META_GRAPH_API_BASE_HOST_URL = env.str(
     "META_GRAPH_API_BASE_HOST_URL", default="https://graph.facebook.com"
