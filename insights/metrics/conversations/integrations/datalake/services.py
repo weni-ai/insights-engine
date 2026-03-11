@@ -134,6 +134,74 @@ class BaseConversationsMetricsService(ABC):
         Get crosstab data from Datalake.
         """
 
+    @abstractmethod
+    def get_event_count(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> int:
+        """
+        Get event count from Datalake.
+        """
+
+    @abstractmethod
+    def get_events_values_sum(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values sum from Datalake.
+        """
+
+    @abstractmethod
+    def get_events_values_average(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values average from Datalake.
+        """
+
+    @abstractmethod
+    def get_events_highest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events highest value from Datalake.
+        """
+
+    @abstractmethod
+    def get_events_lowest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events lowest value from Datalake.
+        """
+
 
 class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
     """
