@@ -1,3 +1,46 @@
+# 1.11.1
+# Fix
+  - ensure project_uuid is always a string in InternalVTEXOrdersViewSet
+  - authentication classes orders when using JWTAuthentication alongside OIDC
+
+# 1.11.0
+# Add
+  - Internal project CSAT endpoint
+  - Adding internal authentication to conversation totals and VTEX orders
+
+# 1.10.1
+# Add
+  - restrict delete permission for SurveyAdmin
+
+# 1.10.0
+# Add
+  - admin SSO functionality with Keycloak login/logout views.
+  - settings to include OIDC parameters and session cookie configurations.
+  - URL patterns to support OIDC routes for admin.
+  - custom admin login template to include Keycloak login option.
+
+# 1.9.0
+# Add
+  - data volume for queue and tags
+  - WhiteNoise middleware for static file serving
+  - unit tests for HumanSupportDashboardService to ensure functionality and reliability
+
+# 1.8.3
+# Fix
+  - Handle empty answers in feedback service and update serializer to allow blank answers
+
+# 1.8.2
+# Add
+  - Chips and filters
+
+# 1.8.1
+# Add
+  - is_staff field to User model and create migration
+
+# 1.8.0
+# Add
+  - User feedback for the conversational dashboard
+
 # 1.7.1
 # Add
   - Getting user request for analysis 
