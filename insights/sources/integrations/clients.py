@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
+from functools import cached_property
 import logging
 from uuid import UUID
 import requests
 from requests.models import Response
 import json
+from weni.feature_flags.shortcuts import is_feature_active_for_attributes
+from sentry_sdk import capture_exception
 
 
 from django.conf import settings
@@ -147,18 +150,64 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
     """
 
     def __init__(self):
-        self.base_url = settings.NEXUS_CONVERSATIONS_API_BASE_URL
-        self.path_prefix = settings.NEXUS_CONVERSATIONS_API_PATH_PREFIX
-        self.headers = {
-            "Authorization": f"Bearer {settings.NEXUS_CONVERSATIONS_API_TOKEN}",
-        }
+        self.feature_flag_key = settings.USE_NEXUS_CONVERSATIONS_API_FEATURE_FLAG_KEY
+
+        self.nexus_conversations_base_url = settings.NEXUS_CONVERSATIONS_API_BASE_URL
+        self.nexus_conversations_topics_path_prefix = "api/v1/projects/"
+
+        self.nexus_base_url = settings.NEXUS_BASE_URL
+        self.nexus_topics_path_prefix = ""
         self.timeout = 60
+
+    @cached_property
+    def use_nexus_conversations_api(self) -> bool:
+        if settings.FORCE_USE_NEXUS_CONVERSATIONS_API:
+            return True
+
+        try:
+            is_nexus_conversations_feature_flag_active = (
+                is_feature_active_for_attributes(
+                    key=self.feature_flag_key,
+                    attributes={},
+                )
+            )
+        except Exception as e:
+            logger.error(f"Error checking if Nexus Conversations API is active: {e}")
+            capture_exception(e)
+            return False
+
+        return is_nexus_conversations_feature_flag_active
+
+    @property
+    def base_url(self) -> str:
+        if self.use_nexus_conversations_api:
+            return self.nexus_conversations_base_url
+
+        return self.nexus_base_url
+
+    @property
+    def topics_path_prefix(self) -> str:
+        if self.use_nexus_conversations_api:
+            return self.nexus_conversations_topics_path_prefix
+
+        return self.nexus_topics_path_prefix
+
+    @property
+    def headers(self) -> dict:
+        if self.use_nexus_conversations_api:
+            return {
+                "Authorization": f"Bearer {settings.NEXUS_CONVERSATIONS_API_TOKEN}",
+            }
+
+        return {
+            "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
+        }
 
     def get_topics(self, project_uuid: UUID) -> Response:
         """
         Get conversation topics for a project.
         """
-        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/"
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -167,7 +216,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Get subtopics for a topic.
         """
 
-        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/{topic_uuid}/subtopics/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -176,7 +225,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Create a topic for a project.
         """
 
-        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/"
 
         body = {
             "name": name,
@@ -194,7 +243,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Create a subtopic for a project.
         """
 
-        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/{topic_uuid}/subtopics/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         body = {
             "name": name,
@@ -210,7 +259,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Delete a topic for a project.
         """
 
-        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/{topic_uuid}/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/{topic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -221,6 +270,6 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         Delete a subtopic for a project.
         """
 
-        url = f"{self.base_url}/{self.path_prefix}/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
