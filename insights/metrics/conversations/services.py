@@ -4,6 +4,7 @@ from uuid import UUID
 from datetime import datetime
 import json
 
+from django.conf import settings
 from sentry_sdk import capture_exception, capture_message
 from rest_framework import status
 
@@ -64,13 +65,13 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         datalake_service: BaseConversationsMetricsService = DatalakeConversationsMetricsService(),
         nexus_conversations_client: BaseNexusConversationsAPIClient = NexusConversationsAPIClient(),
         cache_client: CacheClient = CacheClient(),
-        nexus_cache_ttl: int = 60,
+        nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
     ):
         self.datalake_service = datalake_service
         self.nexus_conversations_client = nexus_conversations_client
         self.cache_client = cache_client
-        self.nexus_cache_ttl = nexus_cache_ttl
+        self.nexus_conversations_cache_ttl = nexus_conversations_cache_ttl
         self.flowruns_query_executor = flowruns_query_executor
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
