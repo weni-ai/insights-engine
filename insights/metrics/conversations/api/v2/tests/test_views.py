@@ -11,16 +11,9 @@ from insights.metrics.conversations.enums import NpsMetricsType
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
 )
-from insights.metrics.conversations.services import (
-    ConversationsMetricsService,
-)
 from insights.projects.models import Project
-from insights.sources.integrations.clients import BaseNexusClient
 from insights.users.models.user import User
 from insights.widgets.models import Widget
-from insights.sources.flowruns.tests.mock_query_executor import (
-    MockFlowRunsQueryExecutor,
-)
 
 
 class BaseTestConversationsMetricsViewSetV2(APITestCase):
@@ -28,16 +21,14 @@ class BaseTestConversationsMetricsViewSetV2(APITestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.original_service = ConversationsMetricsViewSetV2.service
-        ConversationsMetricsViewSetV2.service = ConversationsMetricsService(
-            datalake_service=MagicMock(spec=BaseConversationsMetricsService),
-            nexus_client=MagicMock(spec=BaseNexusClient),
-            flowruns_query_executor=MockFlowRunsQueryExecutor,
+        ConversationsMetricsViewSetV2._service = MagicMock(
+            spec=BaseConversationsMetricsService
         )
 
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
-        ConversationsMetricsViewSetV2.service = cls.original_service
+        ConversationsMetricsViewSetV2._service = cls.original_service
 
     def get_nps_metrics(self, query_params: dict) -> Response:
         url = "/v2/metrics/conversations/nps/"

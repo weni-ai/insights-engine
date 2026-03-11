@@ -19,8 +19,15 @@ class ConversationsMetricsViewSetV2(ConversationsMetricsResponseMixin, GenericVi
     ViewSet to get conversations metrics
     """
 
-    service = ConversationsMetricsService()
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+    _service = None
+
+    @property
+    def service(self) -> ConversationsMetricsService:
+        if self._service is None:
+            self._service = ConversationsMetricsService()
+
+        return self._service
 
     @action(
         detail=False,
