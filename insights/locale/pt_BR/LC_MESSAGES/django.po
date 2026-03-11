@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-06 14:51+0000\n"
+"POT-Creation-Date: 2026-03-10 20:46+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Kallil Souza dos Santos <kallilsouza@hotmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -51,13 +51,120 @@ msgstr "Centro de ajuda"
 msgid "Cannot set a default dashboard as non-default"
 msgstr "Não é possível definir um dashboard padrão como não padrão"
 
+#: insights/feedback/models.py:12
+msgid "Start"
+msgstr "Início"
+
+#: insights/feedback/models.py:13
+msgid "End"
+msgstr "Fim"
+
+#: insights/feedback/models.py:16 insights/feedback/models.py:29
+msgid "Survey"
+msgstr "Pesquisa"
+
+#: insights/feedback/models.py:17
+msgid "Surveys"
+msgstr "Pesquisas"
+
+#: insights/feedback/models.py:33
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: insights/feedback/models.py:39
+msgid "Dashboard type"
+msgstr "Tipo de dashboard"
+
+#: insights/feedback/models.py:43
+msgid "User"
+msgstr "Usuário"
+
+#: insights/feedback/models.py:50 insights/feedback/models.py:60
+msgid "Feedback"
+msgstr "Feedback"
+
+#: insights/feedback/models.py:51
+msgid "Feedbacks"
+msgstr "Feedbacks"
+
+#: insights/feedback/models.py:64
+msgid "Reference"
+msgstr "Referência"
+
+#: insights/feedback/models.py:68
+msgid "Answer"
+msgstr "Resposta"
+
+#: insights/feedback/models.py:71
+msgid "Answer type"
+msgstr "Tipo de resposta"
+
+#: insights/feedback/models.py:77
+msgid "Feedback answer"
+msgstr "Resposta de feedback"
+
+#: insights/feedback/models.py:78
+msgid "Feedback answers"
+msgstr "Respostas de feedback"
+
+#: insights/feedback/serializers/base.py:10
+msgid "Invalid answer. Must be a string number between 1 and 5."
+msgstr "Resposta inválida. Deve ser um número entre 1 e 5."
+
+#: insights/feedback/serializers/base.py:33
+#, python-brace-format
+msgid "Invalid answer. Must be a string less than {max_length} characters."
+msgstr "Resposta inválida. Deve ser uma string menor que {max_length} caracteres."
+
+#: insights/feedback/services.py:88
+msgid "Survey is not active"
+msgstr "Pesquisa não está ativa"
+
+#: insights/feedback/services.py:91
+msgid "User has already answered the survey"
+msgstr "O usuário já respondeu a pesquisa"
+
+#: insights/feedback/validators.py:33
+msgid "Reference is required"
+msgstr "Referência é obrigatória"
+
+#: insights/feedback/validators.py:40
+msgid "Reference must be unique"
+msgstr "Referência deve ser única"
+
+#: insights/feedback/validators.py:52
+#, python-brace-format
+msgid "Invalid dashboard type: {dashboard_type}"
+msgstr "Tipo de dashboard inválido: {dashboard_type}"
+
+#: insights/feedback/views.py:43 insights/feedback/views.py:77
+msgid "Dashboard not found"
+msgstr "Dashboard não encontrado"
+
+#: insights/feedback/views.py:52
+msgid "User does not have permission to access this dashboard's survey status"
+msgstr "O usuário não tem permissão para acessar o status da pesquisa deste dashboard"
+
+#: insights/feedback/views.py:84
+msgid "User does not have permission to access this dashboard"
+msgstr "O usuário não tem permissão para acessar este dashboard"
+
+#: insights/feedback/views.py:94
+msgid "Survey not found"
+msgstr "Pesquisa não encontrada"
+
+#: insights/feedback/views.py:115
+#, python-brace-format
+msgid "An unexpected error occurred. Event ID: {event_id}"
+msgstr "Ocorreu um erro inesperado. ID do evento: {event_id}"
+
 #: insights/internals/api/users/serializers.py:14
 msgid "User does not exist"
 msgstr "Usuário não existe"
 
 #: insights/metrics/conversations/integrations/datalake/services.py:346
-#: insights/metrics/conversations/reports/services.py:979
-#: insights/metrics/conversations/reports/services.py:1156
+#: insights/metrics/conversations/reports/services.py:982
+#: insights/metrics/conversations/reports/services.py:1159
 msgid "Unclassified"
 msgstr "Não classificada"
 
@@ -67,10 +174,12 @@ msgid "Conversations dashboard report"
 msgstr "Relatório de dashboard de conversas"
 
 #: insights/metrics/conversations/reports/serializers.py:36
+#: insights/metrics/conversations/serializers.py:40
 msgid "Project not found"
 msgstr "Projeto não encontrado"
 
 #: insights/metrics/conversations/reports/serializers.py:73
+#: insights/metrics/conversations/validators.py:21
 msgid "Start date must be before end date"
 msgstr "A data de início deve ser antes da data de fim"
 
@@ -118,80 +227,80 @@ msgstr "Widget NPS Humano não encontrado ou não está configurado corretamente
 msgid "Conversations dashboard not found"
 msgstr "Dashboard de conversas não encontrado"
 
-#: insights/metrics/conversations/reports/services.py:970
+#: insights/metrics/conversations/reports/services.py:973
 msgid "Resolutions"
 msgstr "Resolução"
 
-#: insights/metrics/conversations/reports/services.py:972
+#: insights/metrics/conversations/reports/services.py:975
 msgid "Resolution"
 msgstr "Resoluções"
 
-#: insights/metrics/conversations/reports/services.py:973
-#: insights/metrics/conversations/reports/services.py:1153
-#: insights/metrics/conversations/reports/services.py:1221
-#: insights/metrics/conversations/reports/services.py:1280
-#: insights/metrics/conversations/reports/services.py:1351
-#: insights/metrics/conversations/reports/services.py:1420
-#: insights/metrics/conversations/reports/services.py:1482
+#: insights/metrics/conversations/reports/services.py:976
+#: insights/metrics/conversations/reports/services.py:1156
+#: insights/metrics/conversations/reports/services.py:1224
+#: insights/metrics/conversations/reports/services.py:1283
+#: insights/metrics/conversations/reports/services.py:1354
+#: insights/metrics/conversations/reports/services.py:1423
+#: insights/metrics/conversations/reports/services.py:1485
 msgid "Date"
 msgstr "Data"
 
-#: insights/metrics/conversations/reports/services.py:975
+#: insights/metrics/conversations/reports/services.py:978
 msgid "AI-Assisted"
 msgstr "Atendido por IA"
 
-#: insights/metrics/conversations/reports/services.py:976
+#: insights/metrics/conversations/reports/services.py:979
 msgid "Not assisted"
 msgstr "Não atendido por IA"
 
-#: insights/metrics/conversations/reports/services.py:977
+#: insights/metrics/conversations/reports/services.py:980
 msgid "Transferred to human support"
 msgstr "Transferida para atendimento humano"
 
-#: insights/metrics/conversations/reports/services.py:980
+#: insights/metrics/conversations/reports/services.py:983
 msgid "Unknown"
 msgstr "Desconhecido"
 
-#: insights/metrics/conversations/reports/services.py:1149
+#: insights/metrics/conversations/reports/services.py:1152
 msgid "Topics Distribution AI"
 msgstr "Distribuição de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1151
+#: insights/metrics/conversations/reports/services.py:1154
 msgid "Topics Distribution Human"
 msgstr "Distribuição de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1154
+#: insights/metrics/conversations/reports/services.py:1157
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1155
+#: insights/metrics/conversations/reports/services.py:1158
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1220
+#: insights/metrics/conversations/reports/services.py:1223
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1222
-#: insights/metrics/conversations/reports/services.py:1281
-#: insights/metrics/conversations/reports/services.py:1352
-#: insights/metrics/conversations/reports/services.py:1421
+#: insights/metrics/conversations/reports/services.py:1225
+#: insights/metrics/conversations/reports/services.py:1284
+#: insights/metrics/conversations/reports/services.py:1355
+#: insights/metrics/conversations/reports/services.py:1424
 msgid "Rating"
 msgstr "Avaliação"
 
-#: insights/metrics/conversations/reports/services.py:1279
+#: insights/metrics/conversations/reports/services.py:1282
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1350
+#: insights/metrics/conversations/reports/services.py:1353
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1419
+#: insights/metrics/conversations/reports/services.py:1422
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1483
+#: insights/metrics/conversations/reports/services.py:1486
 msgid "Value"
 msgstr "Valor"
 
@@ -199,32 +308,32 @@ msgstr "Valor"
 msgid "There is another report being processed for this project"
 msgstr "Existe outro relatório sendo processado para este projeto"
 
-#: insights/metrics/conversations/serializers.py:286
-#: insights/metrics/conversations/serializers.py:452
+#: insights/metrics/conversations/serializers.py:274
+#: insights/metrics/conversations/serializers.py:440
 msgid "Widget not found"
 msgstr "Widget NPS AI não encontrado"
 
-#: insights/metrics/conversations/serializers.py:291
+#: insights/metrics/conversations/serializers.py:279
 msgid "Widget source is not sales funnel"
 msgstr "A fonte do widget não é uma funnel de vendas"
 
-#: insights/metrics/conversations/serializers.py:297
+#: insights/metrics/conversations/serializers.py:285
 msgid "Widget type is not sales funnel"
 msgstr "O tipo de widget não é uma funnel de vendas"
 
-#: insights/metrics/conversations/serializers.py:398
+#: insights/metrics/conversations/serializers.py:386
 msgid "Widget type is not crosstab"
 msgstr "O tipo de widget não é uma crosstab"
 
-#: insights/metrics/conversations/serializers.py:404
+#: insights/metrics/conversations/serializers.py:392
 msgid "Widget source is not crosstab"
 msgstr "A fonte do widget não é uma crosstab"
 
-#: insights/metrics/conversations/serializers.py:420
+#: insights/metrics/conversations/serializers.py:408
 msgid "Widget config is not valid, must have source_a and source_b"
 msgstr "A configuração do widget não é válida, deve ter source_a e source_b"
 
-#: insights/metrics/conversations/serializers.py:430
+#: insights/metrics/conversations/serializers.py:418
 msgid "Widget config is not valid, must have key for source_a and source_b"
 msgstr ""
 "A configuração do widget não é válida, deve ter key para source_a e source_b"
@@ -611,11 +720,11 @@ msgstr "Template não está nos favoritos"
 msgid "WABA id is required"
 msgstr "O ID do WABA é obrigatório"
 
-#: insights/metrics/vtex/views.py:33
+#: insights/metrics/vtex/views.py:34
 msgid "Required"
 msgstr "Obrigatório"
 
-#: insights/metrics/vtex/views.py:50
+#: insights/metrics/vtex/views.py:51
 msgid "Invalid date format. Use YYYY-MM-DD."
 msgstr "Formato de data inválido. Use YYYY-MM-DD."
 
@@ -711,10 +820,28 @@ msgstr "Modificado em"
 msgid "config"
 msgstr "configuração"
 
-#: insights/sources/vtex_conversions/services.py:83
+#: insights/sources/vtex_conversions/services.py:75
 msgid "Project does not have permission to access WABA"
 msgstr "O projeto não tem permissão para acessar o WABA"
 
 #: insights/sources/vtex_conversions/usecases/query_execute.py:39
 msgid "Project does not have the credentials to access VTEX's API"
 msgstr "O projeto não tem as credenciais para acessar a API do VTEX"
+
+#: insights/templates/admin/login.html:28
+msgid "Please correct the error below."
+msgid_plural "Please correct the errors below."
+msgstr[0] ""
+msgstr[1] ""
+
+#: insights/templates/admin/login.html:55
+msgid "Forgotten your password or username?"
+msgstr "Esqueceu sua senha ou username?"
+
+#: insights/templates/admin/login.html:59
+msgid "Log in"
+msgstr "Entrar"
+
+#: insights/templates/admin/login.html:64
+msgid "Login with Keycloak"
+msgstr "Entrar com Keycloak"

@@ -361,6 +361,14 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             config={},
             position={},
         )
+        widget2_child = Widget.objects.create(
+            parent=widget2,
+            name="Widget 2 child",
+            source="TestSource",
+            type="TestType",
+            config={},
+            position={},
+        )
 
         response = self.list_widgets(str(dashboard.uuid))
 
@@ -368,6 +376,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         response_widgets = {w["uuid"] for w in response.data["results"]}
         self.assertIn(str(widget1.uuid), response_widgets)
         self.assertIn(str(widget2.uuid), response_widgets)
+        self.assertNotIn(str(widget2_child.uuid), response_widgets)
 
     @with_project_auth
     def test_dashboard_filters(self):
