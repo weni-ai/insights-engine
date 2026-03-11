@@ -125,11 +125,13 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             project_uuid, ConversationsMetricsResource.TOPICS, response_content
         )
 
-        return (
-            response_content.get("results", [])
-            if isinstance(response_content, dict)
-            else []
-        )
+        if isinstance(response_content, dict):
+            return response_content.get("results", [])
+        else:
+            if isinstance(response_content, list):
+                return response_content
+            else:
+                return []
 
     def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
         """
@@ -166,11 +168,13 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
 
-        return (
-            response_content.get("results", [])
-            if isinstance(response_content, dict)
-            else []
-        )
+        if isinstance(response_content, dict):
+            return response_content.get("results", [])
+        else:
+            if isinstance(response_content, list):
+                return response_content
+            else:
+                return []
 
     def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
         """
