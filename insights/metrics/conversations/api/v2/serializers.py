@@ -17,7 +17,7 @@ class NpsMetricsFieldSerializer(serializers.Serializer):
     """
 
     # Percentage
-    value = serializers.IntegerField(source="percentage")
+    value = serializers.FloatField(source="percentage")
 
     # Original value
     full_value = serializers.IntegerField(source="count")
