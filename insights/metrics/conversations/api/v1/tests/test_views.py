@@ -36,7 +36,7 @@ from insights.metrics.conversations.integrations.datalake.services import (
     BaseConversationsMetricsService,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
-from insights.metrics.conversations.views import ConversationsMetricsViewSet
+from insights.metrics.conversations.api.v1.views import ConversationsMetricsViewSet
 from insights.projects.models import Project
 from insights.sources.flowruns.tests.mock_query_executor import (
     MockFlowRunsQueryExecutor,
