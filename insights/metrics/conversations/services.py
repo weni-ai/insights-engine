@@ -13,6 +13,7 @@ from insights.metrics.conversations.dataclass import (
     CrosstabItemData,
     CrosstabSubItemData,
     NPSMetrics,
+    NPSMetricsField,
     SalesFunnelMetrics,
     SubtopicMetrics,
     TopicMetrics,
@@ -74,7 +75,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         Convert datetime to ISO string if needed for JSON serialization
         """
-        return date_value.isoformat() if isinstance(date_value, datetime) else date_value
+        return (
+            date_value.isoformat() if isinstance(date_value, datetime) else date_value
+        )
 
     def get_topics(self, project_uuid: UUID) -> dict:
         """
@@ -529,9 +532,11 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return NPSMetrics(
             total_responses=total_responses,
-            promoters=promoters_percentage,
-            passives=passives_percentage,
-            detractors=detractors_percentage,
+            promoters=NPSMetricsField(count=promoters, percentage=promoters_percentage),
+            passives=NPSMetricsField(count=passives, percentage=passives_percentage),
+            detractors=NPSMetricsField(
+                count=detractors, percentage=detractors_percentage
+            ),
             score=score,
         )
 

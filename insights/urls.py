@@ -61,6 +61,7 @@ urlpatterns += [
     ),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("v1/metrics/", include("insights.metrics.api.v1.urls")),
+    path("v2/metrics/", include("insights.metrics.api.v2.urls")),
     path(
         "v1/internal/", include("insights.internals.api.urls", namespace="internal_api")
     ),
