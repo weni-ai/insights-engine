@@ -26,6 +26,7 @@ from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
 )
+from insights.sources.integrations.clients import NexusConversationsAPIClient
 from insights.users.models import User
 from insights.reports.models import Report
 from insights.reports.choices import ReportFormat, ReportStatus
@@ -34,7 +35,6 @@ from insights.metrics.conversations.reports.services import (
     serialize_filters_for_json,
 )
 from insights.projects.models import Project
-from insights.sources.integrations.tests.mock_clients import MockNexusClient
 from insights.sources.flowruns.tests.mock_query_executor import (
     MockFlowRunsQueryExecutor,
 )
@@ -54,7 +54,7 @@ class TestConversationsReportService(TestCase):
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
-                nexus_client=MockNexusClient(),
+                nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
             ),
@@ -1027,7 +1027,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             datalake_events_client=ClassificationMockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
-                nexus_client=MockNexusClient(),
+                nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
                 cache_client=MockCacheClient(),
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
             ),

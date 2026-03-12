@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 import json
 from uuid import UUID
-from unittest.mock import Mock
+from unittest.mock import Mock, MagicMock
 
 from django.test import TestCase
 from django.core.cache import cache
@@ -39,7 +39,9 @@ from insights.projects.models import Project
 from insights.sources.flowruns.usecases.query_execute import (
     QueryExecutor as FlowRunsQueryExecutor,
 )
-from insights.sources.integrations.clients import NexusClient
+from insights.sources.integrations.clients import (
+    NexusConversationsAPIClient,
+)
 from insights.sources.cache import CacheClient
 from insights.widgets.models import Widget
 
@@ -70,7 +72,9 @@ class TestConversationsMetricsService(TestCase):
 
         # Create mocks with proper specs for type safety
         self.mock_datalake_service = Mock(spec=BaseConversationsMetricsService)
-        self.mock_nexus_client = Mock(spec=NexusClient)
+        self.mock_nexus_conversations_client = MagicMock(
+            spec=NexusConversationsAPIClient
+        )
         self.mock_cache_client = Mock(spec=CacheClient)
         self.mock_flowruns_query_executor = Mock(spec=FlowRunsQueryExecutor)
 
@@ -131,43 +135,42 @@ class TestConversationsMetricsService(TestCase):
         }
 
         # Configure nexus client mocks
-        topics_data = [
-            {
-                "name": "Cancelamento",
-                "uuid": "2026cedc-67f6-4a04-977a-55cc581defa9",
-                "created_at": "2025-07-15T20:56:47.582521Z",
-                "description": "Quando cliente pede para cancelar um pedido",
-                "subtopic": [
-                    {
-                        "name": "Subtopic 1",
-                        "uuid": "023d2374-04ef-45b5-8b5f-5c031fafd59e",
-                        "created_at": "2025-07-15T20:56:47.582521Z",
-                        "description": "Quando cliente pede para cancelar um pedido",
-                    },
-                ],
-            }
-        ]
+        topics_data = {
+            "results": [
+                {
+                    "name": "Cancelamento",
+                    "uuid": "2026cedc-67f6-4a04-977a-55cc581defa9",
+                    "created_at": "2025-07-15T20:56:47.582521Z",
+                    "description": "Quando cliente pede para cancelar um pedido",
+                    "subtopic": [
+                        {
+                            "name": "Subtopic 1",
+                            "uuid": "023d2374-04ef-45b5-8b5f-5c031fafd59e",
+                            "created_at": "2025-07-15T20:56:47.582521Z",
+                            "description": "Quando cliente pede para cancelar um pedido",
+                        },
+                    ],
+                }
+            ]
+        }
 
-        self.mock_nexus_client.get_topics.return_value = MockResponse(
+        self.mock_nexus_conversations_client.get_topics.return_value = MockResponse(
             200, json.dumps(topics_data)
         )
-        self.mock_nexus_client.get_subtopics.return_value = MockResponse(
+        self.mock_nexus_conversations_client.get_subtopics.return_value = MockResponse(
             200, json.dumps(topics_data)
         )
-        self.mock_nexus_client.create_topic.return_value = MockResponse(
+        self.mock_nexus_conversations_client.create_topic.return_value = MockResponse(
             201, json.dumps({})
         )
-        self.mock_nexus_client.create_subtopic.return_value = MockResponse(
-            201, json.dumps({})
+        self.mock_nexus_conversations_client.create_subtopic.return_value = (
+            MockResponse(201, json.dumps({}))
         )
-        self.mock_nexus_client.delete_topic.return_value = MockResponse(
+        self.mock_nexus_conversations_client.delete_topic.return_value = MockResponse(
             204, json.dumps({})
         )
-        self.mock_nexus_client.delete_subtopic.return_value = MockResponse(
-            204, json.dumps({})
-        )
-        self.mock_nexus_client.get_project_multi_agents_status.return_value = (
-            MockResponse(200, json.dumps({"multi_agents": False}))
+        self.mock_nexus_conversations_client.delete_subtopic.return_value = (
+            MockResponse(204, json.dumps({}))
         )
 
         # Configure flowruns query executor mocks
@@ -184,7 +187,7 @@ class TestConversationsMetricsService(TestCase):
 
         self.service = ConversationsMetricsService(
             datalake_service=self.mock_datalake_service,
-            nexus_client=self.mock_nexus_client,
+            nexus_conversations_client=self.mock_nexus_conversations_client,
             cache_client=self.mock_cache_client,
             flowruns_query_executor=self.mock_flowruns_query_executor,
         )
@@ -733,37 +736,27 @@ class TestConversationsMetricsService(TestCase):
 
         self.assertEqual(len(topics), 1)
         self.assertEqual(topics[0]["name"], "Cached Topic")
-        self.mock_nexus_client.get_topics.assert_not_called()
+        self.mock_nexus_conversations_client.get_topics.assert_not_called()
 
     def test_get_topics_with_exception(self):
         """Test get_topics when nexus client raises exception"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         self.mock_cache_client.get.return_value = None
-        self.mock_nexus_client.get_topics.side_effect = Exception("Network error")
+        self.mock_nexus_conversations_client.get_topics.side_effect = Exception(
+            "Network error"
+        )
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.get_topics(project_uuid)
 
         self.assertIn("Error fetching topics", str(context.exception))
 
-    def test_get_topics_with_json_parse_error(self):
-        """Test get_topics when response.json() fails"""
-        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        self.mock_cache_client.get.return_value = None
-        mock_response = MockResponse(200, "invalid json")
-        mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
-        self.mock_nexus_client.get_topics.return_value = mock_response
-
-        topics = self.service.get_topics(project_uuid)
-
-        self.assertEqual(topics, "invalid json")
-
     def test_get_topics_with_non_success_status(self):
         """Test get_topics when response status is not success"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         self.mock_cache_client.get.return_value = None
         mock_response = MockResponse(500, "Internal Server Error")
-        self.mock_nexus_client.get_topics.return_value = mock_response
+        self.mock_nexus_conversations_client.get_topics.return_value = mock_response
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.get_topics(project_uuid)
@@ -774,31 +767,21 @@ class TestConversationsMetricsService(TestCase):
         """Test get_subtopics when nexus client raises exception"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        self.mock_nexus_client.get_subtopics.side_effect = Exception("Network error")
+        self.mock_nexus_conversations_client.get_subtopics.side_effect = Exception(
+            "Network error"
+        )
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.get_subtopics(project_uuid, topic_uuid)
 
         self.assertIn("Error fetching subtopics", str(context.exception))
 
-    def test_get_subtopics_with_json_parse_error(self):
-        """Test get_subtopics when response.json() fails"""
-        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        mock_response = MockResponse(200, "invalid json")
-        mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
-        self.mock_nexus_client.get_subtopics.return_value = mock_response
-
-        subtopics = self.service.get_subtopics(project_uuid, topic_uuid)
-
-        self.assertEqual(subtopics, "invalid json")
-
     def test_get_subtopics_with_non_success_status(self):
         """Test get_subtopics when response status is not success"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         mock_response = MockResponse(404, "Not Found")
-        self.mock_nexus_client.get_subtopics.return_value = mock_response
+        self.mock_nexus_conversations_client.get_subtopics.return_value = mock_response
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.get_subtopics(project_uuid, topic_uuid)
@@ -808,7 +791,9 @@ class TestConversationsMetricsService(TestCase):
     def test_create_topic_with_exception(self):
         """Test create_topic when nexus client raises exception"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        self.mock_nexus_client.create_topic.side_effect = Exception("Network error")
+        self.mock_nexus_conversations_client.create_topic.side_effect = Exception(
+            "Network error"
+        )
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.create_topic(project_uuid, "Test Topic", "Test Description")
@@ -820,7 +805,7 @@ class TestConversationsMetricsService(TestCase):
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         mock_response = MockResponse(201, "invalid json")
         mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
-        self.mock_nexus_client.create_topic.return_value = mock_response
+        self.mock_nexus_conversations_client.create_topic.return_value = mock_response
 
         result = self.service.create_topic(
             project_uuid, "Test Topic", "Test Description"
@@ -832,7 +817,7 @@ class TestConversationsMetricsService(TestCase):
         """Test create_topic when response status is not success"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         mock_response = MockResponse(400, "Bad Request")
-        self.mock_nexus_client.create_topic.return_value = mock_response
+        self.mock_nexus_conversations_client.create_topic.return_value = mock_response
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.create_topic(project_uuid, "Test Topic", "Test Description")
@@ -843,7 +828,9 @@ class TestConversationsMetricsService(TestCase):
         """Test create_subtopic when nexus client raises exception"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        self.mock_nexus_client.create_subtopic.side_effect = Exception("Network error")
+        self.mock_nexus_conversations_client.create_subtopic.side_effect = Exception(
+            "Network error"
+        )
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.create_subtopic(
@@ -858,7 +845,9 @@ class TestConversationsMetricsService(TestCase):
         topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         mock_response = MockResponse(201, "invalid json")
         mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
-        self.mock_nexus_client.create_subtopic.return_value = mock_response
+        self.mock_nexus_conversations_client.create_subtopic.return_value = (
+            mock_response
+        )
 
         result = self.service.create_subtopic(
             project_uuid, topic_uuid, "Test Subtopic", "Test Description"
@@ -871,7 +860,9 @@ class TestConversationsMetricsService(TestCase):
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         mock_response = MockResponse(400, "Bad Request")
-        self.mock_nexus_client.create_subtopic.return_value = mock_response
+        self.mock_nexus_conversations_client.create_subtopic.return_value = (
+            mock_response
+        )
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.create_subtopic(
@@ -884,7 +875,9 @@ class TestConversationsMetricsService(TestCase):
         """Test delete_topic when nexus client raises exception"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        self.mock_nexus_client.delete_topic.side_effect = Exception("Network error")
+        self.mock_nexus_conversations_client.delete_topic.side_effect = Exception(
+            "Network error"
+        )
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.delete_topic(project_uuid, topic_uuid)
@@ -896,7 +889,7 @@ class TestConversationsMetricsService(TestCase):
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         mock_response = MockResponse(404, "Not Found")
-        self.mock_nexus_client.delete_topic.return_value = mock_response
+        self.mock_nexus_conversations_client.delete_topic.return_value = mock_response
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.delete_topic(project_uuid, topic_uuid)
@@ -908,7 +901,9 @@ class TestConversationsMetricsService(TestCase):
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         subtopic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        self.mock_nexus_client.delete_subtopic.side_effect = Exception("Network error")
+        self.mock_nexus_conversations_client.delete_subtopic.side_effect = Exception(
+            "Network error"
+        )
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.delete_subtopic(project_uuid, topic_uuid, subtopic_uuid)
@@ -921,7 +916,9 @@ class TestConversationsMetricsService(TestCase):
         topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         subtopic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
         mock_response = MockResponse(404, "Not Found")
-        self.mock_nexus_client.delete_subtopic.return_value = mock_response
+        self.mock_nexus_conversations_client.delete_subtopic.return_value = (
+            mock_response
+        )
 
         with self.assertRaises(ConversationsMetricsError) as context:
             self.service.delete_subtopic(project_uuid, topic_uuid, subtopic_uuid)

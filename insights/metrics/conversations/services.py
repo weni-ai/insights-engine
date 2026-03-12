@@ -4,6 +4,7 @@ from uuid import UUID
 from datetime import datetime
 import json
 
+from django.conf import settings
 from sentry_sdk import capture_exception, capture_message
 from rest_framework import status
 
@@ -41,7 +42,10 @@ from insights.metrics.conversations.enums import (
     CsatMetricsType,
     NpsMetricsType,
 )
-from insights.sources.integrations.clients import NexusClient
+from insights.sources.integrations.clients import (
+    NexusConversationsAPIClient,
+    BaseNexusConversationsAPIClient,
+)
 from insights.widgets.models import Widget
 
 
@@ -60,15 +64,15 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
     def __init__(
         self,
         datalake_service: BaseConversationsMetricsService = DatalakeConversationsMetricsService(),
-        nexus_client: NexusClient = NexusClient(),
+        nexus_conversations_client: BaseNexusConversationsAPIClient = NexusConversationsAPIClient(),
         cache_client: CacheClient = CacheClient(),
-        nexus_cache_ttl: int = 60,
+        nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
     ):
         self.datalake_service = datalake_service
-        self.nexus_client = nexus_client
+        self.nexus_conversations_client = nexus_conversations_client
         self.cache_client = cache_client
-        self.nexus_cache_ttl = nexus_cache_ttl
+        self.nexus_conversations_cache_ttl = nexus_conversations_cache_ttl
         self.flowruns_query_executor = flowruns_query_executor
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
@@ -90,7 +94,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             return json.loads(cached_results)
 
         try:
-            response = self.nexus_client.get_topics(project_uuid)
+            response = self.nexus_conversations_client.get_topics(project_uuid)
 
         except Exception as e:
             logger.error("Error fetching topics for project %s: %s", project_uuid, e)
@@ -122,14 +126,22 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             project_uuid, ConversationsMetricsResource.TOPICS, response_content
         )
 
-        return response_content
+        if isinstance(response_content, dict):
+            return response_content.get("results", [])
+        else:
+            if isinstance(response_content, list):
+                return response_content
+            else:
+                return []
 
     def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
         """
         Get conversation subtopics
         """
         try:
-            response = self.nexus_client.get_subtopics(project_uuid, topic_uuid)
+            response = self.nexus_conversations_client.get_subtopics(
+                project_uuid, topic_uuid
+            )
 
         except Exception as e:
             logger.error("Error fetching subtopics for project %s: %s", project_uuid, e)
@@ -157,14 +169,22 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
 
-        return response_content
+        if isinstance(response_content, dict):
+            return response_content.get("results", [])
+        else:
+            if isinstance(response_content, list):
+                return response_content
+            else:
+                return []
 
     def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
         """
         Create a conversation topic
         """
         try:
-            response = self.nexus_client.create_topic(project_uuid, name, description)
+            response = self.nexus_conversations_client.create_topic(
+                project_uuid, name, description
+            )
 
         except Exception as e:
             logger.error("Error creating topic for project %s: %s", project_uuid, e)
@@ -206,7 +226,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
 
         try:
-            response = self.nexus_client.create_subtopic(
+            response = self.nexus_conversations_client.create_subtopic(
                 project_uuid, topic_uuid, name, description
             )
 
@@ -249,7 +269,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
 
         try:
-            response = self.nexus_client.delete_topic(project_uuid, topic_uuid)
+            response = self.nexus_conversations_client.delete_topic(
+                project_uuid, topic_uuid
+            )
 
         except Exception as e:
             logger.error("Error deleting topic for project %s: %s", project_uuid, e)
@@ -284,7 +306,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
 
         try:
-            response = self.nexus_client.delete_subtopic(
+            response = self.nexus_conversations_client.delete_subtopic(
                 project_uuid, topic_uuid, subtopic_uuid
             )
 
