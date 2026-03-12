@@ -647,6 +647,9 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         Get nps metrics
         """
+        # Staging only:
+        return self._transform_nps_results({str(i): 10 for i in range(0, 11)})
+
         # HUMAN
         if metric_type == NpsMetricsType.HUMAN:
             flow_uuid = widget.config.get("filter", {}).get("flow")
