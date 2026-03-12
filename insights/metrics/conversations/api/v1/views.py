@@ -27,7 +27,7 @@ from insights.metrics.conversations.exceptions import (
 from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import (
     GetProjectAiCsatMetricsUseCase,
 )
-from insights.metrics.conversations.serializers import (
+from insights.metrics.conversations.api.v1.serializers import (
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,

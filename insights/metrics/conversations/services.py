@@ -17,6 +17,7 @@ from insights.metrics.conversations.dataclass import (
     CrosstabItemData,
     CrosstabSubItemData,
     NPSMetrics,
+    NPSMetricsField,
     SalesFunnelMetrics,
     SubtopicMetrics,
     TopicMetrics,
@@ -156,7 +157,13 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             project_uuid, ConversationsMetricsResource.TOPICS, response_content
         )
 
-        return response_content
+        if isinstance(response_content, dict):
+            return response_content.get("results", [])
+        else:
+            if isinstance(response_content, list):
+                return response_content
+            else:
+                return []
 
     def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
         """
@@ -193,7 +200,13 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
 
-        return response_content
+        if isinstance(response_content, dict):
+            return response_content.get("results", [])
+        else:
+            if isinstance(response_content, list):
+                return response_content
+            else:
+                return []
 
     def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
         """
@@ -561,9 +574,11 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return NPSMetrics(
             total_responses=total_responses,
-            promoters=promoters_percentage,
-            passives=passives_percentage,
-            detractors=detractors_percentage,
+            promoters=NPSMetricsField(count=promoters, percentage=promoters_percentage),
+            passives=NPSMetricsField(count=passives, percentage=passives_percentage),
+            detractors=NPSMetricsField(
+                count=detractors, percentage=detractors_percentage
+            ),
             score=score,
         )
 

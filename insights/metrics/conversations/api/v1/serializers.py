@@ -334,9 +334,9 @@ class NpsMetricsSerializer(serializers.Serializer):
     """
 
     total_responses = serializers.IntegerField()
-    promoters = serializers.FloatField()
-    passives = serializers.FloatField()
-    detractors = serializers.FloatField()
+    promoters = serializers.FloatField(source="promoters.percentage")
+    passives = serializers.FloatField(source="passives.percentage")
+    detractors = serializers.FloatField(source="detractors.percentage")
     score = serializers.FloatField()
 
 

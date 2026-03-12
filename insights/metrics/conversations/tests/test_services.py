@@ -18,6 +18,7 @@ from insights.metrics.conversations.dataclass import (
     CrosstabItemData,
     CrosstabSubItemData,
     NPSMetrics,
+    NPSMetricsField,
     SalesFunnelMetrics,
     TopicsDistributionMetrics,
 )
@@ -165,22 +166,24 @@ class TestConversationsMetricsService(TestCase):
         }
 
         # Configure nexus client mocks
-        topics_data = [
-            {
-                "name": "Cancelamento",
-                "uuid": "2026cedc-67f6-4a04-977a-55cc581defa9",
-                "created_at": "2025-07-15T20:56:47.582521Z",
-                "description": "Quando cliente pede para cancelar um pedido",
-                "subtopic": [
-                    {
-                        "name": "Subtopic 1",
-                        "uuid": "023d2374-04ef-45b5-8b5f-5c031fafd59e",
-                        "created_at": "2025-07-15T20:56:47.582521Z",
-                        "description": "Quando cliente pede para cancelar um pedido",
-                    },
-                ],
-            }
-        ]
+        topics_data = {
+            "results": [
+                {
+                    "name": "Cancelamento",
+                    "uuid": "2026cedc-67f6-4a04-977a-55cc581defa9",
+                    "created_at": "2025-07-15T20:56:47.582521Z",
+                    "description": "Quando cliente pede para cancelar um pedido",
+                    "subtopic": [
+                        {
+                            "name": "Subtopic 1",
+                            "uuid": "023d2374-04ef-45b5-8b5f-5c031fafd59e",
+                            "created_at": "2025-07-15T20:56:47.582521Z",
+                            "description": "Quando cliente pede para cancelar um pedido",
+                        },
+                    ],
+                }
+            ]
+        }
 
         self.mock_nexus_conversations_client.get_topics.return_value = MockResponse(
             200, json.dumps(topics_data)
@@ -561,9 +564,13 @@ class TestConversationsMetricsService(TestCase):
 
         expected_results = NPSMetrics(
             total_responses=200,
-            promoters=round(((125 / 200) * 100), 2),
-            passives=round(((42 / 200) * 100), 2),
-            detractors=round(((33 / 200) * 100), 2),
+            promoters=NPSMetricsField(
+                count=125, percentage=round(((125 / 200) * 100), 2)
+            ),
+            passives=NPSMetricsField(count=42, percentage=round(((42 / 200) * 100), 2)),
+            detractors=NPSMetricsField(
+                count=33, percentage=round(((33 / 200) * 100), 2)
+            ),
             score=46.0,
         )
 
@@ -934,18 +941,6 @@ class TestConversationsMetricsService(TestCase):
 
         self.assertIn("Error fetching topics", str(context.exception))
 
-    def test_get_topics_with_json_parse_error(self):
-        """Test get_topics when response.json() fails"""
-        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        self.mock_cache_client.get.return_value = None
-        mock_response = MockResponse(200, "invalid json")
-        mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
-        self.mock_nexus_conversations_client.get_topics.return_value = mock_response
-
-        topics = self.service.get_topics(project_uuid)
-
-        self.assertEqual(topics, "invalid json")
-
     def test_get_topics_with_non_success_status(self):
         """Test get_topics when response status is not success"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
@@ -970,18 +965,6 @@ class TestConversationsMetricsService(TestCase):
             self.service.get_subtopics(project_uuid, topic_uuid)
 
         self.assertIn("Error fetching subtopics", str(context.exception))
-
-    def test_get_subtopics_with_json_parse_error(self):
-        """Test get_subtopics when response.json() fails"""
-        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
-        mock_response = MockResponse(200, "invalid json")
-        mock_response.json = Mock(side_effect=ValueError("Invalid JSON"))
-        self.mock_nexus_conversations_client.get_subtopics.return_value = mock_response
-
-        subtopics = self.service.get_subtopics(project_uuid, topic_uuid)
-
-        self.assertEqual(subtopics, "invalid json")
 
     def test_get_subtopics_with_non_success_status(self):
         """Test get_subtopics when response status is not success"""

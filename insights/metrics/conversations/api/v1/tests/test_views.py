@@ -41,7 +41,7 @@ from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
 )
-from insights.metrics.conversations.views import ConversationsMetricsViewSet
+from insights.metrics.conversations.api.v1.views import ConversationsMetricsViewSet
 from insights.projects.models import Project
 from insights.sources.flowruns.tests.mock_query_executor import (
     MockFlowRunsQueryExecutor,
