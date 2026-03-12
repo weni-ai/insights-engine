@@ -1,7 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from insights.metrics.conversations.views import ConversationsMetricsViewSet
+from insights.metrics.conversations.api.v1.views import (
+    ConversationsMetricsViewSet,
+    InternalConversationsMetricsViewSet,
+)
 from insights.metrics.conversations.reports.views import (
     AvailableWidgetsViewSet,
     ConversationsReportsViewSet,
@@ -19,3 +22,10 @@ urlpatterns = [
     path("report/", ConversationsReportsViewSet.as_view(), name="conversations-report"),
     path("", include(router.urls)),
 ]
+
+internal_router = DefaultRouter()
+internal_router.register(
+    "",
+    InternalConversationsMetricsViewSet,
+    basename="internal-ai-csat-metrics",
+)

@@ -15,7 +15,7 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.enums import ConversationType, CsatMetricsType
 from insights.projects.models import Project, ProjectAuth
-from insights.metrics.conversations.serializers import (
+from insights.metrics.conversations.api.v1.serializers import (
     ConversationBaseQueryParamsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
     ConversationTotalsMetricsSerializer,
