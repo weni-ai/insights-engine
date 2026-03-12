@@ -1,6 +1,6 @@
 from django.urls import include, path
 
-from insights.metrics.conversations.urls import internal_router
+from insights.metrics.conversations.api.v1.urls import internal_router
 
 app_name = "internal_api"
 

@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from insights.metrics.conversations.views import (
+from insights.metrics.conversations.api.v1.views import (
     ConversationsMetricsViewSet,
     InternalConversationsMetricsViewSet,
 )

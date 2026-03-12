@@ -14,6 +14,7 @@ from insights.metrics.conversations.dataclass import (
     CrosstabItemData,
     CrosstabSubItemData,
     NPSMetrics,
+    NPSMetricsField,
     SalesFunnelMetrics,
     SubtopicMetrics,
     TopicMetrics,
@@ -553,9 +554,11 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return NPSMetrics(
             total_responses=total_responses,
-            promoters=promoters_percentage,
-            passives=passives_percentage,
-            detractors=detractors_percentage,
+            promoters=NPSMetricsField(count=promoters, percentage=promoters_percentage),
+            passives=NPSMetricsField(count=passives, percentage=passives_percentage),
+            detractors=NPSMetricsField(
+                count=detractors, percentage=detractors_percentage
+            ),
             score=score,
         )
 

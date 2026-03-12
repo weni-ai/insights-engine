@@ -73,11 +73,21 @@ class ConversationsTotalsMetrics:
 
 
 @dataclass(frozen=True)
+class NPSMetricsField:
+    """
+    Dataclass for NPS metrics field
+    """
+
+    count: int
+    percentage: float
+
+
+@dataclass(frozen=True)
 class NPSMetrics:
     total_responses: int
-    promoters: float
-    passives: float
-    detractors: float
+    promoters: NPSMetricsField
+    passives: NPSMetricsField
+    detractors: NPSMetricsField
     score: float
 
 

@@ -16,6 +16,7 @@ from insights.metrics.conversations.dataclass import (
     CrosstabItemData,
     CrosstabSubItemData,
     NPSMetrics,
+    NPSMetricsField,
     SalesFunnelMetrics,
     TopicsDistributionMetrics,
 )
@@ -336,9 +337,13 @@ class TestConversationsMetricsService(TestCase):
 
         expected_results = NPSMetrics(
             total_responses=200,
-            promoters=round(((125 / 200) * 100), 2),
-            passives=round(((42 / 200) * 100), 2),
-            detractors=round(((33 / 200) * 100), 2),
+            promoters=NPSMetricsField(
+                count=125, percentage=round(((125 / 200) * 100), 2)
+            ),
+            passives=NPSMetricsField(count=42, percentage=round(((42 / 200) * 100), 2)),
+            detractors=NPSMetricsField(
+                count=33, percentage=round(((33 / 200) * 100), 2)
+            ),
             score=46.0,
         )
 
