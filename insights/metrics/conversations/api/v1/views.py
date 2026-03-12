@@ -13,6 +13,7 @@ from insights.authentication.permissions import (
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
+from insights.metrics.conversations.api.permissions import WidgetQueryParamPermission
 from insights.metrics.conversations.exceptions import (
     ConversationsMetricsError,
     GetProjectAiCsatMetricsError,
@@ -21,6 +22,7 @@ from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import 
     GetProjectAiCsatMetricsUseCase,
 )
 from insights.metrics.conversations.api.v1.serializers import (
+    AbsoluteNumbersQueryParamsSerializer,
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
@@ -43,6 +45,7 @@ from insights.metrics.conversations.api.v1.serializers import (
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
+from insights.metrics.conversations.api.mixins import ConversationsMetricsResponseMixin
 
 
 logger = logging.getLogger(__name__)
@@ -54,7 +57,7 @@ if TYPE_CHECKING:
     from rest_framework.request import Request
 
 
-class ConversationsMetricsViewSet(GenericViewSet):
+class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericViewSet):
     """
     ViewSet to get conversations metrics
     """
@@ -541,6 +544,22 @@ class ConversationsMetricsViewSet(GenericViewSet):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="absolute-numbers",
+        url_name="absolute-numbers",
+        permission_classes=[IsAuthenticated, WidgetQueryParamPermission],
+    )
+    def absolute_numbers(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get absolute numbers metrics
+        """
+        query_params = AbsoluteNumbersQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        return Response(status=status.HTTP_200_OK)
 
 
 class InternalConversationsMetricsViewSet(GenericViewSet):

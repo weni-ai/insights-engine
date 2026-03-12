@@ -532,3 +532,23 @@ class InternalCsatMetricsQueryParamsSerializer(serializers.Serializer):
         attrs["end_date"] = end_date
 
         return attrs
+
+
+class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for absolute numbers query params
+    """
+
+    widget_uuid = serializers.UUIDField(required=True)
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        widget = self.context.get("widget")
+
+        return attrs
