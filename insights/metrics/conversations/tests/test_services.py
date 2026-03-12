@@ -1179,3 +1179,78 @@ class TestConversationsMetricsService(TestCase):
         self.assertNotIn("created_on", filters)
         self.assertEqual(filters["created_on__gte"], "2026-01-15T00:00:00")
         self.assertEqual(filters["created_on__lte"], "2026-01-22T00:00:00")
+
+    def test_get_event_count(self):
+        """Test get_event_count"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+
+        self.mock_datalake_service.get_event_count.return_value = 10
+
+        count = self.service.get_event_count(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+        self.assertEqual(count, 10)
+
+    def test_get_events_values_sum(self):
+        """Test get_events_values_sum"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+        self.mock_datalake_service.get_events_values_sum.return_value = 10
+        sum_result = self.service.get_events_values_sum(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(sum_result, 10)
+
+    def test_get_events_values_average(self):
+        """Test get_events_values_average"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+        self.mock_datalake_service.get_events_values_average.return_value = 10
+        average = self.service.get_events_values_average(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+        self.assertEqual(average, 10)
+
+    def test_get_events_highest_value(self):
+        """Test get_events_highest_value"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+        self.mock_datalake_service.get_events_highest_value.return_value = 10
+        highest_value = self.service.get_events_highest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(highest_value, 10)
+
+    def test_get_events_lowest_value(self):
+        """Test get_events_lowest_value"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+
+        self.mock_datalake_service.get_events_lowest_value.return_value = 10
+        lowest_value = self.service.get_events_lowest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(lowest_value, 10)
