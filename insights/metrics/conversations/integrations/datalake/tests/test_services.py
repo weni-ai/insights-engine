@@ -666,6 +666,27 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             result = self.service._get_cached_results("test_key")
             self.assertIsNone(result)
 
+    def test_get_cached_results_with_result_type_int(self):
+        with patch.object(self.service.cache_client, "get") as mock_get:
+            mock_get.return_value = "42"
+
+            result = self.service._get_cached_results("test_key", result_type=int)
+            self.assertEqual(result, 42)
+
+    def test_get_cached_results_with_result_type_int_from_float(self):
+        with patch.object(self.service.cache_client, "get") as mock_get:
+            mock_get.return_value = "123.0"
+
+            result = self.service._get_cached_results("test_key", result_type=int)
+            self.assertEqual(result, 123)
+
+    def test_get_cached_results_with_result_type_conversion_failure(self):
+        with patch.object(self.service.cache_client, "get") as mock_get:
+            mock_get.return_value = '{"not": "an int"}'
+
+            result = self.service._get_cached_results("test_key", result_type=int)
+            self.assertIsNone(result)
+
     def test_csat_metrics_with_cached_string_data(self):
         project_uuid = uuid.uuid4()
         agent_uuid = str(uuid.uuid4())
@@ -913,3 +934,72 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         project_uuid = uuid.uuid4()
         results = self.service.check_if_sales_funnel_data_exists(project_uuid)
         self.assertTrue(results)
+
+    def test_get_event_count(self):
+        project_uuid = uuid.uuid4()
+        event_name = "test_event"
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+        key = "test_key"
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+
+        results = self.service.get_event_count(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(results, 10)
+
+        self.mock_events_client.get_events_count.assert_called_once_with(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key=key,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+        )
+
+    def test_get_event_count_with_cache(self):
+        project_uuid = uuid.uuid4()
+        event_name = "test_event"
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+        agent_uuid = str(uuid.uuid4())
+        key = "test_key"
+
+        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+        self.mock_cache_client.get.return_value = json.dumps(10)
+
+        results = self.service.get_event_count(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(results, 10)
+        self.mock_events_client.get_events_count.assert_not_called()
+        self.mock_cache_client.get.assert_called_once_with(
+            self.service._get_cache_key(
+                data_type="event_count",
+                project_uuid=project_uuid,
+                event_name=event_name,
+                start_date=start_date,
+                end_date=end_date,
+                key=key,
+                agent_uuid=agent_uuid,
+            )
+        )
+
+    def test_get_events_values_sum(self):
+        # TODO: Dependency not yet implemented
+        pass
+
+    def test_get_events_values_average(self):
+        # TODO: Dependency not yet implemented
+        pass
+
+    def test_get_events_highest_value(self):
+        # TODO: Dependency not yet implemented
+        pass
+
+    def test_get_events_lowest_value(self):
+        # TODO: Dependency not yet implemented
+        pass
