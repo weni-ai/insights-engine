@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
+from functools import cached_property
 import logging
 from uuid import UUID
 import requests
 from requests.models import Response
 import json
+from weni.feature_flags.shortcuts import is_feature_active_for_attributes
+from sentry_sdk import capture_exception
 
 
 from django.conf import settings
@@ -67,6 +70,40 @@ class BaseNexusClient(ABC):
     """
 
     @abstractmethod
+    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
+        """
+        Get the status of the multi agents for a project.
+        """
+
+
+class NexusClient(BaseNexusClient):
+    """
+    Client for Nexus API.
+    """
+
+    def __init__(self):
+        self.base_url = settings.NEXUS_BASE_URL
+        self.headers = {
+            "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
+        }
+        self.timeout = 60
+
+    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
+        """
+        Get the status of the multi agents for a project.
+        """
+
+        url = f"{self.base_url}/project/{project_uuid}/multi-agents"
+
+        return requests.get(url=url, headers=self.headers, timeout=self.timeout)
+
+
+class BaseNexusConversationsAPIClient(ABC):
+    """
+    Base client for Conversations API.
+    """
+
+    @abstractmethod
     def get_topics(self, project_uuid: UUID) -> Response:
         """
         Get conversation topics for a project.
@@ -81,7 +118,7 @@ class BaseNexusClient(ABC):
     @abstractmethod
     def create_topic(self, project_uuid: UUID, name: str, description: str) -> Response:
         """
-        Create a conversation topic for a project.
+        Create a topic for a project.
         """
 
     @abstractmethod
@@ -89,13 +126,13 @@ class BaseNexusClient(ABC):
         self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
     ) -> Response:
         """
-        Create a conversation subtopic for a project.
+        Create a subtopic for a topic.
         """
 
     @abstractmethod
     def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
         """
-        Delete a conversation topic for a project.
+        Delete a topic for a project.
         """
 
     @abstractmethod
@@ -103,33 +140,74 @@ class BaseNexusClient(ABC):
         self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
     ) -> Response:
         """
-        Delete a conversation subtopic for a project.
-        """
-
-    @abstractmethod
-    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
-        """
-        Get the status of the multi agents for a project.
+        Delete a subtopic for a topic.
         """
 
 
-class NexusClient:
+class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
     """
-    Client for Nexus API.
+    Client for Nexus Conversations API.
     """
 
     def __init__(self):
-        self.base_url = settings.NEXUS_BASE_URL
-        self.headers = {
+        self.feature_flag_key = settings.USE_NEXUS_CONVERSATIONS_API_FEATURE_FLAG_KEY
+
+        self.nexus_conversations_base_url = settings.NEXUS_CONVERSATIONS_API_BASE_URL
+        self.nexus_conversations_topics_path_prefix = "api/v1/projects/"
+
+        self.nexus_base_url = settings.NEXUS_BASE_URL
+        self.nexus_topics_path_prefix = ""
+        self.timeout = 60
+
+    @cached_property
+    def use_nexus_conversations_api(self) -> bool:
+        if settings.FORCE_USE_NEXUS_CONVERSATIONS_API:
+            return True
+
+        try:
+            is_nexus_conversations_feature_flag_active = (
+                is_feature_active_for_attributes(
+                    key=self.feature_flag_key,
+                    attributes={},
+                )
+            )
+        except Exception as e:
+            logger.error(f"Error checking if Nexus Conversations API is active: {e}")
+            capture_exception(e)
+            return False
+
+        return is_nexus_conversations_feature_flag_active
+
+    @property
+    def base_url(self) -> str:
+        if self.use_nexus_conversations_api:
+            return self.nexus_conversations_base_url
+
+        return self.nexus_base_url
+
+    @property
+    def topics_path_prefix(self) -> str:
+        if self.use_nexus_conversations_api:
+            return self.nexus_conversations_topics_path_prefix
+
+        return self.nexus_topics_path_prefix
+
+    @property
+    def headers(self) -> dict:
+        if self.use_nexus_conversations_api:
+            return {
+                "Authorization": f"Bearer {settings.NEXUS_CONVERSATIONS_API_TOKEN}",
+            }
+
+        return {
             "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
         }
-        self.timeout = 60
 
     def get_topics(self, project_uuid: UUID) -> Response:
         """
         Get conversation topics for a project.
         """
-        url = f"{self.base_url}/{project_uuid}/topics/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/"
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -138,7 +216,7 @@ class NexusClient:
         Get subtopics for a topic.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -147,7 +225,7 @@ class NexusClient:
         Create a topic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/"
 
         body = {
             "name": name,
@@ -165,7 +243,7 @@ class NexusClient:
         Create a subtopic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         body = {
             "name": name,
@@ -181,7 +259,7 @@ class NexusClient:
         Delete a topic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/{topic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -192,15 +270,6 @@ class NexusClient:
         Delete a subtopic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
+        url = f"{self.base_url}/{self.topics_path_prefix}{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
-
-    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
-        """
-        Get the status of the multi agents for a project.
-        """
-
-        url = f"{self.base_url}/project/{project_uuid}/multi-agents"
-
-        return requests.get(url=url, headers=self.headers, timeout=self.timeout)

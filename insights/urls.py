@@ -60,7 +60,8 @@ urlpatterns += [
         name="swagger-ui",
     ),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("v1/metrics/", include("insights.metrics.urls")),
+    path("v1/metrics/", include("insights.metrics.api.v1.urls")),
+    path("v2/metrics/", include("insights.metrics.api.v2.urls")),
     path(
         "v1/internal/", include("insights.internals.api.urls", namespace="internal_api")
     ),
@@ -79,7 +80,9 @@ if settings.ADMIN_ENABLED is True:
     if getattr(settings, "OIDC_ENABLED", False):
         # Must be before admin/ so /admin/keycloak-login/ is not caught by admin (which requires login)
         admin_urls.append(
-            path("admin/keycloak-login/", admin_oidc_login, name="admin_keycloak_login"),
+            path(
+                "admin/keycloak-login/", admin_oidc_login, name="admin_keycloak_login"
+            ),
         )
         # Use OIDC logout for admin so "Log out" redirects to IdP end-session
         admin_urls.append(
