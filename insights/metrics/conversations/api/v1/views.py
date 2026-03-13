@@ -13,6 +13,7 @@ from insights.authentication.permissions import (
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
+from insights.metrics.conversations.api.decorators import force_use_real_service
 from insights.metrics.conversations.exceptions import (
     ConversationsMetricsError,
     GetProjectAiCsatMetricsError,
@@ -40,9 +41,13 @@ from insights.metrics.conversations.api.v1.serializers import (
     TopicsDistributionMetricsSerializer,
     NpsMetricsSerializer,
 )
-from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.services import (
+    BaseConversationsMetricsService,
+    ConversationsMetricsService,
+)
 from insights.projects.models import ProjectAuth
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
+from insights.metrics.conversations.resolvers import ConversationsMetricsServiceResolver
 
 
 logger = logging.getLogger(__name__)
@@ -61,6 +66,35 @@ class ConversationsMetricsViewSet(GenericViewSet):
 
     service = ConversationsMetricsService()
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+
+    @property
+    def resolver(self) -> ConversationsMetricsServiceResolver:
+        if self._resolver is None:
+            self._resolver = ConversationsMetricsServiceResolver()
+
+        return self._resolver
+
+    @property
+    def service(self) -> BaseConversationsMetricsService:
+        if self._service is None:
+            query_params = self.request.query_params
+            project_uuid = query_params.get("project_uuid")
+
+            try:
+                action = getattr(self, self.action)
+                force_use_real_service = getattr(
+                    action, "force_use_real_service", False
+                )
+            except AttributeError:
+                force_use_real_service = False
+
+            self._service = self.resolver.resolve(
+                request=self.request,
+                project_uuid=project_uuid,
+                force_use_real_service=force_use_real_service,
+            )
+
+        return self._service
 
     @action(
         detail=False,
@@ -188,6 +222,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         url_name="topics",
         permission_classes=[IsAuthenticated],
     )
+    @force_use_real_service
     def topics(self, request: "Request", *args, **kwargs):
         """
         Get or create conversation topics
@@ -242,6 +277,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         url_name="subtopics",
         permission_classes=[IsAuthenticated],
     )
+    @force_use_real_service
     def subtopics(self, request: "Request", *args, **kwargs):
         """
         Get or create conversation subtopics
@@ -302,6 +338,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         url_name="topic",
         permission_classes=[IsAuthenticated],
     )
+    @force_use_real_service
     def topic(self, request: "Request", *args, **kwargs):
         """
         Delete a conversation topic
@@ -337,6 +374,7 @@ class ConversationsMetricsViewSet(GenericViewSet):
         url_name="subtopic",
         permission_classes=[IsAuthenticated],
     )
+    @force_use_real_service
     def subtopic(self, request: "Request", *args, **kwargs):
         topic_uuid = kwargs.get("topic_uuid")
         subtopic_uuid = kwargs.get("subtopic_uuid")
