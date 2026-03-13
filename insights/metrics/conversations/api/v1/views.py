@@ -13,6 +13,7 @@ from insights.authentication.permissions import (
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
+from insights.metrics.conversations.api.permissions import WidgetQueryParamPermission
 from insights.metrics.conversations.exceptions import (
     ConversationsMetricsError,
     GetProjectAiCsatMetricsError,
@@ -21,6 +22,7 @@ from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import 
     GetProjectAiCsatMetricsUseCase,
 )
 from insights.metrics.conversations.api.v1.serializers import (
+    AbsoluteNumbersQueryParamsSerializer,
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
@@ -43,6 +45,7 @@ from insights.metrics.conversations.api.v1.serializers import (
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import ProjectAuth
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
+from insights.metrics.conversations.api.mixins import ConversationsMetricsResponseMixin
 
 
 logger = logging.getLogger(__name__)
@@ -54,7 +57,7 @@ if TYPE_CHECKING:
     from rest_framework.request import Request
 
 
-class ConversationsMetricsViewSet(GenericViewSet):
+class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericViewSet):
     """
     ViewSet to get conversations metrics
     """
@@ -541,6 +544,40 @@ class ConversationsMetricsViewSet(GenericViewSet):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="absolute-numbers",
+        url_name="absolute-numbers",
+        permission_classes=[IsAuthenticated, WidgetQueryParamPermission],
+    )
+    def absolute_numbers(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get absolute numbers metrics
+        """
+        query_params = AbsoluteNumbersQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            metrics = self.service.get_absolute_numbers(
+                widget=query_params.validated_data["widget"],
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            logger.error(
+                "[ConversationsMetricsViewSet] Error getting absolute numbers metrics: %s",
+                e,
+                exc_info=True,
+            )
+            event_id = capture_exception(e)
+            return Response(
+                {"error": f"Internal error. Event ID: {event_id}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(metrics, status=status.HTTP_200_OK)
 
 
 class InternalConversationsMetricsViewSet(GenericViewSet):

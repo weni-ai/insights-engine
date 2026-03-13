@@ -48,3 +48,15 @@ class AvailableWidgets(TextChoices):
     """
 
     SALES_FUNNEL = "SALES_FUNNEL"
+
+
+class AbsoluteNumbersMetricsType(TextChoices):
+    """
+    Absolute numbers metrics type
+    """
+
+    TOTAL = "TOTAL"
+    SUM = "SUM"
+    AVERAGE = "AVERAGE"
+    HIGHEST = "HIGHEST"
+    LOWEST = "LOWEST"
