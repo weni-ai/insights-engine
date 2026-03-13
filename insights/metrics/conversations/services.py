@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import logging
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -25,7 +26,7 @@ from insights.metrics.conversations.integrations.datalake.dataclass import (
     CrosstabSource,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
+    BaseDatalakeConversationsMetricsService,
     DatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
@@ -56,7 +57,164 @@ if TYPE_CHECKING:
     from insights.projects.models import Project
 
 
-class ConversationsMetricsService(ConversationsServiceCachingMixin):
+class BaseConversationsMetricsService(ABC):
+    """
+    Base class for conversations metrics services.
+    """
+
+    @abstractmethod
+    def get_topics(self, project_uuid: UUID) -> dict:
+        """
+        Get conversation topics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
+        """
+        Get conversation subtopics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
+        """
+        Create a conversation topic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def create_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
+    ) -> dict:
+        """
+        Create a conversation subtopic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
+        """
+        Delete a conversation topic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def delete_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
+    ) -> dict:
+        """
+        Delete a conversation subtopic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_topics_distribution(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+        output_language: str = "en",
+    ) -> TopicsDistributionMetrics:
+        """
+        Get topics distribution
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_totals(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations totals
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: CsatMetricsType,
+    ) -> dict:
+        """
+        Get csat metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: NpsMetricsType,
+    ) -> dict:
+        """
+        Get nps metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_generic_metrics_by_key(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+    ) -> dict:
+        """
+        Get generic metrics by key
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_sales_funnel_data(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SalesFunnelMetrics:
+        """
+        Get sales funnel data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_available_widgets(
+        self, project_uuid: UUID, widget_type: AvailableWidgetsListType | None = None
+    ) -> AvailableWidgetsList:
+        """
+        Get available widgets
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_crosstab_data(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get crosstab data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+
+class ConversationsMetricsService(
+    ConversationsServiceCachingMixin, BaseConversationsMetricsService
+):
     """
     Service to get conversations metrics
     """
@@ -69,11 +227,15 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
     ):
-        self.datalake_service = datalake_service
-        self.nexus_conversations_client = nexus_conversations_client
-        self.cache_client = cache_client
-        self.nexus_conversations_cache_ttl = nexus_conversations_cache_ttl
-        self.flowruns_query_executor = flowruns_query_executor
+        self.datalake_service: BaseDatalakeConversationsMetricsService = (
+            datalake_service
+        )
+        self.nexus_conversations_client: BaseNexusConversationsAPIClient = (
+            nexus_conversations_client
+        )
+        self.cache_client: CacheClient = cache_client
+        self.nexus_conversations_cache_ttl: int = nexus_conversations_cache_ttl
+        self.flowruns_query_executor: FlowRunsQueryExecutor = flowruns_query_executor
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
         """
@@ -413,14 +575,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         )
 
     def get_totals(
-        self, project: "Project", start_date: datetime, end_date: datetime
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> ConversationsTotalsMetrics:
         """
         Get conversations metrics totals
         """
 
         return self.datalake_service.get_conversations_totals(
-            project_uuid=project.uuid,
+            project_uuid=project_uuid,
             start_date=start_date,
             end_date=end_date,
         )

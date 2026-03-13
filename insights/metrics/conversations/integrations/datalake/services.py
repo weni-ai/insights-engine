@@ -41,7 +41,7 @@ CACHE_RESULTS = settings.CACHE_DATALAKE_EVENTS_RESULTS
 CACHE_TTL = settings.CACHE_DATALAKE_EVENTS_RESULTS_TTL
 
 
-class BaseConversationsMetricsService(ABC):
+class BaseDatalakeConversationsMetricsService(ABC):
     """
     Base class for conversations metrics services.
     """
@@ -132,7 +132,7 @@ class BaseConversationsMetricsService(ABC):
         """
 
 
-class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
+class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsService):
     """
     Service for getting conversations metrics from Datalake.
     """

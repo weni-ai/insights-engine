@@ -9,9 +9,6 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 
 from insights.metrics.conversations.enums import ConversationType
-from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
-)
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportWorksheet,
     ConversationsReportFile,
@@ -22,7 +19,10 @@ from insights.metrics.conversations.integrations.elasticsearch.services import (
 from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
     MockElasticsearchClient,
 )
-from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.services import (
+    BaseConversationsMetricsService,
+    ConversationsMetricsService,
+)
 from insights.sources.dl_events.tests.mock_client import (
     ClassificationMockDataLakeEventsClient,
 )
