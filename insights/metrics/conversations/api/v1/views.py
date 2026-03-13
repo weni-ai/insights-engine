@@ -371,7 +371,7 @@ class ConversationsMetricsViewSet(
 
         try:
             totals = self.service.get_totals(
-                project=query_params_serializer.validated_data["project"],
+                project_uuid=query_params_serializer.validated_data["project_uuid"],
                 start_date=query_params_serializer.validated_data[
                     "start_date"
                 ].isoformat(),

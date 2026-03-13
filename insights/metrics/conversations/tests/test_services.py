@@ -637,7 +637,7 @@ class TestConversationsMetricsService(TestCase):
 
     def test_get_totals(self):
         totals = self.service.get_totals(
-            project=self.project,
+            project_uuid=self.project.uuid,
             start_date=self.start_date,
             end_date=self.end_date,
         )

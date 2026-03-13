@@ -251,23 +251,6 @@ class ConversationsMetricsService(
         self.nexus_conversations_cache_ttl: int = nexus_conversations_cache_ttl
         self.flowruns_query_executor: FlowRunsQueryExecutor = flowruns_query_executor
 
-    def get_totals(
-        self, project: "Project", start_date: datetime, end_date: datetime
-    ) -> ConversationsTotalsMetrics:
-        """
-        Get conversations metrics totals
-        """
-
-        print("get totals (metrics service)")
-        print("start_date", start_date)
-        print("end_date", end_date)
-
-        return self.datalake_service.get_conversations_totals(
-            project_uuid=project.uuid,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
         """
         Convert datetime to ISO string if needed for JSON serialization
@@ -605,6 +588,19 @@ class ConversationsMetricsService(
 
         return TopicsDistributionMetrics(
             topics=topics_metrics,
+        )
+
+    def get_totals(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations metrics totals
+        """
+
+        return self.datalake_service.get_conversations_totals(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     def _get_csat_metrics_from_flowruns(
