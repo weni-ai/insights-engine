@@ -50,7 +50,7 @@ from insights.metrics.conversations.enums import (
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
 from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
+    BaseDatalakeConversationsMetricsService,
     DatalakeConversationsMetricsService,
 )
 from insights.sources.cache import CacheClient
