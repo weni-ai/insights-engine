@@ -7,13 +7,12 @@ from insights.metrics.conversations.dataclass import (
     SubtopicMetrics,
     TopicMetrics,
     TopicsDistributionMetrics,
+    SalesFunnelMetrics,
+    AvailableWidgetsList,
 )
 from insights.metrics.conversations.enums import (
     AvailableWidgetsListType,
     ConversationType,
-    TopicsDistributionMetrics,
-    SalesFunnelMetrics,
-    AvailableWidgetsList,
 )
 from insights.widgets.models import Widget
 from insights.metrics.conversations.services import BaseConversationsMetricsService

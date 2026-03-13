@@ -132,6 +132,48 @@ class BaseConversationsMetricsService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: CsatMetricsType,
+    ) -> dict:
+        """
+        Get csat metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: NpsMetricsType,
+    ) -> dict:
+        """
+        Get nps metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_generic_metrics_by_key(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+    ) -> dict:
+        """
+        Get generic metrics by key
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_sales_funnel_data(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SalesFunnelMetrics:
@@ -185,11 +227,15 @@ class ConversationsMetricsService(
         nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
     ):
-        self.datalake_service = datalake_service
-        self.nexus_conversations_client = nexus_conversations_client
-        self.cache_client = cache_client
-        self.nexus_conversations_cache_ttl = nexus_conversations_cache_ttl
-        self.flowruns_query_executor = flowruns_query_executor
+        self.datalake_service: BaseDatalakeConversationsMetricsService = (
+            datalake_service
+        )
+        self.nexus_conversations_client: BaseNexusConversationsAPIClient = (
+            nexus_conversations_client
+        )
+        self.cache_client: CacheClient = cache_client
+        self.nexus_conversations_cache_ttl: int = nexus_conversations_cache_ttl
+        self.flowruns_query_executor: FlowRunsQueryExecutor = flowruns_query_executor
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
         """
