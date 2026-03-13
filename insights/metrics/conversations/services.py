@@ -575,14 +575,14 @@ class ConversationsMetricsService(
         )
 
     def get_totals(
-        self, project: "Project", start_date: datetime, end_date: datetime
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> ConversationsTotalsMetrics:
         """
         Get conversations metrics totals
         """
 
         return self.datalake_service.get_conversations_totals(
-            project_uuid=project.uuid,
+            project_uuid=project_uuid,
             start_date=start_date,
             end_date=end_date,
         )
