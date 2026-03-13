@@ -568,7 +568,7 @@ class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
                 code="widget_source_not_absolute_numbers_child",
             )
 
-        if not operation in AbsoluteNumbersMetricsType.choices:
+        if operation not in AbsoluteNumbersMetricsType.values:
             raise serializers.ValidationError(
                 {"widget_uuid": _("Widget operation is not valid")},
                 code="widget_operation_not_valid",
@@ -607,5 +607,6 @@ class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
 
         attrs["start_date"] = start_date
         attrs["end_date"] = end_date
+        attrs["widget"] = widget
 
         return attrs

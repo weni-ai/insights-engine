@@ -559,7 +559,26 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
         query_params = AbsoluteNumbersQueryParamsSerializer(data=request.query_params)
         query_params.is_valid(raise_exception=True)
 
-        return Response(status=status.HTTP_200_OK)
+        try:
+            metrics = self.service.get_absolute_numbers(
+                project_uuid=query_params.validated_data["project_uuid"],
+                widget=query_params.validated_data["widget"],
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            logger.error(
+                "[ConversationsMetricsViewSet] Error getting absolute numbers metrics: %s",
+                e,
+                exc_info=True,
+            )
+            event_id = capture_exception(e)
+            return Response(
+                {"error": f"Internal error. Event ID: {event_id}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(metrics, status=status.HTTP_200_OK)
 
 
 class InternalConversationsMetricsViewSet(GenericViewSet):
