@@ -377,7 +377,8 @@ class ConversationsMetricsViewSet(
                 ].isoformat(),
                 end_date=query_params_serializer.validated_data["end_date"].isoformat(),
             )
-        except Exception:
+        except Exception as e:
+            print(e)
             return Response(
                 {"error": "Error getting conversations metrics totals"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
