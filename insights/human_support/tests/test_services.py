@@ -41,41 +41,17 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertIn("queues", result)
         self.assertIn("tags", result)
 
-    @patch("insights.human_support.services.SectorsQueryExecutor")
-    @patch("insights.human_support.services.QueuesQueryExecutor")
-    @patch("insights.human_support.services.TagsQueryExecutor")
-    def test_expand_all_tokens_sectors(self, mock_tags, mock_queues, mock_sectors):
-        mock_sectors.execute.return_value = {
-            "results": [{"uuid": "sec-1"}, {"uuid": "sec-2"}],
-        }
-        mock_queues.execute.return_value = {"results": []}
-        mock_tags.execute.return_value = {"results": []}
+    def test_expand_all_tokens_sectors(self):
         result = self.service._expand_all_tokens({"sectors": "__all__"})
-        self.assertEqual(result["sectors"], ["sec-1", "sec-2"])
+        self.assertNotIn("sectors", result)
 
-    @patch("insights.human_support.services.SectorsQueryExecutor")
-    @patch("insights.human_support.services.QueuesQueryExecutor")
-    @patch("insights.human_support.services.TagsQueryExecutor")
-    def test_expand_all_tokens_queues(self, mock_tags, mock_queues, mock_sectors):
-        mock_sectors.execute.return_value = {"results": []}
-        mock_queues.execute.return_value = {
-            "results": [{"uuid": "q-1"}],
-        }
-        mock_tags.execute.return_value = {"results": []}
+    def test_expand_all_tokens_queues(self):
         result = self.service._expand_all_tokens({"queues": "__all__"})
-        self.assertEqual(result["queues"], ["q-1"])
+        self.assertNotIn("queues", result)
 
-    @patch("insights.human_support.services.SectorsQueryExecutor")
-    @patch("insights.human_support.services.QueuesQueryExecutor")
-    @patch("insights.human_support.services.TagsQueryExecutor")
-    def test_expand_all_tokens_tags(self, mock_tags, mock_queues, mock_sectors):
-        mock_sectors.execute.return_value = {"results": []}
-        mock_queues.execute.return_value = {"results": []}
-        mock_tags.execute.return_value = {
-            "results": [{"uuid": "t-1"}, {"uuid": "t-2"}],
-        }
+    def test_expand_all_tokens_tags(self):
         result = self.service._expand_all_tokens({"tags": ["__all__"]})
-        self.assertEqual(result["tags"], ["t-1", "t-2"])
+        self.assertNotIn("tags", result)
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_attendance_status(self, mock_rooms):

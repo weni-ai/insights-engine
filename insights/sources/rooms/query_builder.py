@@ -88,11 +88,11 @@ class RoomSQLQueryBuilder:
 
         # Ensures that the join with queues_queue and sectors_sector exists (aliases q and sec)
         queue_join = """
-            INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id AND q.is_deleted=false
-            INNER JOIN public.sectors_sector AS sec ON sec.uuid=q.sector_id AND sec.is_deleted=false
+            INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id
+            INNER JOIN public.sectors_sector AS sec ON sec.uuid=q.sector_id
         """
         sector_as_sec_join = """
-            INNER JOIN public.sectors_sector AS sec ON sec.uuid=q.sector_id AND sec.is_deleted=false
+            INNER JOIN public.sectors_sector AS sec ON sec.uuid=q.sector_id
         """
         if "q" not in self.joins:
             self.join_clause = f"{queue_join} {self.join_clause}"
@@ -128,7 +128,7 @@ class RoomSQLQueryBuilder:
         tag_joins = """
             INNER JOIN public.rooms_room_tags AS rt ON rt.room_id=r.uuid
             INNER JOIN public.sectors_sectortag AS stg ON stg.uuid=rt.sectortag_id
-            INNER JOIN public.sectors_sector AS sec ON sec.uuid=stg.sector_id AND sec.is_deleted=false
+            INNER JOIN public.sectors_sector AS sec ON sec.uuid=stg.sector_id
         """
 
         query = f"""
