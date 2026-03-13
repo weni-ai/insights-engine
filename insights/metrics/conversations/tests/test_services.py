@@ -32,11 +32,13 @@ from insights.metrics.conversations.enums import (
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     SalesFunnelData,
 )
-from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
-)
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
-from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseDatalakeConversationsMetricsService,
+)
+from insights.metrics.conversations.services import (
+    ConversationsMetricsService,
+)
 from insights.projects.models import Project
 from insights.sources.flowruns.usecases.query_execute import (
     QueryExecutor as FlowRunsQueryExecutor,
@@ -102,7 +104,7 @@ class TestConversationsMetricsService(TestCase):
         )
 
         # Create mocks with proper specs for type safety
-        self.mock_datalake_service = Mock(spec=BaseConversationsMetricsService)
+        self.mock_datalake_service = Mock(spec=BaseDatalakeConversationsMetricsService)
         self.mock_nexus_conversations_client = MagicMock(
             spec=NexusConversationsAPIClient
         )

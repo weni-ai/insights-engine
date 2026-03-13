@@ -11,11 +11,11 @@ from insights.metrics.conversations.integrations.datalake.dataclass import (
     SalesFunnelData,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
+    BaseDatalakeConversationsMetricsService,
 )
 
 
-class MockDatalakeConversationsMetricsService(BaseConversationsMetricsService):
+class MockDatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsService):
     """
     Mock service for conversations metrics.
     """
