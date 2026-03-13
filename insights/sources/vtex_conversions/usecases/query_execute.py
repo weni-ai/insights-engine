@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
 
 
+from insights.authentication.services.jwt_service import JWTService
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.projects.models import Project
 from insights.sources.cache import CacheClient
@@ -27,6 +28,14 @@ class QueryExecutor:
             return json.loads(settings.VTEX_ORDERS_CREDENTIALS)
 
         vtex_credentials_client = AuthRestClient(project=project.uuid)
+
+        if project.vtex_account:
+            return {
+                "domain": project.vtex_account,
+                "internal_token": JWTService().generate_jwt_token(
+                    vtex_account=project.vtex_account
+                ),
+            }
 
         try:
             credentials = vtex_credentials_client.get_vtex_auth()
@@ -53,7 +62,15 @@ class QueryExecutor:
         meta_api_client = MetaGraphAPIClient()
         integrations_client = WeniIntegrationsClient()
         vtex_credentials = cls.get_vtex_credentials(project)
-        orders_client = VtexOrdersRestClient(vtex_credentials, CacheClient())
+
+        if vtex_credentials.get("internal_token"):
+            use_io_proxy = True
+        else:
+            use_io_proxy = False
+
+        orders_client = VtexOrdersRestClient(
+            vtex_credentials, CacheClient(), use_io_proxy=use_io_proxy
+        )
 
         service = VTEXOrdersConversionsService(
             project, meta_api_client, integrations_client, orders_client

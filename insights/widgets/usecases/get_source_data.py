@@ -5,6 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 
+from insights.authentication.services.jwt_service import JWTService
 from insights.projects.parsers import parse_dict_to_json
 from insights.shared.viewsets import get_source
 from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
@@ -215,19 +216,28 @@ def get_source_data_from_widget(
 
         serialized_auth = {}
         if widget.type == "vtex_order":
-            auth_source = get_source(slug="vtexcredentials")
-            try:
-                serialized_auth: dict = auth_source.execute(
-                    filters={"project": widget.project.uuid},
-                    operation="get_vtex_auth",
-                    parser=parse_dict_to_json,
-                    return_format="",
-                    query_kwargs={},
-                )
-            except VtexCredentialsNotFound:
-                raise PermissionDenied(
-                    detail="VTEX credentials not configured for this project. Please configure the VTEX integration first."
-                )
+            if widget.project.vtex_account:
+                serialized_auth = {
+                    "domain": widget.project.vtex_account,
+                    "internal_token": JWTService().generate_jwt_token(
+                        vtex_account=widget.project.vtex_account
+                    ),
+                }
+
+            else:
+                auth_source = get_source(slug="vtexcredentials")
+                try:
+                    serialized_auth: dict = auth_source.execute(
+                        filters={"project": widget.project.uuid},
+                        operation="get_vtex_auth",
+                        parser=parse_dict_to_json,
+                        return_format="",
+                        query_kwargs={},
+                    )
+                except VtexCredentialsNotFound:
+                    raise PermissionDenied(
+                        detail="VTEX credentials not configured for this project. Please configure the VTEX integration first."
+                    )
 
         operation_function = (
             cross_source_data_operation
