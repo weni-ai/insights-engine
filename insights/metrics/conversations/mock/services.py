@@ -153,6 +153,16 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
             score=score,
         )
 
+    def get_generic_metrics_by_key(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+    ) -> dict:
+        return {}
+
     def get_sales_funnel_data(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SalesFunnelMetrics:
