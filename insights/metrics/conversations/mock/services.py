@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime
 
 from insights.metrics.conversations.dataclass import (
@@ -56,13 +56,13 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         return TopicsDistributionMetrics(
             topics=[
                 TopicMetrics(
-                    uuid=UUID.uuid4(),
+                    uuid=uuid4(),
                     name="Topic 1",
                     quantity=120,
                     percentage=50.0,
                     subtopics=[
                         SubtopicMetrics(
-                            uuid=UUID.uuid4(),
+                            uuid=uuid4(),
                             name="Subtopic 1.1",
                             quantity=50,
                             percentage=100.0,
@@ -70,19 +70,19 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
                     ],
                 ),
                 TopicMetrics(
-                    uuid=UUID.uuid4(),
+                    uuid=uuid4(),
                     name="Topic 2",
                     quantity=100,
                     percentage=50.0,
                     subtopics=[
                         SubtopicMetrics(
-                            uuid=UUID.uuid4(),
+                            uuid=uuid4(),
                             name="Subtopic 2.1",
                             quantity=65,
                             percentage=65.0,
                         ),
                         SubtopicMetrics(
-                            uuid=UUID.uuid4(),
+                            uuid=uuid4(),
                             name="Subtopic 2.2",
                             quantity=35,
                             percentage=35.0,
@@ -159,14 +159,18 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         widget: Widget,
         start_date: datetime,
         end_date: datetime,
-        key: str,
     ) -> dict:
         return {}
 
     def get_sales_funnel_data(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SalesFunnelMetrics:
-        return {}
+        return SalesFunnelMetrics(
+            leads_count=150,
+            total_orders_count=45,
+            total_orders_value=675000,
+            currency_code="USD",
+        )
 
     def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
         return False
