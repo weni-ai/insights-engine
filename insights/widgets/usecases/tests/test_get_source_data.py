@@ -380,6 +380,7 @@ class TestGetSourceDataFromWidget(TestCase):
 
         self.widget_mock.type = "vtex_order"
         self.widget_mock.project.uuid = "vtex_project_uuid"
+        self.widget_mock.project.vtex_account = None
 
         result = get_source_data_from_widget(widget=self.widget_mock)
 
@@ -415,6 +416,7 @@ class TestGetSourceDataFromWidget(TestCase):
 
         self.widget_mock.type = "vtex_order"
         self.widget_mock.project.uuid = "vtex_project_uuid"
+        self.widget_mock.project.vtex_account = None
 
         # Verify that PermissionDenied is raised
         with self.assertRaises(PermissionDenied) as context:

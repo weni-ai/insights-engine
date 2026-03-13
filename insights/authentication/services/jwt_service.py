@@ -12,15 +12,23 @@ class JWTService:
     """
 
     def generate_jwt_token(
-        self, project_uuid: str | UUID, key: str | None = None
+        self,
+        project_uuid: str | UUID | None = None,
+        key: str | None = None,
+        vtex_account: str | None = None,
     ) -> str:
         if key is None:
             key = settings.JWT_SECRET_KEY
         payload = {
-            "project_uuid": str(project_uuid),
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
             "iat": datetime.now(timezone.utc),
         }
+
+        if vtex_account is not None:
+            payload["vtex_account"] = vtex_account
+
+        if project_uuid is not None:
+            payload["project_uuid"] = str(project_uuid)
 
         if not key:
             key = settings.JWT_SECRET_KEY
