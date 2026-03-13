@@ -369,20 +369,6 @@ class ConversationsMetricsViewSet(
         )
         query_params_serializer.is_valid(raise_exception=True)
 
-        # [STAGING] Mock conversations metrics totals
-        project_uuid = query_params_serializer.validated_data["project_uuid"]
-        if str(project_uuid) in settings.STG_MOCK_CONVERSATIONS_PROJECT_UUIDS:
-            mock_data = {
-                "total_conversations": {"value": 9227, "percentage": 100.0},
-                "resolved": {"value": 7219, "percentage": 78.24},
-                "unresolved": {"value": 2008, "percentage": 21.76},
-                "transferred_to_human": {"value": 1551, "percentage": 16.81},
-            }
-            return Response(
-                mock_data,
-                status=status.HTTP_200_OK,
-            )
-
         try:
             totals = self.service.get_totals(
                 project=query_params_serializer.validated_data["project"],
