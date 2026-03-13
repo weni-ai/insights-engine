@@ -35,6 +35,6 @@ class ConversationsMetricsServiceResolverMixin:
                 request=self.request,
                 project_uuid=project_uuid,
                 force_use_real_service=force_use_real_service,
-            )
+            )()
 
         return self._service
