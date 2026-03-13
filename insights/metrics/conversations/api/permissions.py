@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from rest_framework.permissions import BasePermission
 
 
@@ -16,12 +17,15 @@ class WidgetQueryParamPermission(BasePermission):
         if not widget_uuid:
             return False
 
-        widget = Widget.objects.filter(
-            uuid=widget_uuid,
-            dashboard__project__in=ProjectAuth.objects.filter(
-                user=request.user
-            ).values_list("project", flat=True),
-        ).first()
+        try:
+            widget = Widget.objects.filter(
+                uuid=widget_uuid,
+                dashboard__project__in=ProjectAuth.objects.filter(
+                    user=request.user
+                ).values_list("project", flat=True),
+            ).first()
+        except (ValueError, ValidationError):
+            return False
 
         if not widget:
             return False

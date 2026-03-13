@@ -936,7 +936,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
     def get_absolute_numbers(
         self,
-        project_uuid: UUID,
         widget: Widget,
         start_date: datetime,
         end_date: datetime,
@@ -957,7 +956,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         method = self._get_absolute_numbers_method_by_operation(operation)
 
         return method(
-            project_uuid=project_uuid,
+            project_uuid=widget.dashboard.project_id,
             key=key,
             start_date=start_date,
             end_date=end_date,

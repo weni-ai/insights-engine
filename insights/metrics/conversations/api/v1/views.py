@@ -561,7 +561,6 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
 
         try:
             metrics = self.service.get_absolute_numbers(
-                project_uuid=query_params.validated_data["project_uuid"],
                 widget=query_params.validated_data["widget"],
                 start_date=query_params.validated_data["start_date"],
                 end_date=query_params.validated_data["end_date"],

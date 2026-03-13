@@ -1279,7 +1279,6 @@ class TestConversationsMetricsService(TestCase):
         )
 
         result = self.service.get_absolute_numbers(
-            project_uuid=self.project.uuid,
             widget=widget,
             start_date=self.start_date,
             end_date=self.end_date,
@@ -1290,7 +1289,7 @@ class TestConversationsMetricsService(TestCase):
             AbsoluteNumbersMetricsType.TOTAL
         )
         mock_method.assert_called_once_with(
-            project_uuid=self.project.uuid,
+            project_uuid=widget.dashboard.project_id,
             key="test_key",
             start_date=self.start_date,
             end_date=self.end_date,
@@ -1321,7 +1320,6 @@ class TestConversationsMetricsService(TestCase):
             )
 
             result = self.service.get_absolute_numbers(
-                project_uuid=self.project.uuid,
                 widget=widget,
                 start_date=self.start_date,
                 end_date=self.end_date,
@@ -1349,7 +1347,6 @@ class TestConversationsMetricsService(TestCase):
 
         with self.assertRaises(AssertionError):
             self.service.get_absolute_numbers(
-                project_uuid=self.project.uuid,
                 widget=widget,
                 start_date=self.start_date,
                 end_date=self.end_date,
@@ -1372,7 +1369,6 @@ class TestConversationsMetricsService(TestCase):
 
         with self.assertRaises(AssertionError):
             self.service.get_absolute_numbers(
-                project_uuid=self.project.uuid,
                 widget=widget,
                 start_date=self.start_date,
                 end_date=self.end_date,
@@ -1394,7 +1390,6 @@ class TestConversationsMetricsService(TestCase):
 
         with self.assertRaises(AssertionError):
             self.service.get_absolute_numbers(
-                project_uuid=self.project.uuid,
                 widget=widget,
                 start_date=self.start_date,
                 end_date=self.end_date,
@@ -1415,7 +1410,6 @@ class TestConversationsMetricsService(TestCase):
 
         with self.assertRaises(AssertionError):
             self.service.get_absolute_numbers(
-                project_uuid=self.project.uuid,
                 widget=widget,
                 start_date=self.start_date,
                 end_date=self.end_date,
@@ -1433,7 +1427,6 @@ class TestConversationsMetricsService(TestCase):
 
         with self.assertRaises(AssertionError):
             self.service.get_absolute_numbers(
-                project_uuid=self.project.uuid,
                 widget=widget,
                 start_date=self.start_date,
                 end_date=self.end_date,
