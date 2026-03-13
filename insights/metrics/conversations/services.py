@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 from uuid import UUID
 from datetime import datetime
 import json
@@ -35,6 +35,7 @@ from insights.sources.flowruns.usecases.query_execute import (
     QueryExecutor as FlowRunsQueryExecutor,
 )
 from insights.metrics.conversations.enums import (
+    AbsoluteNumbersMetricsType,
     AvailableWidgets,
     AvailableWidgetsListType,
     ConversationType,
@@ -915,4 +916,50 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         return self.datalake_service.get_events_lowest_value(
             project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+    def _get_absolute_numbers_method_by_operation(
+        self, operation: AbsoluteNumbersMetricsType
+    ) -> Callable:
+        """
+        Get absolute numbers method by operation
+        """
+        operation_mapping = {
+            AbsoluteNumbersMetricsType.TOTAL: self.get_event_count,
+            AbsoluteNumbersMetricsType.SUM: self.get_events_values_sum,
+            AbsoluteNumbersMetricsType.AVERAGE: self.get_events_values_average,
+            AbsoluteNumbersMetricsType.HIGHEST: self.get_events_highest_value,
+            AbsoluteNumbersMetricsType.LOWEST: self.get_events_lowest_value,
+        }
+
+        return operation_mapping.get(operation)
+
+    def get_absolute_numbers(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get absolute numbers metrics
+        """
+
+        config = widget.config or {}
+        operation = config.get("operation")
+        key = config.get("key")
+        agent_uuid = config.get("datalake_config", {}).get("agent_uuid")
+
+        assert operation is not None
+        assert key is not None
+        assert agent_uuid is not None
+
+        method = self._get_absolute_numbers_method_by_operation(operation)
+
+        return method(
+            project_uuid=project_uuid,
+            key=key,
+            start_date=start_date,
+            end_date=end_date,
+            agent_uuid=agent_uuid,
         )
