@@ -14,6 +14,9 @@ from insights.authentication.permissions import (
     ProjectAuthQueryParamPermission,
 )
 from insights.metrics.conversations.api.decorators import force_use_real_service
+from insights.metrics.conversations.api.mixins import (
+    ConversationsMetricsServiceResolverMixin,
+)
 from insights.metrics.conversations.exceptions import (
     ConversationsMetricsError,
     GetProjectAiCsatMetricsError,
@@ -42,12 +45,10 @@ from insights.metrics.conversations.api.v1.serializers import (
     NpsMetricsSerializer,
 )
 from insights.metrics.conversations.services import (
-    BaseConversationsMetricsService,
     ConversationsMetricsService,
 )
 from insights.projects.models import ProjectAuth
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
-from insights.metrics.conversations.resolvers import ConversationsMetricsServiceResolver
 
 
 logger = logging.getLogger(__name__)
@@ -59,42 +60,14 @@ if TYPE_CHECKING:
     from rest_framework.request import Request
 
 
-class ConversationsMetricsViewSet(GenericViewSet):
+class ConversationsMetricsViewSet(
+    ConversationsMetricsServiceResolverMixin, GenericViewSet
+):
     """
     ViewSet to get conversations metrics
     """
 
-    service = ConversationsMetricsService()
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
-
-    @property
-    def resolver(self) -> ConversationsMetricsServiceResolver:
-        if self._resolver is None:
-            self._resolver = ConversationsMetricsServiceResolver()
-
-        return self._resolver
-
-    @property
-    def service(self) -> BaseConversationsMetricsService:
-        if self._service is None:
-            query_params = self.request.query_params
-            project_uuid = query_params.get("project_uuid")
-
-            try:
-                action = getattr(self, self.action)
-                force_use_real_service = getattr(
-                    action, "force_use_real_service", False
-                )
-            except AttributeError:
-                force_use_real_service = False
-
-            self._service = self.resolver.resolve(
-                request=self.request,
-                project_uuid=project_uuid,
-                force_use_real_service=force_use_real_service,
-            )
-
-        return self._service
 
     @action(
         detail=False,
