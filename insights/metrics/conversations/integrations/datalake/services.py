@@ -1082,7 +1082,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-        field_name: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values sum from Datalake.
@@ -1115,7 +1115,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-        field_name: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values average from Datalake.
@@ -1149,7 +1149,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-        field_name: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events highest value from Datalake.
@@ -1182,7 +1182,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-        field_name: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events lowest value from Datalake.
