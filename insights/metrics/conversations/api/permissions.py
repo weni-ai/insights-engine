@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from rest_framework.permissions import BasePermission
 
 
@@ -19,10 +20,19 @@ class WidgetQueryParamPermission(BasePermission):
 
         try:
             widget = Widget.objects.filter(
-                uuid=widget_uuid,
-                dashboard__project__in=ProjectAuth.objects.filter(
-                    user=request.user
-                ).values_list("project", flat=True),
+                Q(uuid=widget_uuid)
+                & (
+                    Q(
+                        dashboard__project__in=ProjectAuth.objects.filter(
+                            user=request.user
+                        ).values_list("project", flat=True)
+                    )
+                    | Q(
+                        parent__dashboard__project__in=ProjectAuth.objects.filter(
+                            user=request.user
+                        ).values_list("project", flat=True)
+                    )
+                ),
             ).first()
         except (ValueError, ValidationError):
             return False

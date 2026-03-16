@@ -710,7 +710,7 @@ class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
 
         widget = self._validate_widget(attrs["widget_uuid"])
 
-        project = widget.dashboard.project
+        project = widget.project
 
         validator = ConversationsDatesValidator(
             project=project,

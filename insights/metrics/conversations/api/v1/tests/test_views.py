@@ -1077,6 +1077,51 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_absolute_numbers"
     )
     @with_project_auth
+    def test_get_absolute_numbers_with_child_widget(self, mock_get_absolute_numbers):
+        mock_get_absolute_numbers.return_value = {
+            "value": 150,
+        }
+
+        parent_widget = Widget.objects.create(
+            name="Test Parent Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers.parent",
+            type="conversations.absolute_numbers.parent",
+            position=[1, 2],
+            config={},
+        )
+
+        widget = Widget.objects.create(
+            name="Test Widget",
+            parent=parent_widget,
+            source="conversations.absolute_numbers.child",
+            type="conversations.absolute_numbers.child",
+            position=[1, 2],
+            config={
+                "source": "conversations.absolute_numbers.child",
+                "operation": "TOTAL",
+                "key": "test_key",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        response = self.get_absolute_numbers(
+            {
+                "widget_uuid": widget.uuid,
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["value"], 150)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_absolute_numbers"
+    )
+    @with_project_auth
     def test_get_absolute_numbers_returns_500_on_service_error(
         self, mock_get_absolute_numbers
     ):
