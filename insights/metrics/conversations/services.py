@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from abc import ABC, abstractmethod
 import logging
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Optional
 from uuid import UUID
 
 import pytz
@@ -1157,13 +1157,14 @@ class ConversationsMetricsService(
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values sum from Datalake.
         """
 
         return self.datalake_service.get_events_values_sum(
-            project_uuid, event_name, start_date, end_date, key, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
         )
 
     def get_events_values_average(
@@ -1174,13 +1175,14 @@ class ConversationsMetricsService(
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values average from Datalake.
         """
 
         return self.datalake_service.get_events_values_average(
-            project_uuid, event_name, start_date, end_date, key, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
         )
 
     def get_events_highest_value(
@@ -1191,13 +1193,14 @@ class ConversationsMetricsService(
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events highest value from Datalake.
         """
 
         return self.datalake_service.get_events_highest_value(
-            project_uuid, event_name, start_date, end_date, key, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
         )
 
     def get_events_lowest_value(
@@ -1208,13 +1211,14 @@ class ConversationsMetricsService(
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events lowest value from Datalake.
         """
 
         return self.datalake_service.get_events_lowest_value(
-            project_uuid, event_name, start_date, end_date, key, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
         )
 
     def _get_absolute_numbers_method_by_operation(
@@ -1247,6 +1251,7 @@ class ConversationsMetricsService(
         operation = config.get("operation")
         key = config.get("key")
         agent_uuid = config.get("datalake_config", {}).get("agent_uuid")
+        field_name = config.get("field_name")
 
         assert operation is not None
         assert key is not None
@@ -1260,4 +1265,5 @@ class ConversationsMetricsService(
             start_date=start_date,
             end_date=end_date,
             agent_uuid=agent_uuid,
+            field_name=field_name,
         )

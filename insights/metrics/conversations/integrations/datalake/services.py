@@ -1145,6 +1145,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values sum from Datalake.
@@ -1157,6 +1158,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             end_date=end_date,
             key=key,
             agent_uuid=agent_uuid,
+            field_name=field_name,
         )
 
         if self.cache_results and (
@@ -1176,6 +1178,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values average from Datalake.
@@ -1189,6 +1192,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             end_date=end_date,
             key=key,
             agent_uuid=agent_uuid,
+            field_name=field_name,
         )
 
         if self.cache_results and (
@@ -1208,6 +1212,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events highest value from Datalake.
@@ -1220,6 +1225,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             end_date=end_date,
             key=key,
             agent_uuid=agent_uuid,
+            field_name=field_name,
         )
 
         if self.cache_results and (
@@ -1239,6 +1245,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events lowest value from Datalake.
@@ -1251,6 +1258,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             end_date=end_date,
             key=key,
             agent_uuid=agent_uuid,
+            field_name=field_name,
         )
 
         if self.cache_results and (
