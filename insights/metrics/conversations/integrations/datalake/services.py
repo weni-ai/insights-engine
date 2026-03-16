@@ -3,6 +3,7 @@ from dataclasses import asdict
 import json
 import logging
 from datetime import datetime
+from typing import Optional, Type, TypeVar
 from uuid import UUID
 import uuid
 
@@ -38,6 +39,8 @@ from insights.sources.dl_events.clients import (
 
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 CACHE_RESULTS = settings.CACHE_DATALAKE_EVENTS_RESULTS
 CACHE_TTL = settings.CACHE_DATALAKE_EVENTS_RESULTS_TTL
@@ -133,6 +136,74 @@ class BaseDatalakeConversationsMetricsService(ABC):
         Check if sales funnel data exists in Datalake.
         """
 
+    @abstractmethod
+    def get_event_count(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> int:
+        """
+        Get event count from Datalake.
+        """
+
+    @abstractmethod
+    def get_events_values_sum(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values sum from Datalake.
+        """
+
+    @abstractmethod
+    def get_events_values_average(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values average from Datalake.
+        """
+
+    @abstractmethod
+    def get_events_highest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events highest value from Datalake.
+        """
+
+    @abstractmethod
+    def get_events_lowest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events lowest value from Datalake.
+        """
+
 
 class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsService):
     """
@@ -174,9 +245,14 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         except Exception as e:
             logger.warning("Failed to save results to cache: %s", e)
 
-    def _get_cached_results(self, key: str) -> dict:
+    def _get_cached_results(
+        self, key: str, result_type: Optional[Type[T]] = None
+    ) -> Optional[T]:
         """
         Get results from cache with JSON deserialization.
+
+        If result_type is provided (e.g. int, str, dict), the cached value
+        is converted to that type when possible. Conversion failures return None.
         """
         try:
             cached_data = self.cache_client.get(key)
@@ -188,6 +264,17 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 # Parse the JSON data and reconstruct the objects
                 if not isinstance(cached_data, dict):
                     cached_data = json.loads(cached_data)
+
+                if result_type is not None:
+                    try:
+                        return result_type(cached_data)
+                    except (TypeError, ValueError) as e:
+                        logger.warning(
+                            "Failed to convert cached data to %s: %s",
+                            result_type.__name__,
+                            e,
+                        )
+                        return None
 
                 return cached_data
             return None
@@ -1003,3 +1090,174 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         ).serialize()
 
         return data
+
+    def get_event_count(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get event count from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="event_count",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key, int)
+        ):
+            return cached_results
+
+        try:
+            event_count = self.events_client.get_events_count(
+                event_name=event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                key=key,
+                metadata_key="agent_uuid",
+                metadata_value=agent_uuid,
+            )[0].get("count", 0)
+        except Exception as e:
+            logger.error("Failed to get event count: %s", e)
+            raise e
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, event_count)
+
+        return event_count
+
+    def get_events_values_sum(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values sum from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="events_values_sum",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key, int)
+        ):
+            return cached_results
+
+        # TODO: Dependency not yet implemented
+
+        return 0
+
+    def get_events_values_average(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events values average from Datalake.
+        """
+
+        cache_key = self._get_cache_key(
+            data_type="events_values_average",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key, int)
+        ):
+            return cached_results
+
+        # TODO: Dependency not yet implemented
+
+        return 0
+
+    def get_events_highest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events highest value from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="events_highest_value",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key, int)
+        ):
+            return cached_results
+
+        # TODO: Dependency not yet implemented
+
+        return 0
+
+    def get_events_lowest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+    ) -> int:
+        """
+        Get events lowest value from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="events_lowest_value",
+            project_uuid=project_uuid,
+            event_name=event_name,
+            start_date=start_date,
+            end_date=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key, int)
+        ):
+            return cached_results
+
+        # TODO: Dependency not yet implemented
+
+        return 0

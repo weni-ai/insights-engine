@@ -182,6 +182,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
+    def get_absolute_numbers(self, query_params: dict) -> Response:
+        url = reverse("conversations-absolute-numbers")
+
+        return self.client.get(url, query_params, format="json")
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -278,6 +283,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_crosstab_metrics_when_unauthenticated(self):
         response = self.get_crosstab_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_absolute_numbers_when_unauthenticated(self):
+        response = self.get_absolute_numbers({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -969,6 +979,141 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["available_widgets"], [])
+
+    @with_project_auth
+    def test_cannot_get_absolute_numbers_without_widget_uuid(self):
+        response = self.get_absolute_numbers({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_cannot_get_absolute_numbers_without_valid_widget_uuid(self):
+        response = self.get_absolute_numbers({"widget_uuid": "invalid"})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cannot_get_absolute_numbers_without_widget_permission(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers.child",
+            type="conversations.absolute_numbers.child",
+            position=[1, 2],
+            config={
+                "source": "conversations.absolute_numbers.child",
+                "operation": "TOTAL",
+                "key": "test_key",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        response = self.get_absolute_numbers({"widget_uuid": widget.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_cannot_get_absolute_numbers_without_required_params(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers.child",
+            type="conversations.absolute_numbers.child",
+            position=[1, 2],
+            config={
+                "source": "conversations.absolute_numbers.child",
+                "operation": "TOTAL",
+                "key": "test_key",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        response = self.get_absolute_numbers({"widget_uuid": widget.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_absolute_numbers"
+    )
+    @with_project_auth
+    def test_get_absolute_numbers(self, mock_get_absolute_numbers):
+        mock_get_absolute_numbers.return_value = {
+            "value": 150,
+        }
+
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers.child",
+            type="conversations.absolute_numbers.child",
+            position=[1, 2],
+            config={
+                "source": "conversations.absolute_numbers.child",
+                "operation": "TOTAL",
+                "key": "test_key",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        response = self.get_absolute_numbers(
+            {
+                "widget_uuid": widget.uuid,
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["value"], 150)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_absolute_numbers"
+    )
+    @with_project_auth
+    def test_get_absolute_numbers_returns_500_on_service_error(
+        self, mock_get_absolute_numbers
+    ):
+        from insights.metrics.conversations.exceptions import (
+            ConversationsMetricsError,
+        )
+
+        mock_get_absolute_numbers.side_effect = ConversationsMetricsError(
+            "Service error"
+        )
+
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers.child",
+            type="conversations.absolute_numbers.child",
+            position=[1, 2],
+            config={
+                "source": "conversations.absolute_numbers.child",
+                "operation": "TOTAL",
+                "key": "test_key",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        response = self.get_absolute_numbers(
+            {
+                "widget_uuid": widget.uuid,
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn("error", response.data)
 
 
 class BaseTestInternalConversationsMetricsViewSet(APITestCase):
