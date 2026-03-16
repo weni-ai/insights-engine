@@ -1,7 +1,9 @@
+from django.db.models import Q
 from rest_framework import mixins, viewsets
 from rest_framework.response import Response
 from django.db.models import QuerySet
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.projects.models import ProjectAuth
@@ -30,10 +32,13 @@ class WidgetViewSet(
         return [IsAuthenticated, ProjectAuthPermission]
 
     def get_queryset(self) -> QuerySet[Widget]:
+        project_auths = ProjectAuth.objects.filter(
+            user=self.request.user, role=1
+        ).values_list("project", flat=True)
+
         return self.queryset.filter(
-            dashboard__project__in=ProjectAuth.objects.filter(
-                user=self.request.user, role=1
-            ).values_list("project", flat=True)
+            Q(dashboard__project__in=project_auths)
+            | Q(parent__dashboard__project__in=project_auths),
         )
 
     def _update(self, widget, update_data, partial):
@@ -94,4 +99,18 @@ class WidgetViewSet(
         }
         report.save()
 
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="children", url_name="list-children")
+    def list_children(self, request, pk=None):
+        widget = self.get_object()
+        children = widget.children.all()
+
+        page = self.paginate_queryset(children)
+
+        if page is not None:
+            serializer = WidgetSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = WidgetSerializer(children, many=True)
         return Response(serializer.data)
