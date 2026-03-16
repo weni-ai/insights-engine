@@ -1251,175 +1251,33 @@ class TestAbsoluteNumbersQueryParamsSerializer(TestCase):
         self.project = Project.objects.create(
             name="Test Project",
         )
-        self.dashboard = Dashboard.objects.create(
-            name="Test Dashboard",
-            project=self.project,
-        )
-        self.valid_config = {
-            "source": "conversations.absolute_numbers.child",
-            "operation": AbsoluteNumbersMetricsType.TOTAL,
-            "key": "test_key",
-            "datalake_config": {
-                "agent_uuid": str(uuid.uuid4()),
-            },
-        }
-        self.widget = Widget.objects.create(
-            name="Test Widget",
-            dashboard=self.dashboard,
-            source="conversations.absolute_numbers.child",
-            type="absolute_numbers",
-            position=[1, 2],
-            config=self.valid_config,
-        )
 
     def test_serializer_valid(self):
         serializer = AbsoluteNumbersQueryParamsSerializer(
             data={
-                "widget_uuid": self.widget.uuid,
                 "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
-            }
+            },
+            context={"project": self.project},
         )
         self.assertTrue(serializer.is_valid())
-        self.assertEqual(serializer.validated_data["widget"], self.widget)
 
-    def test_serializer_widget_not_found(self):
+    def test_serializer_missing_start_date(self):
         serializer = AbsoluteNumbersQueryParamsSerializer(
             data={
-                "widget_uuid": uuid.uuid4(),
-                "start_date": "2021-01-01",
                 "end_date": "2021-01-02",
-            }
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("widget_uuid", serializer.errors)
-        self.assertEqual(serializer.errors["widget_uuid"][0].code, "widget_not_found")
-
-    def test_serializer_invalid_source(self):
-        self.widget.config = {
-            **self.valid_config,
-            "source": "invalid_source",
-        }
-        self.widget.save(update_fields=["config"])
-        serializer = AbsoluteNumbersQueryParamsSerializer(
-            data={
-                "widget_uuid": self.widget.uuid,
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-            }
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("widget_uuid", serializer.errors)
-        self.assertEqual(
-            serializer.errors["widget_uuid"][0].code,
-            "widget_source_not_absolute_numbers_child",
-        )
-
-    def test_serializer_invalid_operation(self):
-        self.widget.config = {
-            **self.valid_config,
-            "operation": "invalid_operation",
-        }
-        self.widget.save(update_fields=["config"])
-        serializer = AbsoluteNumbersQueryParamsSerializer(
-            data={
-                "widget_uuid": self.widget.uuid,
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-            }
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("widget_uuid", serializer.errors)
-        self.assertEqual(
-            serializer.errors["widget_uuid"][0].code, "widget_operation_not_valid"
-        )
-
-    def test_serializer_missing_key(self):
-        self.widget.config = {
-            "source": "conversations.absolute_numbers.child",
-            "operation": AbsoluteNumbersMetricsType.TOTAL,
-            "datalake_config": {
-                "agent_uuid": str(uuid.uuid4()),
             },
-        }
-        self.widget.save(update_fields=["config"])
-        serializer = AbsoluteNumbersQueryParamsSerializer(
-            data={
-                "widget_uuid": self.widget.uuid,
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-            }
+            context={"project": self.project},
         )
         self.assertFalse(serializer.is_valid())
-        self.assertIn("widget_uuid", serializer.errors)
-        self.assertEqual(
-            serializer.errors["widget_uuid"][0].code, "widget_key_not_valid"
-        )
+        self.assertIn("start_date", serializer.errors)
 
-    def test_serializer_missing_agent_uuid(self):
-        self.widget.config = {
-            "source": "conversations.absolute_numbers.child",
-            "operation": AbsoluteNumbersMetricsType.TOTAL,
-            "key": "test_key",
-            "datalake_config": {},
-        }
-        self.widget.save(update_fields=["config"])
-        serializer = AbsoluteNumbersQueryParamsSerializer(
-            data={
-                "widget_uuid": self.widget.uuid,
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-            }
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("widget_uuid", serializer.errors)
-        self.assertEqual(
-            serializer.errors["widget_uuid"][0].code, "widget_agent_uuid_not_valid"
-        )
-
-    def test_serializer_missing_datalake_config(self):
-        self.widget.config = {
-            "source": "conversations.absolute_numbers.child",
-            "operation": AbsoluteNumbersMetricsType.TOTAL,
-            "key": "test_key",
-        }
-        self.widget.save(update_fields=["config"])
-        serializer = AbsoluteNumbersQueryParamsSerializer(
-            data={
-                "widget_uuid": self.widget.uuid,
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-            }
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("widget_uuid", serializer.errors)
-        self.assertEqual(
-            serializer.errors["widget_uuid"][0].code, "widget_agent_uuid_not_valid"
-        )
-
-    def test_serializer_empty_config(self):
-        self.widget.config = {}
-        self.widget.save(update_fields=["config"])
-        serializer = AbsoluteNumbersQueryParamsSerializer(
-            data={
-                "widget_uuid": self.widget.uuid,
-                "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-            }
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("widget_uuid", serializer.errors)
-        self.assertEqual(
-            serializer.errors["widget_uuid"][0].code,
-            "widget_source_not_absolute_numbers_child",
-        )
-
-    def test_serializer_missing_widget_uuid(self):
+    def test_serializer_missing_end_date(self):
         serializer = AbsoluteNumbersQueryParamsSerializer(
             data={
                 "start_date": "2021-01-01",
-                "end_date": "2021-01-02",
-            }
+            },
+            context={"project": self.project},
         )
         self.assertFalse(serializer.is_valid())
-        self.assertIn("widget_uuid", serializer.errors)
+        self.assertIn("end_date", serializer.errors)

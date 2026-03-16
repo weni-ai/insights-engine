@@ -1000,7 +1000,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             type="conversations.absolute_numbers.child",
             position=[1, 2],
             config={
-                "source": "conversations.absolute_numbers.child",
                 "operation": "TOTAL",
                 "key": "test_key",
                 "datalake_config": {
@@ -1022,7 +1021,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             type="conversations.absolute_numbers.child",
             position=[1, 2],
             config={
-                "source": "conversations.absolute_numbers.child",
                 "operation": "TOTAL",
                 "key": "test_key",
                 "datalake_config": {
@@ -1053,7 +1051,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             type="conversations.absolute_numbers.child",
             position=[1, 2],
             config={
-                "source": "conversations.absolute_numbers.child",
                 "operation": "TOTAL",
                 "key": "test_key",
                 "datalake_config": {
@@ -1098,7 +1095,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             type="conversations.absolute_numbers.child",
             position=[1, 2],
             config={
-                "source": "conversations.absolute_numbers.child",
                 "operation": "TOTAL",
                 "key": "test_key",
                 "datalake_config": {
@@ -1140,7 +1136,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             type="conversations.absolute_numbers.child",
             position=[1, 2],
             config={
-                "source": "conversations.absolute_numbers.child",
                 "operation": "TOTAL",
                 "key": "test_key",
                 "datalake_config": {
