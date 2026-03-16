@@ -791,7 +791,6 @@ class TestAbsoluteNumbersQueryParamsSerializer(TestCase):
             project=self.project,
         )
         self.valid_config = {
-            "source": "conversations.absolute_numbers.child",
             "operation": AbsoluteNumbersMetricsType.TOTAL,
             "key": "test_key",
             "datalake_config": {
@@ -831,9 +830,10 @@ class TestAbsoluteNumbersQueryParamsSerializer(TestCase):
         self.assertEqual(serializer.errors["widget_uuid"][0].code, "widget_not_found")
 
     def test_serializer_invalid_source(self):
+        self.widget.source = "flowruns"
+        self.widget.save(update_fields=["source"])
         self.widget.config = {
             **self.valid_config,
-            "source": "invalid_source",
         }
         self.widget.save(update_fields=["config"])
         serializer = AbsoluteNumbersQueryParamsSerializer(
@@ -946,7 +946,7 @@ class TestAbsoluteNumbersQueryParamsSerializer(TestCase):
         self.assertIn("widget_uuid", serializer.errors)
         self.assertEqual(
             serializer.errors["widget_uuid"][0].code,
-            "widget_source_not_absolute_numbers_child",
+            "widget_operation_not_valid",
         )
 
     def test_serializer_missing_widget_uuid(self):

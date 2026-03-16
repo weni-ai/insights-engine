@@ -557,7 +557,7 @@ class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
             )
 
         config = widget.config or {}
-        source = config.get("source")
+        source = widget.source
         operation = config.get("operation")
         key = config.get("key")
         agent_uuid = config.get("datalake_config", {}).get("agent_uuid")
