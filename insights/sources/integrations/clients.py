@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from functools import cached_property
 import logging
 from uuid import UUID
 import requests
@@ -159,7 +158,7 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         self.nexus_topics_path_prefix = ""
         self.timeout = 60
 
-    @cached_property
+    @property
     def use_nexus_conversations_api(self) -> bool:
         if settings.FORCE_USE_NEXUS_CONVERSATIONS_API:
             return True

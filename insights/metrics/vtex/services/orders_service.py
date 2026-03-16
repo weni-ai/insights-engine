@@ -40,7 +40,7 @@ class OrdersService:
                 {
                     "domain": self.project.vtex_account,
                     "internal_token": JWTService().generate_jwt_token(
-                        self.project.uuid
+                        vtex_account=self.project.vtex_account
                     ),
                 },
                 CacheClient(),
