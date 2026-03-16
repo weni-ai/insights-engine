@@ -310,3 +310,20 @@ class TestNexusConversationsAPIClient(TestCase):
             self.assertEqual(response.status_code, 204)
 
             self.assertEqual(len(rsps.calls), 1)
+
+    @override_settings(FORCE_USE_NEXUS_CONVERSATIONS_API=True)
+    def test_get_page(self):
+        page_url = "https://conversations.weni.ai/api/v1/projects/123/topics/?page=2"
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET,
+                page_url,
+                json={"results": [{"name": "Topic 2"}], "next": None},
+                status=200,
+            )
+            response = self.client.get_page(page_url)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["results"], [{"name": "Topic 2"}])
+            self.assertIsNone(response.json()["next"])
+
+            self.assertEqual(len(rsps.calls), 1)
