@@ -1,12 +1,10 @@
 import logging
-from uuid import UUID
 
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from insights.metrics.conversations.dataclass import CrosstabItemData
 from insights.metrics.conversations.enums import (
-    AbsoluteNumbersMetricsType,
     AvailableWidgets,
     AvailableWidgetsListType,
     CsatMetricsType,
@@ -541,52 +539,8 @@ class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
     Serializer for absolute numbers query params
     """
 
-    widget_uuid = serializers.UUIDField(required=True)
     start_date = serializers.DateTimeField()
     end_date = serializers.DateTimeField()
-
-    def _validate_widget(self, widget_uuid: UUID) -> dict:
-        """
-        Validate widget
-        """
-        widget = Widget.objects.filter(uuid=widget_uuid).first()
-
-        if not widget:
-            raise serializers.ValidationError(
-                {"widget_uuid": _("Widget not found")}, code="widget_not_found"
-            )
-
-        config = widget.config or {}
-        source = widget.source
-        operation = config.get("operation")
-        key = config.get("key")
-        agent_uuid = config.get("datalake_config", {}).get("agent_uuid")
-
-        if source != "conversations.absolute_numbers.child":
-            raise serializers.ValidationError(
-                {"widget_uuid": _("Widget source is not absolute numbers child")},
-                code="widget_source_not_absolute_numbers_child",
-            )
-
-        if operation not in AbsoluteNumbersMetricsType.values:
-            raise serializers.ValidationError(
-                {"widget_uuid": _("Widget operation is not valid")},
-                code="widget_operation_not_valid",
-            )
-
-        if not key:
-            raise serializers.ValidationError(
-                {"widget_uuid": _("Widget key is not valid")},
-                code="widget_key_not_valid",
-            )
-
-        if not agent_uuid:
-            raise serializers.ValidationError(
-                {"widget_uuid": _("Widget agent UUID is not valid")},
-                code="widget_agent_uuid_not_valid",
-            )
-
-        return widget
 
     def validate(self, attrs: dict) -> dict:
         """
@@ -594,9 +548,7 @@ class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
         """
         attrs = super().validate(attrs)
 
-        widget = self._validate_widget(attrs["widget_uuid"])
-
-        project = widget.project
+        project = self.context.get("project")
 
         validator = ConversationsDatesValidator(
             project=project,
@@ -607,6 +559,5 @@ class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
 
         attrs["start_date"] = start_date
         attrs["end_date"] = end_date
-        attrs["widget"] = widget
 
         return attrs

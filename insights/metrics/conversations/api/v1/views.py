@@ -18,6 +18,9 @@ from insights.metrics.conversations.exceptions import (
     ConversationsMetricsError,
     GetProjectAiCsatMetricsError,
 )
+from insights.metrics.conversations.usecases.get_absolute_numbers_widget import (
+    GetAbsoluteNumbersWidgetUseCase,
+)
 from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import (
     GetProjectAiCsatMetricsUseCase,
 )
@@ -556,12 +559,19 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
         """
         Get absolute numbers metrics
         """
-        query_params = AbsoluteNumbersQueryParamsSerializer(data=request.query_params)
+        widget = GetAbsoluteNumbersWidgetUseCase().execute(
+            widget_uuid=request.query_params.get("widget_uuid"),
+        )
+
+        query_params = AbsoluteNumbersQueryParamsSerializer(
+            data=request.query_params,
+            context={"project": widget.project},
+        )
         query_params.is_valid(raise_exception=True)
 
         try:
             metrics = self.service.get_absolute_numbers(
-                widget=query_params.validated_data["widget"],
+                widget=widget,
                 start_date=query_params.validated_data["start_date"],
                 end_date=query_params.validated_data["end_date"],
             )
