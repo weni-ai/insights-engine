@@ -1482,6 +1482,7 @@ class TestConversationsMetricsService(TestCase):
             start_date=self.start_date,
             end_date=self.end_date,
             agent_uuid=agent_uuid,
+            field_name=None,
         )
 
     def test_get_absolute_numbers_each_operation_type(self):
