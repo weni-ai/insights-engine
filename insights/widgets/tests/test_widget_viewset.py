@@ -33,6 +33,11 @@ class BaseTestWidgetViewSet(APITestCase):
 
         return self.client.delete(url)
 
+    def list_children(self, widget_uuid: UUID) -> Response:
+        url = reverse("widget-list-children", args=[widget_uuid])
+
+        return self.client.get(url)
+
 
 class TestWidgetViewSetAsAnonymousUser(BaseTestWidgetViewSet):
     def test_list_widgets(self) -> None:
@@ -55,6 +60,11 @@ class TestWidgetViewSetAsAnonymousUser(BaseTestWidgetViewSet):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_list_children(self) -> None:
+        response = self.list_children(uuid.uuid4())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class TestWidgetViewSetAsAuthenticationUser(BaseTestWidgetViewSet):
     def setUp(self):
@@ -69,14 +79,15 @@ class TestWidgetViewSetAsAuthenticationUser(BaseTestWidgetViewSet):
 
         self.client.force_authenticate(self.user)
 
-    def _create_widget(self):
+    def _create_widget(self, parent: Widget = None):
         return Widget.objects.create(
             name="testwidget",
-            dashboard=self.dashboard,
+            dashboard=self.dashboard if parent is None else None,
             source="test",
             position=[],
             config={},
             type="test",
+            parent=parent,
         )
 
     def test_list_widgets_without_permission(self):
@@ -127,6 +138,45 @@ class TestWidgetViewSetAsAuthenticationUser(BaseTestWidgetViewSet):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    @with_project_auth
+    def test_create_widget_with_parent(self):
+        parent = self._create_widget()
+        response = self.create_widget(
+            {
+                "name": "testwidget",
+                "parent": parent.uuid,
+                "source": "test",
+                "position": [],
+                "config": {},
+                "type": "test",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["parent"], parent.uuid)
+
+    @with_project_auth
+    def test_create_widget_with_both_parent_and_dashboard(self):
+        parent = self._create_widget()
+        response = self.create_widget(
+            {
+                "name": "testwidget",
+                "parent": parent.uuid,
+                "dashboard": self.dashboard.uuid,
+                "source": "test",
+                "position": [],
+                "config": {},
+                "type": "test",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            str(response.data["error"][0]),
+            "Widget cannot have both parent and dashboard.",
+        )
+        self.assertEqual(response.data["error"][0].code, "invalid")
+
     def test_update_widget_without_permission(self):
         widget = self._create_widget()
         response = self.update_widget(widget.uuid, {"name": "testwidget2"})
@@ -166,6 +216,76 @@ class TestWidgetViewSetAsAuthenticationUser(BaseTestWidgetViewSet):
 
         self.assertEqual(widget.report.config, expected_report_config)
 
+    @with_project_auth
+    def test_update_widget_with_parent_when_widget_has_dashboard(self):
+        parent = self._create_widget()
+        widget = self._create_widget()
+        response = self.update_widget(widget.uuid, {"parent": parent.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            str(response.data["error"][0]),
+            "Widget cannot have both parent and dashboard.",
+        )
+        self.assertEqual(response.data["error"][0].code, "invalid")
+
+    @with_project_auth
+    def test_update_widget_with_dashboard_when_widget_has_parent(self):
+        parent = self._create_widget()
+        widget = self._create_widget(parent=parent)
+        response = self.update_widget(widget.uuid, {"dashboard": self.dashboard.uuid})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            str(response.data["error"][0]),
+            "Widget cannot have both parent and dashboard.",
+        )
+        self.assertEqual(response.data["error"][0].code, "invalid")
+
+    @with_project_auth
+    def test_update_widget_to_have_a_parent_when_the_parent_has_a_parent(self):
+        widget_1 = self._create_widget()
+        widget_2 = self._create_widget(parent=widget_1)
+        widget_3 = self._create_widget()
+
+        response = self.update_widget(
+            widget_3.uuid, {"parent": widget_2.uuid, "dashboard": None}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            str(response.data["error"][0]),
+            "A widget that has a parent cannot have a grandparent.",
+        )
+        self.assertEqual(response.data["error"][0].code, "invalid")
+
+    @with_project_auth
+    def test_update_widget_with_children_to_have_a_parent(self):
+        widget_1 = self._create_widget()
+        widget_2 = self._create_widget()
+        self._create_widget(parent=widget_2)
+
+        response = self.update_widget(
+            widget_2.uuid, {"parent": widget_1.uuid, "dashboard": None}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            str(response.data["error"][0]),
+            "A widget that is being added to a parent cannot have children.",
+        )
+        self.assertEqual(response.data["error"][0].code, "invalid")
+
+    @with_project_auth
+    def test_update_widget_to_have_a_parent(self):
+        widget_1 = self._create_widget()
+        widget_2 = self._create_widget()
+
+        response = self.update_widget(
+            widget_2.uuid, {"parent": widget_1.uuid, "dashboard": None}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_cannot_delete_widget_without_permission(self):
         widget = self._create_widget()
         response = self.delete_widget(widget.uuid)
@@ -180,3 +300,32 @@ class TestWidgetViewSetAsAuthenticationUser(BaseTestWidgetViewSet):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         self.assertFalse(Widget.objects.filter(uuid=widget.uuid).exists())
+
+    def test_list_children_without_permission(self):
+        widget = self._create_widget()
+        response = self.list_children(widget.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    @with_project_auth
+    def test_list_children_when_widget_has_no_children(self):
+        widget = self._create_widget()
+        response = self.list_children(widget.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("next", response.data)
+        self.assertIn("previous", response.data)
+        self.assertIn("results", response.data)
+        self.assertEqual(len(response.data["results"]), 0)
+
+    @with_project_auth
+    def test_list_children_when_widget_has_children(self):
+        parent = self._create_widget()
+        child = self._create_widget(parent=parent)
+        response = self.list_children(parent.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        result_widgets = {widget["uuid"] for widget in response.data["results"]}
+
+        self.assertIn(str(child.uuid), result_widgets)
+        self.assertNotIn(str(parent.uuid), result_widgets)

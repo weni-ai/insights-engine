@@ -15,6 +15,7 @@ class CanCreateWidgetPermission(permissions.BasePermission):
             return None
 
         dashboard_uuid = request.data.get("dashboard")
+        parent_uuid = request.data.get("parent")
 
         return (
             dashboard_uuid
@@ -22,6 +23,14 @@ class CanCreateWidgetPermission(permissions.BasePermission):
                 project__dashboards__uuid=dashboard_uuid,
                 user=request.user,
                 role=1,
+            ).exists()
+        ) or (
+            parent_uuid
+            and Widget.objects.filter(
+                uuid=parent_uuid,
+                dashboard__project__in=ProjectAuth.objects.filter(
+                    user=request.user, role=1
+                ).values_list("project", flat=True),
             ).exists()
         )
 
