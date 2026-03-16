@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 from datetime import datetime
 import json
@@ -857,13 +857,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values sum from Datalake.
         """
 
         return self.datalake_service.get_events_values_sum(
-            project_uuid, event_name, start_date, end_date, key, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
         )
 
     def get_events_values_average(
@@ -874,13 +875,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values average from Datalake.
         """
 
         return self.datalake_service.get_events_values_average(
-            project_uuid, event_name, start_date, end_date, key, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
         )
 
     def get_events_highest_value(
@@ -891,13 +893,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events highest value from Datalake.
         """
 
         return self.datalake_service.get_events_highest_value(
-            project_uuid, event_name, start_date, end_date, key, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
         )
 
     def get_events_lowest_value(
@@ -908,11 +911,12 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events lowest value from Datalake.
         """
 
         return self.datalake_service.get_events_lowest_value(
-            project_uuid, event_name, start_date, end_date, key, agent_uuid
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
         )
