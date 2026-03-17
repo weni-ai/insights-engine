@@ -2,14 +2,16 @@ import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from typing import Optional
 from urllib.parse import urlencode
 
-
+from django.conf import settings
 import requests
 from sentry_sdk import capture_message
 
 from insights.internals.base import VtexAuthentication
 from insights.sources.cache import CacheClient
+from insights.sources.orders.dataclass import VTEXOrdersBaseMetrics
 from insights.utils import redact_headers
 
 logger = logging.getLogger(__name__)
@@ -191,6 +193,83 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         return query_filters
 
+    def get_pages(
+        self,
+        query_filters,
+        page_range: tuple[int, int],
+        metrics: VTEXOrdersBaseMetrics,
+        last_order_id: Optional[str] = None,
+    ):
+        with ThreadPoolExecutor(
+            max_workers=settings.VTEX_ORDERS_API_MAX_WORKERS
+        ) as executor:
+            page_futures = {
+                executor.submit(
+                    lambda page=page: self.get_orders_list(
+                        {**query_filters, "page": page},
+                        page,
+                    )
+                ): page
+                for page in range(page_range[0], page_range[1] + 1)
+            }
+
+            for page_future in as_completed(page_futures):
+                try:
+                    response = page_future.result()
+
+                    if not response.ok:
+                        logger.error(
+                            f"VTEX API error processing page: status={response.status_code}, response={response.text}"
+                        )
+                        capture_message(
+                            f"VTEX API error processing page: status={response.status_code}, response={response.text}",
+                            level="error",
+                            extra={
+                                "response": response.text,
+                                "request": response.request.url,
+                                "headers": response.request.headers,
+                            },
+                        )
+                        return response.status_code, response.json()
+
+                    results = response.json()
+
+                    for result in results["list"]:
+                        if (
+                            result["status"] != "canceled"
+                            and result["orderId"] != last_order_id
+                        ):
+                            metrics.total_value += result["totalValue"]
+                            metrics.total_sell += 1
+                            metrics.max_value = max(
+                                metrics.max_value, result["totalValue"]
+                            )
+                            metrics.min_value = min(
+                                metrics.min_value, result["totalValue"]
+                            )
+                            metrics.currency_code = result["currencyCode"]
+
+                            authorized_date = result["authorizedDate"]
+
+                            if authorized_date < metrics.last_authorized_date:
+                                metrics.last_authorized_date = authorized_date
+                                metrics.last_order_id = result["orderId"]
+
+                except Exception as exc:
+                    logger.error(f"VTEX API error processing page: {exc}")
+                    capture_message(
+                        f"VTEX API error processing page: status={response.status_code}, response={response.text}",
+                        level="error",
+                        extra={
+                            "response": response.text,
+                            "request": response.request.url,
+                            "headers": response.request.headers,
+                        },
+                    )
+                    return 500, {"error": "Internal server error"}
+
+        return metrics
+
     def list(self, query_filters: dict):
         cache_key = self.get_cache_key(query_filters)
 
@@ -217,58 +296,17 @@ class VtexOrdersRestClient(VtexAuthentication):
         max_value = float("-inf")
         min_value = float("inf")
 
-        # botar o max_workers em variavel de ambiente
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            page_futures = {
-                executor.submit(
-                    lambda page=page: self.get_orders_list(
-                        {**query_filters, "page": page},
-                        page,
-                    )
-                ): page
-                for page in range(1, pages + 1)
-            }
+        metrics = VTEXOrdersBaseMetrics(
+            total_value=total_value,
+            total_sell=total_sell,
+            max_value=max_value,
+            min_value=min_value,
+            currency_code=currency_code,
+        )
 
-            for page_future in as_completed(page_futures):
-                try:
-                    response = page_future.result()
+        last_page = 0
 
-                    if response.status_code != 200:
-                        logger.error(
-                            f"VTEX API error processing page: status={response.status_code}, response={response.text}"
-                        )
-                        capture_message(
-                            f"VTEX API error processing page: status={response.status_code}, response={response.text}",
-                            level="error",
-                            extra={
-                                "response": response.text,
-                                "request": response.request.url,
-                                "headers": response.request.headers,
-                            },
-                        )
-                        return response.status_code, response.json()
-
-                    results = response.json()
-                    for result in results["list"]:
-                        if result["status"] != "canceled":
-                            total_value += result["totalValue"]
-                            total_sell += 1
-                            max_value = max(max_value, result["totalValue"])
-                            min_value = min(min_value, result["totalValue"])
-
-                            currency_code = result["currencyCode"]
-                except Exception as exc:
-                    logger.error(f"VTEX API error processing page: {exc}")
-                    capture_message(
-                        f"VTEX API error processing page: status={response.status_code}, response={response.text}",
-                        level="error",
-                        extra={
-                            "response": response.text,
-                            "request": response.request.url,
-                            "headers": response.request.headers,
-                        },
-                    )
-                    return 500, {"error": "Internal server error"}
+        for page in range(last_page + 1, settings.VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED + 1):
 
         total_value = total_value / 100
         max_value = (max_value / 100) if max_value != float("-inf") else 0
