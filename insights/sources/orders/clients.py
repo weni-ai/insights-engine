@@ -255,7 +255,7 @@ class VtexOrdersRestClient(VtexAuthentication):
 
                             if (
                                 metrics.last_authorized_date is None
-                                or authorized_date <= metrics.last_authorized_date
+                                or authorized_date < metrics.last_authorized_date
                             ):
                                 metrics.last_authorized_date = authorized_date
 
