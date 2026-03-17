@@ -240,10 +240,7 @@ class VtexOrdersRestClient(VtexAuthentication):
                     results = response.json()
 
                     for result in results["list"]:
-                        if (
-                            result["status"] != "canceled"
-                            and result["orderId"] != last_order_id
-                        ):
+                        if result["orderId"] not in metrics.processed_orders:
                             metrics.total_value += result["totalValue"]
                             metrics.total_sell += 1
                             metrics.max_value = max(
@@ -255,6 +252,7 @@ class VtexOrdersRestClient(VtexAuthentication):
                             metrics.currency_code = result["currencyCode"]
 
                             authorized_date = result["authorizedDate"]
+                            metrics.processed_orders.add(result["orderId"])
 
                             if (
                                 metrics.last_authorized_date is None
@@ -286,8 +284,8 @@ class VtexOrdersRestClient(VtexAuthentication):
     def list(self, query_filters: dict):
         cache_key = self.get_cache_key(query_filters)
 
-        if cached_list := self.get_cached_list(cache_key):
-            return cached_list
+        # if cached_list := self.get_cached_list(cache_key):
+        #     return cached_list
 
         if not query_filters.get("utm_source", None):
             return {"error": "utm_source field is mandatory"}
@@ -323,7 +321,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         processed_pages = 0
 
         for _ in range(1, ((max_page // vtex_max_pages) + 2)):
-            page_qty = min(vtex_max_pages, (pages - processed_pages))
+            page_qty = min(vtex_max_pages, ((pages - processed_pages) + 1))
 
             metrics = self.get_pages(query_filters, page_qty, metrics)
             processed_pages += page_qty

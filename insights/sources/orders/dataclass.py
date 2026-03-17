@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -15,3 +15,4 @@ class VTEXOrdersBaseMetrics:
     currency_code: str = ""
     last_authorized_date: Optional[str] = None
     last_order_id: Optional[str] = None
+    processed_orders: set = field(default_factory=set)
