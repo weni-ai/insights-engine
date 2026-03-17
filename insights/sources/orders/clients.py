@@ -61,7 +61,7 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         query_params = {
             "f_UtmSource": utm_source,
-            "per_page": 100,
+            "per_page": settings.VTEX_ORDERS_API_PAGE_SIZE,
             "page": page_number,
             "f_status": "invoiced",
         }
@@ -198,10 +198,11 @@ class VtexOrdersRestClient(VtexAuthentication):
     def get_pages(
         self,
         query_filters,
-        page_range: tuple[int, int],
+        page_quantity: int,
         metrics: VTEXOrdersBaseMetrics,
         last_order_id: Optional[str] = None,
     ) -> VTEXOrdersBaseMetrics:
+
         with ThreadPoolExecutor(
             max_workers=settings.VTEX_ORDERS_API_MAX_WORKERS
         ) as executor:
@@ -212,7 +213,7 @@ class VtexOrdersRestClient(VtexAuthentication):
                         page,
                     )
                 ): page
-                for page in range(page_range[0], page_range[1] + 1)
+                for page in range(1, page_quantity + 1)
             }
 
             for page_future in as_completed(page_futures):
@@ -316,17 +317,19 @@ class VtexOrdersRestClient(VtexAuthentication):
             currency_code=currency_code,
         )
 
-        last_page = 0
+        max_page = min(pages, settings.VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED)
 
-        for page in range(
-            last_page + 1, min(pages, settings.VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED) + 1
-        ):
-            metrics = self.get_pages(query_filters, (page, page), metrics)
+        vtex_max_pages = settings.VTEX_ORDERS_API_MAX_PAGES
+        processed_pages = 0
 
-            last_page = page
+        for _ in range(1, ((max_page // vtex_max_pages) + 2)):
+            page_qty = min(vtex_max_pages, (pages - processed_pages))
+
+            metrics = self.get_pages(query_filters, page_qty, metrics)
+            processed_pages += page_qty
 
             if metrics.last_authorized_date != float("inf"):
-                query_filters["ended_at__gte"] = self.parse_datetime(
+                query_filters["ended_at__lte"] = self.parse_datetime(
                     metrics.last_authorized_date
                 ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
