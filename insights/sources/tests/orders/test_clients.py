@@ -314,7 +314,6 @@ class TestVtexOrdersRestClient(TestCase):
                     "totalValue": 25000,
                     "currencyCode": "BRL",
                 },
-                {"status": "canceled", "totalValue": 5000, "currencyCode": "BRL"},
             ],
             "paging": {"pages": 1, "currentPage": 1, "total": 3, "perPage": 100},
         }

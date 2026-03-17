@@ -292,7 +292,7 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         query_filters = self.handle_query_filters(query_filters)
 
-        response = self.get_orders_list(query_filters, 1)
+        response = self.get_orders_list(query_filters.copy(), 1)
         data = response.json()
 
         if "list" not in data:
@@ -321,7 +321,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         processed_pages = 0
 
         for _ in range(1, ((max_page // vtex_max_pages) + 2)):
-            page_qty = min(vtex_max_pages, ((pages - processed_pages) + 1))
+            page_qty = min(vtex_max_pages, (pages - processed_pages))
 
             metrics = self.get_pages(query_filters, page_qty, metrics)
             processed_pages += page_qty
