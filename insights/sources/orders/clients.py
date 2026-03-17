@@ -1,7 +1,6 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional
 from urllib.parse import urlencode
 
 from django.conf import settings
