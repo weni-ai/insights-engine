@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
-from datetime import datetime
-from django.utils import timezone
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -39,6 +39,9 @@ class VtexOrdersViewSet(viewsets.ViewSet):
                 code="required",
             )
 
+        project = get_object_or_404(Project, uuid=project_uuid)
+        project_tz = ZoneInfo(project.timezone) if project.timezone else ZoneInfo("UTC")
+
         utm_source = request.query_params.get("utm_source", None)
         start_date_str = request.query_params.get("start_date", None)
         end_date_str = request.query_params.get("end_date", None)
@@ -52,16 +55,16 @@ class VtexOrdersViewSet(viewsets.ViewSet):
                 code="invalid_date_format",
             ) from e
 
-        start_date = timezone.make_aware(start_date)
-        end_date = timezone.make_aware(end_date)
+        start_date = start_date.replace(tzinfo=project_tz).astimezone(timezone.utc)
+        end_date = end_date.replace(
+            hour=23, minute=59, second=59, tzinfo=project_tz
+        ).astimezone(timezone.utc)
 
         filters = {
             "project_uuid": project_uuid,
             "start_date": start_date,
             "end_date": end_date,
         }
-
-        project = get_object_or_404(Project, uuid=project_uuid)
         service = OrdersService(project)
         response_data = service.get_metrics_from_utm_source(utm_source, filters)
 
@@ -91,16 +94,23 @@ class InternalVTEXOrdersViewSet(viewsets.ViewSet):
             project_uuid = serializer.validated_data["project_uuid"]
 
         project_uuid = str(project_uuid)
+        project = get_object_or_404(Project, uuid=project_uuid)
+        project_tz = ZoneInfo(project.timezone) if project.timezone else ZoneInfo("UTC")
 
         utm_source = serializer.validated_data.get("utm_source", None)
         start_date_str = serializer.data.get("start_date", None)
         end_date_str = serializer.data.get("end_date", None)
 
-        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-
-        start_date = timezone.make_aware(start_date)
-        end_date = timezone.make_aware(end_date)
+        start_date = (
+            datetime.strptime(start_date_str, "%Y-%m-%d")
+            .replace(tzinfo=project_tz)
+            .astimezone(timezone.utc)
+        )
+        end_date = (
+            datetime.strptime(end_date_str, "%Y-%m-%d")
+            .replace(hour=23, minute=59, second=59, tzinfo=project_tz)
+            .astimezone(timezone.utc)
+        )
 
         filters = {
             "project_uuid": project_uuid,
@@ -108,7 +118,6 @@ class InternalVTEXOrdersViewSet(viewsets.ViewSet):
             "end_date": end_date,
         }
 
-        project = get_object_or_404(Project, uuid=project_uuid)
         service = OrdersService(project)
         response_data = service.get_metrics_from_utm_source(utm_source, filters)
 
