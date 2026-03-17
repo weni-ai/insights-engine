@@ -14,5 +14,4 @@ class VTEXOrdersBaseMetrics:
     min_value: float = float("inf")
     currency_code: str = ""
     last_authorized_date: Optional[str] = None
-    last_order_id: Optional[str] = None
     processed_orders: set = field(default_factory=set)

@@ -200,7 +200,6 @@ class VtexOrdersRestClient(VtexAuthentication):
         query_filters,
         page_quantity: int,
         metrics: VTEXOrdersBaseMetrics,
-        last_order_id: Optional[str] = None,
     ) -> VTEXOrdersBaseMetrics:
 
         with ThreadPoolExecutor(
@@ -256,10 +255,9 @@ class VtexOrdersRestClient(VtexAuthentication):
 
                             if (
                                 metrics.last_authorized_date is None
-                                or authorized_date < metrics.last_authorized_date
+                                or authorized_date <= metrics.last_authorized_date
                             ):
                                 metrics.last_authorized_date = authorized_date
-                                metrics.last_order_id = result["orderId"]
 
                 except Exception as exc:
                     logger.error(f"VTEX API error processing page: {exc}")
@@ -284,8 +282,8 @@ class VtexOrdersRestClient(VtexAuthentication):
     def list(self, query_filters: dict):
         cache_key = self.get_cache_key(query_filters)
 
-        if cached_list := self.get_cached_list(cache_key):
-            return cached_list
+        # if cached_list := self.get_cached_list(cache_key):
+        #     return cached_list
 
         if not query_filters.get("utm_source", None):
             return {"error": "utm_source field is mandatory"}
@@ -321,12 +319,12 @@ class VtexOrdersRestClient(VtexAuthentication):
         processed_pages = 0
 
         for _ in range(1, ((max_page // vtex_max_pages) + 2)):
-            page_qty = min(vtex_max_pages, (pages - processed_pages))
+            page_qty = min(vtex_max_pages, (max_page - processed_pages))
 
             metrics = self.get_pages(query_filters, page_qty, metrics)
             processed_pages += page_qty
 
-            if metrics.last_authorized_date != float("inf"):
+            if metrics.last_authorized_date is not None:
                 query_filters["ended_at__lte"] = self.parse_datetime(
                     metrics.last_authorized_date
                 ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
