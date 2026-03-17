@@ -541,3 +541,16 @@ WAIT_TIME_FOR_CHECKING_MARKETING_MESSAGES_STATUS = env.int(
 VTEX_INTERNAL_DOMAINS = env.list(
     "VTEX_INTERNAL_DOMAINS", default=["vtex.com", "weni.ai"]
 )
+
+# VTEX Orders API
+VTEX_ORDERS_API_MAX_WORKERS = env.int("VTEX_ORDERS_API_MAX_WORKERS", default=10)
+VTEX_ORDERS_API_PAGE_SIZE = env.int("VTEX_ORDERS_API_PAGE_SIZE", default=100)
+
+# This is the documented maximum number of pages that can be returned by the VTEX Orders API
+# https://developers.vtex.com/docs/api-reference/orders-api#get-/api/oms/pvt/orders
+VTEX_ORDERS_API_MAX_PAGES = env.int("VTEX_ORDERS_API_MAX_PAGES", default=30)
+
+# Our defined max pages
+VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED = env.int(
+    "VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED", default=100
+)
