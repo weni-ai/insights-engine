@@ -281,8 +281,8 @@ class VtexOrdersRestClient(VtexAuthentication):
     def list(self, query_filters: dict):
         cache_key = self.get_cache_key(query_filters)
 
-        # if cached_list := self.get_cached_list(cache_key):
-        #     return cached_list
+        if cached_list := self.get_cached_list(cache_key):
+            return cached_list
 
         if not query_filters.get("utm_source", None):
             return {"error": "utm_source field is mandatory"}
