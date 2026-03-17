@@ -1,17 +1,19 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
 from typing import Optional
 from urllib.parse import urlencode
 
 from django.conf import settings
 import requests
 from sentry_sdk import capture_message
+from dateutil.parser import parse as date_parser
+from rest_framework import status
 
 from insights.internals.base import VtexAuthentication
 from insights.sources.cache import CacheClient
 from insights.sources.orders.dataclass import VTEXOrdersBaseMetrics
+from insights.sources.orders.exceptions import VTEXOrdersAPIError
 from insights.utils import redact_headers
 
 logger = logging.getLogger(__name__)
@@ -156,7 +158,7 @@ class VtexOrdersRestClient(VtexAuthentication):
     def parse_datetime(self, date_str):
         try:
             # Tente fazer o parse da string para datetime
-            return datetime.fromisoformat(date_str)  # Para strings ISO formatadas
+            return date_parser(date_str)  # Para strings ISO formatadas
         except ValueError:
             return None  # Retorne None se a conversão falhar
 
@@ -199,7 +201,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         page_range: tuple[int, int],
         metrics: VTEXOrdersBaseMetrics,
         last_order_id: Optional[str] = None,
-    ):
+    ) -> VTEXOrdersBaseMetrics:
         with ThreadPoolExecutor(
             max_workers=settings.VTEX_ORDERS_API_MAX_WORKERS
         ) as executor:
@@ -217,7 +219,7 @@ class VtexOrdersRestClient(VtexAuthentication):
                 try:
                     response = page_future.result()
 
-                    if not response.ok:
+                    if not status.is_success(response.status_code):
                         logger.error(
                             f"VTEX API error processing page: status={response.status_code}, response={response.text}"
                         )
@@ -230,7 +232,9 @@ class VtexOrdersRestClient(VtexAuthentication):
                                 "headers": response.request.headers,
                             },
                         )
-                        return response.status_code, response.json()
+                        raise VTEXOrdersAPIError(
+                            f"VTEX API error processing page: status={response.status_code}, response={response.text}"
+                        )
 
                     results = response.json()
 
@@ -251,7 +255,10 @@ class VtexOrdersRestClient(VtexAuthentication):
 
                             authorized_date = result["authorizedDate"]
 
-                            if authorized_date < metrics.last_authorized_date:
+                            if (
+                                metrics.last_authorized_date is None
+                                or authorized_date < metrics.last_authorized_date
+                            ):
                                 metrics.last_authorized_date = authorized_date
                                 metrics.last_order_id = result["orderId"]
 
@@ -266,7 +273,12 @@ class VtexOrdersRestClient(VtexAuthentication):
                             "headers": response.request.headers,
                         },
                     )
-                    return 500, {"error": "Internal server error"}
+                    if isinstance(exc, VTEXOrdersAPIError):
+                        raise exc from exc
+                    else:
+                        raise VTEXOrdersAPIError(
+                            f"VTEX API error processing page: {exc}"
+                        ) from exc
 
         return metrics
 
@@ -306,7 +318,23 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         last_page = 0
 
-        for page in range(last_page + 1, settings.VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED + 1):
+        for page in range(
+            last_page + 1, min(pages, settings.VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED) + 1
+        ):
+            metrics = self.get_pages(query_filters, (page, page), metrics)
+
+            last_page = page
+
+            if metrics.last_authorized_date != float("inf"):
+                query_filters["ended_at__gte"] = self.parse_datetime(
+                    metrics.last_authorized_date
+                ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        total_value = metrics.total_value
+        total_sell = metrics.total_sell
+        max_value = metrics.max_value
+        min_value = metrics.min_value
+        currency_code = metrics.currency_code
 
         total_value = total_value / 100
         max_value = (max_value / 100) if max_value != float("-inf") else 0
