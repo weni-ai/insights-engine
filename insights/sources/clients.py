@@ -34,6 +34,10 @@ class GenericSQLQueryGenerator:
             if field_object is None:
                 continue
             source_field = field_object.source_field
+            if field_object.default_operation:
+                operation = field_object.default_operation
+                if isinstance(value, list):
+                    value = value[0]
             join_clause = field_object.join_clause
             if join_clause != {}:
                 builder.add_joins(join_clause)
