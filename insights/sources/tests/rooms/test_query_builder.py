@@ -24,7 +24,7 @@ class TestRoomSQLQueryBuilder(TestCase):
             self.strategy, "uuid", "eq", ["test_uuid"], table_alias="ctt"
         )
         expected_clause = (
-            "(ctt.name ILIKE (%s) OR ctt.external_id ILIKE (%s) OR r.urn ILIKE (%s))"
+            "(LOWER(ctt.name) LIKE (%s) OR LOWER(ctt.external_id) LIKE (%s) OR LOWER(r.urn) LIKE (%s))"
         )
         self.assertEqual(self.builder.where_clauses, [expected_clause])
         expected_params = [f"%{p}%" for p in ["test_uuid"] * 3]
@@ -35,7 +35,7 @@ class TestRoomSQLQueryBuilder(TestCase):
             self.strategy, "uuid", "eq", "test_uuid_str", table_alias="ctt"
         )
         expected_clause = (
-            "(ctt.name ILIKE (%s) OR ctt.external_id ILIKE (%s) OR r.urn ILIKE (%s))"
+            "(LOWER(ctt.name) LIKE (%s) OR LOWER(ctt.external_id) LIKE (%s) OR LOWER(r.urn) LIKE (%s))"
         )
         self.assertEqual(self.builder.where_clauses, [expected_clause])
         expected_params = [f"%{p}%" for p in ["test_uuid_str"] * 3]
