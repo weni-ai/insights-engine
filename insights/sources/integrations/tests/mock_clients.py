@@ -79,6 +79,9 @@ class MockNexusClient(BaseNexusClient):
     ) -> MockResponse:
         return MockResponse(status_code=204, content=json.dumps({}))
 
+    def get_page(self, url: str) -> MockResponse:
+        return MockResponse(status_code=200, content=json.dumps({"results": [], "next": None}))
+
     def get_project_multi_agents_status(self, project_uuid: UUID) -> MockResponse:
         return MockResponse(
             status_code=200, content=json.dumps({"multi_agents": False})
