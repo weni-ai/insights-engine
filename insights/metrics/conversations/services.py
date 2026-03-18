@@ -122,10 +122,6 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
 
-        self._save_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.TOPICS, response_content
-        )
-
         if isinstance(response_content, dict):
             results = response_content.get("results", [])
             next_url = response_content.get("next")
@@ -157,12 +153,18 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                     max_pages,
                 )
 
-            return results
+            topics_data = results
         else:
             if isinstance(response_content, list):
-                return response_content
+                topics_data = response_content
             else:
-                return []
+                topics_data = []
+
+        self._save_cache_for_project_resource(
+            project_uuid, ConversationsMetricsResource.TOPICS, topics_data
+        )
+
+        return topics_data
 
     def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
         """
