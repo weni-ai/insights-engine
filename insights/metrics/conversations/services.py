@@ -122,17 +122,49 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
 
-        self._save_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.TOPICS, response_content
-        )
-
         if isinstance(response_content, dict):
-            return response_content.get("results", [])
+            results = response_content.get("results", [])
+            next_url = response_content.get("next")
+            page = 1
+            max_pages = settings.NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES
+
+            while next_url and page < max_pages:
+                page += 1
+                next_response = self.nexus_conversations_client.get_page(next_url)
+                try:
+                    next_content = next_response.json()
+                except Exception:
+                    break
+
+                if not status.is_success(next_response.status_code):
+                    break
+
+                if isinstance(next_content, dict):
+                    results.extend(next_content.get("results", []))
+                    next_url = next_content.get("next")
+                else:
+                    break
+
+            if next_url:
+                logger.warning(
+                    "Topics pagination limit reached for project %s. "
+                    "There are still more pages to fetch (limit: %d).",
+                    project_uuid,
+                    max_pages,
+                )
+
+            topics_data = results
         else:
             if isinstance(response_content, list):
-                return response_content
+                topics_data = response_content
             else:
-                return []
+                topics_data = []
+
+        self._save_cache_for_project_resource(
+            project_uuid, ConversationsMetricsResource.TOPICS, topics_data
+        )
+
+        return topics_data
 
     def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
         """
@@ -170,7 +202,38 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         if isinstance(response_content, dict):
-            return response_content.get("results", [])
+            results = response_content.get("results", [])
+            next_url = response_content.get("next")
+            page = 1
+            max_pages = settings.NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES
+
+            while next_url and page < max_pages:
+                page += 1
+                next_response = self.nexus_conversations_client.get_page(next_url)
+                try:
+                    next_content = next_response.json()
+                except Exception:
+                    break
+
+                if not status.is_success(next_response.status_code):
+                    break
+
+                if isinstance(next_content, dict):
+                    results.extend(next_content.get("results", []))
+                    next_url = next_content.get("next")
+                else:
+                    break
+
+            if next_url:
+                logger.warning(
+                    "Subtopics pagination limit reached for project %s, topic %s. "
+                    "There are still more pages to fetch (limit: %d).",
+                    project_uuid,
+                    topic_uuid,
+                    max_pages,
+                )
+
+            return results
         else:
             if isinstance(response_content, list):
                 return response_content

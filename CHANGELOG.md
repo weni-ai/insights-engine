@@ -1,3 +1,25 @@
+# 1.13.0
+# Add
+  - NPS metrics V2 endpoint
+# Remove
+  - Cached property from Nexus Conversations API client
+
+# 1.12.2
+# Add
+  - Enhance response_content handling in ConversationsMetricsService to return lists for both dict and list types
+
+# 1.12.1
+# Fix
+  - ensure response_content from topics and subtopics returns a list for non-dict types in ConversationsMetricsService
+
+# 1.12.0
+# Add
+  - Nexus Conversations API client
+
+# 1.11.2
+# Add
+  - Agent email to detailed monitoring
+
 # 1.11.1
 # Fix
   - ensure project_uuid is always a string in InternalVTEXOrdersViewSet
