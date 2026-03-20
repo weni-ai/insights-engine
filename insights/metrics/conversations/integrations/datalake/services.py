@@ -761,7 +761,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
 
             length = len(events)
 
-            if length == 0:
+            if length == 0 or events == [{}]:
                 break
 
             total_orders_count += length
