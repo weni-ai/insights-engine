@@ -24,7 +24,7 @@ class GetAbsoluteNumbersWidgetUseCase:
         source = widget.source
         operation = config.get("operation")
         key = config.get("key")
-        agent_uuid = config.get("datalake_config", {}).get("agent_uuid")
+        agent_uuid = config.get("agent_uuid")
 
         if source != "conversations.absolute_numbers.child":
             raise serializers.ValidationError(

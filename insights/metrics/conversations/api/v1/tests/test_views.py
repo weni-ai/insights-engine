@@ -900,9 +900,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             config={
                 "operation": "TOTAL",
                 "key": "test_key",
-                "datalake_config": {
-                    "agent_uuid": str(uuid.uuid4()),
-                },
+                "agent_uuid": str(uuid.uuid4()),
             },
         )
 
@@ -974,9 +972,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             config={
                 "operation": "TOTAL",
                 "key": "test_key",
-                "datalake_config": {
-                    "agent_uuid": str(uuid.uuid4()),
-                },
+                "agent_uuid": str(uuid.uuid4()),
             },
         )
 
@@ -1015,9 +1011,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             config={
                 "operation": "TOTAL",
                 "key": "test_key",
-                "datalake_config": {
-                    "agent_uuid": str(uuid.uuid4()),
-                },
+                "agent_uuid": str(uuid.uuid4()),
             },
         )
 
