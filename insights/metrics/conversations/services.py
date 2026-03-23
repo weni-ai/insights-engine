@@ -1142,6 +1142,7 @@ class ConversationsMetricsService(
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get event count from Datalake.
