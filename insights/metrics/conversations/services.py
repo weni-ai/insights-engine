@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import logging
-from typing import TYPE_CHECKING
 from uuid import UUID
 from datetime import datetime
 import json
@@ -51,10 +50,6 @@ from insights.widgets.models import Widget
 
 
 logger = logging.getLogger(__name__)
-
-
-if TYPE_CHECKING:
-    from insights.projects.models import Project
 
 
 class BaseConversationsMetricsService(ABC):
@@ -166,7 +161,6 @@ class BaseConversationsMetricsService(ABC):
         widget: Widget,
         start_date: datetime,
         end_date: datetime,
-        key: str,
     ) -> dict:
         """
         Get generic metrics by key
@@ -501,7 +495,7 @@ class ConversationsMetricsService(
 
     def get_topics_distribution(
         self,
-        project: "Project",
+        project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
@@ -512,11 +506,11 @@ class ConversationsMetricsService(
         """
         # If the topic distribution is limited by Nexus topics,
         # the client will see other topics listed as "OTHER"
-        current_topics_data = self.get_topics(project.uuid)
+        current_topics_data = self.get_topics(project_uuid)
 
         try:
             topics = self.datalake_service.get_topics_distribution(
-                project_uuid=project.uuid,
+                project_uuid=project_uuid,
                 start_date=start_date,
                 end_date=end_date,
                 conversation_type=conversation_type,
