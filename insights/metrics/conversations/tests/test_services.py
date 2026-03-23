@@ -1267,9 +1267,7 @@ class TestConversationsMetricsService(TestCase):
             config={
                 "operation": AbsoluteNumbersMetricsType.TOTAL,
                 "key": "test_key",
-                "datalake_config": {
-                    "agent_uuid": agent_uuid,
-                },
+                "agent_uuid": agent_uuid,
             },
         )
 
@@ -1309,9 +1307,7 @@ class TestConversationsMetricsService(TestCase):
                 config={
                     "operation": operation,
                     "key": "test_key",
-                    "datalake_config": {
-                        "agent_uuid": agent_uuid,
-                    },
+                    "agent_uuid": agent_uuid,
                 },
             )
 
