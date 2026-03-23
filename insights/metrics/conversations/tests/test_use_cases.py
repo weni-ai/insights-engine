@@ -125,7 +125,7 @@ class TestGetAbsoluteNumbersWidgetUseCase(TestCase):
         self.valid_config = {
             "operation": "TOTAL",
             "key": "some_key",
-            "datalake_config": {"agent_uuid": "agent-123"},
+            "agent_uuid": str(uuid.uuid4()),
         }
         self.widget = Widget.objects.create(
             name="Test Widget",
