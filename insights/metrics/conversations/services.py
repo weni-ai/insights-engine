@@ -1268,4 +1268,5 @@ class ConversationsMetricsService(
             end_date=end_date,
             agent_uuid=agent_uuid,
             field_name=field_name,
+            event_name="weni_nexus_data",
         )
