@@ -1099,10 +1099,14 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get event count from Datalake.
         """
+        # Staging only:
+        return 0  # TODO: Use mock service
+
         cache_key = self._get_cache_key(
             data_type="event_count",
             project_uuid=project_uuid,
