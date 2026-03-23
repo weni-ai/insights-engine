@@ -26,17 +26,6 @@ class ProjectAuthPermission(permissions.BasePermission):
         ).exists()
 
 
-class IsProjectAdminPermission(permissions.BasePermission):
-    """
-    Permission that verifies if the user is an admin (role=1) of at least one project.
-    """
-
-    def has_permission(self, request, view):
-        if request.user.is_anonymous:
-            return False
-        return ProjectAuth.objects.filter(user=request.user, role=1).exists()
-
-
 class ProjectAuthQueryParamPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         project_uuid_field = getattr(view, "project_uuid_field", "project_uuid")
