@@ -26,6 +26,7 @@ from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import 
 )
 from insights.metrics.conversations.api.v1.serializers import (
     AbsoluteNumbersQueryParamsSerializer,
+    AbsoluteNumbersSerializer,
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
@@ -587,7 +588,9 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        return Response(metrics, status=status.HTTP_200_OK)
+        data = AbsoluteNumbersSerializer(metrics).data
+
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class InternalConversationsMetricsViewSet(GenericViewSet):

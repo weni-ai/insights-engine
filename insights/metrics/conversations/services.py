@@ -9,6 +9,7 @@ from sentry_sdk import capture_exception, capture_message
 from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
+    AbsoluteNumbersMetrics,
     AvailableWidgetsList,
     ConversationsTotalsMetrics,
     CrosstabItemData,
@@ -961,8 +962,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
         method = self._get_absolute_numbers_method_by_operation(operation)
 
-        return method(
-            project_uuid=widget.parent.dashboard.project_id,
+        project_uuid = (
+            widget.parent.dashboard.project_id
+            if widget.parent
+            else widget.dashboard.project_id
+        )
+
+        value = method(
+            project_uuid=project_uuid,
             key=key,
             start_date=start_date,
             end_date=end_date,
@@ -970,3 +977,5 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             field_name=field_name,
             event_name="weni_nexus_data",
         )
+
+        return AbsoluteNumbersMetrics(value=value)

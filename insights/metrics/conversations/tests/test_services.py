@@ -1258,9 +1258,17 @@ class TestConversationsMetricsService(TestCase):
 
     def test_get_absolute_numbers(self):
         agent_uuid = str(uuid.uuid4())
+        parent = Widget.objects.create(
+            name="Test Parent Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={},
+        )
         widget = Widget.objects.create(
             name="Test Widget",
-            dashboard=self.dashboard,
+            parent=parent,
             source="conversations.absolute_numbers",
             type="absolute_numbers",
             position=[1, 2],
@@ -1282,26 +1290,36 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(result, 42)
+        self.assertEqual(result.value, 42)
         self.service._get_absolute_numbers_method_by_operation.assert_called_once_with(
             AbsoluteNumbersMetricsType.TOTAL
         )
         mock_method.assert_called_once_with(
-            project_uuid=widget.dashboard.project_id,
+            project_uuid=parent.dashboard.project_id,
             key="test_key",
             start_date=self.start_date,
             end_date=self.end_date,
             agent_uuid=agent_uuid,
             field_name=None,
+            event_name="weni_nexus_data",
         )
 
     def test_get_absolute_numbers_each_operation_type(self):
+        parent = Widget.objects.create(
+            name="Test Parent Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={},
+        )
+
         for operation in AbsoluteNumbersMetricsType:
             agent_uuid = str(uuid.uuid4())
             widget = Widget.objects.create(
                 name="Test Widget",
-                dashboard=self.dashboard,
-                source="conversations.absolute_numbers",
+                parent=parent,
+                source="conversations.absolute_numbers.child",
                 type="absolute_numbers",
                 position=[1, 2],
                 config={
@@ -1322,7 +1340,7 @@ class TestConversationsMetricsService(TestCase):
                 end_date=self.end_date,
             )
 
-            self.assertEqual(result, 99)
+            self.assertEqual(result.value, 99)
             self.service._get_absolute_numbers_method_by_operation.assert_called_once_with(
                 operation
             )

@@ -561,3 +561,11 @@ class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
         attrs["end_date"] = end_date
 
         return attrs
+
+
+class AbsoluteNumbersSerializer(serializers.Serializer):
+    """
+    Serializer for absolute numbers
+    """
+
+    value = serializers.FloatField()
