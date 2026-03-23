@@ -235,6 +235,8 @@ class BaseConversationsMetricsService(ABC):
         start_date: datetime,
         end_date: datetime,
         key: str,
+        agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get event count
@@ -248,6 +250,9 @@ class BaseConversationsMetricsService(ABC):
         event_name: str,
         start_date: datetime,
         end_date: datetime,
+        key: str,
+        agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values sum
@@ -261,6 +266,9 @@ class BaseConversationsMetricsService(ABC):
         event_name: str,
         start_date: datetime,
         end_date: datetime,
+        key: str,
+        agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events values average
@@ -276,6 +284,7 @@ class BaseConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events highest value
@@ -291,6 +300,7 @@ class BaseConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         """
         Get events lowest value

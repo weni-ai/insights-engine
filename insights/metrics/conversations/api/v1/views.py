@@ -634,6 +634,8 @@ class ConversationsMetricsViewSet(
         )
         query_params.is_valid(raise_exception=True)
 
+        print("Service name", self.service.__class__.__name__)
+
         try:
             metrics = self.service.get_absolute_numbers(
                 widget=widget,

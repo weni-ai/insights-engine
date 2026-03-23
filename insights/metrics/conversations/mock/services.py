@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import UUID, uuid4
 from datetime import datetime
 
@@ -183,9 +184,12 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
     def get_crosstab_data(
         self,
         project_uuid: UUID,
-        widget: Widget,
+        event_name: str,
         start_date: datetime,
         end_date: datetime,
+        key: str,
+        agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> dict:
         return {}
 
@@ -197,6 +201,7 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         return 0
 
@@ -208,6 +213,7 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         return 0
 
@@ -219,6 +225,7 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         return 0
 
@@ -230,6 +237,7 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         return 0
 
@@ -241,6 +249,7 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
+        field_name: Optional[str] = None,
     ) -> int:
         return 0
 
