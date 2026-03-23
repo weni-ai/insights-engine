@@ -830,7 +830,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         Validate crosstab source
         """
         key = source.get("key")
-        field = source.get("field", "value")
+        field = source.get("field")
+
+        if field is None or field == "":
+            field = "value"
 
         if not key:
             raise ConversationsMetricsError("Key is required")
