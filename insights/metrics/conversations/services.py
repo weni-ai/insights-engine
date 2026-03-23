@@ -1262,7 +1262,7 @@ class ConversationsMetricsService(
         method = self._get_absolute_numbers_method_by_operation(operation)
 
         return method(
-            project_uuid=widget.parent.project_id,
+            project_uuid=widget.parent.dashboard.project_id,
             key=key,
             start_date=start_date,
             end_date=end_date,
