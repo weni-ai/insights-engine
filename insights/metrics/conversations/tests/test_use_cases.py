@@ -1,6 +1,7 @@
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
+import uuid
 
 from django.test import TestCase, override_settings
 from rest_framework import serializers
