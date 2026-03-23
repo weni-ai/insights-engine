@@ -15,17 +15,8 @@ from insights.human_support.filters import HumanSupportFilterSet
 from insights.projects.models import Project
 from insights.sources.agents.clients import AgentsRESTClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
-from insights.sources.queues.usecases.query_execute import (
-    QueryExecutor as QueuesQueryExecutor,
-)
 from insights.sources.rooms.usecases.query_execute import (
     QueryExecutor as RoomsQueryExecutor,
-)
-from insights.sources.sectors.usecases.query_execute import (
-    QueryExecutor as SectorsQueryExecutor,
-)
-from insights.sources.tags.usecases.query_execute import (
-    QueryExecutor as TagsQueryExecutor,
 )
 
 
@@ -50,28 +41,13 @@ class HumanSupportDashboardService:
             )
 
         if is_all(filters.get("sectors")):
-            data = SectorsQueryExecutor.execute(
-                filters={"project": project_uuid}, operation="list", parser=lambda x: x
-            )
-            filters["sectors"] = [
-                row.get("uuid") for row in (data or {}).get("results", [])
-            ]
+            filters.pop("sectors", None)
 
         if is_all(filters.get("queues")):
-            data = QueuesQueryExecutor.execute(
-                filters={"project": project_uuid}, operation="list", parser=lambda x: x
-            )
-            filters["queues"] = [
-                row.get("uuid") for row in (data or {}).get("results", [])
-            ]
+            filters.pop("queues", None)
 
         if is_all(filters.get("tags")):
-            data = TagsQueryExecutor.execute(
-                filters={"project": project_uuid}, operation="list", parser=lambda x: x
-            )
-            filters["tags"] = [
-                row.get("uuid") for row in (data or {}).get("results", [])
-            ]
+            filters.pop("tags", None)
         return filters
 
     def _normalize_filters(self, incoming_filters: dict | None) -> dict:
