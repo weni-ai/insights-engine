@@ -1252,7 +1252,7 @@ class ConversationsMetricsService(
         config = widget.config or {}
         operation = config.get("operation")
         key = config.get("key")
-        agent_uuid = config.get("datalake_config", {}).get("agent_uuid")
+        agent_uuid = config.get("agent_uuid")
         field_name = config.get("field_name")
 
         assert operation is not None

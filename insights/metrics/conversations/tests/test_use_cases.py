@@ -1,6 +1,7 @@
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
+import uuid
 
 from django.test import TestCase, override_settings
 from rest_framework import serializers
@@ -125,7 +126,7 @@ class TestGetAbsoluteNumbersWidgetUseCase(TestCase):
         self.valid_config = {
             "operation": "TOTAL",
             "key": "some_key",
-            "datalake_config": {"agent_uuid": "agent-123"},
+            "agent_uuid": str(uuid.uuid4()),
         }
         self.widget = Widget.objects.create(
             name="Test Widget",
