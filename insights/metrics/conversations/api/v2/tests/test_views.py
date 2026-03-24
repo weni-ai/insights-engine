@@ -8,9 +8,7 @@ from insights.authentication.tests.decorators import with_project_auth
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.api.v2.views import ConversationsMetricsViewSetV2
 from insights.metrics.conversations.enums import NpsMetricsType
-from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
-)
+from insights.metrics.conversations.services import BaseConversationsMetricsService
 from insights.projects.models import Project
 from insights.users.models.user import User
 from insights.widgets.models import Widget
