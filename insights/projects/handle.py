@@ -1,8 +1,11 @@
 from amqp.channel import Channel
 
-from .consumers import ProjectAuthConsumer, ProjectConsumer
+from .consumers import ProjectAuthConsumer, ProjectConsumer, UpdateProjectConsumer
 
 
 def handle_consumers(channel: Channel) -> None:
     channel.basic_consume("insights.projects", callback=ProjectConsumer().handle)
     channel.basic_consume("insights.permissions", callback=ProjectAuthConsumer().handle)
+    channel.basic_consume(
+        "insights.update-project", callback=UpdateProjectConsumer().handle
+    )
