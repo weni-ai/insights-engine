@@ -140,6 +140,12 @@ class BaseNexusConversationsAPIClient(ABC):
         Delete a subtopic for a topic.
         """
 
+    @abstractmethod
+    def get_page(self, url: str) -> Response:
+        """
+        Fetch a page by its full URL (used for pagination).
+        """
+
 
 class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
     """
@@ -227,3 +233,6 @@ class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
         url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
+
+    def get_page(self, url: str) -> Response:
+        return requests.get(url=url, headers=self.headers, timeout=self.timeout)

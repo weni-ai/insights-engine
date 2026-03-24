@@ -12,7 +12,9 @@ class TestNexusConversationsAPIClient(TestCase):
         self.client = NexusConversationsAPIClient()
 
     def test_base_url(self):
-        self.assertEqual(self.client.base_url, settings.NEXUS_CONVERSATIONS_API_BASE_URL)
+        self.assertEqual(
+            self.client.base_url, settings.NEXUS_CONVERSATIONS_API_BASE_URL
+        )
 
     def test_headers(self):
         headers = self.client.headers
