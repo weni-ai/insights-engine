@@ -16,13 +16,16 @@ from insights.metrics.skills.exceptions import (
     TemplateNotFound,
 )
 from insights.metrics.skills.services.base import BaseSkillMetricsService
+from insights.metrics.skills.services.dataclass import AbandonedCartWhatsAppTemplate
 from insights.metrics.skills.validators import validate_date_str
 from insights.metrics.vtex.services.orders_service import OrdersService
+from insights.settings import (
+    ABANDONED_CART_MAX_TEMPLATE_IDS,
+    ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST,
+    ABANDONED_CART_METRICS_START_DATE_MAX_DAYS,
+)
 from insights.sources.cache import CacheClient
 from insights.sources.integrations.clients import WeniIntegrationsClient
-
-
-ABANDONED_CART_METRICS_START_DATE_MAX_DAYS = 90
 
 logger = logging.getLogger(__name__)
 
@@ -83,10 +86,8 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
     def _whatsapp_template_ids_and_waba(self):
         name = "weni_abandoned_cart"
 
-        template_ids = []
+        templates_by_name: dict[str, list[str | int]] = {}
         waba_id = None
-
-        most_recent_template_name = ""
 
         for waba in self._project_wabas:
             templates = self.meta_api_client.get_templates_list(
@@ -97,19 +98,24 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
                 continue
 
             for template in templates.get("data", []):
-                if template["name"] >= most_recent_template_name:
-                    if template["name"] == most_recent_template_name:
-                        template_ids.append(template["id"])
-                    else:
-                        template_ids = [template["id"]]
+                templates_by_name.setdefault(template["name"], []).append(
+                    template["id"]
+                )
+                waba_id = waba["waba_id"]
 
-                    most_recent_template_name = template["name"]
-                    waba_id = waba["waba_id"]
-
-        if not template_ids or not waba_id:
+        if not templates_by_name or not waba_id:
             raise TemplateNotFound("No abandoned cart template found for the project")
 
-        return template_ids, waba_id
+        result = sorted(
+            [
+                AbandonedCartWhatsAppTemplate(name=tpl_name, ids=tpl_ids)
+                for tpl_name, tpl_ids in templates_by_name.items()
+            ],
+            key=lambda t: t.name,
+            reverse=True,
+        )
+
+        return result, waba_id
 
     def _calculate_increase_percentage(self, current: int, past: int):
         if past == 0:
@@ -117,26 +123,43 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
         return round(((current - past) / past) * 100, 2)
 
+    def _get_capped_template_ids(
+        self, templates: list[AbandonedCartWhatsAppTemplate]
+    ) -> list[str | int]:
+        all_ids = []
+        for template in templates:
+            for tid in template.ids:
+                all_ids.append(tid)
+                if len(all_ids) >= ABANDONED_CART_MAX_TEMPLATE_IDS:
+                    return all_ids
+        return all_ids
+
+    def _fetch_analytics_for_template_ids(
+        self, waba_id, template_ids, start_date, end_date, product_type
+    ) -> list[dict]:
+        data_points = []
+        for i in range(0, len(template_ids), ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST):
+            chunk = template_ids[i : i + ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST]
+            metrics = self.meta_api_client.get_messages_analytics(
+                waba_id=waba_id,
+                template_id=chunk,
+                start_date=start_date,
+                end_date=end_date,
+                product_type=product_type,
+            )
+            data_points.extend(metrics.get("data", {}).get("data_points", []))
+        return data_points
+
     def _get_message_templates_metrics(self, start_date, end_date) -> dict:
-        template_ids, waba_id = self._whatsapp_template_ids_and_waba
+        templates, waba_id = self._whatsapp_template_ids_and_waba
+        template_ids = self._get_capped_template_ids(templates)
 
-        cloud_api_metrics = self.meta_api_client.get_messages_analytics(
-            waba_id=waba_id,
-            template_id=template_ids,
-            start_date=start_date,
-            end_date=end_date,
-            product_type=ProductType.CLOUD_API.value,
+        cloud_api_data_points = self._fetch_analytics_for_template_ids(
+            waba_id, template_ids, start_date, end_date, ProductType.CLOUD_API.value
         )
-        mm_lite_metrics = self.meta_api_client.get_messages_analytics(
-            waba_id=waba_id,
-            template_id=template_ids,
-            start_date=start_date,
-            end_date=end_date,
-            product_type=ProductType.MM_LITE.value,
+        mm_lite_data_points = self._fetch_analytics_for_template_ids(
+            waba_id, template_ids, start_date, end_date, ProductType.MM_LITE.value
         )
-
-        cloud_api_data_points = cloud_api_metrics.get("data", {}).get("data_points")
-        mm_lite_data_points = mm_lite_metrics.get("data", {}).get("data_points")
 
         data_points = [*cloud_api_data_points, *mm_lite_data_points]
 
