@@ -38,7 +38,6 @@ class UpdateProjectConsumer(EDAConsumer):
                 name=body.get("name"),
                 timezone=body.get("timezone"),
                 date_format=body.get("date_format"),
-                config=body.get("config"),
             )
             channel.basic_ack(message.delivery_tag)
         except Exception as exception:

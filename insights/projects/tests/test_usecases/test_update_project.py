@@ -61,42 +61,6 @@ class TestUpdateProjectUseCase(TestCase):
         self.assertEqual(self.project.timezone, "UTC")
         self.assertEqual(self.project.date_format, "MM/DD/YYYY")
 
-    def test_update_config_on_project_without_config(self):
-        self.use_case.execute(
-            project_uuid=str(self.project.uuid),
-            config={"key": "value"},
-        )
-        self.project.refresh_from_db()
-        self.assertEqual(self.project.config, {"key": "value"})
-
-    def test_update_config_merges_with_existing(self):
-        self.project.config = {"existing_key": "existing_value"}
-        self.project.save(update_fields=["config"])
-
-        self.use_case.execute(
-            project_uuid=str(self.project.uuid),
-            config={"new_key": "new_value"},
-        )
-        self.project.refresh_from_db()
-        self.assertEqual(
-            self.project.config,
-            {"existing_key": "existing_value", "new_key": "new_value"},
-        )
-
-    def test_update_config_overwrites_existing_keys(self):
-        self.project.config = {"key": "old_value", "other": "keep"}
-        self.project.save(update_fields=["config"])
-
-        self.use_case.execute(
-            project_uuid=str(self.project.uuid),
-            config={"key": "new_value"},
-        )
-        self.project.refresh_from_db()
-        self.assertEqual(
-            self.project.config,
-            {"key": "new_value", "other": "keep"},
-        )
-
     def test_raises_exception_for_nonexistent_project(self):
         with self.assertRaises(Exception):
             self.use_case.execute(project_uuid=str(uuid4()))
