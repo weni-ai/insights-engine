@@ -22,6 +22,11 @@ class AgentFilterSet:
             "r": "INNER JOIN public.rooms_room AS r ON r.user_id=pp.user_id",
         },
     )
+    search = GenericSQLFilter(
+        source_field={"first_name": "u", "last_name": "u"},
+        table_alias="u",
+        default_operation="or",
+    )
 
     def get_field(self, field_name):
         try:

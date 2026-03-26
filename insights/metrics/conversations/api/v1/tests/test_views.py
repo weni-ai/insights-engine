@@ -34,9 +34,11 @@ from insights.metrics.conversations.enums import (
     NpsMetricsType,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
+    BaseDatalakeConversationsMetricsService,
 )
-from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.services import (
+    ConversationsMetricsService,
+)
 from insights.metrics.conversations.api.v1.views import ConversationsMetricsViewSet
 from insights.projects.models import Project
 from insights.sources.flowruns.tests.mock_query_executor import (
@@ -79,7 +81,7 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
         )
 
         ConversationsMetricsViewSet.service = ConversationsMetricsService(
-            datalake_service=MagicMock(spec=BaseConversationsMetricsService),
+            datalake_service=MagicMock(spec=BaseDatalakeConversationsMetricsService),
             nexus_conversations_client=nexus_conversations_client,
             flowruns_query_executor=MockFlowRunsQueryExecutor,
         )
