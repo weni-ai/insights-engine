@@ -1,5 +1,6 @@
+from abc import ABC, abstractmethod
 import logging
-from typing import TYPE_CHECKING
+from typing import Callable, Optional
 from uuid import UUID
 from datetime import datetime
 import json
@@ -9,6 +10,7 @@ from sentry_sdk import capture_exception, capture_message
 from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
+    AbsoluteNumbersMetrics,
     AvailableWidgetsList,
     ConversationsTotalsMetrics,
     CrosstabItemData,
@@ -25,7 +27,7 @@ from insights.metrics.conversations.integrations.datalake.dataclass import (
     CrosstabSource,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
+    BaseDatalakeConversationsMetricsService,
     DatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
@@ -35,6 +37,7 @@ from insights.sources.flowruns.usecases.query_execute import (
     QueryExecutor as FlowRunsQueryExecutor,
 )
 from insights.metrics.conversations.enums import (
+    AbsoluteNumbersMetricsType,
     AvailableWidgets,
     AvailableWidgetsListType,
     ConversationType,
@@ -52,11 +55,163 @@ from insights.widgets.models import Widget
 logger = logging.getLogger(__name__)
 
 
-if TYPE_CHECKING:
-    from insights.projects.models import Project
+class BaseConversationsMetricsService(ABC):
+    """
+    Base class for conversations metrics services.
+    """
+
+    @abstractmethod
+    def get_topics(self, project_uuid: UUID) -> dict:
+        """
+        Get conversation topics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
+        """
+        Get conversation subtopics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
+        """
+        Create a conversation topic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def create_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
+    ) -> dict:
+        """
+        Create a conversation subtopic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
+        """
+        Delete a conversation topic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def delete_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
+    ) -> dict:
+        """
+        Delete a conversation subtopic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_topics_distribution(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+        output_language: str = "en",
+    ) -> TopicsDistributionMetrics:
+        """
+        Get topics distribution
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_totals(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations totals
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: CsatMetricsType,
+    ) -> dict:
+        """
+        Get csat metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: NpsMetricsType,
+    ) -> dict:
+        """
+        Get nps metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_generic_metrics_by_key(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get generic metrics by key
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_sales_funnel_data(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SalesFunnelMetrics:
+        """
+        Get sales funnel data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_available_widgets(
+        self, project_uuid: UUID, widget_type: AvailableWidgetsListType | None = None
+    ) -> AvailableWidgetsList:
+        """
+        Get available widgets
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_crosstab_data(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get crosstab data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
 
 
-class ConversationsMetricsService(ConversationsServiceCachingMixin):
+class ConversationsMetricsService(
+    ConversationsServiceCachingMixin, BaseConversationsMetricsService
+):
     """
     Service to get conversations metrics
     """
@@ -69,11 +224,15 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
     ):
-        self.datalake_service = datalake_service
-        self.nexus_conversations_client = nexus_conversations_client
-        self.cache_client = cache_client
-        self.nexus_conversations_cache_ttl = nexus_conversations_cache_ttl
-        self.flowruns_query_executor = flowruns_query_executor
+        self.datalake_service: BaseDatalakeConversationsMetricsService = (
+            datalake_service
+        )
+        self.nexus_conversations_client: BaseNexusConversationsAPIClient = (
+            nexus_conversations_client
+        )
+        self.cache_client: CacheClient = cache_client
+        self.nexus_conversations_cache_ttl: int = nexus_conversations_cache_ttl
+        self.flowruns_query_executor: FlowRunsQueryExecutor = flowruns_query_executor
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
         """
@@ -402,7 +561,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
     def get_topics_distribution(
         self,
-        project: "Project",
+        project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
@@ -413,11 +572,11 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         # If the topic distribution is limited by Nexus topics,
         # the client will see other topics listed as "OTHER"
-        current_topics_data = self.get_topics(project.uuid)
+        current_topics_data = self.get_topics(project_uuid)
 
         try:
             topics = self.datalake_service.get_topics_distribution(
-                project_uuid=project.uuid,
+                project_uuid=project_uuid,
                 start_date=start_date,
                 end_date=end_date,
                 conversation_type=conversation_type,
@@ -476,14 +635,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         )
 
     def get_totals(
-        self, project: "Project", start_date: datetime, end_date: datetime
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> ConversationsTotalsMetrics:
         """
         Get conversations metrics totals
         """
 
         return self.datalake_service.get_conversations_totals(
-            project_uuid=project.uuid,
+            project_uuid=project_uuid,
             start_date=start_date,
             end_date=end_date,
         )
@@ -830,7 +989,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         Validate crosstab source
         """
         key = source.get("key")
-        field = source.get("field_name")
+        field = source.get("field")
 
         if field is None or field == "":
             field = "value"
@@ -897,3 +1056,149 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         return items
+
+    def get_event_count(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+        field_name: Optional[str] = None,
+    ) -> int:
+        """
+        Get event count from Datalake.
+        """
+
+        return self.datalake_service.get_event_count(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+    def get_events_values_sum(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+        field_name: Optional[str] = None,
+    ) -> int:
+        """
+        Get events values sum from Datalake.
+        """
+
+        return self.datalake_service.get_events_values_sum(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
+        )
+
+    def get_events_values_average(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+        field_name: Optional[str] = None,
+    ) -> int:
+        """
+        Get events values average from Datalake.
+        """
+
+        return self.datalake_service.get_events_values_average(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
+        )
+
+    def get_events_highest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+        field_name: Optional[str] = None,
+    ) -> int:
+        """
+        Get events highest value from Datalake.
+        """
+
+        return self.datalake_service.get_events_highest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
+        )
+
+    def get_events_lowest_value(
+        self,
+        project_uuid: UUID,
+        event_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        key: str,
+        agent_uuid: str,
+        field_name: Optional[str] = None,
+    ) -> int:
+        """
+        Get events lowest value from Datalake.
+        """
+
+        return self.datalake_service.get_events_lowest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid, field_name
+        )
+
+    def _get_absolute_numbers_method_by_operation(
+        self, operation: AbsoluteNumbersMetricsType
+    ) -> Callable:
+        """
+        Get absolute numbers method by operation
+        """
+        operation_mapping = {
+            AbsoluteNumbersMetricsType.TOTAL: self.get_event_count,
+            AbsoluteNumbersMetricsType.SUM: self.get_events_values_sum,
+            AbsoluteNumbersMetricsType.AVERAGE: self.get_events_values_average,
+            AbsoluteNumbersMetricsType.HIGHEST: self.get_events_highest_value,
+            AbsoluteNumbersMetricsType.LOWEST: self.get_events_lowest_value,
+        }
+
+        return operation_mapping.get(operation)
+
+    def get_absolute_numbers(
+        self,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get absolute numbers metrics
+        """
+
+        config = widget.config or {}
+        operation = config.get("operation")
+        key = config.get("key")
+        agent_uuid = config.get("agent_uuid")
+        field_name = config.get("field_name")
+
+        assert operation is not None
+        assert key is not None
+        assert agent_uuid is not None
+
+        method = self._get_absolute_numbers_method_by_operation(operation)
+
+        project_uuid = (
+            widget.parent.dashboard.project_id
+            if widget.parent
+            else widget.dashboard.project_id
+        )
+
+        value = method(
+            project_uuid=project_uuid,
+            key=key,
+            start_date=start_date,
+            end_date=end_date,
+            agent_uuid=agent_uuid,
+            field_name=field_name,
+            event_name="weni_nexus_data",
+        )
+
+        return AbsoluteNumbersMetrics(value=value)

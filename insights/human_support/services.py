@@ -777,6 +777,7 @@ class HumanSupportDashboardService:
             formatted_results.append(
                 {
                     "agent": room.get("agent"),
+                    "agent_email": room.get("user_email"),
                     "sector": room.get("sector"),
                     "queue": room.get("queue"),
                     "contact": room.get("contact"),

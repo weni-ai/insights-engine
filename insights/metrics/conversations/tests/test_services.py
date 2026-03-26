@@ -21,6 +21,7 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import (
+    AbsoluteNumbersMetricsType,
     AvailableWidgets,
     AvailableWidgetsListType,
     ConversationType,
@@ -30,11 +31,13 @@ from insights.metrics.conversations.enums import (
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     SalesFunnelData,
 )
-from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
-)
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
-from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseDatalakeConversationsMetricsService,
+)
+from insights.metrics.conversations.services import (
+    ConversationsMetricsService,
+)
 from insights.projects.models import Project
 from insights.sources.flowruns.usecases.query_execute import (
     QueryExecutor as FlowRunsQueryExecutor,
@@ -71,7 +74,7 @@ class TestConversationsMetricsService(TestCase):
         )
 
         # Create mocks with proper specs for type safety
-        self.mock_datalake_service = Mock(spec=BaseConversationsMetricsService)
+        self.mock_datalake_service = Mock(spec=BaseDatalakeConversationsMetricsService)
         self.mock_nexus_conversations_client = MagicMock(
             spec=NexusConversationsAPIClient
         )
@@ -612,7 +615,7 @@ class TestConversationsMetricsService(TestCase):
 
     def test_get_totals(self):
         totals = self.service.get_totals(
-            project=self.project,
+            project_uuid=self.project.uuid,
             start_date=self.start_date,
             end_date=self.end_date,
         )
@@ -1383,3 +1386,269 @@ class TestConversationsMetricsService(TestCase):
         self.assertNotIn("created_on", filters)
         self.assertEqual(filters["created_on__gte"], "2026-01-15T00:00:00")
         self.assertEqual(filters["created_on__lte"], "2026-01-22T00:00:00")
+
+    def test_get_event_count(self):
+        """Test get_event_count"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+
+        self.mock_datalake_service.get_event_count.return_value = 10
+
+        count = self.service.get_event_count(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+        self.assertEqual(count, 10)
+
+    def test_get_events_values_sum(self):
+        """Test get_events_values_sum"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+        self.mock_datalake_service.get_events_values_sum.return_value = 10
+        sum_result = self.service.get_events_values_sum(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(sum_result, 10)
+
+    def test_get_events_values_average(self):
+        """Test get_events_values_average"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+        self.mock_datalake_service.get_events_values_average.return_value = 10
+        average = self.service.get_events_values_average(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+
+        self.assertEqual(average, 10)
+
+    def test_get_events_highest_value(self):
+        """Test get_events_highest_value"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+        self.mock_datalake_service.get_events_highest_value.return_value = 10
+        highest_value = self.service.get_events_highest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(highest_value, 10)
+
+    def test_get_events_lowest_value(self):
+        """Test get_events_lowest_value"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        event_name = "test_event"
+        start_date = datetime(2026, 1, 15, 0, 0, 0)
+        end_date = datetime(2026, 1, 22, 0, 0, 0)
+        key = "test_key"
+        agent_uuid = "test_agent_uuid"
+
+        self.mock_datalake_service.get_events_lowest_value.return_value = 10
+        lowest_value = self.service.get_events_lowest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(lowest_value, 10)
+
+    def test_get_absolute_numbers(self):
+        agent_uuid = str(uuid.uuid4())
+        parent = Widget.objects.create(
+            name="Test Parent Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={},
+        )
+        widget = Widget.objects.create(
+            name="Test Widget",
+            parent=parent,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={
+                "operation": AbsoluteNumbersMetricsType.TOTAL,
+                "key": "test_key",
+                "agent_uuid": agent_uuid,
+            },
+        )
+
+        mock_method = Mock(return_value=42)
+        self.service._get_absolute_numbers_method_by_operation = Mock(
+            return_value=mock_method
+        )
+
+        result = self.service.get_absolute_numbers(
+            widget=widget,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(result.value, 42)
+        self.service._get_absolute_numbers_method_by_operation.assert_called_once_with(
+            AbsoluteNumbersMetricsType.TOTAL
+        )
+        mock_method.assert_called_once_with(
+            project_uuid=parent.dashboard.project_id,
+            key="test_key",
+            start_date=self.start_date,
+            end_date=self.end_date,
+            agent_uuid=agent_uuid,
+            field_name=None,
+            event_name="weni_nexus_data",
+        )
+
+    def test_get_absolute_numbers_each_operation_type(self):
+        parent = Widget.objects.create(
+            name="Test Parent Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={},
+        )
+
+        for operation in AbsoluteNumbersMetricsType:
+            agent_uuid = str(uuid.uuid4())
+            widget = Widget.objects.create(
+                name="Test Widget",
+                parent=parent,
+                source="conversations.absolute_numbers.child",
+                type="absolute_numbers",
+                position=[1, 2],
+                config={
+                    "operation": operation,
+                    "key": "test_key",
+                    "agent_uuid": agent_uuid,
+                },
+            )
+
+            mock_method = Mock(return_value=99)
+            self.service._get_absolute_numbers_method_by_operation = Mock(
+                return_value=mock_method
+            )
+
+            result = self.service.get_absolute_numbers(
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+            self.assertEqual(result.value, 99)
+            self.service._get_absolute_numbers_method_by_operation.assert_called_once_with(
+                operation
+            )
+
+    def test_get_absolute_numbers_missing_operation(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={
+                "key": "test_key",
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        with self.assertRaises(AssertionError):
+            self.service.get_absolute_numbers(
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+    def test_get_absolute_numbers_missing_key(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={
+                "operation": AbsoluteNumbersMetricsType.TOTAL,
+                "datalake_config": {
+                    "agent_uuid": str(uuid.uuid4()),
+                },
+            },
+        )
+
+        with self.assertRaises(AssertionError):
+            self.service.get_absolute_numbers(
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+    def test_get_absolute_numbers_missing_agent_uuid(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={
+                "operation": AbsoluteNumbersMetricsType.TOTAL,
+                "key": "test_key",
+                "datalake_config": {},
+            },
+        )
+
+        with self.assertRaises(AssertionError):
+            self.service.get_absolute_numbers(
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+    def test_get_absolute_numbers_missing_datalake_config(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={
+                "operation": AbsoluteNumbersMetricsType.TOTAL,
+                "key": "test_key",
+            },
+        )
+
+        with self.assertRaises(AssertionError):
+            self.service.get_absolute_numbers(
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+    def test_get_absolute_numbers_empty_config(self):
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers",
+            type="absolute_numbers",
+            position=[1, 2],
+            config={},
+        )
+
+        with self.assertRaises(AssertionError):
+            self.service.get_absolute_numbers(
+                widget=widget,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )

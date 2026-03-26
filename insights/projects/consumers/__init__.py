@@ -1,2 +1,3 @@
 from .auth_consumer import ProjectAuthConsumer
 from .project_consumer import ProjectConsumer
+from .update_project_consumer import UpdateProjectConsumer

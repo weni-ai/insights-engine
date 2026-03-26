@@ -1,3 +1,23 @@
+# 1.14.4
+# Add
+  - Endpoint to list projects to be used in mcp
+
+# 1.14.3
+# Fix
+  - Search agents
+  
+# 1.14.2
+# Add
+  - Vtex orders pagination
+  
+# 1.14.1
+# Add
+  - Conversations metric service
+
+# 1.14.0
+# Add
+  - Use vtex account on jwt auth
+  
 # 1.13.0
 # Add
   - NPS metrics V2 endpoint

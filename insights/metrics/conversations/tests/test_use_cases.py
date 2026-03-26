@@ -1,18 +1,26 @@
 from datetime import datetime
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
+import uuid
 
 from django.test import TestCase, override_settings
+from rest_framework import serializers
 
+from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.enums import CsatMetricsType
 from insights.metrics.conversations.exceptions import (
     ConversationsMetricsError,
     GetProjectAiCsatMetricsError,
+)
+from insights.metrics.conversations.usecases.get_absolute_numbers_widget import (
+    GetAbsoluteNumbersWidgetUseCase,
 )
 from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import (
     GetProjectAiCsatMetricsUseCase,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.projects.models import Project
+from insights.widgets.models import Widget
 
 
 class TestGetProjectAiCsatMetricsUseCase(TestCase):
@@ -105,3 +113,88 @@ class TestGetProjectAiCsatMetricsUseCase(TestCase):
             )
 
         self.service.get_csat_metrics.assert_called_once()
+
+
+class TestGetAbsoluteNumbersWidgetUseCase(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.dashboard = Dashboard.objects.create(
+            project=self.project,
+            name="Test Dashboard",
+            description="Test",
+        )
+        self.valid_config = {
+            "operation": "TOTAL",
+            "key": "some_key",
+            "agent_uuid": str(uuid.uuid4()),
+        }
+        self.widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="conversations.absolute_numbers.child",
+            config=self.valid_config,
+        )
+        self.use_case = GetAbsoluteNumbersWidgetUseCase()
+
+    def test_execute_returns_widget_when_valid(self):
+        result = self.use_case.execute(widget_uuid=self.widget.uuid)
+
+        self.assertEqual(result.pk, self.widget.pk)
+
+    def test_execute_raises_when_widget_not_found(self):
+        with self.assertRaises(serializers.ValidationError) as ctx:
+            self.use_case.execute(widget_uuid=uuid4())
+
+        self.assertEqual(ctx.exception.detail["widget_uuid"].code, "widget_not_found")
+
+    def test_execute_raises_when_source_is_not_absolute_numbers_child(self):
+        self.widget.source = "conversations.other"
+        self.widget.save()
+
+        with self.assertRaises(serializers.ValidationError) as ctx:
+            self.use_case.execute(widget_uuid=self.widget.uuid)
+
+        self.assertEqual(
+            ctx.exception.detail["widget_uuid"].code,
+            "widget_source_not_absolute_numbers_child",
+        )
+
+    def test_execute_raises_when_operation_is_not_valid(self):
+        self.widget.config = {**self.valid_config, "operation": "INVALID"}
+        self.widget.save()
+
+        with self.assertRaises(serializers.ValidationError) as ctx:
+            self.use_case.execute(widget_uuid=self.widget.uuid)
+
+        self.assertEqual(
+            ctx.exception.detail["widget_uuid"].code,
+            "widget_operation_not_valid",
+        )
+
+    def test_execute_raises_when_key_is_missing(self):
+        self.widget.config = {**self.valid_config, "key": ""}
+        self.widget.save()
+
+        with self.assertRaises(serializers.ValidationError) as ctx:
+            self.use_case.execute(widget_uuid=self.widget.uuid)
+
+        self.assertEqual(
+            ctx.exception.detail["widget_uuid"].code,
+            "widget_key_not_valid",
+        )
+
+    def test_execute_raises_when_agent_uuid_is_missing(self):
+        self.widget.config = {
+            "operation": "TOTAL",
+            "key": "some_key",
+            "datalake_config": {},
+        }
+        self.widget.save()
+
+        with self.assertRaises(serializers.ValidationError) as ctx:
+            self.use_case.execute(widget_uuid=self.widget.uuid)
+
+        self.assertEqual(
+            ctx.exception.detail["widget_uuid"].code,
+            "widget_agent_uuid_not_valid",
+        )
