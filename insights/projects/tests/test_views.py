@@ -11,7 +11,7 @@ from insights.authentication.tests.decorators import (
     with_internal_auth,
     with_project_auth,
 )
-from insights.projects.models import Project
+from insights.projects.models import Project, ProjectAuth
 from insights.authentication.authentication import StaticTokenAuthentication
 from insights.authentication.permissions import IsServiceAuthentication
 
@@ -469,3 +469,65 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data, True)
+
+
+class TestUserProjectsViewAsAnonymousUser(APITestCase):
+    def test_cannot_list_projects_as_anonymous_user(self):
+        url = reverse("user-projects")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestUserProjectsView(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email="test@test.com")
+        self.client.force_authenticate(user=self.user)
+        self.url = reverse("user-projects")
+
+    def test_returns_empty_list_when_user_has_no_projects(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"], [])
+
+    def test_returns_only_admin_projects(self):
+        admin_project = Project.objects.create(name="Admin Project")
+        non_admin_project = Project.objects.create(name="Non Admin Project")
+        ProjectAuth.objects.create(project=admin_project, user=self.user, role=1)
+        ProjectAuth.objects.create(project=non_admin_project, user=self.user, role=0)
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["uuid"], str(admin_project.uuid))
+
+    def test_does_not_return_projects_from_other_users(self):
+        other_user = User.objects.create_user(email="other@test.com")
+        project = Project.objects.create(name="Other User Project")
+        ProjectAuth.objects.create(project=project, user=other_user, role=1)
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"], [])
+
+    def test_response_is_paginated(self):
+        for i in range(3):
+            project = Project.objects.create(name=f"Project {i}")
+            ProjectAuth.objects.create(project=project, user=self.user, role=1)
+
+        response = self.client.get(self.url, {"limit": 2})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertIn("next", response.data)
+        self.assertIn("previous", response.data)
+        self.assertEqual(response.data["count"], 3)
+
+    def test_pagination_offset(self):
+        projects = []
+        for i in range(3):
+            project = Project.objects.create(name=f"Project {i}")
+            ProjectAuth.objects.create(project=project, user=self.user, role=1)
+            projects.append(project)
+
+        response = self.client.get(self.url, {"limit": 2, "offset": 2})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)

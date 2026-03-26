@@ -147,7 +147,7 @@ class ConversationsMetricsViewSet(
                 output_language = "en"
 
             metrics = self.service.get_topics_distribution(
-                serializer.validated_data["project"],
+                serializer.validated_data["project"].uuid,
                 serializer.validated_data["start_date"].isoformat(),
                 serializer.validated_data["end_date"].isoformat(),
                 serializer.validated_data["type"],
