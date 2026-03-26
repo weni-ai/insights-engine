@@ -7,10 +7,12 @@ class GenericSQLFilter:
         table_alias: str,
         join_clause: dict = {},
         value: any = None,
+        default_operation: str = None,
     ) -> None:
         self.source_field = source_field
         self.table_alias = table_alias
         self.join_clause = join_clause
+        self.default_operation = default_operation
 
 
 class GenericElasticSearchFilter:

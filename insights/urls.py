@@ -32,6 +32,7 @@ from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
 from insights.widgets.viewsets import WidgetViewSet
 from insights.feedback.views import FeedbackViewSet
+from insights.projects.views import UserProjectsView
 
 urlpatterns = []
 
@@ -60,7 +61,8 @@ urlpatterns += [
         name="swagger-ui",
     ),
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("v1/metrics/", include("insights.metrics.urls")),
+    path("v1/metrics/", include("insights.metrics.api.v1.urls")),
+    path("v2/metrics/", include("insights.metrics.api.v2.urls")),
     path(
         "v1/internal/", include("insights.internals.api.urls", namespace="internal_api")
     ),
@@ -69,6 +71,7 @@ urlpatterns += [
         FeatureFlagsWebhookView.as_view(),
         name="feature_flags_webhook",
     ),
+    path("v1/user-projects/", UserProjectsView.as_view(), name="user-projects"),
     path("v1/", include(router.urls)),
 ]
 
@@ -79,7 +82,9 @@ if settings.ADMIN_ENABLED is True:
     if getattr(settings, "OIDC_ENABLED", False):
         # Must be before admin/ so /admin/keycloak-login/ is not caught by admin (which requires login)
         admin_urls.append(
-            path("admin/keycloak-login/", admin_oidc_login, name="admin_keycloak_login"),
+            path(
+                "admin/keycloak-login/", admin_oidc_login, name="admin_keycloak_login"
+            ),
         )
         # Use OIDC logout for admin so "Log out" redirects to IdP end-session
         admin_urls.append(

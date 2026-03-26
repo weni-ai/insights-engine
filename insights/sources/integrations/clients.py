@@ -67,6 +67,40 @@ class BaseNexusClient(ABC):
     """
 
     @abstractmethod
+    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
+        """
+        Get the status of the multi agents for a project.
+        """
+
+
+class NexusClient(BaseNexusClient):
+    """
+    Client for Nexus API.
+    """
+
+    def __init__(self):
+        self.base_url = settings.NEXUS_BASE_URL
+        self.headers = {
+            "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
+        }
+        self.timeout = 60
+
+    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
+        """
+        Get the status of the multi agents for a project.
+        """
+
+        url = f"{self.base_url}/project/{project_uuid}/multi-agents"
+
+        return requests.get(url=url, headers=self.headers, timeout=self.timeout)
+
+
+class BaseNexusConversationsAPIClient(ABC):
+    """
+    Base client for Conversations API.
+    """
+
+    @abstractmethod
     def get_topics(self, project_uuid: UUID) -> Response:
         """
         Get conversation topics for a project.
@@ -81,7 +115,7 @@ class BaseNexusClient(ABC):
     @abstractmethod
     def create_topic(self, project_uuid: UUID, name: str, description: str) -> Response:
         """
-        Create a conversation topic for a project.
+        Create a topic for a project.
         """
 
     @abstractmethod
@@ -89,13 +123,13 @@ class BaseNexusClient(ABC):
         self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
     ) -> Response:
         """
-        Create a conversation subtopic for a project.
+        Create a subtopic for a topic.
         """
 
     @abstractmethod
     def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> Response:
         """
-        Delete a conversation topic for a project.
+        Delete a topic for a project.
         """
 
     @abstractmethod
@@ -103,33 +137,37 @@ class BaseNexusClient(ABC):
         self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
     ) -> Response:
         """
-        Delete a conversation subtopic for a project.
+        Delete a subtopic for a topic.
         """
 
     @abstractmethod
-    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
+    def get_page(self, url: str) -> Response:
         """
-        Get the status of the multi agents for a project.
+        Fetch a page by its full URL (used for pagination).
         """
 
 
-class NexusClient:
+class NexusConversationsAPIClient(BaseNexusConversationsAPIClient):
     """
-    Client for Nexus API.
+    Client for Nexus Conversations API.
     """
 
     def __init__(self):
-        self.base_url = settings.NEXUS_BASE_URL
-        self.headers = {
-            "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
-        }
+        self.base_url = settings.NEXUS_CONVERSATIONS_API_BASE_URL
+
         self.timeout = 60
+
+    @property
+    def headers(self) -> dict:
+        return {
+            "Authorization": f"Bearer {settings.NEXUS_CONVERSATIONS_API_TOKEN}",
+        }
 
     def get_topics(self, project_uuid: UUID) -> Response:
         """
         Get conversation topics for a project.
         """
-        url = f"{self.base_url}/{project_uuid}/topics/"
+        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/"
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -138,7 +176,7 @@ class NexusClient:
         Get subtopics for a topic.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/"
+        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -147,7 +185,7 @@ class NexusClient:
         Create a topic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/"
+        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/"
 
         body = {
             "name": name,
@@ -165,7 +203,7 @@ class NexusClient:
         Create a subtopic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/"
+        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/{topic_uuid}/subtopics/"
 
         body = {
             "name": name,
@@ -181,7 +219,7 @@ class NexusClient:
         Delete a topic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/"
+        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/{topic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
 
@@ -192,15 +230,9 @@ class NexusClient:
         Delete a subtopic for a project.
         """
 
-        url = f"{self.base_url}/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
+        url = f"{self.base_url}/api/v1/projects/{project_uuid}/topics/{topic_uuid}/subtopics/{subtopic_uuid}/"
 
         return requests.delete(url=url, headers=self.headers, timeout=self.timeout)
 
-    def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
-        """
-        Get the status of the multi agents for a project.
-        """
-
-        url = f"{self.base_url}/project/{project_uuid}/multi-agents"
-
+    def get_page(self, url: str) -> Response:
         return requests.get(url=url, headers=self.headers, timeout=self.timeout)

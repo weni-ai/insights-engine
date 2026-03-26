@@ -42,7 +42,7 @@ class PostgreSQLFilterStrategyTests(TestCase):
         field = "name"
         value = "test"
         query, params = self.strategy.apply(field, "icontains", value, self.table_alias)
-        self.assertEqual(query, f"{self.table_alias}.{field} ILIKE (%s)")
+        self.assertEqual(query, f"LOWER({self.table_alias}.{field}) LIKE (%s)")
         self.assertEqual(params, [f"%{value}%"])
 
     def test_isnull_operation_true(self):
@@ -61,7 +61,7 @@ class PostgreSQLFilterStrategyTests(TestCase):
         field = {"name": "users", "email": "users"}
         value = "john"
         query, params = self.strategy.apply(field, "or", value, self.table_alias)
-        expected_query = "(users.name ILIKE (%s) OR users.email ILIKE (%s))"
+        expected_query = "(LOWER(users.name) LIKE (%s) OR LOWER(users.email) LIKE (%s))"
         self.assertEqual(query, expected_query)
         self.assertEqual(params, [f"%{value}%", f"%{value}%"])
 

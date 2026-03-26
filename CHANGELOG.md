@@ -1,3 +1,88 @@
+# 1.14.4
+# Add
+  - Endpoint to list projects to be used in mcp
+
+# 1.14.3
+# Fix
+  - Search agents
+  
+# 1.14.2
+# Add
+  - Vtex orders pagination
+  
+# 1.14.1
+# Add
+  - Conversations metric service
+
+# 1.14.0
+# Add
+  - Use vtex account on jwt auth
+  
+# 1.13.0
+# Add
+  - NPS metrics V2 endpoint
+# Remove
+  - Cached property from Nexus Conversations API client
+
+# 1.12.2
+# Add
+  - Enhance response_content handling in ConversationsMetricsService to return lists for both dict and list types
+
+# 1.12.1
+# Fix
+  - ensure response_content from topics and subtopics returns a list for non-dict types in ConversationsMetricsService
+
+# 1.12.0
+# Add
+  - Nexus Conversations API client
+
+# 1.11.2
+# Add
+  - Agent email to detailed monitoring
+
+# 1.11.1
+# Fix
+  - ensure project_uuid is always a string in InternalVTEXOrdersViewSet
+  - authentication classes orders when using JWTAuthentication alongside OIDC
+
+# 1.11.0
+# Add
+  - Internal project CSAT endpoint
+  - Adding internal authentication to conversation totals and VTEX orders
+
+# 1.10.1
+# Add
+  - restrict delete permission for SurveyAdmin
+
+# 1.10.0
+# Add
+  - admin SSO functionality with Keycloak login/logout views.
+  - settings to include OIDC parameters and session cookie configurations.
+  - URL patterns to support OIDC routes for admin.
+  - custom admin login template to include Keycloak login option.
+
+# 1.9.0
+# Add
+  - data volume for queue and tags
+  - WhiteNoise middleware for static file serving
+  - unit tests for HumanSupportDashboardService to ensure functionality and reliability
+
+# 1.8.3
+# Fix
+  - Handle empty answers in feedback service and update serializer to allow blank answers
+
+# 1.8.2
+# Add
+  - Chips and filters
+
+# 1.8.1
+# Add
+  - is_staff field to User model and create migration
+
+# 1.8.0
+# Add
+  - User feedback for the conversational dashboard
+
 # 1.7.1
 # Add
   - Getting user request for analysis 

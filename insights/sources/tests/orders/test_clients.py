@@ -7,6 +7,7 @@ from django.test import TestCase
 
 from insights.sources.cache import CacheClient
 from insights.sources.orders.clients import VtexOrdersRestClient
+from insights.sources.orders.exceptions import VTEXOrdersAPIError
 
 
 class TestVtexOrdersRestClient(TestCase):
@@ -300,16 +301,19 @@ class TestVtexOrdersRestClient(TestCase):
         mock_api_response.json.return_value = {
             "list": [
                 {
+                    "authorizedDate": "2023-01-01T00:00:00.000000+00:00",
+                    "orderId": "1234567890",
                     "status": "invoiced",
                     "totalValue": 15000,
                     "currencyCode": "BRL",
                 },
                 {
+                    "authorizedDate": "2023-01-02T00:00:00.000000+00:00",
+                    "orderId": "1234567891",
                     "status": "invoiced",
                     "totalValue": 25000,
                     "currencyCode": "BRL",
                 },
-                {"status": "canceled", "totalValue": 5000, "currencyCode": "BRL"},
             ],
             "paging": {"pages": 1, "currentPage": 1, "total": 3, "perPage": 100},
         }
@@ -478,8 +482,5 @@ class TestVtexOrdersRestClient(TestCase):
             page_futures_dict.keys()
         )
 
-        actual_result = self.client_direct.list(query_filters.copy())
-
-        self.assertEqual(actual_result[0], 500)
-        self.assertEqual(mock_logger_error.call_count, 2)
-        self.assertEqual(mock_requests_get.call_count, 2)
+        with self.assertRaises(VTEXOrdersAPIError):
+            self.client_direct.list(query_filters.copy())

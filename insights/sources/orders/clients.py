@@ -1,15 +1,18 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
 from urllib.parse import urlencode
 
-
+from django.conf import settings
 import requests
 from sentry_sdk import capture_message
+from dateutil.parser import parse as date_parser
+from rest_framework import status
 
 from insights.internals.base import VtexAuthentication
 from insights.sources.cache import CacheClient
+from insights.sources.orders.dataclass import VTEXOrdersBaseMetrics
+from insights.sources.orders.exceptions import VTEXOrdersAPIError
 from insights.utils import redact_headers
 
 logger = logging.getLogger(__name__)
@@ -57,7 +60,7 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         query_params = {
             "f_UtmSource": utm_source,
-            "per_page": 100,
+            "per_page": settings.VTEX_ORDERS_API_PAGE_SIZE,
             "page": page_number,
             "f_status": "invoiced",
         }
@@ -154,7 +157,7 @@ class VtexOrdersRestClient(VtexAuthentication):
     def parse_datetime(self, date_str):
         try:
             # Tente fazer o parse da string para datetime
-            return datetime.fromisoformat(date_str)  # Para strings ISO formatadas
+            return date_parser(date_str)  # Para strings ISO formatadas
         except ValueError:
             return None  # Retorne None se a conversão falhar
 
@@ -191,6 +194,90 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         return query_filters
 
+    def get_pages(
+        self,
+        query_filters,
+        page_quantity: int,
+        metrics: VTEXOrdersBaseMetrics,
+    ) -> VTEXOrdersBaseMetrics:
+
+        with ThreadPoolExecutor(
+            max_workers=settings.VTEX_ORDERS_API_MAX_WORKERS
+        ) as executor:
+            page_futures = {
+                executor.submit(
+                    lambda page=page: self.get_orders_list(
+                        {**query_filters, "page": page},
+                        page,
+                    )
+                ): page
+                for page in range(1, page_quantity + 1)
+            }
+
+            for page_future in as_completed(page_futures):
+                try:
+                    response = page_future.result()
+
+                    if not status.is_success(response.status_code):
+                        logger.error(
+                            f"VTEX API error processing page: status={response.status_code}, response={response.text}"
+                        )
+                        capture_message(
+                            f"VTEX API error processing page: status={response.status_code}, response={response.text}",
+                            level="error",
+                            extra={
+                                "response": response.text,
+                                "request": response.request.url,
+                                "headers": response.request.headers,
+                            },
+                        )
+                        raise VTEXOrdersAPIError(
+                            f"VTEX API error processing page: status={response.status_code}, response={response.text}"
+                        )
+
+                    results = response.json()
+
+                    for result in results["list"]:
+                        if result["orderId"] not in metrics.processed_orders:
+                            metrics.total_value += result["totalValue"]
+                            metrics.total_sell += 1
+                            metrics.max_value = max(
+                                metrics.max_value, result["totalValue"]
+                            )
+                            metrics.min_value = min(
+                                metrics.min_value, result["totalValue"]
+                            )
+                            metrics.currency_code = result["currencyCode"]
+
+                            authorized_date = result["authorizedDate"]
+                            metrics.processed_orders.add(result["orderId"])
+
+                            if (
+                                metrics.last_authorized_date is None
+                                or authorized_date < metrics.last_authorized_date
+                            ):
+                                metrics.last_authorized_date = authorized_date
+
+                except Exception as exc:
+                    logger.error(f"VTEX API error processing page: {exc}")
+                    capture_message(
+                        f"VTEX API error processing page: status={response.status_code}, response={response.text}",
+                        level="error",
+                        extra={
+                            "response": response.text,
+                            "request": response.request.url,
+                            "headers": response.request.headers,
+                        },
+                    )
+                    if isinstance(exc, VTEXOrdersAPIError):
+                        raise exc from exc
+                    else:
+                        raise VTEXOrdersAPIError(
+                            f"VTEX API error processing page: {exc}"
+                        ) from exc
+
+        return metrics
+
     def list(self, query_filters: dict):
         cache_key = self.get_cache_key(query_filters)
 
@@ -202,7 +289,7 @@ class VtexOrdersRestClient(VtexAuthentication):
 
         query_filters = self.handle_query_filters(query_filters)
 
-        response = self.get_orders_list(query_filters, 1)
+        response = self.get_orders_list(query_filters.copy(), 1)
         data = response.json()
 
         if "list" not in data:
@@ -217,58 +304,35 @@ class VtexOrdersRestClient(VtexAuthentication):
         max_value = float("-inf")
         min_value = float("inf")
 
-        # botar o max_workers em variavel de ambiente
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            page_futures = {
-                executor.submit(
-                    lambda page=page: self.get_orders_list(
-                        {**query_filters, "page": page},
-                        page,
-                    )
-                ): page
-                for page in range(1, pages + 1)
-            }
+        metrics = VTEXOrdersBaseMetrics(
+            total_value=total_value,
+            total_sell=total_sell,
+            max_value=max_value,
+            min_value=min_value,
+            currency_code=currency_code,
+        )
 
-            for page_future in as_completed(page_futures):
-                try:
-                    response = page_future.result()
+        max_page = min(pages, settings.VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED)
 
-                    if response.status_code != 200:
-                        logger.error(
-                            f"VTEX API error processing page: status={response.status_code}, response={response.text}"
-                        )
-                        capture_message(
-                            f"VTEX API error processing page: status={response.status_code}, response={response.text}",
-                            level="error",
-                            extra={
-                                "response": response.text,
-                                "request": response.request.url,
-                                "headers": response.request.headers,
-                            },
-                        )
-                        return response.status_code, response.json()
+        vtex_max_pages = settings.VTEX_ORDERS_API_MAX_PAGES
+        processed_pages = 0
 
-                    results = response.json()
-                    for result in results["list"]:
-                        if result["status"] != "canceled":
-                            total_value += result["totalValue"]
-                            total_sell += 1
-                            max_value = max(max_value, result["totalValue"])
-                            min_value = min(min_value, result["totalValue"])
+        for _ in range(1, ((max_page // vtex_max_pages) + 2)):
+            page_qty = min(vtex_max_pages, (max_page - processed_pages))
 
-                            currency_code = result["currencyCode"]
-                except Exception as exc:
-                    logger.error(f"VTEX API error processing page: {exc}")
-                    capture_message(
-                        f"VTEX API error processing page: status={response.status_code}, response={response.text}",
-                        level="error",
-                        extra={
-                            "response": response.text,
-                            "request": response.request.url,
-                            "headers": response.request.headers,
-                        },
-                    )
-                    return 500, {"error": "Internal server error"}
+            metrics = self.get_pages(query_filters, page_qty, metrics)
+            processed_pages += page_qty
+
+            if metrics.last_authorized_date is not None:
+                query_filters["ended_at__lte"] = self.parse_datetime(
+                    metrics.last_authorized_date
+                ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        total_value = metrics.total_value
+        total_sell = metrics.total_sell
+        max_value = metrics.max_value
+        min_value = metrics.min_value
+        currency_code = metrics.currency_code
 
         total_value = total_value / 100
         max_value = (max_value / 100) if max_value != float("-inf") else 0
