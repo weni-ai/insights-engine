@@ -943,12 +943,12 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         key = "test_key"
         agent_uuid = str(uuid.uuid4())
 
-        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+        self.mock_events_client.get_events_count.return_value = [{"count": 10.0}]
 
         results = self.service.get_event_count(
             project_uuid, event_name, start_date, end_date, key, agent_uuid
         )
-        self.assertEqual(results, 10)
+        self.assertEqual(results, 10.0)
 
         self.mock_events_client.get_events_count.assert_called_once_with(
             event_name=event_name,
@@ -968,13 +968,13 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         agent_uuid = str(uuid.uuid4())
         key = "test_key"
 
-        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
-        self.mock_cache_client.get.return_value = json.dumps(10)
+        self.mock_events_client.get_events_count.return_value = [{"count": 10.0}]
+        self.mock_cache_client.get.return_value = json.dumps(10.0)
 
         results = self.service.get_event_count(
             project_uuid, event_name, start_date, end_date, key, agent_uuid
         )
-        self.assertEqual(results, 10)
+        self.assertEqual(results, 10.0)
         self.mock_events_client.get_events_count.assert_not_called()
         self.mock_cache_client.get.assert_called_once_with(
             self.service._get_cache_key(
@@ -996,12 +996,12 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         key = "test_key"
         agent_uuid = str(uuid.uuid4())
 
-        self.mock_events_client.get_events_sum.return_value = [{"total": 250}]
+        self.mock_events_client.get_events_sum.return_value = [{"total": 250.0}]
 
         result = self.service.get_events_values_sum(
             project_uuid, event_name, start_date, end_date, key, agent_uuid
         )
-        self.assertEqual(result, 250)
+        self.assertEqual(result, 250.0)
 
         self.mock_events_client.get_events_sum.assert_called_once_with(
             event_name=event_name,
@@ -1021,12 +1021,12 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         key = "test_key"
         agent_uuid = str(uuid.uuid4())
 
-        self.mock_events_client.get_events_avg.return_value = [{"average": 42}]
+        self.mock_events_client.get_events_avg.return_value = [{"average": 42.0}]
 
         result = self.service.get_events_values_average(
             project_uuid, event_name, start_date, end_date, key, agent_uuid
         )
-        self.assertEqual(result, 42)
+        self.assertEqual(result, 42.0)
 
         self.mock_events_client.get_events_avg.assert_called_once_with(
             event_name=event_name,
@@ -1046,12 +1046,12 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         key = "test_key"
         agent_uuid = str(uuid.uuid4())
 
-        self.mock_events_client.get_events_max.return_value = [{"max_value": 999}]
+        self.mock_events_client.get_events_max.return_value = [{"max_value": 999.0}]
 
         result = self.service.get_events_highest_value(
             project_uuid, event_name, start_date, end_date, key, agent_uuid
         )
-        self.assertEqual(result, 999)
+        self.assertEqual(result, 999.0)
 
         self.mock_events_client.get_events_max.assert_called_once_with(
             event_name=event_name,
@@ -1071,12 +1071,12 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         key = "test_key"
         agent_uuid = str(uuid.uuid4())
 
-        self.mock_events_client.get_events_min.return_value = [{"min_value": 3}]
+        self.mock_events_client.get_events_min.return_value = [{"min_value": 3.0}]
 
         result = self.service.get_events_lowest_value(
             project_uuid, event_name, start_date, end_date, key, agent_uuid
         )
-        self.assertEqual(result, 3)
+        self.assertEqual(result, 3.0)
 
         self.mock_events_client.get_events_min.assert_called_once_with(
             event_name=event_name,

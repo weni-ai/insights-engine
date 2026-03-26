@@ -141,7 +141,7 @@ class BaseDatalakeConversationsMetricsService(ABC):
         event_name: str,
         start_date: datetime,
         end_date: datetime,
-    ) -> int:
+    ) -> float:
         """
         Get event count from Datalake.
         """
@@ -155,7 +155,7 @@ class BaseDatalakeConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get events values sum from Datalake.
         """
@@ -169,7 +169,7 @@ class BaseDatalakeConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get events values average from Datalake.
         """
@@ -183,7 +183,7 @@ class BaseDatalakeConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get events highest value from Datalake.
         """
@@ -197,7 +197,7 @@ class BaseDatalakeConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get events lowest value from Datalake.
         """
@@ -1036,7 +1036,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get event count from Datalake.
         """
@@ -1051,7 +1051,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
@@ -1083,7 +1083,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         key: str,
         agent_uuid: str,
         field_name: Optional[str] = None,
-    ) -> int:
+    ) -> float:
         """
         Get events values sum from Datalake.
         """
@@ -1099,7 +1099,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
@@ -1131,7 +1131,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         key: str,
         agent_uuid: str,
         field_name: Optional[str] = None,
-    ) -> int:
+    ) -> float:
         """
         Get events values average from Datalake.
         """
@@ -1148,7 +1148,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
@@ -1180,7 +1180,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         key: str,
         agent_uuid: str,
         field_name: Optional[str] = None,
-    ) -> int:
+    ) -> float:
         """
         Get events highest value from Datalake.
         """
@@ -1196,7 +1196,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
@@ -1228,7 +1228,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         key: str,
         agent_uuid: str,
         field_name: Optional[str] = None,
-    ) -> int:
+    ) -> float:
         """
         Get events lowest value from Datalake.
         """
@@ -1244,7 +1244,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
