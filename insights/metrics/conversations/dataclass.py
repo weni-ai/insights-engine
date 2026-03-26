@@ -143,3 +143,12 @@ class CrosstabItemData:
     title: str
     total: int  # sum of all related events
     subitems: list[CrosstabSubItemData]
+
+
+@dataclass(frozen=True)
+class AbsoluteNumbersMetrics:
+    """
+    Dataclass for absolute numbers metrics
+    """
+
+    value: float

@@ -529,3 +529,40 @@ class InternalCsatMetricsQueryParamsSerializer(serializers.Serializer):
         attrs["end_date"] = end_date
 
         return attrs
+
+
+class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for absolute numbers query params
+    """
+
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate query params
+        """
+        attrs = super().validate(attrs)
+
+        project = self.context.get("project")
+
+        validator = ConversationsDatesValidator(
+            project=project,
+            start_date=attrs["start_date"],
+            end_date=attrs["end_date"],
+        )
+        start_date, end_date = validator.validate()
+
+        attrs["start_date"] = start_date
+        attrs["end_date"] = end_date
+
+        return attrs
+
+
+class AbsoluteNumbersSerializer(serializers.Serializer):
+    """
+    Serializer for absolute numbers
+    """
+
+    value = serializers.FloatField()

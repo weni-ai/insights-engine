@@ -13,9 +13,13 @@ from insights.metrics.conversations.dataclass import (
     TopicMetrics,
     TopicsDistributionMetrics,
 )
-from insights.metrics.conversations.enums import ConversationType, CsatMetricsType
+from insights.metrics.conversations.enums import (
+    ConversationType,
+    CsatMetricsType,
+)
 from insights.projects.models import Project, ProjectAuth
 from insights.metrics.conversations.api.v1.serializers import (
+    AbsoluteNumbersQueryParamsSerializer,
     ConversationBaseQueryParamsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
     ConversationTotalsMetricsSerializer,
@@ -774,3 +778,40 @@ class TestCrosstabItemSerializer(TestCase):
         self.assertEqual(
             serializer.data["events"], {"Test Subitem": {"value": 30, "full_value": 15}}
         )
+
+
+class TestAbsoluteNumbersQueryParamsSerializer(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+        )
+
+    def test_serializer_valid(self):
+        serializer = AbsoluteNumbersQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+            },
+            context={"project": self.project},
+        )
+        self.assertTrue(serializer.is_valid())
+
+    def test_serializer_missing_start_date(self):
+        serializer = AbsoluteNumbersQueryParamsSerializer(
+            data={
+                "end_date": "2021-01-02",
+            },
+            context={"project": self.project},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+
+    def test_serializer_missing_end_date(self):
+        serializer = AbsoluteNumbersQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+            },
+            context={"project": self.project},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("end_date", serializer.errors)

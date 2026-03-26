@@ -5,10 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.api.mixins import (
-    ConversationsMetricsServiceResolverMixin,
-)
-from insights.metrics.conversations.api.v2.mixins import (
     ConversationsMetricsResponseMixin,
+    ConversationsMetricsServiceResolverMixin,
 )
 from insights.metrics.conversations.api.v2.serializers import (
     NpsMetricsQueryParamsSerializerV2,
