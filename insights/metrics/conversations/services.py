@@ -1,5 +1,6 @@
+from abc import ABC, abstractmethod
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 from uuid import UUID
 from datetime import datetime
 import json
@@ -25,7 +26,7 @@ from insights.metrics.conversations.integrations.datalake.dataclass import (
     CrosstabSource,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
+    BaseDatalakeConversationsMetricsService,
     DatalakeConversationsMetricsService,
 )
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
@@ -52,11 +53,163 @@ from insights.widgets.models import Widget
 logger = logging.getLogger(__name__)
 
 
-if TYPE_CHECKING:
-    from insights.projects.models import Project
+class BaseConversationsMetricsService(ABC):
+    """
+    Base class for conversations metrics services.
+    """
+
+    @abstractmethod
+    def get_topics(self, project_uuid: UUID) -> dict:
+        """
+        Get conversation topics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
+        """
+        Get conversation subtopics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def create_topic(self, project_uuid: UUID, name: str, description: str) -> dict:
+        """
+        Create a conversation topic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def create_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, name: str, description: str
+    ) -> dict:
+        """
+        Create a conversation subtopic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def delete_topic(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
+        """
+        Delete a conversation topic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def delete_subtopic(
+        self, project_uuid: UUID, topic_uuid: UUID, subtopic_uuid: UUID
+    ) -> dict:
+        """
+        Delete a conversation subtopic
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_topics_distribution(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_type: ConversationType,
+        output_language: str = "en",
+    ) -> TopicsDistributionMetrics:
+        """
+        Get topics distribution
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_totals(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> ConversationsTotalsMetrics:
+        """
+        Get conversations totals
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_csat_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: CsatMetricsType,
+    ) -> dict:
+        """
+        Get csat metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_nps_metrics(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+        metric_type: NpsMetricsType,
+    ) -> dict:
+        """
+        Get nps metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_generic_metrics_by_key(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get generic metrics by key
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_sales_funnel_data(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SalesFunnelMetrics:
+        """
+        Get sales funnel data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
+        """
+        Check if sales funnel data exists
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_available_widgets(
+        self, project_uuid: UUID, widget_type: AvailableWidgetsListType | None = None
+    ) -> AvailableWidgetsList:
+        """
+        Get available widgets
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_crosstab_data(
+        self,
+        project_uuid: UUID,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get crosstab data
+        """
+        raise NotImplementedError("Subclasses must implement this method")
 
 
-class ConversationsMetricsService(ConversationsServiceCachingMixin):
+class ConversationsMetricsService(
+    ConversationsServiceCachingMixin, BaseConversationsMetricsService
+):
     """
     Service to get conversations metrics
     """
@@ -69,11 +222,15 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
     ):
-        self.datalake_service = datalake_service
-        self.nexus_conversations_client = nexus_conversations_client
-        self.cache_client = cache_client
-        self.nexus_conversations_cache_ttl = nexus_conversations_cache_ttl
-        self.flowruns_query_executor = flowruns_query_executor
+        self.datalake_service: BaseDatalakeConversationsMetricsService = (
+            datalake_service
+        )
+        self.nexus_conversations_client: BaseNexusConversationsAPIClient = (
+            nexus_conversations_client
+        )
+        self.cache_client: CacheClient = cache_client
+        self.nexus_conversations_cache_ttl: int = nexus_conversations_cache_ttl
+        self.flowruns_query_executor: FlowRunsQueryExecutor = flowruns_query_executor
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
         """
@@ -122,17 +279,49 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
                 f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
 
-        self._save_cache_for_project_resource(
-            project_uuid, ConversationsMetricsResource.TOPICS, response_content
-        )
-
         if isinstance(response_content, dict):
-            return response_content.get("results", [])
+            results = response_content.get("results", [])
+            next_url = response_content.get("next")
+            page = 1
+            max_pages = settings.NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES
+
+            while next_url and page < max_pages:
+                page += 1
+                next_response = self.nexus_conversations_client.get_page(next_url)
+                try:
+                    next_content = next_response.json()
+                except Exception:
+                    break
+
+                if not status.is_success(next_response.status_code):
+                    break
+
+                if isinstance(next_content, dict):
+                    results.extend(next_content.get("results", []))
+                    next_url = next_content.get("next")
+                else:
+                    break
+
+            if next_url:
+                logger.warning(
+                    "Topics pagination limit reached for project %s. "
+                    "There are still more pages to fetch (limit: %d).",
+                    project_uuid,
+                    max_pages,
+                )
+
+            topics_data = results
         else:
             if isinstance(response_content, list):
-                return response_content
+                topics_data = response_content
             else:
-                return []
+                topics_data = []
+
+        self._save_cache_for_project_resource(
+            project_uuid, ConversationsMetricsResource.TOPICS, topics_data
+        )
+
+        return topics_data
 
     def get_subtopics(self, project_uuid: UUID, topic_uuid: UUID) -> dict:
         """
@@ -170,7 +359,38 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
             )
 
         if isinstance(response_content, dict):
-            return response_content.get("results", [])
+            results = response_content.get("results", [])
+            next_url = response_content.get("next")
+            page = 1
+            max_pages = settings.NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES
+
+            while next_url and page < max_pages:
+                page += 1
+                next_response = self.nexus_conversations_client.get_page(next_url)
+                try:
+                    next_content = next_response.json()
+                except Exception:
+                    break
+
+                if not status.is_success(next_response.status_code):
+                    break
+
+                if isinstance(next_content, dict):
+                    results.extend(next_content.get("results", []))
+                    next_url = next_content.get("next")
+                else:
+                    break
+
+            if next_url:
+                logger.warning(
+                    "Subtopics pagination limit reached for project %s, topic %s. "
+                    "There are still more pages to fetch (limit: %d).",
+                    project_uuid,
+                    topic_uuid,
+                    max_pages,
+                )
+
+            return results
         else:
             if isinstance(response_content, list):
                 return response_content
@@ -339,7 +559,7 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
 
     def get_topics_distribution(
         self,
-        project: "Project",
+        project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
         conversation_type: ConversationType,
@@ -350,11 +570,11 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         """
         # If the topic distribution is limited by Nexus topics,
         # the client will see other topics listed as "OTHER"
-        current_topics_data = self.get_topics(project.uuid)
+        current_topics_data = self.get_topics(project_uuid)
 
         try:
             topics = self.datalake_service.get_topics_distribution(
-                project_uuid=project.uuid,
+                project_uuid=project_uuid,
                 start_date=start_date,
                 end_date=end_date,
                 conversation_type=conversation_type,
@@ -413,14 +633,14 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         )
 
     def get_totals(
-        self, project: "Project", start_date: datetime, end_date: datetime
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> ConversationsTotalsMetrics:
         """
         Get conversations metrics totals
         """
 
         return self.datalake_service.get_conversations_totals(
-            project_uuid=project.uuid,
+            project_uuid=project_uuid,
             start_date=start_date,
             end_date=end_date,
         )
@@ -767,7 +987,10 @@ class ConversationsMetricsService(ConversationsServiceCachingMixin):
         Validate crosstab source
         """
         key = source.get("key")
-        field = source.get("field", "value")
+        field = source.get("field")
+
+        if field is None or field == "":
+            field = "value"
 
         if not key:
             raise ConversationsMetricsError("Key is required")

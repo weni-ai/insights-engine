@@ -10,7 +10,7 @@ class PostgreSQLFilterStrategy:
             placeholders = ", ".join(["%s"] * len(value))
             return f"{table_alias}.{field} IN ({placeholders})", list(value)
         elif operation == "icontains":
-            return f"{table_alias}.{field} ILIKE (%s)", [f"%{value}%"]
+            return f"LOWER({table_alias}.{field}) LIKE (%s)", [f"%{value.lower()}%"]
         elif operation == "isnull":
             placeholder = "IS NULL" if value is True else "IS NOT NULL"
             return f"{table_alias}.{field} {placeholder}", None

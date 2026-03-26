@@ -79,6 +79,7 @@ class TestGenericSQLQueryGenerator(TestCase):
         mock_field_object.source_field = "source_field"
         mock_field_object.table_alias = "table_alias"
         mock_field_object.join_clause = {}
+        mock_field_object.default_operation = None
 
         self.mock_filter_strategy.return_value = mock_strategy_instance
         self.mock_query_builder.return_value = mock_builder_instance
@@ -120,6 +121,7 @@ class TestGenericSQLQueryGenerator(TestCase):
         mock_field_object.source_field = "source_field"
         mock_field_object.table_alias = "table_alias"
         mock_field_object.join_clause = {}
+        mock_field_object.default_operation = None
 
         self.mock_filter_strategy.return_value = mock_strategy_instance
         self.mock_query_builder.return_value = mock_builder_instance
@@ -155,6 +157,7 @@ class TestGenericSQLQueryGenerator(TestCase):
         mock_field_object.source_field = "source_field"
         mock_field_object.table_alias = "table_alias"
         mock_field_object.join_clause = {}
+        mock_field_object.default_operation = None
 
         self.mock_filter_strategy.return_value = mock_strategy_instance
         self.mock_query_builder.return_value = mock_builder_instance
@@ -194,6 +197,7 @@ class TestGenericSQLQueryGenerator(TestCase):
         mock_field_object.source_field = "source_field"
         mock_field_object.table_alias = "table_alias"
         mock_field_object.join_clause = {}
+        mock_field_object.default_operation = None
 
         self.mock_filter_strategy.return_value = mock_strategy_instance
         self.mock_query_builder.return_value = mock_builder_instance
@@ -233,6 +237,7 @@ class TestGenericSQLQueryGenerator(TestCase):
         mock_field_object.source_field = "source_field"
         mock_field_object.table_alias = "table_alias"
         mock_field_object.join_clause = {"join1": "INNER JOIN table1 ON condition"}
+        mock_field_object.default_operation = None
 
         self.mock_filter_strategy.return_value = mock_strategy_instance
         self.mock_query_builder.return_value = mock_builder_instance
@@ -270,6 +275,7 @@ class TestGenericSQLQueryGenerator(TestCase):
         mock_field_object.source_field = "source_field"
         mock_field_object.table_alias = "table_alias"
         mock_field_object.join_clause = {}
+        mock_field_object.default_operation = None
 
         self.mock_filter_strategy.return_value = mock_strategy_instance
         self.mock_query_builder.return_value = mock_builder_instance
@@ -335,11 +341,13 @@ class TestGenericSQLQueryGenerator(TestCase):
         field1_object.source_field = "source_field1"
         field1_object.table_alias = "table_alias1"
         field1_object.join_clause = {}
+        field1_object.default_operation = None
 
         field2_object = Mock()
         field2_object.source_field = "source_field2"
         field2_object.table_alias = "table_alias2"
         field2_object.join_clause = {}
+        field2_object.default_operation = None
 
         self.mock_filter_strategy.return_value = mock_strategy_instance
         self.mock_query_builder.return_value = mock_builder_instance
@@ -390,6 +398,7 @@ class TestGenericSQLQueryGenerator(TestCase):
         mock_field_object.source_field = "source_field"
         mock_field_object.table_alias = "table_alias"
         mock_field_object.join_clause = {}
+        mock_field_object.default_operation = None
 
         self.mock_filter_strategy.return_value = mock_strategy_instance
         self.mock_query_builder.return_value = mock_builder_instance
@@ -423,6 +432,7 @@ class TestGenericSQLQueryGenerator(TestCase):
         mock_field_object.source_field = "source_field"
         mock_field_object.table_alias = "table_alias"
         mock_field_object.join_clause = {}
+        mock_field_object.default_operation = None
 
         self.mock_filter_strategy.return_value = mock_strategy_instance
         self.mock_query_builder.return_value = mock_builder_instance

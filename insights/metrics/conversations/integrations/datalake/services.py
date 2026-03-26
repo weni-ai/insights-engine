@@ -44,7 +44,7 @@ CACHE_RESULTS = settings.CACHE_DATALAKE_EVENTS_RESULTS
 CACHE_TTL = settings.CACHE_DATALAKE_EVENTS_RESULTS_TTL
 
 
-class BaseConversationsMetricsService(ABC):
+class BaseDatalakeConversationsMetricsService(ABC):
     """
     Base class for conversations metrics services.
     """
@@ -141,7 +141,7 @@ class BaseConversationsMetricsService(ABC):
         event_name: str,
         start_date: datetime,
         end_date: datetime,
-    ) -> int:
+    ) -> float:
         """
         Get event count from Datalake.
         """
@@ -155,7 +155,7 @@ class BaseConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get events values sum from Datalake.
         """
@@ -169,7 +169,7 @@ class BaseConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get events values average from Datalake.
         """
@@ -183,7 +183,7 @@ class BaseConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get events highest value from Datalake.
         """
@@ -197,13 +197,13 @@ class BaseConversationsMetricsService(ABC):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get events lowest value from Datalake.
         """
 
 
-class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
+class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsService):
     """
     Service for getting conversations metrics from Datalake.
     """
@@ -1036,7 +1036,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
         key: str,
         agent_uuid: str,
-    ) -> int:
+    ) -> float:
         """
         Get event count from Datalake.
         """
@@ -1051,7 +1051,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
@@ -1083,7 +1083,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         key: str,
         agent_uuid: str,
         field_name: Optional[str] = None,
-    ) -> int:
+    ) -> float:
         """
         Get events values sum from Datalake.
         """
@@ -1099,13 +1099,28 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
-        # TODO: Dependency not yet implemented
+        result = self.events_client.get_events_sum(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+            field_name=field_name,
+        )
 
-        return 0
+        assert isinstance(result, list)
+
+        total = result[0].get("total", 0) if len(result) > 0 else 0
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, total)
+
+        return total
 
     def get_events_values_average(
         self,
@@ -1116,7 +1131,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         key: str,
         agent_uuid: str,
         field_name: Optional[str] = None,
-    ) -> int:
+    ) -> float:
         """
         Get events values average from Datalake.
         """
@@ -1133,13 +1148,28 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
-        # TODO: Dependency not yet implemented
+        result = self.events_client.get_events_avg(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+            field_name=field_name,
+        )
 
-        return 0
+        assert isinstance(result, list)
+
+        average = result[0].get("average", 0) if len(result) > 0 else 0
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, average)
+
+        return average
 
     def get_events_highest_value(
         self,
@@ -1150,7 +1180,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         key: str,
         agent_uuid: str,
         field_name: Optional[str] = None,
-    ) -> int:
+    ) -> float:
         """
         Get events highest value from Datalake.
         """
@@ -1166,13 +1196,28 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
-        # TODO: Dependency not yet implemented
+        result = self.events_client.get_events_max(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+            field_name=field_name,
+        )
 
-        return 0
+        assert isinstance(result, list)
+
+        max_value = result[0].get("max_value", 0) if len(result) > 0 else 0
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, max_value)
+
+        return max_value
 
     def get_events_lowest_value(
         self,
@@ -1183,7 +1228,7 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         key: str,
         agent_uuid: str,
         field_name: Optional[str] = None,
-    ) -> int:
+    ) -> float:
         """
         Get events lowest value from Datalake.
         """
@@ -1199,10 +1244,25 @@ class DatalakeConversationsMetricsService(BaseConversationsMetricsService):
         )
 
         if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key, int)
+            cached_results := self._get_cached_results(cache_key, float)
         ):
             return cached_results
 
-        # TODO: Dependency not yet implemented
+        result = self.events_client.get_events_min(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+            field_name=field_name,
+        )
 
-        return 0
+        assert isinstance(result, list)
+
+        min_value = result[0].get("min_value", 0) if len(result) > 0 else 0
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, min_value)
+
+        return min_value

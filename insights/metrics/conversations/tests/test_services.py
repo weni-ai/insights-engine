@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 import json
 from uuid import UUID
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 
 from django.test import TestCase
 from django.core.cache import cache
@@ -30,11 +30,13 @@ from insights.metrics.conversations.enums import (
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     SalesFunnelData,
 )
-from insights.metrics.conversations.integrations.datalake.services import (
-    BaseConversationsMetricsService,
-)
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
-from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseDatalakeConversationsMetricsService,
+)
+from insights.metrics.conversations.services import (
+    ConversationsMetricsService,
+)
 from insights.projects.models import Project
 from insights.sources.flowruns.usecases.query_execute import (
     QueryExecutor as FlowRunsQueryExecutor,
@@ -71,7 +73,7 @@ class TestConversationsMetricsService(TestCase):
         )
 
         # Create mocks with proper specs for type safety
-        self.mock_datalake_service = Mock(spec=BaseConversationsMetricsService)
+        self.mock_datalake_service = Mock(spec=BaseDatalakeConversationsMetricsService)
         self.mock_nexus_conversations_client = MagicMock(
             spec=NexusConversationsAPIClient
         )
@@ -378,6 +380,210 @@ class TestConversationsMetricsService(TestCase):
 
         self.assertEqual(len(subtopics), 1)
 
+    def test_get_topics_fetches_next_pages(self):
+        """Test get_topics follows next URL to fetch additional pages"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_cache_client.get.return_value = None
+
+        page1_data = {
+            "results": [{"name": "Topic 1", "uuid": "aaa"}],
+            "next": "https://api.example.com/topics/?page=2",
+        }
+        page2_data = {
+            "results": [{"name": "Topic 2", "uuid": "bbb"}],
+            "next": None,
+        }
+
+        self.mock_nexus_conversations_client.get_topics.return_value = MockResponse(
+            200, json.dumps(page1_data)
+        )
+        self.mock_nexus_conversations_client.get_page.return_value = MockResponse(
+            200, json.dumps(page2_data)
+        )
+
+        with self.settings(NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES=3):
+            topics = self.service.get_topics(project_uuid)
+
+        self.assertEqual(len(topics), 2)
+        self.assertEqual(topics[0]["name"], "Topic 1")
+        self.assertEqual(topics[1]["name"], "Topic 2")
+        self.mock_nexus_conversations_client.get_page.assert_called_once_with(
+            "https://api.example.com/topics/?page=2"
+        )
+
+    @patch("insights.metrics.conversations.services.logger")
+    def test_get_topics_logs_warning_when_limit_reached(self, mock_logger):
+        """Test get_topics logs a warning when there are still pages after the limit"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_cache_client.get.return_value = None
+
+        page1_data = {
+            "results": [{"name": "Topic 1", "uuid": "aaa"}],
+            "next": "https://api.example.com/topics/?page=2",
+        }
+        page2_data = {
+            "results": [{"name": "Topic 2", "uuid": "bbb"}],
+            "next": "https://api.example.com/topics/?page=3",
+        }
+
+        self.mock_nexus_conversations_client.get_topics.return_value = MockResponse(
+            200, json.dumps(page1_data)
+        )
+        self.mock_nexus_conversations_client.get_page.return_value = MockResponse(
+            200, json.dumps(page2_data)
+        )
+
+        with self.settings(NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES=2):
+            topics = self.service.get_topics(project_uuid)
+
+        self.assertEqual(len(topics), 2)
+        mock_logger.warning.assert_called_once()
+        warning_msg = mock_logger.warning.call_args[0][0]
+        self.assertIn("Topics pagination limit reached", warning_msg)
+
+    def test_get_topics_no_pagination_when_next_is_null(self):
+        """Test get_topics does not paginate when next is null"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_cache_client.get.return_value = None
+
+        page1_data = {
+            "results": [{"name": "Topic 1", "uuid": "aaa"}],
+            "next": None,
+        }
+
+        self.mock_nexus_conversations_client.get_topics.return_value = MockResponse(
+            200, json.dumps(page1_data)
+        )
+
+        topics = self.service.get_topics(project_uuid)
+
+        self.assertEqual(len(topics), 1)
+        self.mock_nexus_conversations_client.get_page.assert_not_called()
+
+    def test_get_topics_stops_pagination_on_error_status(self):
+        """Test get_topics stops paginating when a next page returns a non-success status"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        self.mock_cache_client.get.return_value = None
+
+        page1_data = {
+            "results": [{"name": "Topic 1", "uuid": "aaa"}],
+            "next": "https://api.example.com/topics/?page=2",
+        }
+
+        self.mock_nexus_conversations_client.get_topics.return_value = MockResponse(
+            200, json.dumps(page1_data)
+        )
+        self.mock_nexus_conversations_client.get_page.return_value = MockResponse(
+            500, "Internal Server Error"
+        )
+
+        with self.settings(NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES=3):
+            topics = self.service.get_topics(project_uuid)
+
+        self.assertEqual(len(topics), 1)
+
+    def test_get_subtopics_fetches_next_pages(self):
+        """Test get_subtopics follows next URL to fetch additional pages"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+
+        page1_data = {
+            "results": [{"name": "Subtopic 1", "uuid": "aaa"}],
+            "next": "https://api.example.com/subtopics/?page=2",
+        }
+        page2_data = {
+            "results": [{"name": "Subtopic 2", "uuid": "bbb"}],
+            "next": None,
+        }
+
+        self.mock_nexus_conversations_client.get_subtopics.return_value = MockResponse(
+            200, json.dumps(page1_data)
+        )
+        self.mock_nexus_conversations_client.get_page.return_value = MockResponse(
+            200, json.dumps(page2_data)
+        )
+
+        with self.settings(NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES=3):
+            subtopics = self.service.get_subtopics(project_uuid, topic_uuid)
+
+        self.assertEqual(len(subtopics), 2)
+        self.assertEqual(subtopics[0]["name"], "Subtopic 1")
+        self.assertEqual(subtopics[1]["name"], "Subtopic 2")
+        self.mock_nexus_conversations_client.get_page.assert_called_once_with(
+            "https://api.example.com/subtopics/?page=2"
+        )
+
+    @patch("insights.metrics.conversations.services.logger")
+    def test_get_subtopics_logs_warning_when_limit_reached(self, mock_logger):
+        """Test get_subtopics logs a warning when there are still pages after the limit"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+
+        page1_data = {
+            "results": [{"name": "Subtopic 1", "uuid": "aaa"}],
+            "next": "https://api.example.com/subtopics/?page=2",
+        }
+        page2_data = {
+            "results": [{"name": "Subtopic 2", "uuid": "bbb"}],
+            "next": "https://api.example.com/subtopics/?page=3",
+        }
+
+        self.mock_nexus_conversations_client.get_subtopics.return_value = MockResponse(
+            200, json.dumps(page1_data)
+        )
+        self.mock_nexus_conversations_client.get_page.return_value = MockResponse(
+            200, json.dumps(page2_data)
+        )
+
+        with self.settings(NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES=2):
+            subtopics = self.service.get_subtopics(project_uuid, topic_uuid)
+
+        self.assertEqual(len(subtopics), 2)
+        mock_logger.warning.assert_called_once()
+        warning_msg = mock_logger.warning.call_args[0][0]
+        self.assertIn("Subtopics pagination limit reached", warning_msg)
+
+    def test_get_subtopics_no_pagination_when_next_is_null(self):
+        """Test get_subtopics does not paginate when next is null"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+
+        page1_data = {
+            "results": [{"name": "Subtopic 1", "uuid": "aaa"}],
+            "next": None,
+        }
+
+        self.mock_nexus_conversations_client.get_subtopics.return_value = MockResponse(
+            200, json.dumps(page1_data)
+        )
+
+        subtopics = self.service.get_subtopics(project_uuid, topic_uuid)
+
+        self.assertEqual(len(subtopics), 1)
+        self.mock_nexus_conversations_client.get_page.assert_not_called()
+
+    def test_get_subtopics_stops_pagination_on_error_status(self):
+        """Test get_subtopics stops paginating when a next page returns a non-success status"""
+        project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+        topic_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
+
+        page1_data = {
+            "results": [{"name": "Subtopic 1", "uuid": "aaa"}],
+            "next": "https://api.example.com/subtopics/?page=2",
+        }
+
+        self.mock_nexus_conversations_client.get_subtopics.return_value = MockResponse(
+            200, json.dumps(page1_data)
+        )
+        self.mock_nexus_conversations_client.get_page.return_value = MockResponse(
+            500, "Internal Server Error"
+        )
+
+        with self.settings(NEXUS_CONVERSATIONS_TOPICS_MAX_PAGES=3):
+            subtopics = self.service.get_subtopics(project_uuid, topic_uuid)
+
+        self.assertEqual(len(subtopics), 1)
+
     def test_create_topic(self):
         self.service.create_topic(
             project_uuid=UUID("2026cedc-67f6-4a04-977a-55cc581defa9"),
@@ -408,7 +614,7 @@ class TestConversationsMetricsService(TestCase):
 
     def test_get_totals(self):
         totals = self.service.get_totals(
-            project=self.project,
+            project_uuid=self.project.uuid,
             start_date=self.start_date,
             end_date=self.end_date,
         )
