@@ -14,6 +14,10 @@ from insights.authentication.permissions import (
     ProjectAuthQueryParamPermission,
 )
 from insights.metrics.conversations.api.permissions import WidgetQueryParamPermission
+from insights.metrics.conversations.api.decorators import force_use_real_service
+from insights.metrics.conversations.api.mixins import (
+    ConversationsMetricsServiceResolverMixin,
+)
 from insights.metrics.conversations.exceptions import (
     ConversationsMetricsError,
     GetProjectAiCsatMetricsError,
@@ -46,7 +50,9 @@ from insights.metrics.conversations.api.v1.serializers import (
     TopicsDistributionMetricsSerializer,
     NpsMetricsSerializer,
 )
-from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.services import (
+    ConversationsMetricsService,
+)
 from insights.projects.models import ProjectAuth
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
 from insights.metrics.conversations.api.mixins import ConversationsMetricsResponseMixin
@@ -61,12 +67,15 @@ if TYPE_CHECKING:
     from rest_framework.request import Request
 
 
-class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericViewSet):
+class ConversationsMetricsViewSet(
+    ConversationsMetricsServiceResolverMixin,
+    ConversationsMetricsResponseMixin,
+    GenericViewSet,
+):
     """
     ViewSet to get conversations metrics
     """
 
-    service = ConversationsMetricsService()
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
 
     @action(
@@ -162,7 +171,7 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
                 output_language = "en"
 
             metrics = self.service.get_topics_distribution(
-                serializer.validated_data["project"],
+                serializer.validated_data["project"].uuid,
                 serializer.validated_data["start_date"].isoformat(),
                 serializer.validated_data["end_date"].isoformat(),
                 serializer.validated_data["type"],
@@ -195,6 +204,7 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
         url_name="topics",
         permission_classes=[IsAuthenticated],
     )
+    @force_use_real_service
     def topics(self, request: "Request", *args, **kwargs):
         """
         Get or create conversation topics
@@ -249,6 +259,7 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
         url_name="subtopics",
         permission_classes=[IsAuthenticated],
     )
+    @force_use_real_service
     def subtopics(self, request: "Request", *args, **kwargs):
         """
         Get or create conversation subtopics
@@ -309,6 +320,7 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
         url_name="topic",
         permission_classes=[IsAuthenticated],
     )
+    @force_use_real_service
     def topic(self, request: "Request", *args, **kwargs):
         """
         Delete a conversation topic
@@ -344,6 +356,7 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
         url_name="subtopic",
         permission_classes=[IsAuthenticated],
     )
+    @force_use_real_service
     def subtopic(self, request: "Request", *args, **kwargs):
         topic_uuid = kwargs.get("topic_uuid")
         subtopic_uuid = kwargs.get("subtopic_uuid")
@@ -391,7 +404,7 @@ class ConversationsMetricsViewSet(ConversationsMetricsResponseMixin, GenericView
 
         try:
             totals = self.service.get_totals(
-                project=query_params_serializer.validated_data["project"],
+                project_uuid=query_params_serializer.validated_data["project_uuid"],
                 start_date=query_params_serializer.validated_data[
                     "start_date"
                 ].isoformat(),

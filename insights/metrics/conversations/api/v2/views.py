@@ -6,28 +6,24 @@ from rest_framework.permissions import IsAuthenticated
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
 from insights.metrics.conversations.api.mixins import (
     ConversationsMetricsResponseMixin,
+    ConversationsMetricsServiceResolverMixin,
 )
 from insights.metrics.conversations.api.v2.serializers import (
     NpsMetricsQueryParamsSerializerV2,
     NpsMetricsSerializerV2,
 )
-from insights.metrics.conversations.services import ConversationsMetricsService
 
 
-class ConversationsMetricsViewSetV2(ConversationsMetricsResponseMixin, GenericViewSet):
+class ConversationsMetricsViewSetV2(
+    ConversationsMetricsResponseMixin,
+    ConversationsMetricsServiceResolverMixin,
+    GenericViewSet,
+):
     """
     ViewSet to get conversations metrics
     """
 
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
-    _service = None
-
-    @property
-    def service(self) -> ConversationsMetricsService:
-        if self._service is None:
-            self._service = ConversationsMetricsService()
-
-        return self._service
 
     @action(
         detail=False,

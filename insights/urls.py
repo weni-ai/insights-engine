@@ -32,6 +32,7 @@ from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
 from insights.widgets.viewsets import WidgetViewSet
 from insights.feedback.views import FeedbackViewSet
+from insights.projects.views import UserProjectsView
 
 urlpatterns = []
 
@@ -70,6 +71,7 @@ urlpatterns += [
         FeatureFlagsWebhookView.as_view(),
         name="feature_flags_webhook",
     ),
+    path("v1/user-projects/", UserProjectsView.as_view(), name="user-projects"),
     path("v1/", include(router.urls)),
 ]
 

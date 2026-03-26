@@ -27,3 +27,15 @@ class ClassificationMockDataLakeEventsClient(BaseDataLakeEventsClient):
         """
 
         return [{"payload_value": "1", "count": 10}]
+
+    def get_events_sum(self, **query_kwargs) -> dict:
+        return [{"total": 100.0}]
+
+    def get_events_avg(self, **query_kwargs) -> dict:
+        return [{"average": 10.0}]
+
+    def get_events_max(self, **query_kwargs) -> dict:
+        return [{"max_value": 50.0}]
+
+    def get_events_min(self, **query_kwargs) -> dict:
+        return [{"min_value": 1.0}]
