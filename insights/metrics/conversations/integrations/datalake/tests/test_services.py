@@ -989,17 +989,101 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         )
 
     def test_get_events_values_sum(self):
-        # TODO: Dependency not yet implemented
-        pass
+        project_uuid = uuid.uuid4()
+        event_name = "test_event"
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+        key = "test_key"
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_sum.return_value = [{"total": 250}]
+
+        result = self.service.get_events_values_sum(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(result, 250)
+
+        self.mock_events_client.get_events_sum.assert_called_once_with(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+            field_name=None,
+        )
 
     def test_get_events_values_average(self):
-        # TODO: Dependency not yet implemented
-        pass
+        project_uuid = uuid.uuid4()
+        event_name = "test_event"
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+        key = "test_key"
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_avg.return_value = [{"average": 42}]
+
+        result = self.service.get_events_values_average(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(result, 42)
+
+        self.mock_events_client.get_events_avg.assert_called_once_with(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+            field_name=None,
+        )
 
     def test_get_events_highest_value(self):
-        # TODO: Dependency not yet implemented
-        pass
+        project_uuid = uuid.uuid4()
+        event_name = "test_event"
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+        key = "test_key"
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_max.return_value = [{"max_value": 999}]
+
+        result = self.service.get_events_highest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(result, 999)
+
+        self.mock_events_client.get_events_max.assert_called_once_with(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+            field_name=None,
+        )
 
     def test_get_events_lowest_value(self):
-        # TODO: Dependency not yet implemented
-        pass
+        project_uuid = uuid.uuid4()
+        event_name = "test_event"
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+        key = "test_key"
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_min.return_value = [{"min_value": 3}]
+
+        result = self.service.get_events_lowest_value(
+            project_uuid, event_name, start_date, end_date, key, agent_uuid
+        )
+        self.assertEqual(result, 3)
+
+        self.mock_events_client.get_events_min.assert_called_once_with(
+            event_name=event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key=key,
+            agent_uuid=agent_uuid,
+            field_name=None,
+        )
