@@ -10,6 +10,10 @@ from weni_datalake_sdk.clients.redshift.events import (
     get_events_silver,
     get_events_silver_count,
     get_events_silver_count_by_group,
+    get_events_sum,
+    get_events_avg,
+    get_events_max,
+    get_events_min,
 )
 
 
@@ -41,6 +45,30 @@ class BaseDataLakeEventsClient(ABC):
     ) -> dict:
         """
         Get the count of events by group from the DataLakeEvents source.
+        """
+
+    @abstractmethod
+    def get_events_sum(self, **query_kwargs) -> dict:
+        """
+        Get the sum of events from the DataLakeEvents source.
+        """
+
+    @abstractmethod
+    def get_events_avg(self, **query_kwargs) -> dict:
+        """
+        Get the average of events from the DataLakeEvents source.
+        """
+
+    @abstractmethod
+    def get_events_max(self, **query_kwargs) -> dict:
+        """
+        Get the maximum of events from the DataLakeEvents source.
+        """
+
+    @abstractmethod
+    def get_events_min(self, **query_kwargs) -> dict:
+        """
+        Get the minimum of events from the DataLakeEvents source.
         """
 
 
@@ -118,3 +146,27 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
             raise e
 
         return events
+
+    def get_events_sum(self, **query_kwargs) -> dict:
+        """
+        Get the sum of events from the DataLakeEvents source.
+        """
+        return get_events_sum(**query_kwargs)
+
+    def get_events_avg(self, **query_kwargs) -> dict:
+        """
+        Get the average of events from the DataLakeEvents source.
+        """
+        return get_events_avg(**query_kwargs)
+
+    def get_events_max(self, **query_kwargs) -> dict:
+        """
+        Get the maximum of events from the DataLakeEvents source.
+        """
+        return get_events_max(**query_kwargs)
+
+    def get_events_min(self, **query_kwargs) -> dict:
+        """
+        Get the minimum of events from the DataLakeEvents source.
+        """
+        return get_events_min(**query_kwargs)

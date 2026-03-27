@@ -80,9 +80,17 @@ class QueryExecutor:
                         "sector_name": row["sector_name"],
                         "queues": [],
                     }
+
+                queue_name = row["queue_name"]
+                queue_is_deleted = row["queue_is_deleted"]
+
+                if queue_is_deleted and "_is_deleted_" in queue_name:
+                    queue_name = queue_name.split("_is_deleted_")[0]
+
                 grouped[sector_uuid]["queues"].append(
                     {
-                        "queue_name": row["queue_name"],
+                        "queue_name": queue_name,
+                        "is_deleted": queue_is_deleted,
                         "value": row["value"],
                     }
                 )

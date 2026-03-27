@@ -20,11 +20,11 @@ from insights.authentication.permissions import (
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
+from insights.metrics.conversations.api.permissions import WidgetQueryParamPermission
 from insights.metrics.conversations.api.decorators import force_use_real_service
 from insights.metrics.conversations.api.mixins import (
     ConversationsMetricsServiceResolverMixin,
 )
-from insights.metrics.conversations.api.permissions import WidgetQueryParamPermission
 from insights.metrics.conversations.exceptions import (
     ConversationsMetricsError,
     GetProjectAiCsatMetricsError,

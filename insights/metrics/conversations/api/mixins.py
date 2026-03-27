@@ -4,12 +4,9 @@ from rest_framework import status
 from rest_framework import serializers
 from sentry_sdk import capture_exception
 
-
-from insights.metrics.conversations.exceptions import ConversationsMetricsError
-
-
 from insights.metrics.conversations.resolvers import ConversationsMetricsServiceResolver
 from insights.metrics.conversations.services import BaseConversationsMetricsService
+from insights.metrics.conversations.exceptions import ConversationsMetricsError
 
 
 class ConversationsMetricsServiceResolverMixin:
