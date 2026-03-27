@@ -87,7 +87,7 @@ class QueryExecutor:
                 grouped[sector_uuid]["queues"].append(
                     {
                         "queue_name": queue_name,
-                        "queue_is_deleted": queue_is_deleted,
+                        "is_deleted": queue_is_deleted,
                         "value": row["value"],
                     }
                 )
