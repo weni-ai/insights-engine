@@ -107,11 +107,12 @@ class RoomSQLQueryBuilder:
                 q.uuid AS queue_uuid,
                 q.name AS queue_name,
                 q.is_deleted AS queue_is_deleted,
+                sec.is_deleted AS sector_is_deleted,
                 COUNT(r.*) AS value
             FROM public.rooms_room AS r
             {self.join_clause}
             WHERE {self.where_clause}
-            GROUP BY sec.uuid, sec.name, q.uuid, q.name, q.is_deleted
+            GROUP BY sec.uuid, sec.name, q.uuid, q.name, q.is_deleted, sec.is_deleted
             ORDER BY value DESC, queue_name ASC;
         """
         return query, self.params
