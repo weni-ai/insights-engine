@@ -1,3 +1,25 @@
+# 1.17.1
+# Fix
+  - Crosstab field name for crosstable
+
+# 1.17.0
+# Add
+  - Absolute numbers endpoint and metrics service integration
+  - Subwidgets support
+  - User email to finished rooms endpoint
+
+# 1.16.0
+# Add
+  - Update projects consumer
+
+# 1.15.0
+# Add
+  - Increase the number of templates used in abandoned cart analytics
+  - Conversations metrics service class
+  - Update datalake SDK version to 0.7.0
+# Fix
+  - Crosstab empty data handling
+
 # 1.14.4
 # Add
   - Endpoint to list projects to be used in mcp
