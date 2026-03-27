@@ -73,8 +73,15 @@ class QueryExecutor:
             for row in query_results:
                 sector_uuid = row["sector_uuid"]
                 if sector_uuid not in grouped:
+                    sector_name = row["sector_name"]
+                    sector_is_deleted = row["sector_is_deleted"]
+
+                    if sector_is_deleted and "_is_deleted_" in sector_name:
+                        sector_name = sector_name.split("_is_deleted_")[0]
+
                     grouped[sector_uuid] = {
-                        "sector_name": row["sector_name"],
+                        "sector_name": sector_name,
+                        "is_deleted": sector_is_deleted,
                         "queues": [],
                     }
 
