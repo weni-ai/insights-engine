@@ -1187,6 +1187,9 @@ class ConversationsMetricsService(
         agent_uuid = config.get("agent_uuid")
         field_name = config.get("value_field_name")
 
+        if field_name == "":
+            field_name = None
+
         assert operation is not None
         assert key is not None
         assert agent_uuid is not None
