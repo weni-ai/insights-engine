@@ -1100,7 +1100,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             end_date=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=field_name,
+            operation_key=field_name,
         )
 
         if self.cache_results and (
@@ -1115,7 +1115,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             date_end=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=field_name,
+            operation_key=field_name,
         )
 
         assert isinstance(result, list)
@@ -1149,7 +1149,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             end_date=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=field_name,
+            operation_key=field_name,
         )
 
         if self.cache_results and (
@@ -1164,7 +1164,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             date_end=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=field_name,
+            operation_key=field_name,
         )
 
         assert isinstance(result, list)
@@ -1197,7 +1197,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             end_date=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=field_name,
+            operation_key=field_name,
         )
 
         if self.cache_results and (
@@ -1212,7 +1212,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             date_end=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=field_name,
+            operation_key=field_name,
         )
 
         assert isinstance(result, list)
@@ -1245,7 +1245,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             end_date=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=field_name,
+            operation_key=field_name,
         )
 
         if self.cache_results and (
@@ -1260,7 +1260,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             date_end=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=field_name,
+            operation_key=field_name,
         )
 
         assert isinstance(result, list)
