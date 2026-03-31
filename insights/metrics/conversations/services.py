@@ -1177,7 +1177,7 @@ class ConversationsMetricsService(
         operation = config.get("operation")
         key = config.get("key")
         agent_uuid = config.get("agent_uuid")
-        field_name = config.get("field_name")
+        field_name = config.get("value_field_name")
 
         assert operation is not None
         assert key is not None
