@@ -61,6 +61,10 @@ class RequestConversationsReportGenerationSerializer(
         required=False,
         child=serializers.UUIDField(),
     )
+    crosstab_widgets = serializers.ListField(
+        required=False,
+        child=serializers.UUIDField(),
+    )
     start = serializers.DateTimeField(read_only=True)
     end = serializers.DateTimeField(read_only=True)
 
@@ -78,9 +82,13 @@ class RequestConversationsReportGenerationSerializer(
         """
         Validate sections and custom widgets
         """
-        if ("sections" not in attrs or not attrs["sections"]) and (
-            "custom_widgets" not in attrs or not attrs["custom_widgets"]
-        ):
+        has_sections = "sections" in attrs and attrs["sections"]
+        has_custom_widgets = "custom_widgets" in attrs and attrs["custom_widgets"]
+        has_crosstab_widgets = (
+            "crosstab_widgets" in attrs and attrs["crosstab_widgets"]
+        )
+
+        if not has_sections and not has_custom_widgets and not has_crosstab_widgets:
             raise serializers.ValidationError(
                 {"error": _("Sections or custom widgets are required")},
                 code="sections_or_custom_widgets_required",
