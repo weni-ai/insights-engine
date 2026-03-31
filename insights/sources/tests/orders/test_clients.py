@@ -81,7 +81,7 @@ class TestVtexOrdersRestClient(TestCase):
 
     def test_get_cache_key(self):
         query_filters = {"param1": "value1", "param2": "value2"}
-        expected_key = f"vtex_data:{json.dumps(query_filters, sort_keys=True)}"
+        expected_key = f"vtex_data:{self.client_direct.base_url}:{json.dumps(query_filters, sort_keys=True)}"
         self.assertEqual(self.client_direct.get_cache_key(query_filters), expected_key)
 
     def test_get_query_params(self):
