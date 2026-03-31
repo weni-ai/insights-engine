@@ -1108,15 +1108,19 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         ):
             return cached_results
 
-        result = self.events_client.get_events_sum(
-            event_name=event_name,
-            project=project_uuid,
-            date_start=start_date,
-            date_end=end_date,
-            key=key,
-            agent_uuid=agent_uuid,
-            operation_key=field_name,
-        )
+        query_kwargs = {
+            "event_name": event_name,
+            "project": project_uuid,
+            "date_start": start_date,
+            "date_end": end_date,
+            "key": key,
+            "agent_uuid": agent_uuid,
+        }
+
+        if field_name:
+            query_kwargs["operation_key"] = field_name
+
+        result = self.events_client.get_events_sum(**query_kwargs)
 
         assert isinstance(result, list)
 
@@ -1157,14 +1161,20 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         ):
             return cached_results
 
+        query_kwargs = {
+            "event_name": event_name,
+            "project": project_uuid,
+            "date_start": start_date,
+            "date_end": end_date,
+            "key": key,
+            "agent_uuid": agent_uuid,
+        }
+
+        if field_name:
+            query_kwargs["operation_key"] = field_name
+
         result = self.events_client.get_events_avg(
-            event_name=event_name,
-            project=project_uuid,
-            date_start=start_date,
-            date_end=end_date,
-            key=key,
-            agent_uuid=agent_uuid,
-            operation_key=field_name,
+            **query_kwargs,
         )
 
         assert isinstance(result, list)
@@ -1205,14 +1215,20 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         ):
             return cached_results
 
+        query_kwargs = {
+            "event_name": event_name,
+            "project": project_uuid,
+            "date_start": start_date,
+            "date_end": end_date,
+            "key": key,
+            "agent_uuid": agent_uuid,
+        }
+
+        if field_name:
+            query_kwargs["operation_key"] = field_name
+
         result = self.events_client.get_events_max(
-            event_name=event_name,
-            project=project_uuid,
-            date_start=start_date,
-            date_end=end_date,
-            key=key,
-            agent_uuid=agent_uuid,
-            operation_key=field_name,
+            **query_kwargs,
         )
 
         assert isinstance(result, list)
@@ -1253,14 +1269,20 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         ):
             return cached_results
 
+        query_kwargs = {
+            "event_name": event_name,
+            "project": project_uuid,
+            "date_start": start_date,
+            "date_end": end_date,
+            "key": key,
+            "agent_uuid": agent_uuid,
+        }
+
+        if field_name:
+            query_kwargs["operation_key"] = field_name
+
         result = self.events_client.get_events_min(
-            event_name=event_name,
-            project=project_uuid,
-            date_start=start_date,
-            date_end=end_date,
-            key=key,
-            agent_uuid=agent_uuid,
-            operation_key=field_name,
+            **query_kwargs,
         )
 
         assert isinstance(result, list)
