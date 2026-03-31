@@ -16,7 +16,6 @@ class TestVtexOrdersRestClient(TestCase):
             "domain": "testenv",
             "app_token": "test_token",
             "app_key": "test_key",
-            "internal_token": "internal_token_test",
         }
         self.auth_params_io_proxy = {
             "domain": "testenv.myvtex.com",
@@ -26,12 +25,10 @@ class TestVtexOrdersRestClient(TestCase):
         self.client_direct = VtexOrdersRestClient(
             auth_params=self.auth_params_direct,
             cache_client=self.mock_cache_client,
-            use_io_proxy=False,
         )
         self.client_io_proxy = VtexOrdersRestClient(
             auth_params=self.auth_params_io_proxy,
             cache_client=self.mock_cache_client,
-            use_io_proxy=True,
         )
 
     def test_initialization_direct(self):
@@ -63,7 +60,6 @@ class TestVtexOrdersRestClient(TestCase):
         client = VtexOrdersRestClient(
             auth_params=auth_params_custom,
             cache_client=self.mock_cache_client,
-            use_io_proxy=True,
         )
         self.assertEqual(client.base_url, "https://another.myvtex.com")
 
@@ -75,7 +71,6 @@ class TestVtexOrdersRestClient(TestCase):
         client = VtexOrdersRestClient(
             auth_params=auth_params_custom,
             cache_client=self.mock_cache_client,
-            use_io_proxy=True,
         )
         self.assertEqual(client.base_url, "https://justdomain.myvtex.com")
 

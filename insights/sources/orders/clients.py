@@ -23,9 +23,11 @@ class VtexOrdersRestClient(VtexAuthentication):
         self,
         auth_params: dict,
         cache_client: CacheClient,
-        use_io_proxy: bool = False,
     ) -> None:
-        self.use_io_proxy = use_io_proxy
+        auth_params = auth_params if isinstance(auth_params, dict) else {}
+        internal_token = auth_params.get("internal_token")
+
+        self.use_io_proxy = internal_token is not None
         self.headers = {}
         self.internal_token = None
 
@@ -39,7 +41,7 @@ class VtexOrdersRestClient(VtexAuthentication):
                 self.base_url = f"{self.base_url}.myvtex.com"
 
             self.headers = {
-                "X-Weni-Auth": auth_params.get("internal_token"),
+                "X-Weni-Auth": internal_token,
             }
         else:
             self.headers = {
