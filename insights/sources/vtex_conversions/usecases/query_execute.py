@@ -63,13 +63,9 @@ class QueryExecutor:
         integrations_client = WeniIntegrationsClient()
         vtex_credentials = cls.get_vtex_credentials(project)
 
-        if vtex_credentials.get("internal_token"):
-            use_io_proxy = True
-        else:
-            use_io_proxy = False
-
         orders_client = VtexOrdersRestClient(
-            vtex_credentials, CacheClient(), use_io_proxy=use_io_proxy
+            vtex_credentials,
+            CacheClient(),
         )
 
         service = VTEXOrdersConversionsService(

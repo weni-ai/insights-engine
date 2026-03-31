@@ -49,7 +49,6 @@ class OrdersService:
                     ),
                 },
                 CacheClient(),
-                use_io_proxy=True,
             )
 
         return VtexOrdersRestClient(self._get_credentials(), CacheClient())
