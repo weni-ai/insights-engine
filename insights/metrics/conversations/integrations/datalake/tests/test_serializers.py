@@ -456,3 +456,76 @@ class TestCrosstabDataSerializer(TestCase):
                 "Shopping": {"Unsatisfied": 1},
             },
         )
+
+    def test_serialize_with_reference_field_multiple_refs_same_label(self):
+        """
+        Multiple reference fields mapping to the same label
+        should aggregate counts under that label.
+        """
+        labels = {"Delivery", "Shopping"}
+        join_keys = {
+            "ref-aaa": "Delivery",
+            "ref-bbb": "Delivery",
+            "ref-ccc": "Shopping",
+        }
+        events = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-aaa",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Unsatisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-bbb",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-2",
+                        "interaction_id": "ref-ccc",
+                    }
+                ),
+            },
+        ]
+
+        serializer = self.serializer_class(
+            labels,
+            join_keys,
+            events,
+            "value",
+            reference_field="interaction_id",
+        )
+        data = serializer.serialize()
+
+        self.assertEqual(
+            data,
+            {
+                "Delivery": {"Satisfied": 1, "Unsatisfied": 1},
+                "Shopping": {"Satisfied": 1},
+            },
+        )
