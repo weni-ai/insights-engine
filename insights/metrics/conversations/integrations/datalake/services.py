@@ -960,6 +960,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         source_b: CrosstabSource,
         start_date: datetime,
         end_date: datetime,
+        reference_field: str | None = None,
     ) -> dict:
         """
         Get crosstab data from Datalake.
@@ -978,6 +979,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             source_b=source_b,
             start_date=start_date,
             end_date=end_date,
+            reference_field=reference_field,
         )
 
         if self.cache_results and (
@@ -1017,13 +1019,16 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         )
 
         labels_data = CrosstabLabelsSerializer(
-            source_a_events, source_a.field
+            source_a_events, source_a.field, reference_field=reference_field
         ).serialize()
         labels = labels_data["labels"]
-        conversations_uuids = labels_data["conversations_uuids"]
+        join_keys = labels_data["join_keys"]
 
         data = CrosstabDataSerializer(
-            labels, conversations_uuids, source_b_events
+            labels,
+            join_keys,
+            source_b_events,
+            reference_field=reference_field,
         ).serialize()
 
         return data
