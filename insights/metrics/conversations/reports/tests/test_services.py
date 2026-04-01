@@ -2038,6 +2038,7 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         self.assertEqual(results, [])
 
+    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
     @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
     @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
@@ -2050,29 +2051,31 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_csat_human_widget,
         mock_get_nps_human_widget,
         mock_get_custom_widgets,
+        mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with only basic widgets (no special widgets)."""
-        # Mock all special widget functions to return None
         mock_get_csat_ai_widget.return_value = None
         mock_get_nps_ai_widget.return_value = None
         mock_get_csat_human_widget.return_value = None
         mock_get_nps_human_widget.return_value = None
         mock_get_custom_widgets.return_value = []
+        mock_get_crosstab_widgets.return_value = []
 
         result = self.service.get_available_widgets(self.project)
 
-        # Should only contain basic widgets
         expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
+        self.assertEqual(result.crosstab_widgets, [])
 
-        # Verify all special widget functions were called
         mock_get_csat_ai_widget.assert_called_once_with(self.project)
         mock_get_nps_ai_widget.assert_called_once_with(self.project)
         mock_get_csat_human_widget.assert_called_once_with(self.project)
         mock_get_nps_human_widget.assert_called_once_with(self.project)
         mock_get_custom_widgets.assert_called_once_with(self.project)
+        mock_get_crosstab_widgets.assert_called_once_with(self.project)
 
+    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
     @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
     @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
@@ -2085,9 +2088,9 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_csat_human_widget,
         mock_get_nps_human_widget,
         mock_get_custom_widgets,
+        mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with special widgets available."""
-        # Mock special widget functions to return mock widgets
         mock_csat_ai_widget = Widget.objects.create(
             name="CSAT AI Widget",
             config={"datalake_config": {"agent_uuid": "test-uuid"}},
@@ -2134,10 +2137,10 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_csat_human_widget.return_value = mock_csat_human_widget
         mock_get_nps_human_widget.return_value = mock_nps_human_widget
         mock_get_custom_widgets.return_value = []
+        mock_get_crosstab_widgets.return_value = []
 
         result = self.service.get_available_widgets(self.project)
 
-        # Should contain basic widgets plus special widgets
         expected_sections = [
             "RESOLUTIONS",
             "TRANSFERRED",
@@ -2150,7 +2153,9 @@ class TestConversationsReportServiceAdditional(TestCase):
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
+        self.assertEqual(result.crosstab_widgets, [])
 
+    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
     @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
     @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
@@ -2163,15 +2168,15 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_csat_human_widget,
         mock_get_nps_human_widget,
         mock_get_custom_widgets,
+        mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with custom widgets available."""
-        # Mock special widget functions to return None
         mock_get_csat_ai_widget.return_value = None
         mock_get_nps_ai_widget.return_value = None
         mock_get_csat_human_widget.return_value = None
         mock_get_nps_human_widget.return_value = None
+        mock_get_crosstab_widgets.return_value = []
 
-        # Create custom widgets
         custom_widget1 = Widget.objects.create(
             name="Custom Widget 1",
             config={"datalake_config": {"key": "test1", "agent_uuid": "test-uuid"}},
@@ -2196,13 +2201,14 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         result = self.service.get_available_widgets(self.project)
 
-        # Should contain basic widgets and custom widgets
         expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(
             result.custom_widgets, [custom_widget1.uuid, custom_widget2.uuid]
         )
+        self.assertEqual(result.crosstab_widgets, [])
 
+    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
     @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
     @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
@@ -2215,9 +2221,9 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_csat_human_widget,
         mock_get_nps_human_widget,
         mock_get_custom_widgets,
+        mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with all types of widgets available."""
-        # Mock special widget functions to return mock widgets
         mock_csat_ai_widget = Widget.objects.create(
             name="CSAT AI Widget",
             config={"datalake_config": {"agent_uuid": "test-uuid"}},
@@ -2240,7 +2246,6 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_csat_human_widget.return_value = None
         mock_get_nps_human_widget.return_value = None
 
-        # Create custom widgets
         custom_widget = Widget.objects.create(
             name="Custom Widget",
             config={"datalake_config": {"key": "test", "agent_uuid": "test-uuid"}},
@@ -2251,10 +2256,10 @@ class TestConversationsReportServiceAdditional(TestCase):
         )
 
         mock_get_custom_widgets.return_value = [custom_widget.uuid]
+        mock_get_crosstab_widgets.return_value = []
 
         result = self.service.get_available_widgets(self.project)
 
-        # Should contain basic widgets, some special widgets, and custom widgets
         expected_sections = [
             "RESOLUTIONS",
             "TRANSFERRED",
@@ -2265,7 +2270,9 @@ class TestConversationsReportServiceAdditional(TestCase):
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [custom_widget.uuid])
+        self.assertEqual(result.crosstab_widgets, [])
 
+    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
     @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
     @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
@@ -2278,9 +2285,9 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_csat_human_widget,
         mock_get_nps_human_widget,
         mock_get_custom_widgets,
+        mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with only some special widgets available."""
-        # Mock only some special widget functions to return widgets
         mock_csat_ai_widget = Widget.objects.create(
             name="CSAT AI Widget",
             config={"datalake_config": {"agent_uuid": "test-uuid"}},
@@ -2295,10 +2302,10 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_csat_human_widget.return_value = None
         mock_get_nps_human_widget.return_value = None
         mock_get_custom_widgets.return_value = []
+        mock_get_crosstab_widgets.return_value = []
 
         result = self.service.get_available_widgets(self.project)
 
-        # Should contain basic widgets plus only CSAT_AI
         expected_sections = [
             "RESOLUTIONS",
             "TRANSFERRED",
@@ -2308,6 +2315,68 @@ class TestConversationsReportServiceAdditional(TestCase):
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
+        self.assertEqual(result.crosstab_widgets, [])
+
+    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
+    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
+    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    def test_get_available_widgets_with_crosstab_widgets(
+        self,
+        mock_get_csat_ai_widget,
+        mock_get_nps_ai_widget,
+        mock_get_csat_human_widget,
+        mock_get_nps_human_widget,
+        mock_get_custom_widgets,
+        mock_get_crosstab_widgets,
+    ):
+        """Test get_available_widgets with crosstab widgets available."""
+        mock_get_csat_ai_widget.return_value = None
+        mock_get_nps_ai_widget.return_value = None
+        mock_get_csat_human_widget.return_value = None
+        mock_get_nps_human_widget.return_value = None
+        mock_get_custom_widgets.return_value = []
+
+        crosstab_widget1 = Widget.objects.create(
+            name="Crosstab Widget 1",
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+        crosstab_widget2 = Widget.objects.create(
+            name="Crosstab Widget 2",
+            config={
+                "source_a": {"key": "key_c", "field": "value"},
+                "source_b": {"key": "key_d", "field": "value"},
+            },
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        mock_get_crosstab_widgets.return_value = [
+            crosstab_widget1.uuid,
+            crosstab_widget2.uuid,
+        ]
+
+        result = self.service.get_available_widgets(self.project)
+
+        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
+        self.assertEqual(result.sections, expected_sections)
+        self.assertEqual(result.custom_widgets, [])
+        self.assertEqual(
+            result.crosstab_widgets,
+            [crosstab_widget1.uuid, crosstab_widget2.uuid],
+        )
+        mock_get_crosstab_widgets.assert_called_once_with(self.project)
 
     def test_zip_files_with_single_file(self):
         """Test zip_files with a single file."""

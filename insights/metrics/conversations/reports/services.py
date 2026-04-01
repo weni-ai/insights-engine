@@ -21,6 +21,7 @@ from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.reports.available_widgets import (
+    get_crosstab_widgets,
     get_csat_ai_widget,
     get_csat_human_widget,
     get_custom_widgets,
@@ -1666,8 +1667,10 @@ class ConversationsReportService(BaseConversationsReportService):
                 available_widgets.append(section)
 
         custom_widgets = get_custom_widgets(project)
+        crosstab_widgets = get_crosstab_widgets(project)
 
         return AvailableReportWidgets(
             sections=available_widgets,
             custom_widgets=custom_widgets,
+            crosstab_widgets=crosstab_widgets,
         )
