@@ -304,6 +304,7 @@ class TestAvailableWidgetsViewSetAsAuthenticatedUser(BaseTestAvailableWidgetsVie
         mock_widgets = {
             "sections": ["RESOLUTIONS", "CSAT_AI", "NPS_AI"],
             "custom_widgets": [str(uuid.uuid4()), str(uuid.uuid4())],
+            "crosstab_widgets": [str(uuid.uuid4())],
         }
         mock_get_available_widgets.return_value = mock_widgets
 
@@ -314,6 +315,9 @@ class TestAvailableWidgetsViewSetAsAuthenticatedUser(BaseTestAvailableWidgetsVie
         self.assertEqual(
             response.data["custom_widgets"], mock_widgets["custom_widgets"]
         )
+        self.assertEqual(
+            response.data["crosstab_widgets"], mock_widgets["crosstab_widgets"]
+        )
         mock_get_available_widgets.assert_called_once_with(project=self.project)
 
     @with_project_auth
@@ -321,7 +325,7 @@ class TestAvailableWidgetsViewSetAsAuthenticatedUser(BaseTestAvailableWidgetsVie
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_available_widgets"
     )
     def test_get_available_widgets_empty_response(self, mock_get_available_widgets):
-        mock_widgets = {"sections": [], "custom_widgets": []}
+        mock_widgets = {"sections": [], "custom_widgets": [], "crosstab_widgets": []}
         mock_get_available_widgets.return_value = mock_widgets
 
         response = self.get_available_widgets({"project_uuid": self.project.uuid})
@@ -329,4 +333,5 @@ class TestAvailableWidgetsViewSetAsAuthenticatedUser(BaseTestAvailableWidgetsVie
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["sections"], [])
         self.assertEqual(response.data["custom_widgets"], [])
+        self.assertEqual(response.data["crosstab_widgets"], [])
         mock_get_available_widgets.assert_called_once_with(project=self.project)

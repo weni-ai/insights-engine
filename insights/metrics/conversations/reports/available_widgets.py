@@ -70,3 +70,10 @@ def get_custom_widgets(project: Project) -> list[UUID]:
         dashboard__project=project,
         source="conversations.custom",
     ).values_list("uuid", flat=True)
+
+
+def get_crosstab_widgets(project: Project) -> list[UUID]:
+    return Widget.objects.filter(
+        dashboard__project=project,
+        source="conversations.crosstab",
+    ).values_list("uuid", flat=True)

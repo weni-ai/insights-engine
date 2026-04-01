@@ -315,3 +315,4 @@ class AvailableReportWidgetsQueryParamsSerializer(
 class AvailableReportWidgetsResponseSerializer(serializers.Serializer):
     sections = serializers.ListField(child=serializers.CharField())
     custom_widgets = serializers.ListField(child=serializers.UUIDField())
+    crosstab_widgets = serializers.ListField(child=serializers.UUIDField())

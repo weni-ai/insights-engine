@@ -5,6 +5,7 @@ from insights.projects.models import Project
 from insights.dashboards.models import Dashboard
 from insights.widgets.models import Widget
 from insights.metrics.conversations.reports.available_widgets import (
+    get_crosstab_widgets,
     get_csat_ai_widget,
     get_csat_human_widget,
     get_nps_ai_widget,
@@ -377,6 +378,98 @@ class TestAvailableWidgets(TestCase):
         )
 
         result = get_custom_widgets(self.project)
+
+        self.assertEqual(len(result), 1)
+        self.assertIn(current_widget.uuid, result)
+        self.assertNotIn(other_widget.uuid, result)
+
+    def test_get_crosstab_widgets_with_widgets(self):
+        """Test get_crosstab_widgets returns list of UUIDs when crosstab widgets exist"""
+        widget1 = Widget.objects.create(
+            dashboard=self.dashboard,
+            name="Crosstab Widget 1",
+            type="conversations.crosstab",
+            source="conversations.crosstab",
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+            position={},
+        )
+        widget2 = Widget.objects.create(
+            dashboard=self.dashboard,
+            name="Crosstab Widget 2",
+            type="conversations.crosstab",
+            source="conversations.crosstab",
+            config={
+                "source_a": {"key": "key_c", "field": "value"},
+                "source_b": {"key": "key_d", "field": "value"},
+            },
+            position={},
+        )
+        Widget.objects.create(
+            dashboard=self.dashboard,
+            name="Custom Widget",
+            type="chart",
+            source="conversations.custom",
+            config={},
+            position={},
+        )
+
+        result = get_crosstab_widgets(self.project)
+
+        self.assertEqual(len(result), 2)
+        self.assertIn(widget1.uuid, result)
+        self.assertIn(widget2.uuid, result)
+
+    def test_get_crosstab_widgets_without_widgets(self):
+        """Test get_crosstab_widgets returns empty list when no crosstab widgets exist"""
+        Widget.objects.create(
+            dashboard=self.dashboard,
+            name="Custom Widget",
+            type="chart",
+            source="conversations.custom",
+            config={},
+            position={},
+        )
+
+        result = get_crosstab_widgets(self.project)
+        self.assertEqual(len(result), 0)
+
+    def test_get_crosstab_widgets_with_different_project(self):
+        """Test get_crosstab_widgets only returns widgets for the specified project"""
+        other_project = Project.objects.create(name="Other Project")
+        other_dashboard = Dashboard.objects.create(
+            project=other_project,
+            name="Other Dashboard",
+            description="Other Dashboard Description",
+        )
+
+        other_widget = Widget.objects.create(
+            dashboard=other_dashboard,
+            name="Other Crosstab Widget",
+            type="conversations.crosstab",
+            source="conversations.crosstab",
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+            position={},
+        )
+
+        current_widget = Widget.objects.create(
+            dashboard=self.dashboard,
+            name="Current Crosstab Widget",
+            type="conversations.crosstab",
+            source="conversations.crosstab",
+            config={
+                "source_a": {"key": "key_c", "field": "value"},
+                "source_b": {"key": "key_d", "field": "value"},
+            },
+            position={},
+        )
+
+        result = get_crosstab_widgets(self.project)
 
         self.assertEqual(len(result), 1)
         self.assertIn(current_widget.uuid, result)

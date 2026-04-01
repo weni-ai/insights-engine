@@ -26,3 +26,4 @@ class ConversationsReportFile:
 class AvailableReportWidgets:
     sections: list[str]
     custom_widgets: list[UUID]
+    crosstab_widgets: list[UUID]
