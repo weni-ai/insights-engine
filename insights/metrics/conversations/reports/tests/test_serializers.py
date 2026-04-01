@@ -621,3 +621,80 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             serializer.validated_data["source_config"]["nps_human_op_field"],
             widget.config.get("op_field"),
         )
+
+    def test_serializer_with_crosstab_widgets_and_without_sections(self):
+        crosstab_widget = Widget.objects.create(
+            name="Crosstab Widget",
+            dashboard=self.dashboard,
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+        )
+
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "crosstab_widgets": [crosstab_widget.uuid],
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["project"], self.project)
+        self.assertEqual(
+            serializer.validated_data["crosstab_widgets"],
+            [crosstab_widget.uuid],
+        )
+
+    def test_serializer_with_crosstab_widgets_and_sections(self):
+        crosstab_widget = Widget.objects.create(
+            name="Crosstab Widget",
+            dashboard=self.dashboard,
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+        )
+
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.RESOLUTIONS],
+                "crosstab_widgets": [crosstab_widget.uuid],
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(
+            serializer.validated_data["sections"],
+            [ConversationsReportSections.RESOLUTIONS],
+        )
+        self.assertEqual(
+            serializer.validated_data["crosstab_widgets"],
+            [crosstab_widget.uuid],
+        )
+
+    def test_serializer_without_sections_custom_widgets_and_crosstab_widgets(self):
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors["error"][0].code,
+            "sections_or_custom_widgets_required",
+        )

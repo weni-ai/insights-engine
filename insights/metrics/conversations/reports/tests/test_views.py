@@ -158,6 +158,111 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["email"], self.user.email)
         self.assertEqual(response.data["report_uuid"], str(report.uuid))
 
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_current_report_for_project"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.request_generation"
+    )
+    def test_request_generation_with_crosstab_widgets(
+        self,
+        mock_request_generation,
+        mock_get_current_report_for_project,
+    ):
+        report = Report(
+            project=self.project,
+            source=ReportSource.CONVERSATIONS_DASHBOARD,
+            status=ReportStatus.PENDING,
+            requested_by=self.user,
+        )
+        mock_request_generation.return_value = report
+        mock_get_current_report_for_project.return_value = None
+
+        crosstab_widget = Widget.objects.create(
+            name="Crosstab Widget",
+            dashboard=self.dashboard,
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+        )
+
+        response = self.request_generation(
+            {
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-02",
+                "crosstab_widgets": [str(crosstab_widget.uuid)],
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.data["status"], ReportStatus.PENDING)
+
+        call_kwargs = mock_request_generation.call_args[1]
+        self.assertIn(
+            str(crosstab_widget.uuid),
+            call_kwargs["source_config"]["crosstab_widgets"],
+        )
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_current_report_for_project"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.request_generation"
+    )
+    def test_request_generation_with_sections_and_crosstab_widgets(
+        self,
+        mock_request_generation,
+        mock_get_current_report_for_project,
+    ):
+        report = Report(
+            project=self.project,
+            source=ReportSource.CONVERSATIONS_DASHBOARD,
+            status=ReportStatus.PENDING,
+            requested_by=self.user,
+        )
+        mock_request_generation.return_value = report
+        mock_get_current_report_for_project.return_value = None
+
+        crosstab_widget = Widget.objects.create(
+            name="Crosstab Widget",
+            dashboard=self.dashboard,
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+        )
+
+        response = self.request_generation(
+            {
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-02",
+                "sections": ["RESOLUTIONS"],
+                "crosstab_widgets": [str(crosstab_widget.uuid)],
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        call_kwargs = mock_request_generation.call_args[1]
+        self.assertEqual(call_kwargs["source_config"]["sections"], ["RESOLUTIONS"])
+        self.assertIn(
+            str(crosstab_widget.uuid),
+            call_kwargs["source_config"]["crosstab_widgets"],
+        )
+
 
 class BaseTestAvailableWidgetsViewSet(APITestCase):
     def get_available_widgets(self, query_params: dict) -> Response:

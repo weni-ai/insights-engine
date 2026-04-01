@@ -115,6 +115,12 @@ class ConversationsReportsViewSet(APIView):
                         "custom_widgets", []
                     )
                 ],
+                "crosstab_widgets": [
+                    str(widget_uuid)
+                    for widget_uuid in serializer.validated_data.get(
+                        "crosstab_widgets", []
+                    )
+                ],
             }
         )
 

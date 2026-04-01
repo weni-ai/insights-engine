@@ -155,7 +155,7 @@ class TestConversationsReportService(TestCase):
 
         self.assertEqual(
             str(context.exception),
-            "sections or custom_widgets cannot be empty when requesting generation of conversations report",
+            "sections, custom_widgets, or crosstab_widgets cannot be empty when requesting generation of conversations report",
         )
 
     def test_request_generation(self):
@@ -2808,3 +2808,261 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(len(worksheet.data), 1)
         # Subtopic should be unclassified
         self.assertEqual(worksheet.data[0]["Subtopic"], "Unclassified")
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_crosstab_data"
+    )
+    def test_get_crosstab_widget_worksheet(self, mock_get_crosstab_data):
+        from insights.metrics.conversations.dataclass import (
+            CrosstabItemData,
+            CrosstabSubItemData,
+        )
+
+        mock_get_crosstab_data.return_value = [
+            CrosstabItemData(
+                title="Purchases",
+                total=1500,
+                subitems=[
+                    CrosstabSubItemData(title="yes", count=50, percentage=3.33),
+                    CrosstabSubItemData(title="no", count=30, percentage=2.0),
+                    CrosstabSubItemData(title="maybe", count=10, percentage=0.67),
+                ],
+            ),
+            CrosstabItemData(
+                title="Searches",
+                total=500,
+                subitems=[
+                    CrosstabSubItemData(title="yes", count=17, percentage=3.4),
+                    CrosstabSubItemData(title="no", count=2, percentage=0.4),
+                    CrosstabSubItemData(title="maybe", count=15, percentage=3.0),
+                ],
+            ),
+        ]
+
+        widget = Widget.objects.create(
+            name="Crosstab Test",
+            config={
+                "source_a": {"key": "source_a_key", "field": "value"},
+                "source_b": {"key": "source_b_key", "field": "value"},
+            },
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"crosstab_widgets": [str(widget.uuid)]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_crosstab_widget_worksheet(
+            report=report,
+            widget=widget,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Crosstab Test")
+        self.assertEqual(len(worksheet.data), 2)
+
+        self.assertEqual(worksheet.data[0]["Label"], "Purchases")
+        self.assertEqual(worksheet.data[0]["Total"], 1500)
+        self.assertEqual(worksheet.data[0]["yes"], 50)
+        self.assertEqual(worksheet.data[0]["no"], 30)
+        self.assertEqual(worksheet.data[0]["maybe"], 10)
+
+        self.assertEqual(worksheet.data[1]["Label"], "Searches")
+        self.assertEqual(worksheet.data[1]["Total"], 500)
+        self.assertEqual(worksheet.data[1]["yes"], 17)
+        self.assertEqual(worksheet.data[1]["no"], 2)
+        self.assertEqual(worksheet.data[1]["maybe"], 15)
+
+        mock_get_crosstab_data.assert_called_once_with(
+            project_uuid=self.project.uuid,
+            widget=widget,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_crosstab_data"
+    )
+    def test_get_crosstab_widget_worksheet_with_empty_data(
+        self, mock_get_crosstab_data
+    ):
+        mock_get_crosstab_data.return_value = []
+
+        widget = Widget.objects.create(
+            name="Crosstab Empty",
+            config={
+                "source_a": {"key": "source_a_key", "field": "value"},
+                "source_b": {"key": "source_b_key", "field": "value"},
+            },
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"crosstab_widgets": [str(widget.uuid)]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_crosstab_widget_worksheet(
+            report=report,
+            widget=widget,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Crosstab Empty")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["Label"], "")
+        self.assertEqual(worksheet.data[0]["Total"], "")
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_crosstab_data"
+    )
+    def test_get_crosstab_widget_worksheet_with_asymmetric_subitems(
+        self, mock_get_crosstab_data
+    ):
+        from insights.metrics.conversations.dataclass import (
+            CrosstabItemData,
+            CrosstabSubItemData,
+        )
+
+        mock_get_crosstab_data.return_value = [
+            CrosstabItemData(
+                title="Category A",
+                total=100,
+                subitems=[
+                    CrosstabSubItemData(title="yes", count=60, percentage=60.0),
+                    CrosstabSubItemData(title="no", count=40, percentage=40.0),
+                ],
+            ),
+            CrosstabItemData(
+                title="Category B",
+                total=50,
+                subitems=[
+                    CrosstabSubItemData(title="no", count=30, percentage=60.0),
+                    CrosstabSubItemData(title="maybe", count=20, percentage=40.0),
+                ],
+            ),
+        ]
+
+        widget = Widget.objects.create(
+            name="Crosstab Asymmetric",
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"crosstab_widgets": [str(widget.uuid)]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_crosstab_widget_worksheet(
+            report=report,
+            widget=widget,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(len(worksheet.data), 2)
+
+        self.assertEqual(worksheet.data[0]["Label"], "Category A")
+        self.assertEqual(worksheet.data[0]["Total"], 100)
+        self.assertEqual(worksheet.data[0]["yes"], 60)
+        self.assertEqual(worksheet.data[0]["no"], 40)
+        self.assertEqual(worksheet.data[0]["maybe"], 0)
+
+        self.assertEqual(worksheet.data[1]["Label"], "Category B")
+        self.assertEqual(worksheet.data[1]["Total"], 50)
+        self.assertEqual(worksheet.data[1]["yes"], 0)
+        self.assertEqual(worksheet.data[1]["no"], 30)
+        self.assertEqual(worksheet.data[1]["maybe"], 20)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_crosstab_widget_worksheet"
+    )
+    def test_get_worksheets_with_crosstab_widgets(self, mock_get_crosstab_widget):
+        mock_get_crosstab_widget.return_value = ConversationsReportWorksheet(
+            name="Crosstab Widget",
+            data=[{"Label": "Test", "Total": 10, "yes": 5, "no": 5}],
+        )
+
+        widget = Widget.objects.create(
+            name="Crosstab Widget",
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"crosstab_widgets": [str(widget.uuid)]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        worksheets = self.service._get_worksheets(
+            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+        )
+
+        self.assertEqual(len(worksheets), 1)
+        mock_get_crosstab_widget.assert_called_once()
+
+    def test_request_generation_with_only_crosstab_widgets(self):
+        widget = Widget.objects.create(
+            name="Crosstab Widget",
+            config={
+                "source_a": {"key": "key_a", "field": "value"},
+                "source_b": {"key": "key_b", "field": "value"},
+            },
+            source="conversations.crosstab",
+            type="conversations.crosstab",
+            position=[1, 2],
+            dashboard=self.dashboard,
+        )
+
+        report = self.service.request_generation(
+            project=self.project,
+            source_config={"crosstab_widgets": [str(widget.uuid)]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            report_format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        self.assertIsInstance(report, Report)
+        self.assertEqual(report.project, self.project)
+        self.assertEqual(report.status, ReportStatus.PENDING)
