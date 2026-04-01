@@ -255,9 +255,20 @@ class CrosstabLabelsSerializer(BaseSerializer):
     Serializer for crosstab labels
     """
 
-    def __init__(self, events: list[EventDataType], field: str):
+    def __init__(
+        self,
+        events: list[EventDataType],
+        field: str,
+        reference_field: str | None = None,
+    ):
         self.events = events
         self.field = field
+        self.reference_field = reference_field
+
+    def _get_join_key(self, metadata: dict) -> str | None:
+        if self.reference_field:
+            return metadata.get(self.reference_field)
+        return metadata.get("conversation_uuid")
 
     def serialize(self) -> dict:
         """
@@ -265,7 +276,7 @@ class CrosstabLabelsSerializer(BaseSerializer):
         based on source A events
         """
         labels = set()
-        conversations_uuids = {}
+        join_keys = {}
 
         for event in self.events:
             try:
@@ -275,7 +286,7 @@ class CrosstabLabelsSerializer(BaseSerializer):
             except Exception:
                 continue
 
-            conversation_uuid = metadata.get("conversation_uuid")
+            join_key = self._get_join_key(metadata)
 
             label = (
                 event.get("value")
@@ -286,12 +297,12 @@ class CrosstabLabelsSerializer(BaseSerializer):
             if label not in labels:
                 labels.add(label)
 
-            if conversation_uuid not in conversations_uuids:
-                conversations_uuids[conversation_uuid] = label
+            if join_key not in join_keys:
+                join_keys[join_key] = label
 
         return {
             "labels": labels,
-            "conversations_uuids": conversations_uuids,
+            "join_keys": join_keys,
         }
 
 
@@ -303,14 +314,21 @@ class CrosstabDataSerializer(BaseSerializer):
     def __init__(
         self,
         labels: dict,
-        conversations_uuids: dict,
+        join_keys: dict,
         events: list[EventDataType],
         field: str = "value",
+        reference_field: str | None = None,
     ):
         self.labels = labels
-        self.conversations_uuids = conversations_uuids
+        self.join_keys = join_keys
         self.events = events
         self.field = field
+        self.reference_field = reference_field
+
+    def _get_join_key(self, metadata: dict) -> str | None:
+        if self.reference_field:
+            return metadata.get(self.reference_field)
+        return metadata.get("conversation_uuid")
 
     def serialize(self) -> dict:
         """
@@ -327,8 +345,8 @@ class CrosstabDataSerializer(BaseSerializer):
             except Exception:
                 continue
 
-            conversation_uuid = metadata.get("conversation_uuid")
-            source_a_label = self.conversations_uuids.get(conversation_uuid)
+            join_key = self._get_join_key(metadata)
+            source_a_label = self.join_keys.get(join_key)
 
             if not source_a_label:
                 continue

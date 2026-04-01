@@ -1,3 +1,29 @@
+# 1.17.7
+# Fix
+  - Only send operation key when not null in datalake conversations metrics
+
+# 1.17.6
+# Fix
+  - Rename field_name to operation_key in datalake conversations metrics service
+
+# 1.17.5
+# Fix
+  - Handle empty field name in conversations metrics service
+
+# 1.17.4
+# Add
+  - Reference field support for crosstab
+
+# 1.17.3
+# Fix
+  - Absolute numbers config field name in conversations metrics service
+
+# 1.17.2
+# Add
+  - VTEX Orders API cache TTL configuration
+# Fix
+  - VTEX orders cache key generation
+
 # 1.17.1
 # Fix
   - Crosstab field name for crosstable

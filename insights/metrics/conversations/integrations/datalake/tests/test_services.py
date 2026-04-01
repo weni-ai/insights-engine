@@ -1010,7 +1010,6 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             date_end=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=None,
         )
 
     def test_get_events_values_average(self):
@@ -1035,7 +1034,6 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             date_end=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=None,
         )
 
     def test_get_events_highest_value(self):
@@ -1060,7 +1058,6 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             date_end=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=None,
         )
 
     def test_get_events_lowest_value(self):
@@ -1085,5 +1082,4 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             date_end=end_date,
             key=key,
             agent_uuid=agent_uuid,
-            field_name=None,
         )
