@@ -174,11 +174,11 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            serializer.errors["error"][0].code, "sections_or_custom_widgets_required"
+            serializer.errors["error"][0].code, "sections_or_widgets_required"
         )
         self.assertEqual(
             serializer.errors["error"][0].code,
-            "sections_or_custom_widgets_required",
+            "sections_or_widgets_required",
         )
 
     def test_serializer_with_non_existent_project(self):
@@ -696,5 +696,5 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
             serializer.errors["error"][0].code,
-            "sections_or_custom_widgets_required",
+            "sections_or_widgets_required",
         )
