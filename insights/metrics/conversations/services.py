@@ -999,7 +999,9 @@ class ConversationsMetricsService(
 
         return CrosstabSource(key=key, field=field)
 
-    def _validate_crosstab_widget(self, widget: Widget) -> None:
+    def _validate_crosstab_widget(
+        self, widget: Widget
+    ) -> tuple[CrosstabSource, CrosstabSource, str | None]:
         """
         Validate crosstab widget
         """
@@ -1013,8 +1015,9 @@ class ConversationsMetricsService(
 
         source_a = self._validate_crosstab_source(config.get("source_a", {}))
         source_b = self._validate_crosstab_source(config.get("source_b", {}))
+        reference_field = config.get("reference_field") or None
 
-        return source_a, source_b
+        return source_a, source_b, reference_field
 
     def get_crosstab_data(
         self,
@@ -1026,10 +1029,15 @@ class ConversationsMetricsService(
         """
         Get crosstab data
         """
-        source_a, source_b = self._validate_crosstab_widget(widget)
+        source_a, source_b, reference_field = self._validate_crosstab_widget(widget)
 
         data = self.datalake_service.get_crosstab_data(
-            project_uuid, source_a, source_b, start_date, end_date
+            project_uuid,
+            source_a,
+            source_b,
+            start_date,
+            end_date,
+            reference_field=reference_field,
         )
 
         items: list[CrosstabItemData] = []
@@ -1177,7 +1185,10 @@ class ConversationsMetricsService(
         operation = config.get("operation")
         key = config.get("key")
         agent_uuid = config.get("agent_uuid")
-        field_name = config.get("field_name")
+        field_name = config.get("value_field_name")
+
+        if field_name == "":
+            field_name = None
 
         assert operation is not None
         assert key is not None

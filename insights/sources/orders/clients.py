@@ -23,9 +23,11 @@ class VtexOrdersRestClient(VtexAuthentication):
         self,
         auth_params: dict,
         cache_client: CacheClient,
-        use_io_proxy: bool = False,
     ) -> None:
-        self.use_io_proxy = use_io_proxy
+        auth_params = auth_params if isinstance(auth_params, dict) else {}
+        internal_token = auth_params.get("internal_token")
+
+        self.use_io_proxy = internal_token is not None
         self.headers = {}
         self.internal_token = None
 
@@ -39,7 +41,7 @@ class VtexOrdersRestClient(VtexAuthentication):
                 self.base_url = f"{self.base_url}.myvtex.com"
 
             self.headers = {
-                "X-Weni-Auth": auth_params.get("internal_token"),
+                "X-Weni-Auth": internal_token,
             }
         else:
             self.headers = {
@@ -50,8 +52,8 @@ class VtexOrdersRestClient(VtexAuthentication):
         self.cache = cache_client
 
     def get_cache_key(self, query_filters):
-        """Gere uma chave única para o cache baseada nos filtros de consulta."""
-        return f"vtex_data:{json.dumps(query_filters, sort_keys=True)}"
+        """Generate a unique cache key based on the query filters and the base URL."""
+        return f"vtex_data:{self.base_url}:{json.dumps(query_filters, sort_keys=True)}"
 
     def get_query_params(self, query_filters: dict, page_number: int):
         start_date = query_filters.get("ended_at__gte")
@@ -348,6 +350,8 @@ class VtexOrdersRestClient(VtexAuthentication):
             "currencyCode": currency_code,
         }
 
-        self.cache.set(cache_key, json.dumps(result_data), ex=3600)
+        self.cache.set(
+            cache_key, json.dumps(result_data), ex=settings.VTEX_ORDERS_API_CACHE_TTL
+        )
 
         return result_data

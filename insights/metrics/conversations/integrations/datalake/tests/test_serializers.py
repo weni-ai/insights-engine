@@ -248,7 +248,7 @@ class TestCrosstabLabelsSerializer(TestCase):
 
         self.assertEqual(data["labels"], {"value1", "value2"})
         self.assertEqual(
-            data["conversations_uuids"],
+            data["join_keys"],
             {"1234567890": "value1", "1234567891": "value2"},
         )
 
@@ -258,8 +258,51 @@ class TestCrosstabLabelsSerializer(TestCase):
 
         self.assertEqual(data["labels"], {"value3", "value4"})
         self.assertEqual(
-            data["conversations_uuids"],
+            data["join_keys"],
             {"1234567890": "value3", "1234567891": "value4"},
+        )
+
+    def test_serialize_with_reference_field(self):
+        events = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_a_key",
+                "value": "value1",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-aaa",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_a_key",
+                "value": "value2",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-bbb",
+                    }
+                ),
+            },
+        ]
+
+        serializer = self.serializer_class(
+            events, "value", reference_field="interaction_id"
+        )
+        data = serializer.serialize()
+
+        self.assertEqual(data["labels"], {"value1", "value2"})
+        self.assertEqual(
+            data["join_keys"],
+            {"ref-aaa": "value1", "ref-bbb": "value2"},
         )
 
 
@@ -267,7 +310,7 @@ class TestCrosstabDataSerializer(TestCase):
     def setUp(self) -> None:
         self.serializer_class = CrosstabDataSerializer
         self.labels = {"Delivery", "Shopping"}
-        self.conversations_uuids = {
+        self.join_keys = {
             "123": "Delivery",
             "321": "Delivery",
             "555": "Delivery",
@@ -344,7 +387,7 @@ class TestCrosstabDataSerializer(TestCase):
 
     def test_serialize(self):
         serializer = self.serializer_class(
-            self.labels, self.conversations_uuids, self.events, "value"
+            self.labels, self.join_keys, self.events, "value"
         )
         data = serializer.serialize()
 
@@ -353,5 +396,136 @@ class TestCrosstabDataSerializer(TestCase):
             {
                 "Delivery": {"Satisfied": 2, "Unsatisfied": 1},
                 "Shopping": {"Satisfied": 1, "Unsatisfied": 1},
+            },
+        )
+
+    def test_serialize_with_reference_field(self):
+        """
+        Multiple events of both types in the same conversation,
+        paired correctly via reference_field.
+        """
+        labels = {"Delivery", "Shopping"}
+        join_keys = {
+            "ref-aaa": "Delivery",
+            "ref-bbb": "Shopping",
+        }
+        events = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-aaa",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Unsatisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-bbb",
+                    }
+                ),
+            },
+        ]
+
+        serializer = self.serializer_class(
+            labels,
+            join_keys,
+            events,
+            "value",
+            reference_field="interaction_id",
+        )
+        data = serializer.serialize()
+
+        self.assertEqual(
+            data,
+            {
+                "Delivery": {"Satisfied": 1},
+                "Shopping": {"Unsatisfied": 1},
+            },
+        )
+
+    def test_serialize_with_reference_field_multiple_refs_same_label(self):
+        """
+        Multiple reference fields mapping to the same label
+        should aggregate counts under that label.
+        """
+        labels = {"Delivery", "Shopping"}
+        join_keys = {
+            "ref-aaa": "Delivery",
+            "ref-bbb": "Delivery",
+            "ref-ccc": "Shopping",
+        }
+        events = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-aaa",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Unsatisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-bbb",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-2",
+                        "interaction_id": "ref-ccc",
+                    }
+                ),
+            },
+        ]
+
+        serializer = self.serializer_class(
+            labels,
+            join_keys,
+            events,
+            "value",
+            reference_field="interaction_id",
+        )
+        data = serializer.serialize()
+
+        self.assertEqual(
+            data,
+            {
+                "Delivery": {"Satisfied": 1, "Unsatisfied": 1},
+                "Shopping": {"Satisfied": 1},
             },
         )

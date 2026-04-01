@@ -16,7 +16,6 @@ class TestVtexOrdersRestClient(TestCase):
             "domain": "testenv",
             "app_token": "test_token",
             "app_key": "test_key",
-            "internal_token": "internal_token_test",
         }
         self.auth_params_io_proxy = {
             "domain": "testenv.myvtex.com",
@@ -26,12 +25,10 @@ class TestVtexOrdersRestClient(TestCase):
         self.client_direct = VtexOrdersRestClient(
             auth_params=self.auth_params_direct,
             cache_client=self.mock_cache_client,
-            use_io_proxy=False,
         )
         self.client_io_proxy = VtexOrdersRestClient(
             auth_params=self.auth_params_io_proxy,
             cache_client=self.mock_cache_client,
-            use_io_proxy=True,
         )
 
     def test_initialization_direct(self):
@@ -63,7 +60,6 @@ class TestVtexOrdersRestClient(TestCase):
         client = VtexOrdersRestClient(
             auth_params=auth_params_custom,
             cache_client=self.mock_cache_client,
-            use_io_proxy=True,
         )
         self.assertEqual(client.base_url, "https://another.myvtex.com")
 
@@ -75,13 +71,12 @@ class TestVtexOrdersRestClient(TestCase):
         client = VtexOrdersRestClient(
             auth_params=auth_params_custom,
             cache_client=self.mock_cache_client,
-            use_io_proxy=True,
         )
         self.assertEqual(client.base_url, "https://justdomain.myvtex.com")
 
     def test_get_cache_key(self):
         query_filters = {"param1": "value1", "param2": "value2"}
-        expected_key = f"vtex_data:{json.dumps(query_filters, sort_keys=True)}"
+        expected_key = f"vtex_data:{self.client_direct.base_url}:{json.dumps(query_filters, sort_keys=True)}"
         self.assertEqual(self.client_direct.get_cache_key(query_filters), expected_key)
 
     def test_get_query_params(self):
