@@ -7,6 +7,7 @@ from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 
 from insights.metrics.conversations.reports.available_widgets import (
+    get_crosstab_widgets,
     get_csat_ai_widget,
     get_csat_human_widget,
     get_custom_widgets,
@@ -78,9 +79,9 @@ class RequestConversationsReportGenerationSerializer(
                 code="start_date_after_end_date",
             )
 
-    def _validate_sections_and_custom_widgets(self, attrs: dict) -> dict:
+    def _validate_sections_and_widgets(self, attrs: dict) -> dict:
         """
-        Validate sections and custom widgets
+        Validate sections, custom widgets, and crosstab widgets
         """
         has_sections = "sections" in attrs and attrs["sections"]
         has_custom_widgets = "custom_widgets" in attrs and attrs["custom_widgets"]
@@ -90,8 +91,12 @@ class RequestConversationsReportGenerationSerializer(
 
         if not has_sections and not has_custom_widgets and not has_crosstab_widgets:
             raise serializers.ValidationError(
-                {"error": _("Sections or custom widgets are required")},
-                code="sections_or_custom_widgets_required",
+                {
+                    "error": _(
+                        "Sections, custom widgets, or crosstab widgets are required"
+                    )
+                },
+                code="sections_or_widgets_required",
             )
 
         project_custom_widgets_uuids = get_custom_widgets(attrs["project"])
@@ -99,6 +104,27 @@ class RequestConversationsReportGenerationSerializer(
         if "custom_widgets" in attrs and attrs["custom_widgets"]:
             not_found_widgets = set(attrs["custom_widgets"]) - set(
                 project_custom_widgets_uuids
+            )
+
+            if not_found_widgets:
+                raise serializers.ValidationError(
+                    {
+                        "error": ",".join(
+                            [
+                                _("Widget %(widget_uuid)s not found")
+                                % {"widget_uuid": widget_uuid}
+                                for widget_uuid in not_found_widgets
+                            ]
+                        ),
+                    },
+                    code="widgets_not_found",
+                )
+
+        project_crosstab_widgets_uuids = get_crosstab_widgets(attrs["project"])
+
+        if "crosstab_widgets" in attrs and attrs["crosstab_widgets"]:
+            not_found_widgets = set(attrs["crosstab_widgets"]) - set(
+                project_crosstab_widgets_uuids
             )
 
             if not_found_widgets:
@@ -277,7 +303,7 @@ class RequestConversationsReportGenerationSerializer(
         attrs = super().validate(attrs)
 
         self._validate_dates(attrs)
-        self._validate_sections_and_custom_widgets(attrs)
+        self._validate_sections_and_widgets(attrs)
         attrs = self._validate_sections(attrs)
 
         timezone = (
