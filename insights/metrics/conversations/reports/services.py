@@ -20,6 +20,7 @@ from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.reports.available_widgets import (
+    get_crosstab_widgets,
     get_csat_ai_widget,
     get_csat_human_widget,
     get_custom_widgets,
@@ -228,6 +229,19 @@ class BaseConversationsReportService(ABC):
     ) -> ConversationsReportWorksheet:
         """
         Get nps human worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_crosstab_widget_worksheet(
+        self,
+        report: Report,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get crosstab widget worksheet.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -469,14 +483,15 @@ class ConversationsReportService(BaseConversationsReportService):
 
         sections = source_config.get("sections", [])
         custom_widgets = source_config.get("custom_widgets", [])
+        crosstab_widgets = source_config.get("crosstab_widgets", [])
 
-        if len(sections) == 0 and len(custom_widgets) == 0:
+        if len(sections) == 0 and len(custom_widgets) == 0 and len(crosstab_widgets) == 0:
             logger.error(
-                "[CONVERSATIONS REPORT SERVICE] sections or custom_widgets is empty for project %s",
+                "[CONVERSATIONS REPORT SERVICE] sections, custom_widgets, or crosstab_widgets is empty for project %s",
                 project.uuid,
             )
             raise ValueError(
-                "sections or custom_widgets cannot be empty when requesting generation of conversations report"
+                "sections, custom_widgets, or crosstab_widgets cannot be empty when requesting generation of conversations report"
             )
 
         # Serialize datetime objects in filters to make them JSON-compatible
@@ -600,6 +615,23 @@ class ConversationsReportService(BaseConversationsReportService):
             for widget in widgets:
                 worksheets.append(
                     self.get_custom_widget_worksheet(
+                        report,
+                        widget,
+                        start_date,
+                        end_date,
+                    )
+                )
+
+        crosstab_widgets = source_config.get("crosstab_widgets", [])
+
+        if crosstab_widgets:
+            widgets = Widget.objects.filter(
+                uuid__in=crosstab_widgets, dashboard__project=report.project
+            )
+
+            for widget in widgets:
+                worksheets.append(
+                    self.get_crosstab_widget_worksheet(
                         report,
                         widget,
                         start_date,
@@ -1510,6 +1542,58 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def get_crosstab_widget_worksheet(
+        self,
+        report: Report,
+        widget: Widget,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get crosstab widget worksheet.
+        """
+        items = self.metrics_service.get_crosstab_data(
+            project_uuid=report.project.uuid,
+            widget=widget,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        worksheet_name = widget.name
+
+        with override(report.requested_by.language or "en"):
+            label_header = gettext("Label")
+            total_header = gettext("Total")
+
+        all_subitem_labels = []
+        seen = set()
+        for item in items:
+            for sub in item.subitems:
+                if sub.title not in seen:
+                    seen.add(sub.title)
+                    all_subitem_labels.append(sub.title)
+
+        data = []
+        for item in items:
+            row = {label_header: item.title, total_header: item.total}
+            subitem_counts = {sub.title: sub.count for sub in item.subitems}
+            for sub_label in all_subitem_labels:
+                row[sub_label] = subitem_counts.get(sub_label, 0)
+            data.append(row)
+
+        if len(data) == 0:
+            data = [
+                {
+                    label_header: "",
+                    total_header: "",
+                }
+            ]
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
     def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
         """
         Get available widgets.
@@ -1533,8 +1617,10 @@ class ConversationsReportService(BaseConversationsReportService):
                 available_widgets.append(section)
 
         custom_widgets = get_custom_widgets(project)
+        crosstab_widgets = get_crosstab_widgets(project)
 
         return AvailableReportWidgets(
             sections=available_widgets,
             custom_widgets=custom_widgets,
+            crosstab_widgets=crosstab_widgets,
         )
