@@ -1028,6 +1028,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             labels,
             join_keys,
             source_b_events,
+            field=source_b.field,
             reference_field=reference_field,
         ).serialize()
 
