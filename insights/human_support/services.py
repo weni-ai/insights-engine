@@ -714,14 +714,9 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
-    def get_finished_rooms(self, filters: dict | None = None) -> dict:
-        """
-        Lista de salas finalizadas.
-        Retorna { next, previous, count, results: [...] }.
-        Critérios: is_active=False.
-        """
-        normalized = self._normalize_filters(filters)
-
+    def _params_for_finished_rooms_list(
+        self, normalized: dict, filters: dict | None
+    ) -> dict:
         params: dict = {
             "is_active": False,
         }
@@ -770,6 +765,64 @@ class HumanSupportDashboardService:
                 mapped_field = field_mapping.get(field, field)
                 params["ordering"] = f"{prefix}{mapped_field}"
 
+        return params
+
+    @staticmethod
+    def _chats_url_to_query_string(url: str | None) -> str | None:
+        if url is None:
+            return None
+        return url.split("?", 1)[1] if "?" in url else url
+
+    def _format_finished_room_v2_item(self, room: dict) -> dict:
+        agent = room.get("agent")
+        if agent:
+            agent_out = {
+                "name": agent.get("name"),
+                "is_deleted": bool(agent.get("is_deleted", False)),
+            }
+        else:
+            agent_out = None
+
+        sector = room.get("sector")
+        sector_out = None
+        if sector:
+            sector_out = {
+                "name": sector.get("name"),
+                "is_deleted": bool(sector.get("is_deleted", False)),
+            }
+
+        queue = room.get("queue")
+        queue_out = None
+        if queue:
+            queue_out = {
+                "name": queue.get("name"),
+                "is_deleted": bool(queue.get("is_deleted", False)),
+            }
+
+        return {
+            "agent": agent_out,
+            "sector": sector_out,
+            "queue": queue_out,
+            "contact": room.get("contact"),
+            "ticket_id": room.get("protocol"),
+            "awaiting_time": room.get("waiting_time"),
+            "first_response_time": room.get("first_response_time"),
+            "duration": room.get("duration"),
+            "ended_at": room.get("ended_at"),
+            "csat_rating": room.get("csat_rating"),
+            "link": room.get("link"),
+        }
+
+    def get_finished_rooms(self, filters: dict | None = None) -> dict:
+        """
+        Lista de salas finalizadas.
+        Retorna { next, previous, count, results: [...] }.
+        Critérios: is_active=False.
+        """
+        normalized = self._normalize_filters(filters)
+
+        params = self._params_for_finished_rooms_list(normalized, filters)
+
         response = RoomsQueryExecutor.execute(params, "list", lambda x: x, self.project)
 
         formatted_results = []
@@ -795,6 +848,29 @@ class HumanSupportDashboardService:
             "next": response.get("next"),
             "previous": response.get("previous"),
             "count": response.get("count"),
+            "results": formatted_results,
+        }
+
+    def get_finished_rooms_v2(self, filters: dict | None = None) -> dict:
+        """
+        Finished rooms via Chats v2 internal rooms API.
+        Returns { next, previous, count, results } with the same pagination shape as v1
+        (query strings for next/previous) and v2-shaped room rows.
+        """
+        normalized = self._normalize_filters(filters)
+        params = self._params_for_finished_rooms_list(normalized, filters)
+        params["project"] = str(self.project.uuid)
+
+        response = self.chats_client.get_internal_rooms_v2(params)
+
+        formatted_results = [
+            self._format_finished_room_v2_item(room) for room in response.get("results", [])
+        ]
+
+        return {
+            "next": self._chats_url_to_query_string(response.get("next")),
+            "previous": self._chats_url_to_query_string(response.get("previous")),
+            "count": response.get("count", 0),
             "results": formatted_results,
         }
 
