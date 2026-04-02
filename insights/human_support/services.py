@@ -864,7 +864,8 @@ class HumanSupportDashboardService:
         response = self.chats_client.get_internal_rooms_v2(params)
 
         formatted_results = [
-            self._format_finished_room_v2_item(room) for room in response.get("results", [])
+            self._format_finished_room_v2_item(room)
+            for room in response.get("results", [])
         ]
 
         return {
