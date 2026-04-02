@@ -14,9 +14,14 @@ class AgentSQLQueryBuilder:
         self.where_clause = " AND ".join(self.where_clauses)
         self.is_valid = True
 
-    def list(self):
+    def list(self, include_removed=False):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT pp.uuid, u.email, CONCAT(u.first_name, ' ', u.last_name) AS name FROM public.projects_projectpermission AS pp INNER JOIN public.accounts_user AS u ON u.email=pp.user_id WHERE {self.where_clause};"
+        extra_clause = ""
+        extra_params = []
+        if not include_removed:
+            extra_clause = " AND pp.is_deleted = %s"
+            extra_params = [False]
+        query = f"SELECT pp.uuid, u.email, CONCAT(u.first_name, ' ', u.last_name) AS name FROM public.projects_projectpermission AS pp INNER JOIN public.accounts_user AS u ON u.email=pp.user_id WHERE {self.where_clause}{extra_clause};"
 
-        return query, self.params
+        return query, self.params + extra_params
