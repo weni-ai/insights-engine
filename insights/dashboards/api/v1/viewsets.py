@@ -3,25 +3,28 @@ from uuid import UUID
 
 from django.conf import settings
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 
-from insights.authentication.permissions import (
-    ProjectAuthPermission,
-)
+from insights.authentication.permissions import ProjectAuthPermission
+from insights.core.filters import get_filters_from_query_params
+from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 from insights.dashboards.filters import DashboardFilter
-from insights.dashboards.models import (
-    CONVERSATIONS_DASHBOARD_NAME,
-    Dashboard,
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
+from insights.dashboards.serializers import (
+    DashboardEditSerializer,
+    DashboardIsDefaultSerializer,
+    DashboardSerializer,
+    DashboardWidgetsSerializer,
+    ReportSerializer,
 )
-from insights.dashboards.usecases.flows_dashboard_creation import (
-    CreateFlowsDashboard,
-)
+from insights.dashboards.usecases import dashboard_filters
+from insights.dashboards.usecases.flows_dashboard_creation import CreateFlowsDashboard
 from insights.dashboards.utils import DefaultPagination
 from insights.human_support.services import HumanSupportDashboardService
 from insights.metrics.meta.tasks import (
@@ -33,20 +36,7 @@ from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.sources.contacts.clients import FlowsContactsRestClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
 from insights.widgets.models import Report, Widget
-from insights.widgets.usecases.get_source_data import (
-    get_source_data_from_widget,
-)
-from insights.core.filters import get_filters_from_query_params
-from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
-
-from .serializers import (
-    DashboardEditSerializer,
-    DashboardIsDefaultSerializer,
-    DashboardSerializer,
-    DashboardWidgetsSerializer,
-    ReportSerializer,
-)
-from .usecases import dashboard_filters
+from insights.widgets.usecases.get_source_data import get_source_data_from_widget
 
 logger = logging.getLogger(__name__)
 

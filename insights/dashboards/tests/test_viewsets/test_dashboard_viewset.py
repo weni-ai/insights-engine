@@ -389,7 +389,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertIsInstance(response.data, dict)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.get_source_data_from_widget")
+    @patch("insights.dashboards.api.v1.viewsets.get_source_data_from_widget")
     def test_get_widget_data(self, mock_get_source_data):
         dashboard = Dashboard.objects.create(
             name="Test Dashboard", project=self.project
@@ -469,7 +469,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.get_source_data_from_widget")
+    @patch("insights.dashboards.api.v1.viewsets.get_source_data_from_widget")
     def test_get_report_data(self, mock_get_source_data):
         dashboard = Dashboard.objects.create(
             name="Test Dashboard", project=self.project
@@ -533,7 +533,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertIn(widget2.source, response_sources)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.CreateFlowsDashboard")
+    @patch("insights.dashboards.api.v1.viewsets.CreateFlowsDashboard")
     def test_create_flows_dashboard(self, MockCreateFlowsDashboard):
         mock_dashboard_instance = Dashboard(
             name="Flows Dashboard", project=self.project
@@ -553,7 +553,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         MockCreateFlowsDashboard.assert_called_once()
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.CreateFlowsDashboard")
+    @patch("insights.dashboards.api.v1.viewsets.CreateFlowsDashboard")
     def test_create_flows_dashboard_project_not_found(self, MockCreateFlowsDashboard):
         data = {
             "name": "New Flows Dashboard",
@@ -564,7 +564,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         MockCreateFlowsDashboard.assert_not_called()
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.FlowsContactsRestClient")
+    @patch("insights.dashboards.api.v1.viewsets.FlowsContactsRestClient")
     def test_get_contacts_results(self, MockFlowsContactsRestClient):
         mock_client_instance = MockFlowsContactsRestClient.return_value
         mock_client_instance.get_flows_contacts.return_value = {"contacts": []}
@@ -591,7 +591,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.CustomStatusRESTClient")
+    @patch("insights.dashboards.api.v1.viewsets.CustomStatusRESTClient")
     def test_get_custom_status(self, MockCustomStatusRESTClient):
         mock_client_instance = MockCustomStatusRESTClient.return_value
         mock_client_instance.list_custom_status.return_value = {"status": "ok"}
@@ -606,7 +606,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.CustomStatusRESTClient")
+    @patch("insights.dashboards.api.v1.viewsets.CustomStatusRESTClient")
     def test_get_custom_status_project_not_found(self, MockCustomStatusRESTClient):
         non_existent_project_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
         response = self.get_custom_status({"project": non_existent_project_uuid})
@@ -616,7 +616,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         MockCustomStatusRESTClient.assert_not_called()
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
     def test_get_monitoring_csat_totals(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.csat_score_by_agents.return_value = {
@@ -641,7 +641,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
     def test_get_monitoring_csat_ratings(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.get_csat_ratings.return_value = {
@@ -699,7 +699,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
     def test_get_analysis_csat_totals(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.csat_score_by_agents.return_value = {
@@ -730,7 +730,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
     def test_get_analysis_csat_ratings(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.get_csat_ratings.return_value = {

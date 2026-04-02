@@ -1,6 +1,8 @@
+from insights.core.requests import request_with_retry
+from insights.internals.base import InternalAuthentication
+
 import requests
 from django.conf import settings
-from insights.internals.base import InternalAuthentication
 
 
 class ChatsClient(InternalAuthentication):
@@ -49,4 +51,15 @@ class ChatsClient(InternalAuthentication):
         )
         response.raise_for_status()
 
+        return response.json()
+
+    def get_internal_rooms_v2(self, query_params: dict):
+        response = request_with_retry(
+            url=f"{self.url}/v2/internal/rooms/",
+            headers=self.headers,
+            params=query_params,
+            method="GET",
+            timeout=60,
+            max_retries=3,
+        )
         return response.json()
