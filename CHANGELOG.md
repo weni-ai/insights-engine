@@ -1,3 +1,10 @@
+# 1.18.0
+# Add
+  - Crosstab widgets in human support exports and report worksheets
+  - Validation for crosstab widgets when building reports
+  - Spanish and Portuguese locale updates for export-related messages
+  - Tests for crosstab worksheet export
+
 # 1.17.7
 # Fix
   - Only send operation key when not null in datalake conversations metrics
