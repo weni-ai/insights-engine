@@ -821,7 +821,8 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             [{"count": 10}],
             [{"count": 1}],
         ]
-        self.mock_events_client.get_events_sum.return_value = [{"total": 10000}]
+        # API returns sum in major currency units (same as metadata value); service converts to cents
+        self.mock_events_client.get_events_sum.return_value = [{"total": 100}]
 
         project_uuid = uuid.uuid4()
         start_date = datetime.now() - timedelta(days=1)
@@ -863,6 +864,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             project=project_uuid,
             date_start=start_date,
             date_end=end_date,
+            operation_key="value",
         )
 
         self.assertEqual(results.leads_count, 10)

@@ -841,11 +841,10 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         )[
             0
         ].get("count", 0)
-        total_orders_value = float(
-            self.events_client.get_events_sum(**query_kwargs, operation_key="value")[
-                0
-            ].get("total", 0)
-        )
+        total_orders_value_raw = self.events_client.get_events_sum(
+            **query_kwargs, operation_key="value"
+        )[0].get("total", 0)
+        total_orders_value = int(round(float(total_orders_value_raw) * 100))
 
         if total_orders_count > 0:
             sample_purchase_event = self.events_client.get_events(
