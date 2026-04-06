@@ -15,7 +15,6 @@ from insights.metrics.vtex.serializers import (
     InternalVTEXOrdersRequestSerializer,
     UTMSourceMetricsQueryParamsSerializer,
 )
-from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.metrics.vtex.usecases.utm_source_metrics import UTMSourceMetricsUseCase
 from insights.projects.models import Project
 
@@ -69,21 +68,11 @@ class InternalVTEXOrdersViewSet(viewsets.ViewSet):
 
         validated = serializer.validated_data
         use_case = UTMSourceMetricsUseCase()
-        start_dt, end_dt = use_case.to_utc_range(
+        status_code, response_data = use_case.execute(
+            project,
+            validated["utm_source"],
             validated["start_date"],
             validated["end_date"],
-            project,
         )
 
-        filters = {
-            "project_uuid": project_uuid,
-            "start_date": start_dt,
-            "end_date": end_dt,
-        }
-
-        service = OrdersService(project)
-        response_data = service.get_metrics_from_utm_source(
-            validated["utm_source"], filters
-        )
-
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response(response_data, status=status_code)
