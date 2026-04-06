@@ -78,7 +78,7 @@ class TestVtexOrdersViewAsAuthenticatedUser(BaseTestVtexOrdersView):
         response = self.get_metrics_from_utm_source(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["detail"][0].code, "invalid_date_format")
+        self.assertEqual(response.data["end_date"][0].code, "invalid")
 
     @with_project_auth
     @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
