@@ -827,60 +827,35 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             date_end=end_date,
         )[0].get("count", 0)
 
-        max_pages = settings.SALES_FUNNEL_EVENTS_MAX_PAGES
-        page_size = settings.SALES_FUNNEL_EVENTS_PAGE_SIZE
-        page = 1
-
         currency_code = None
 
-        total_orders_count = 0
-        total_orders_value = 0
+        query_kwargs = {
+            "event_name": "conversion_purchase",
+            "project": project_uuid,
+            "date_start": start_date,
+            "date_end": end_date,
+        }
 
-        while page <= max_pages:
-            events = self.events_client.get_events(
-                event_name="conversion_purchase",
-                project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
-                limit=page_size,
-                offset=(page - 1) * page_size,
+        total_orders_count = self.events_client.get_events_count(
+            **query_kwargs,
+        )[
+            0
+        ].get("count", 0)
+        total_orders_value = self.events_client.get_events_sum(
+            **query_kwargs,
+        )[
+            0
+        ].get("total", 0)
+
+        if total_orders_count > 0:
+            sample_purchase_event = self.events_client.get_events(
+                **query_kwargs,
+                limit=1,
+            )[0]
+            sample_purchase_metadata = self._get_metadata_from_event(
+                sample_purchase_event
             )
-
-            length = len(events)
-
-            if length == 0:
-                break
-
-            total_orders_count += length
-
-            for event in events:
-                metadata = self._get_metadata_from_event(event)
-
-                if not currency_code:
-                    currency_code = metadata.get("currency")
-
-                try:
-                    value = metadata.get("value", 0)
-
-                    if not isinstance(value, float):
-                        try:
-                            value = float(value)
-                        except Exception as e:
-                            logger.error("Error on converting value to float: %s" % e)
-                            raise e
-
-                    order_value = int(value * 100)  # convert to cents
-                except Exception as e:
-                    logger.error("Error on converting value to int: %s" % e)
-                    capture_exception(e)
-                    order_value = 0
-
-                total_orders_value += order_value
-
-            if page >= max_pages:
-                raise ValueError("Max pages reached")
-
-            page += 1
+            currency_code = sample_purchase_metadata.get("currency")
 
         if self.cache_results:
             self._save_results_to_cache(
