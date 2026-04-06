@@ -396,9 +396,6 @@ class HumanSupportDashboardService:
 
         formatted_results = []
         for room in response.get("results", []):
-            original_link = room.get("link")
-            room_uuid = room.get("uuid")
-
             formatted_results.append(
                 {
                     "agent": room.get("agent"),
@@ -409,9 +406,7 @@ class HumanSupportDashboardService:
                     "sector": room.get("sector"),
                     "queue": room.get("queue"),
                     "contact": room.get("contact"),
-                    "link": self._decorate_room_link_with_uuid(
-                        original_link, room_uuid, closed=False
-                    ),
+                    "link": room.get("link"),
                 }
             )
 
@@ -869,9 +864,6 @@ class HumanSupportDashboardService:
 
         formatted_results = []
         for room in response.get("results", []):
-            original_link = room.get("link")
-            room_uuid = room.get("uuid")
-
             formatted_results.append(
                 {
                     "agent": room.get("agent"),
@@ -885,9 +877,7 @@ class HumanSupportDashboardService:
                     "duration": room.get("duration"),
                     "ended_at": room.get("ended_at"),
                     "csat_rating": room.get("csat_rating"),
-                    "link": self._decorate_room_link_with_uuid(
-                        original_link, room_uuid, closed=True
-                    ),
+                    "link": room.get("link"),
                 }
             )
 
