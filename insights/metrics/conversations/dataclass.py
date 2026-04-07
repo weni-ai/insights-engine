@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 from insights.metrics.conversations.enums import AvailableWidgets
@@ -100,7 +101,7 @@ class SalesFunnelMetrics:
     leads_count: int
     total_orders_count: int
     total_orders_value: int  # In cents
-    currency_code: str
+    currency_code: Optional[str] = None
 
     @property
     def average_ticket(self) -> int:

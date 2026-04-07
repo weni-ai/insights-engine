@@ -2,9 +2,8 @@ from datetime import datetime, timedelta
 import json
 import uuid
 
-from django.conf import settings
 from unittest.mock import call, patch, Mock
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetrics,
@@ -810,13 +809,20 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
     def test_get_sales_funnel_data(self):
         def get_events(**kwargs):
-            if kwargs.get("offset") == 0:
+            if (
+                kwargs.get("event_name") == "conversion_purchase"
+                and kwargs.get("limit") == 1
+            ):
                 return [{"metadata": json.dumps({"currency": "BRL", "value": 100})}]
-
             return []
 
         self.mock_events_client.get_events.side_effect = get_events
-        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+        self.mock_events_client.get_events_count.side_effect = [
+            [{"count": 10}],
+            [{"count": 1}],
+        ]
+        # API returns sum in major currency units (same as metadata value); service converts to cents
+        self.mock_events_client.get_events_sum.return_value = [{"total": 100}]
 
         project_uuid = uuid.uuid4()
         start_date = datetime.now() - timedelta(days=1)
@@ -830,57 +836,161 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
         self.assertIsInstance(results, SalesFunnelData)
 
-        self.mock_events_client.get_events.assert_has_calls(
-            [
-                call(
-                    event_name="conversion_purchase",
-                    project=project_uuid,
-                    date_start=start_date,
-                    date_end=end_date,
-                    limit=settings.SALES_FUNNEL_EVENTS_PAGE_SIZE,
-                    offset=settings.SALES_FUNNEL_EVENTS_PAGE_SIZE * 0,
-                ),
-                call(
-                    event_name="conversion_purchase",
-                    project=project_uuid,
-                    date_start=start_date,
-                    date_end=end_date,
-                    limit=settings.SALES_FUNNEL_EVENTS_PAGE_SIZE,
-                    offset=settings.SALES_FUNNEL_EVENTS_PAGE_SIZE * 1,
-                ),
-            ]
-        )
-        self.mock_events_client.get_events_count.assert_called_once_with(
-            event_name="conversion_lead",
+        self.mock_events_client.get_events.assert_called_once_with(
+            event_name="conversion_purchase",
             project=project_uuid,
             date_start=start_date,
             date_end=end_date,
+            limit=1,
+        )
+        self.mock_events_client.get_events_count.assert_has_calls(
+            [
+                call(
+                    event_name="conversion_lead",
+                    project=project_uuid,
+                    date_start=start_date,
+                    date_end=end_date,
+                ),
+                call(
+                    event_name="conversion_purchase",
+                    project=project_uuid,
+                    date_start=start_date,
+                    date_end=end_date,
+                ),
+            ]
+        )
+        self.mock_events_client.get_events_sum.assert_called_once_with(
+            event_name="conversion_purchase",
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            operation_key="value",
         )
 
         self.assertEqual(results.leads_count, 10)
         self.assertEqual(results.total_orders_count, 1)
-        self.assertEqual(results.total_orders_value, 10000)  # Converted to cents
+        self.assertEqual(results.total_orders_value, 10000)  # Sum in cents from datalake
         self.assertEqual(results.currency_code, "BRL")
 
-    @override_settings(SALES_FUNNEL_EVENTS_MAX_PAGES=1)
-    def test_get_sales_funnel_data_exceeding_max_pages(self):
+    def test_get_sales_funnel_data_converts_fractional_sum_to_cents(self):
         def get_events(**kwargs):
-            if kwargs.get("offset") == 0:
-                return [{"metadata": json.dumps({"currency": "BRL", "value": 100})}]
-
+            if (
+                kwargs.get("event_name") == "conversion_purchase"
+                and kwargs.get("limit") == 1
+            ):
+                return [{"metadata": json.dumps({"currency": "USD"})}]
             return []
 
         self.mock_events_client.get_events.side_effect = get_events
-        self.mock_events_client.get_events_count.return_value = [{"count": 10}]
+        self.mock_events_client.get_events_count.side_effect = [
+            [{"count": 1}],
+            [{"count": 1}],
+        ]
+        self.mock_events_client.get_events_sum.return_value = [{"total": 49.99}]
 
-        with self.assertRaises(ValueError) as context:
-            self.service.get_sales_funnel_data(
-                project_uuid=uuid.uuid4(),
-                start_date=datetime.now() - timedelta(days=1),
-                end_date=datetime.now(),
-            )
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
 
-        self.assertEqual(str(context.exception), "Max pages reached")
+        results = self.service.get_sales_funnel_data(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.assertEqual(results.total_orders_value, 4999)
+
+    def test_get_sales_funnel_data_rounds_sum_when_converting_to_cents(self):
+        def get_events(**kwargs):
+            if (
+                kwargs.get("event_name") == "conversion_purchase"
+                and kwargs.get("limit") == 1
+            ):
+                return [{"metadata": json.dumps({"currency": "USD"})}]
+            return []
+
+        self.mock_events_client.get_events.side_effect = get_events
+        self.mock_events_client.get_events_count.side_effect = [
+            [{"count": 1}],
+            [{"count": 1}],
+        ]
+        self.mock_events_client.get_events_sum.return_value = [{"total": 10.555}]
+
+        results = self.service.get_sales_funnel_data(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertEqual(results.total_orders_value, 1056)
+
+    def test_get_sales_funnel_data_accepts_string_total_from_sum_api(self):
+        def get_events(**kwargs):
+            if (
+                kwargs.get("event_name") == "conversion_purchase"
+                and kwargs.get("limit") == 1
+            ):
+                return [{"metadata": json.dumps({"currency": "EUR"})}]
+            return []
+
+        self.mock_events_client.get_events.side_effect = get_events
+        self.mock_events_client.get_events_count.side_effect = [
+            [{"count": 1}],
+            [{"count": 1}],
+        ]
+        self.mock_events_client.get_events_sum.return_value = [{"total": "123.45"}]
+
+        results = self.service.get_sales_funnel_data(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertEqual(results.total_orders_value, 12345)
+
+    def test_get_sales_funnel_data_missing_total_in_sum_response_defaults_to_zero(self):
+        self.mock_events_client.get_events.side_effect = None
+        self.mock_events_client.get_events.return_value = []
+        self.mock_events_client.get_events_count.side_effect = [
+            [{"count": 2}],
+            [{"count": 0}],
+        ]
+        self.mock_events_client.get_events_sum.return_value = [{}]
+
+        results = self.service.get_sales_funnel_data(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertEqual(results.leads_count, 2)
+        self.assertEqual(results.total_orders_count, 0)
+        self.assertEqual(results.total_orders_value, 0)
+        self.mock_events_client.get_events.assert_not_called()
+
+    def test_get_sales_funnel_data_zero_purchase_orders_does_not_fetch_sample_event(self):
+        self.mock_events_client.get_events.side_effect = None
+        self.mock_events_client.get_events.return_value = []
+        self.mock_events_client.get_events_count.side_effect = [
+            [{"count": 5}],
+            [{"count": 0}],
+        ]
+        self.mock_events_client.get_events_sum.return_value = [{"total": 0}]
+
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        results = self.service.get_sales_funnel_data(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.mock_events_client.get_events.assert_not_called()
+        self.assertEqual(results.total_orders_count, 0)
+        self.assertEqual(results.total_orders_value, 0)
+        self.assertIsNone(results.currency_code)
 
     def test_get_sales_funnel_data_with_cached_data(self):
         self.mock_events_client.get_events_count.return_value = [{"count": 10}]
@@ -915,6 +1025,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         )
         self.mock_events_client.get_events.assert_not_called()
         self.mock_events_client.get_events_count.assert_not_called()
+        self.mock_events_client.get_events_sum.assert_not_called()
 
         self.assertEqual(results.leads_count, 10)
         self.assertEqual(results.total_orders_count, 1)
