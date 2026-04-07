@@ -102,6 +102,17 @@ class BaseDatalakeConversationsMetricsService(ABC):
         """
 
     @abstractmethod
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get agent invocation counts grouped by agent from Datalake.
+        """
+
+    @abstractmethod
     def get_sales_funnel_data(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SalesFunnelData:
@@ -772,6 +783,78 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 values[payload_value] += count
             else:
                 values[payload_value] = count
+
+        if self.cache_results:
+            self._save_results_to_cache(cache_key, values)
+
+        return values
+
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        cache_key = self._get_cache_key(
+            data_type="agent_invocations",
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
+
+                return cached_results
+
+        try:
+            events = self.events_client.get_events_count_by_group(
+                key="agent_invocation",
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                metadata_key="agent_uuid",
+            )
+        except Exception as e:
+            logger.error("Failed to get agent invocations: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        values = {}
+
+        for event in events:
+            payload_value = event.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            count = event.get("count", 0)
+
+            if not isinstance(count, int):
+                try:
+                    count = int(count)
+                except Exception as e:
+                    logger.error("Error on converting count to int: %s" % e)
+                    raise e
+
+            agent_uuid = event.get("metadata_key_value")
+
+            if payload_value in values:
+                values[payload_value]["count"] += count
+            else:
+                values[payload_value] = {
+                    "count": count,
+                    "agent_uuid": agent_uuid,
+                }
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, values)
