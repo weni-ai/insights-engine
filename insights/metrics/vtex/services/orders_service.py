@@ -9,6 +9,7 @@ from insights.sources.orders.clients import VtexOrdersRestClient
 from insights.sources.vtexcredentials.clients import (
     AuthRestClient as VtexAuthClient,
 )
+from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
 from insights.sources.vtexcredentials.typing import VtexCredentialsDTO
 from insights.authentication.services.jwt_service import JWTService
 
@@ -46,7 +47,9 @@ class OrdersService:
                 CacheClient(),
             )
 
-        return VtexOrdersRestClient(self._get_credentials(), CacheClient())
+        credentials = self._get_credentials()
+
+        return VtexOrdersRestClient(credentials, CacheClient())
 
     def _get_past_dates(self, start_date, end_date):
         period = (end_date - start_date).days
@@ -71,9 +74,11 @@ class OrdersService:
         filters["ended_at__gte"] = str(start_date)
         filters["ended_at__lte"] = str(end_date)
 
+        client = self._get_client()
+
         try:
             # for the current period:
-            data = self._get_client().list(filters)
+            data = client.list(filters)
             current_value = data.get("accumulatedTotal")
             current_orders_placed = data.get("countSell")
             currency_code = data.get("currencyCode")
@@ -106,6 +111,12 @@ class OrdersService:
             }
 
             return response
+        except VtexCredentialsNotFound as e:
+            logger.error(
+                "[OrdersService] VTEX credentials not found for project %s",
+                self.project.uuid,
+            )
+            raise e
         except Exception as error:
-            logger.exception(f"Error retrieving VTEX metrics: {error}")
-            raise ValueError("Failed to retrieve VTEX metrics")
+            logger.exception(f"[OrdersService] Error retrieving VTEX metrics: {error}")
+            raise error
