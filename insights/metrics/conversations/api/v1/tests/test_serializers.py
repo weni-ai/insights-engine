@@ -6,6 +6,7 @@ from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     AgentInvocationAgent,
     AgentInvocationItem,
+    AgentInvocationMetrics,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
     CrosstabItemData,
@@ -23,6 +24,7 @@ from insights.projects.models import Project, ProjectAuth
 from insights.metrics.conversations.api.v1.serializers import (
     AbsoluteNumbersQueryParamsSerializer,
     AgentInvocationItemSerializer,
+    AgentInvocationMetricsSerializer,
     AgentInvocationQueryParamsSerializer,
     ConversationBaseQueryParamsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
@@ -982,3 +984,47 @@ class TestAgentInvocationItemSerializer(TestCase):
         self.assertEqual(len(serializer.data), 2)
         self.assertEqual(serializer.data[0]["agent"]["uuid"], agent_uuid)
         self.assertIsNone(serializer.data[1]["agent"])
+
+
+class TestAgentInvocationMetricsSerializer(TestCase):
+    def test_serializer_with_invocations(self):
+        agent_uuid = str(uuid.uuid4())
+        metrics = AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label="invocation_1",
+                    agent=AgentInvocationAgent(uuid=agent_uuid),
+                    value=75.5,
+                    full_value=10,
+                ),
+                AgentInvocationItem(
+                    label="invocation_2",
+                    agent=None,
+                    value=24.5,
+                    full_value=5,
+                ),
+            ],
+            total=15,
+        )
+        serializer = AgentInvocationMetricsSerializer(metrics)
+
+        self.assertEqual(serializer.data["total"], 15)
+        self.assertEqual(len(serializer.data["results"]), 2)
+        self.assertEqual(serializer.data["results"][0]["label"], "invocation_1")
+        self.assertEqual(serializer.data["results"][0]["agent"]["uuid"], agent_uuid)
+        self.assertEqual(serializer.data["results"][0]["value"], 75.5)
+        self.assertEqual(serializer.data["results"][0]["full_value"], 10)
+        self.assertEqual(serializer.data["results"][1]["label"], "invocation_2")
+        self.assertIsNone(serializer.data["results"][1]["agent"])
+        self.assertEqual(serializer.data["results"][1]["value"], 24.5)
+        self.assertEqual(serializer.data["results"][1]["full_value"], 5)
+
+    def test_serializer_empty_invocations(self):
+        metrics = AgentInvocationMetrics(
+            invocations=[],
+            total=0,
+        )
+        serializer = AgentInvocationMetricsSerializer(metrics)
+
+        self.assertEqual(serializer.data["total"], 0)
+        self.assertEqual(len(serializer.data["results"]), 0)

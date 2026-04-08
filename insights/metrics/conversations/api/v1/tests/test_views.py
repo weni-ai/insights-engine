@@ -21,6 +21,7 @@ from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
     AgentInvocationAgent,
     AgentInvocationItem,
+    AgentInvocationMetrics,
     AvailableWidgetsList,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
@@ -1063,14 +1064,17 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
     )
     def test_get_agent_invocation(self, mock_get_agent_invocations):
         agent_uuid = str(uuid.uuid4())
-        mock_get_agent_invocations.return_value = [
-            AgentInvocationItem(
-                label="invocation_1",
-                agent=AgentInvocationAgent(uuid=agent_uuid),
-                value=100.0,
-                full_value=10,
-            ),
-        ]
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label="invocation_1",
+                    agent=AgentInvocationAgent(uuid=agent_uuid),
+                    value=100.0,
+                    full_value=10,
+                ),
+            ],
+            total=10,
+        )
 
         response = self.get_agent_invocation(
             {
@@ -1081,25 +1085,29 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["label"], "invocation_1")
-        self.assertEqual(response.data[0]["agent"]["uuid"], agent_uuid)
-        self.assertEqual(response.data[0]["value"], 100.0)
-        self.assertEqual(response.data[0]["full_value"], 10)
+        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["label"], "invocation_1")
+        self.assertEqual(response.data["results"][0]["agent"]["uuid"], agent_uuid)
+        self.assertEqual(response.data["results"][0]["value"], 100.0)
+        self.assertEqual(response.data["results"][0]["full_value"], 10)
 
     @with_project_auth
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
     )
     def test_get_agent_invocation_with_null_agent(self, mock_get_agent_invocations):
-        mock_get_agent_invocations.return_value = [
-            AgentInvocationItem(
-                label="invocation_1",
-                agent=None,
-                value=100.0,
-                full_value=10,
-            ),
-        ]
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label="invocation_1",
+                    agent=None,
+                    value=100.0,
+                    full_value=10,
+                ),
+            ],
+            total=10,
+        )
 
         response = self.get_agent_invocation(
             {
@@ -1110,18 +1118,22 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["label"], "invocation_1")
-        self.assertIsNone(response.data[0]["agent"])
-        self.assertEqual(response.data[0]["value"], 100.0)
-        self.assertEqual(response.data[0]["full_value"], 10)
+        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["label"], "invocation_1")
+        self.assertIsNone(response.data["results"][0]["agent"])
+        self.assertEqual(response.data["results"][0]["value"], 100.0)
+        self.assertEqual(response.data["results"][0]["full_value"], 10)
 
     @with_project_auth
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
     )
     def test_get_agent_invocation_empty(self, mock_get_agent_invocations):
-        mock_get_agent_invocations.return_value = []
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[],
+            total=0,
+        )
 
         response = self.get_agent_invocation(
             {
@@ -1132,7 +1144,8 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
+        self.assertEqual(response.data["total"], 0)
+        self.assertEqual(len(response.data["results"]), 0)
 
     @with_project_auth
     @patch(

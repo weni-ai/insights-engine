@@ -31,7 +31,7 @@ from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import 
 from insights.metrics.conversations.api.v1.serializers import (
     AbsoluteNumbersQueryParamsSerializer,
     AbsoluteNumbersSerializer,
-    AgentInvocationItemSerializer,
+    AgentInvocationMetricsSerializer,
     AgentInvocationQueryParamsSerializer,
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
@@ -532,7 +532,7 @@ class ConversationsMetricsViewSet(
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        response_data = AgentInvocationItemSerializer(metrics, many=True).data
+        response_data = AgentInvocationMetricsSerializer(metrics).data
 
         return Response(response_data, status=status.HTTP_200_OK)
 

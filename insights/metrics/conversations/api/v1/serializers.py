@@ -577,6 +577,11 @@ class AgentInvocationItemSerializer(serializers.Serializer):
     full_value = serializers.IntegerField()
 
 
+class AgentInvocationMetricsSerializer(serializers.Serializer):
+    results = AgentInvocationItemSerializer(many=True, source="invocations")
+    total = serializers.IntegerField()
+
+
 class AbsoluteNumbersSerializer(serializers.Serializer):
     """
     Serializer for absolute numbers
