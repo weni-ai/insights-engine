@@ -933,6 +933,82 @@ class TestConversationsMetricsService(TestCase):
             ],
         )
 
+    def test_get_agent_invocations(self):
+        project_uuid = uuid.uuid4()
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_agent_invocations.return_value = {
+            "invocation_1": {
+                "count": 10,
+                "agent_uuid": agent_uuid,
+            }
+        }
+
+        results = self.service.get_agent_invocations(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(results, dict)
+        self.assertIn("invocation_1", results)
+        self.assertEqual(results["invocation_1"]["count"], 10)
+        self.assertEqual(results["invocation_1"]["agent_uuid"], agent_uuid)
+
+        self.mock_datalake_service.get_agent_invocations.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+    def test_get_agent_invocations_empty_result(self):
+        self.mock_datalake_service.get_agent_invocations.return_value = {}
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(results, {})
+
+    def test_get_agent_invocations_multiple_agents(self):
+        agent_uuid_1 = str(uuid.uuid4())
+        agent_uuid_2 = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_agent_invocations.return_value = {
+            "invocation_1": {
+                "count": 10,
+                "agent_uuid": agent_uuid_1,
+            },
+            "invocation_2": {
+                "count": 20,
+                "agent_uuid": agent_uuid_2,
+            },
+        }
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results["invocation_1"]["count"], 10)
+        self.assertEqual(results["invocation_2"]["count"], 20)
+
+    def test_get_agent_invocations_propagates_exception(self):
+        self.mock_datalake_service.get_agent_invocations.side_effect = Exception(
+            "Datalake error"
+        )
+
+        with self.assertRaises(Exception):
+            self.service.get_agent_invocations(
+                project_uuid=uuid.uuid4(),
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
     def test_get_topics_with_cache_hit(self):
         """Test get_topics when cache is hit"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")

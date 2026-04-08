@@ -196,6 +196,18 @@ class BaseConversationsMetricsService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get agent invocation counts grouped by agent
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_crosstab_data(
         self,
         project_uuid: UUID,
@@ -1064,6 +1076,21 @@ class ConversationsMetricsService(
             )
 
         return items
+
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get agent invocation counts grouped by agent
+        """
+        return self.datalake_service.get_agent_invocations(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     def get_event_count(
         self,
