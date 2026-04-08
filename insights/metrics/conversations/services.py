@@ -26,7 +26,6 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.datalake.dataclass import (
-    AgentInvocationMetric,
     CrosstabSource,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
