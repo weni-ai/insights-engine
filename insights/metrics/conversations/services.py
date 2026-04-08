@@ -13,6 +13,7 @@ from insights.metrics.conversations.dataclass import (
     AbsoluteNumbersMetrics,
     AgentInvocationAgent,
     AgentInvocationItem,
+    AgentInvocationMetrics,
     AvailableWidgetsList,
     ConversationsTotalsMetrics,
     CrosstabItemData,
@@ -1084,7 +1085,7 @@ class ConversationsMetricsService(
         project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-    ) -> list[AgentInvocationItem]:
+    ) -> AgentInvocationMetrics:
         """
         Get agent invocation counts grouped by agent
         """
@@ -1096,21 +1097,26 @@ class ConversationsMetricsService(
 
         total_count = sum(item.count for item in invocations.values())
 
-        return [
-            AgentInvocationItem(
-                label=label,
-                agent=(
-                    AgentInvocationAgent(uuid=item.agent_uuid)
-                    if item.agent_uuid
-                    else None
-                ),
-                value=(
-                    round((item.count / total_count) * 100, 2) if total_count else 0
-                ),
-                full_value=item.count,
-            )
-            for label, item in invocations.items()
-        ]
+        return AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label=label,
+                    agent=(
+                        AgentInvocationAgent(uuid=item.agent_uuid)
+                        if item.agent_uuid
+                        else None
+                    ),
+                    value=(
+                        round((item.count / total_count) * 100, 2)
+                        if total_count
+                        else 0
+                    ),
+                    full_value=item.count,
+                )
+                for label, item in invocations.items()
+            ],
+            total=total_count,
+        )
 
     def get_event_count(
         self,
