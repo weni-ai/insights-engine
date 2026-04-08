@@ -29,6 +29,7 @@ from insights.metrics.conversations.enums import (
     NpsMetricsType,
 )
 from insights.metrics.conversations.integrations.datalake.dataclass import (
+    AgentInvocationMetric,
     SalesFunnelData,
 )
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
@@ -938,10 +939,10 @@ class TestConversationsMetricsService(TestCase):
         agent_uuid = str(uuid.uuid4())
 
         self.mock_datalake_service.get_agent_invocations.return_value = {
-            "invocation_1": {
-                "count": 10,
-                "agent_uuid": agent_uuid,
-            }
+            "invocation_1": AgentInvocationMetric(
+                agent_uuid=agent_uuid,
+                count=10,
+            )
         }
 
         results = self.service.get_agent_invocations(
@@ -952,8 +953,9 @@ class TestConversationsMetricsService(TestCase):
 
         self.assertIsInstance(results, dict)
         self.assertIn("invocation_1", results)
-        self.assertEqual(results["invocation_1"]["count"], 10)
-        self.assertEqual(results["invocation_1"]["agent_uuid"], agent_uuid)
+        self.assertIsInstance(results["invocation_1"], AgentInvocationMetric)
+        self.assertEqual(results["invocation_1"].count, 10)
+        self.assertEqual(results["invocation_1"].agent_uuid, agent_uuid)
 
         self.mock_datalake_service.get_agent_invocations.assert_called_once_with(
             project_uuid=project_uuid,
@@ -977,14 +979,14 @@ class TestConversationsMetricsService(TestCase):
         agent_uuid_2 = str(uuid.uuid4())
 
         self.mock_datalake_service.get_agent_invocations.return_value = {
-            "invocation_1": {
-                "count": 10,
-                "agent_uuid": agent_uuid_1,
-            },
-            "invocation_2": {
-                "count": 20,
-                "agent_uuid": agent_uuid_2,
-            },
+            "invocation_1": AgentInvocationMetric(
+                agent_uuid=agent_uuid_1,
+                count=10,
+            ),
+            "invocation_2": AgentInvocationMetric(
+                agent_uuid=agent_uuid_2,
+                count=20,
+            ),
         }
 
         results = self.service.get_agent_invocations(
@@ -994,8 +996,8 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertEqual(len(results), 2)
-        self.assertEqual(results["invocation_1"]["count"], 10)
-        self.assertEqual(results["invocation_2"]["count"], 20)
+        self.assertEqual(results["invocation_1"].count, 10)
+        self.assertEqual(results["invocation_2"].count, 20)
 
     def test_get_agent_invocations_propagates_exception(self):
         self.mock_datalake_service.get_agent_invocations.side_effect = Exception(

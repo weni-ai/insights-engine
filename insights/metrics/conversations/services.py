@@ -24,6 +24,7 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.datalake.dataclass import (
+    AgentInvocationMetric,
     CrosstabSource,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
@@ -201,7 +202,7 @@ class BaseConversationsMetricsService(ABC):
         project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-    ) -> dict:
+    ) -> dict[str, AgentInvocationMetric]:
         """
         Get agent invocation counts grouped by agent
         """
@@ -1082,7 +1083,7 @@ class ConversationsMetricsService(
         project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-    ) -> dict:
+    ) -> dict[str, AgentInvocationMetric]:
         """
         Get agent invocation counts grouped by agent
         """
