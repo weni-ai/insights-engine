@@ -204,7 +204,7 @@ class BaseConversationsMetricsService(ABC):
         project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-    ) -> list[AgentInvocationItem]:
+    ) -> AgentInvocationMetrics:
         """
         Get agent invocation counts grouped by agent
         """
@@ -1107,9 +1107,7 @@ class ConversationsMetricsService(
                         else None
                     ),
                     value=(
-                        round((item.count / total_count) * 100, 2)
-                        if total_count
-                        else 0
+                        round((item.count / total_count) * 100, 2) if total_count else 0
                     ),
                     full_value=item.count,
                 )
