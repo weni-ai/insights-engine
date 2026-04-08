@@ -1394,9 +1394,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         end_date = datetime.now()
 
         with patch.object(self.service, "_get_cached_results") as mock_get_cached:
-            mock_get_cached.return_value = (
-                '{"inv_1": {"count": 5, "agent_uuid": null}}'
-            )
+            mock_get_cached.return_value = '{"inv_1": {"count": 5, "agent_uuid": null}}'
 
             results = self.service.get_agent_invocations(
                 project_uuid=project_uuid,
