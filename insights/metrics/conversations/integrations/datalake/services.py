@@ -20,6 +20,7 @@ from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     CrosstabSource,
     SalesFunnelData,
+    ToolResultMetric,
 )
 from insights.metrics.conversations.integrations.datalake.serializers import (
     CrosstabDataSerializer,
@@ -99,6 +100,17 @@ class BaseDatalakeConversationsMetricsService(ABC):
     ) -> dict:
         """
         Get generic metrics grouped by value from Datalake.
+        """
+
+    @abstractmethod
+    def get_tool_results(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict[str, ToolResultMetric]:
+        """
+        Get tool result counts grouped by agent from Datalake.
         """
 
     @abstractmethod
@@ -775,6 +787,84 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, values)
+
+        return values
+
+    def get_tool_results(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict[str, ToolResultMetric]:
+        cache_key = self._get_cache_key(
+            data_type="tool_results",
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
+
+                return {
+                    key: ToolResultMetric(**value)
+                    for key, value in cached_results.items()
+                }
+
+        try:
+            events = self.events_client.get_events_count_by_group(
+                key="tool_result",
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                metadata_key="agent_uuid",
+            )
+        except Exception as e:
+            logger.error("Failed to get tool results: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        values: dict[str, ToolResultMetric] = {}
+
+        for event in events:
+            payload_value = event.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            count = event.get("count", 0)
+
+            if not isinstance(count, int):
+                try:
+                    count = int(count)
+                except Exception as e:
+                    logger.error("Error on converting count to int: %s" % e)
+                    raise e
+
+            agent_uuid = event.get("metadata_key_value")
+
+            if payload_value in values:
+                values[payload_value].count += count
+            else:
+                values[payload_value] = ToolResultMetric(
+                    count=count,
+                    agent_uuid=agent_uuid,
+                )
+
+        if self.cache_results:
+            self._save_results_to_cache(
+                cache_key,
+                {key: asdict(value) for key, value in values.items()},
+            )
 
         return values
 

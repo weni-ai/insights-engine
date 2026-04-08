@@ -1,4 +1,15 @@
 from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class ToolResultMetric:
+    """
+    Dataclass to store tool result metric data.
+    """
+
+    agent_uuid: Optional[str] = None
+    count: int = 0
 
 
 @dataclass(frozen=True)
