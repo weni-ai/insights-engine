@@ -1,3 +1,12 @@
+# 1.18.2
+# Fix
+  - Sales funnel event count type conversion to integers
+
+# 1.18.1
+# Add
+  - Absolute numbers operations support in sales funnel metrics
+  - UTM source metrics endpoint for VTEX orders
+
 # 1.18.0
 # Add
   - Crosstab widgets in human support exports and report worksheets
