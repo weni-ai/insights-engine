@@ -903,12 +903,14 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             )
 
         # Leads events
-        leads_count = self.events_client.get_events_count(
-            event_name="conversion_lead",
-            project=project_uuid,
-            date_start=start_date,
-            date_end=end_date,
-        )[0].get("count", 0)
+        leads_count = int(
+            self.events_client.get_events_count(
+                event_name="conversion_lead",
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+            )[0].get("count", 0)
+        )
 
         currency_code = None
 
@@ -919,11 +921,13 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             "date_end": end_date,
         }
 
-        total_orders_count = self.events_client.get_events_count(
-            **query_kwargs,
-        )[
-            0
-        ].get("count", 0)
+        total_orders_count = int(
+            self.events_client.get_events_count(
+                **query_kwargs,
+            )[
+                0
+            ].get("count", 0)
+        )
         total_orders_value_raw = self.events_client.get_events_sum(
             **query_kwargs, operation_key="value"
         )[0].get("total", 0)
