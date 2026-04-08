@@ -10,6 +10,8 @@ from django.core.cache import cache
 
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
+    AgentInvocationAgent,
+    AgentInvocationItem,
     AvailableWidgetsList,
     ConversationsTotalsMetrics,
     ConversationsTotalsMetric,
@@ -951,11 +953,13 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertIsInstance(results, dict)
-        self.assertIn("invocation_1", results)
-        self.assertIsInstance(results["invocation_1"], AgentInvocationMetric)
-        self.assertEqual(results["invocation_1"].count, 10)
-        self.assertEqual(results["invocation_1"].agent_uuid, agent_uuid)
+        self.assertIsInstance(results, list)
+        self.assertEqual(len(results), 1)
+        self.assertIsInstance(results[0], AgentInvocationItem)
+        self.assertEqual(results[0].label, "invocation_1")
+        self.assertEqual(results[0].agent, AgentInvocationAgent(uuid=agent_uuid))
+        self.assertEqual(results[0].value, 100.0)
+        self.assertEqual(results[0].full_value, 10)
 
         self.mock_datalake_service.get_agent_invocations.assert_called_once_with(
             project_uuid=project_uuid,
@@ -972,7 +976,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(results, {})
+        self.assertEqual(results, [])
 
     def test_get_agent_invocations_multiple_agents(self):
         agent_uuid_1 = str(uuid.uuid4())
@@ -996,8 +1000,12 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertEqual(len(results), 2)
-        self.assertEqual(results["invocation_1"].count, 10)
-        self.assertEqual(results["invocation_2"].count, 20)
+        self.assertEqual(results[0].label, "invocation_1")
+        self.assertEqual(results[0].full_value, 10)
+        self.assertEqual(results[0].value, 33.33)
+        self.assertEqual(results[1].label, "invocation_2")
+        self.assertEqual(results[1].full_value, 20)
+        self.assertEqual(results[1].value, 66.67)
 
     def test_get_agent_invocations_propagates_exception(self):
         self.mock_datalake_service.get_agent_invocations.side_effect = Exception(

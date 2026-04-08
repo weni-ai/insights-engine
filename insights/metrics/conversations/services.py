@@ -11,6 +11,8 @@ from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
     AbsoluteNumbersMetrics,
+    AgentInvocationAgent,
+    AgentInvocationItem,
     AvailableWidgetsList,
     ConversationsTotalsMetrics,
     CrosstabItemData,
@@ -202,7 +204,7 @@ class BaseConversationsMetricsService(ABC):
         project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-    ) -> dict[str, AgentInvocationMetric]:
+    ) -> list[AgentInvocationItem]:
         """
         Get agent invocation counts grouped by agent
         """
@@ -1083,15 +1085,29 @@ class ConversationsMetricsService(
         project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-    ) -> dict[str, AgentInvocationMetric]:
+    ) -> list[AgentInvocationItem]:
         """
         Get agent invocation counts grouped by agent
         """
-        return self.datalake_service.get_agent_invocations(
+        invocations = self.datalake_service.get_agent_invocations(
             project_uuid=project_uuid,
             start_date=start_date,
             end_date=end_date,
         )
+
+        total_count = sum(item.count for item in invocations.values())
+
+        return [
+            AgentInvocationItem(
+                label=label,
+                agent=AgentInvocationAgent(uuid=item.agent_uuid),
+                value=(
+                    round((item.count / total_count) * 100, 2) if total_count else 0
+                ),
+                full_value=item.count,
+            )
+            for label, item in invocations.items()
+        ]
 
     def get_event_count(
         self,
