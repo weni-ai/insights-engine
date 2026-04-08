@@ -572,7 +572,7 @@ class AgentInvocationAgentSerializer(serializers.Serializer):
 
 class AgentInvocationItemSerializer(serializers.Serializer):
     label = serializers.CharField()
-    agent = AgentInvocationAgentSerializer()
+    agent = AgentInvocationAgentSerializer(allow_null=True)
     value = serializers.FloatField()
     full_value = serializers.IntegerField()
 

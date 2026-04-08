@@ -1091,6 +1091,35 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
     )
+    def test_get_agent_invocation_with_null_agent(self, mock_get_agent_invocations):
+        mock_get_agent_invocations.return_value = [
+            AgentInvocationItem(
+                label="invocation_1",
+                agent=None,
+                value=100.0,
+                full_value=10,
+            ),
+        ]
+
+        response = self.get_agent_invocation(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["label"], "invocation_1")
+        self.assertIsNone(response.data[0]["agent"])
+        self.assertEqual(response.data[0]["value"], 100.0)
+        self.assertEqual(response.data[0]["full_value"], 10)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
     def test_get_agent_invocation_empty(self, mock_get_agent_invocations):
         mock_get_agent_invocations.return_value = []
 

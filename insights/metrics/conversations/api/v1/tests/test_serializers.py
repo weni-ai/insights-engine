@@ -916,6 +916,20 @@ class TestAgentInvocationItemSerializer(TestCase):
         self.assertEqual(serializer.data["value"], 75.5)
         self.assertEqual(serializer.data["full_value"], 10)
 
+    def test_serializer_single_item_with_null_agent(self):
+        item = AgentInvocationItem(
+            label="invocation_1",
+            agent=None,
+            value=75.5,
+            full_value=10,
+        )
+        serializer = AgentInvocationItemSerializer(item)
+
+        self.assertEqual(serializer.data["label"], "invocation_1")
+        self.assertIsNone(serializer.data["agent"])
+        self.assertEqual(serializer.data["value"], 75.5)
+        self.assertEqual(serializer.data["full_value"], 10)
+
     def test_serializer_many_items(self):
         agent_uuid_1 = str(uuid.uuid4())
         agent_uuid_2 = str(uuid.uuid4())
@@ -945,3 +959,26 @@ class TestAgentInvocationItemSerializer(TestCase):
         self.assertEqual(serializer.data[1]["agent"]["uuid"], agent_uuid_2)
         self.assertEqual(serializer.data[1]["value"], 66.67)
         self.assertEqual(serializer.data[1]["full_value"], 20)
+
+    def test_serializer_many_items_with_mixed_agents(self):
+        agent_uuid = str(uuid.uuid4())
+
+        items = [
+            AgentInvocationItem(
+                label="invocation_1",
+                agent=AgentInvocationAgent(uuid=agent_uuid),
+                value=33.33,
+                full_value=10,
+            ),
+            AgentInvocationItem(
+                label="invocation_2",
+                agent=None,
+                value=66.67,
+                full_value=20,
+            ),
+        ]
+        serializer = AgentInvocationItemSerializer(items, many=True)
+
+        self.assertEqual(len(serializer.data), 2)
+        self.assertEqual(serializer.data[0]["agent"]["uuid"], agent_uuid)
+        self.assertIsNone(serializer.data[1]["agent"])
