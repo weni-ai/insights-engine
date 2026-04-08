@@ -869,7 +869,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
         self.assertEqual(results.leads_count, 10)
         self.assertEqual(results.total_orders_count, 1)
-        self.assertEqual(results.total_orders_value, 10000)  # Sum in cents from datalake
+        self.assertEqual(
+            results.total_orders_value, 10000
+        )  # Sum in cents from datalake
         self.assertEqual(results.currency_code, "BRL")
 
     def test_get_sales_funnel_data_converts_fractional_sum_to_cents(self):
@@ -968,7 +970,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertEqual(results.total_orders_value, 0)
         self.mock_events_client.get_events.assert_not_called()
 
-    def test_get_sales_funnel_data_zero_purchase_orders_does_not_fetch_sample_event(self):
+    def test_get_sales_funnel_data_zero_purchase_orders_does_not_fetch_sample_event(
+        self,
+    ):
         self.mock_events_client.get_events.side_effect = None
         self.mock_events_client.get_events.return_value = []
         self.mock_events_client.get_events_count.side_effect = [
@@ -1240,9 +1244,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 end_date=end_date,
             )
 
-            self.assertEqual(
-                results, {"inv_1": {"count": 5, "agent_uuid": "abc"}}
-            )
+            self.assertEqual(results, {"inv_1": {"count": 5, "agent_uuid": "abc"}})
 
     def test_get_agent_invocations_with_exception(self):
         self.mock_events_client.get_events_count_by_group.side_effect = Exception(
