@@ -18,6 +18,7 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.dataclass import (
+    AgentInvocationMetric,
     CrosstabSource,
     SalesFunnelData,
 )
@@ -107,7 +108,7 @@ class BaseDatalakeConversationsMetricsService(ABC):
         project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-    ) -> dict:
+    ) -> dict[str, AgentInvocationMetric]:
         """
         Get agent invocation counts grouped by agent from Datalake.
         """
@@ -794,7 +795,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         project_uuid: UUID,
         start_date: datetime,
         end_date: datetime,
-    ) -> dict:
+    ) -> dict[str, AgentInvocationMetric]:
         cache_key = self._get_cache_key(
             data_type="agent_invocations",
             project_uuid=project_uuid,
@@ -807,7 +808,10 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 if not isinstance(cached_results, dict):
                     cached_results = json.loads(cached_results)
 
-                return cached_results
+                return {
+                    key: AgentInvocationMetric(**value)
+                    for key, value in cached_results.items()
+                }
 
         try:
             events = self.events_client.get_events_count_by_group(
@@ -824,7 +828,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
 
             raise e
 
-        values = {}
+        values: dict[str, AgentInvocationMetric] = {}
 
         for event in events:
             payload_value = event.get("payload_value")
@@ -849,15 +853,18 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             agent_uuid = event.get("metadata_key_value")
 
             if payload_value in values:
-                values[payload_value]["count"] += count
+                values[payload_value].count += count
             else:
-                values[payload_value] = {
-                    "count": count,
-                    "agent_uuid": agent_uuid,
-                }
+                values[payload_value] = AgentInvocationMetric(
+                    count=count,
+                    agent_uuid=agent_uuid,
+                )
 
         if self.cache_results:
-            self._save_results_to_cache(cache_key, values)
+            self._save_results_to_cache(
+                cache_key,
+                {key: asdict(value) for key, value in values.items()},
+            )
 
         return values
 
