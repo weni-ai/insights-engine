@@ -1099,7 +1099,11 @@ class ConversationsMetricsService(
         return [
             AgentInvocationItem(
                 label=label,
-                agent=AgentInvocationAgent(uuid=item.agent_uuid),
+                agent=(
+                    AgentInvocationAgent(uuid=item.agent_uuid)
+                    if item.agent_uuid
+                    else None
+                ),
                 value=(
                     round((item.count / total_count) * 100, 2) if total_count else 0
                 ),

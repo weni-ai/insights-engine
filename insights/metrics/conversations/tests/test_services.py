@@ -967,6 +967,36 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
+    def test_get_agent_invocations_with_none_agent_uuid(self):
+        project_uuid = uuid.uuid4()
+
+        self.mock_datalake_service.get_agent_invocations.return_value = {
+            "invocation_1": AgentInvocationMetric(
+                agent_uuid=None,
+                count=10,
+            )
+        }
+
+        results = self.service.get_agent_invocations(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(results, list)
+        self.assertEqual(len(results), 1)
+        self.assertIsInstance(results[0], AgentInvocationItem)
+        self.assertEqual(results[0].label, "invocation_1")
+        self.assertIsNone(results[0].agent)
+        self.assertEqual(results[0].value, 100.0)
+        self.assertEqual(results[0].full_value, 10)
+
+        self.mock_datalake_service.get_agent_invocations.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
     def test_get_agent_invocations_empty_result(self):
         self.mock_datalake_service.get_agent_invocations.return_value = {}
 
@@ -1006,6 +1036,34 @@ class TestConversationsMetricsService(TestCase):
         self.assertEqual(results[1].label, "invocation_2")
         self.assertEqual(results[1].full_value, 20)
         self.assertEqual(results[1].value, 66.67)
+
+    def test_get_agent_invocations_mixed_agent_uuids(self):
+        agent_uuid_1 = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_agent_invocations.return_value = {
+            "invocation_1": AgentInvocationMetric(
+                agent_uuid=agent_uuid_1,
+                count=10,
+            ),
+            "invocation_2": AgentInvocationMetric(
+                agent_uuid=None,
+                count=20,
+            ),
+        }
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].label, "invocation_1")
+        self.assertEqual(results[0].agent, AgentInvocationAgent(uuid=agent_uuid_1))
+        self.assertEqual(results[0].full_value, 10)
+        self.assertEqual(results[1].label, "invocation_2")
+        self.assertIsNone(results[1].agent)
+        self.assertEqual(results[1].full_value, 20)
 
     def test_get_agent_invocations_propagates_exception(self):
         self.mock_datalake_service.get_agent_invocations.side_effect = Exception(

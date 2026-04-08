@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -19,7 +20,7 @@ class AgentInvocationMetric:
     Dataclass to store agent invocation metric data.
     """
 
-    agent_uuid: str
+    agent_uuid: Optional[str] = None
     count: int = 0
 
 
