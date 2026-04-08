@@ -31,6 +31,8 @@ from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import 
 from insights.metrics.conversations.api.v1.serializers import (
     AbsoluteNumbersQueryParamsSerializer,
     AbsoluteNumbersSerializer,
+    AgentInvocationItemSerializer,
+    AgentInvocationQueryParamsSerializer,
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
@@ -495,6 +497,43 @@ class ConversationsMetricsViewSet(
                 {"error": f"Internal error. Event ID: {event_id}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="agent-invocation",
+        url_name="agent-invocation",
+    )
+    def agent_invocation(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get agent invocation metrics
+        """
+        query_params = AgentInvocationQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            metrics = self.service.get_agent_invocations(
+                project_uuid=query_params.validated_data["project_uuid"],
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            logger.error(
+                "[ConversationsMetricsViewSet] Error getting agent invocation metrics: %s",
+                e,
+                exc_info=True,
+            )
+            event_id = capture_exception(e)
+            return Response(
+                {"error": f"Internal error. Event ID: {event_id}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        response_data = AgentInvocationItemSerializer(metrics, many=True).data
+
         return Response(response_data, status=status.HTTP_200_OK)
 
     @action(

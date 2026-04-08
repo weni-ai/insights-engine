@@ -4,6 +4,8 @@ from django.test import TestCase
 
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
+    AgentInvocationAgent,
+    AgentInvocationItem,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
     CrosstabItemData,
@@ -20,6 +22,8 @@ from insights.metrics.conversations.enums import (
 from insights.projects.models import Project, ProjectAuth
 from insights.metrics.conversations.api.v1.serializers import (
     AbsoluteNumbersQueryParamsSerializer,
+    AgentInvocationItemSerializer,
+    AgentInvocationQueryParamsSerializer,
     ConversationBaseQueryParamsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
     ConversationTotalsMetricsSerializer,
@@ -815,3 +819,129 @@ class TestAbsoluteNumbersQueryParamsSerializer(TestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertIn("end_date", serializer.errors)
+
+
+class TestAgentInvocationQueryParamsSerializer(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+        )
+
+    def test_serializer_valid(self):
+        serializer = AgentInvocationQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertIn("project", serializer.validated_data)
+        self.assertEqual(
+            str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
+        )
+        self.assertEqual(serializer.validated_data["project"], self.project)
+
+    def test_serializer_missing_project_uuid(self):
+        serializer = AgentInvocationQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("project_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["project_uuid"][0].code, "required")
+
+    def test_serializer_missing_start_date(self):
+        serializer = AgentInvocationQueryParamsSerializer(
+            data={
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+
+    def test_serializer_missing_end_date(self):
+        serializer = AgentInvocationQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("end_date", serializer.errors)
+
+    def test_serializer_invalid_project_uuid(self):
+        serializer = AgentInvocationQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("project_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+    def test_serializer_invalid_date_range(self):
+        serializer = AgentInvocationQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-02",
+                "end_date": "2021-01-01",
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+        self.assertEqual(
+            serializer.errors["start_date"][0].code, "start_date_after_end_date"
+        )
+
+
+class TestAgentInvocationItemSerializer(TestCase):
+    def test_serializer_single_item(self):
+        agent_uuid = str(uuid.uuid4())
+        item = AgentInvocationItem(
+            label="invocation_1",
+            agent=AgentInvocationAgent(uuid=agent_uuid),
+            value=75.5,
+            full_value=10,
+        )
+        serializer = AgentInvocationItemSerializer(item)
+
+        self.assertEqual(serializer.data["label"], "invocation_1")
+        self.assertEqual(serializer.data["agent"]["uuid"], agent_uuid)
+        self.assertEqual(serializer.data["value"], 75.5)
+        self.assertEqual(serializer.data["full_value"], 10)
+
+    def test_serializer_many_items(self):
+        agent_uuid_1 = str(uuid.uuid4())
+        agent_uuid_2 = str(uuid.uuid4())
+
+        items = [
+            AgentInvocationItem(
+                label="invocation_1",
+                agent=AgentInvocationAgent(uuid=agent_uuid_1),
+                value=33.33,
+                full_value=10,
+            ),
+            AgentInvocationItem(
+                label="invocation_2",
+                agent=AgentInvocationAgent(uuid=agent_uuid_2),
+                value=66.67,
+                full_value=20,
+            ),
+        ]
+        serializer = AgentInvocationItemSerializer(items, many=True)
+
+        self.assertEqual(len(serializer.data), 2)
+        self.assertEqual(serializer.data[0]["label"], "invocation_1")
+        self.assertEqual(serializer.data[0]["agent"]["uuid"], agent_uuid_1)
+        self.assertEqual(serializer.data[0]["value"], 33.33)
+        self.assertEqual(serializer.data[0]["full_value"], 10)
+        self.assertEqual(serializer.data[1]["label"], "invocation_2")
+        self.assertEqual(serializer.data[1]["agent"]["uuid"], agent_uuid_2)
+        self.assertEqual(serializer.data[1]["value"], 66.67)
+        self.assertEqual(serializer.data[1]["full_value"], 20)
