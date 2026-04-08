@@ -10,6 +10,7 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.dataclass import (
+    AgentInvocationMetric,
     SalesFunnelData,
 )
 from insights.sources.dl_events.clients import BaseDataLakeEventsClient
@@ -1197,8 +1198,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
         self.assertIsInstance(results, dict)
         self.assertIn("invocation_1", results)
-        self.assertEqual(results["invocation_1"]["count"], 10)
-        self.assertEqual(results["invocation_1"]["agent_uuid"], agent_uuid)
+        self.assertIsInstance(results["invocation_1"], AgentInvocationMetric)
+        self.assertEqual(results["invocation_1"].count, 10)
+        self.assertEqual(results["invocation_1"].agent_uuid, agent_uuid)
 
         self.mock_events_client.get_events_count_by_group.assert_called_once_with(
             key="agent_invocation",
@@ -1244,7 +1246,10 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 end_date=end_date,
             )
 
-            self.assertEqual(results, {"inv_1": {"count": 5, "agent_uuid": "abc"}})
+            self.assertIn("inv_1", results)
+            self.assertIsInstance(results["inv_1"], AgentInvocationMetric)
+            self.assertEqual(results["inv_1"].count, 5)
+            self.assertEqual(results["inv_1"].agent_uuid, "abc")
 
     def test_get_agent_invocations_with_exception(self):
         self.mock_events_client.get_events_count_by_group.side_effect = Exception(
@@ -1276,8 +1281,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
         self.assertNotIn(None, results)
         self.assertIn("valid", results)
-        self.assertEqual(results["valid"]["count"], 5)
-        self.assertEqual(results["valid"]["agent_uuid"], "agent2")
+        self.assertIsInstance(results["valid"], AgentInvocationMetric)
+        self.assertEqual(results["valid"].count, 5)
+        self.assertEqual(results["valid"].agent_uuid, "agent2")
 
     def test_get_agent_invocations_with_int_payload_value(self):
         agent_uuid = str(uuid.uuid4())
@@ -1297,8 +1303,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         )
 
         self.assertIn("123", results)
-        self.assertEqual(results["123"]["count"], 7)
-        self.assertEqual(results["123"]["agent_uuid"], agent_uuid)
+        self.assertIsInstance(results["123"], AgentInvocationMetric)
+        self.assertEqual(results["123"].count, 7)
+        self.assertEqual(results["123"].agent_uuid, agent_uuid)
 
     def test_get_agent_invocations_with_duplicate_payload_values(self):
         agent_uuid = str(uuid.uuid4())
@@ -1322,7 +1329,8 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             end_date=datetime.now(),
         )
 
-        self.assertEqual(results["same_value"]["count"], 8)
+        self.assertIsInstance(results["same_value"], AgentInvocationMetric)
+        self.assertEqual(results["same_value"].count, 8)
 
     def test_get_agent_invocations_with_string_count(self):
         agent_uuid = str(uuid.uuid4())
@@ -1341,7 +1349,8 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             end_date=datetime.now(),
         )
 
-        self.assertEqual(results["inv_1"]["count"], 15)
+        self.assertIsInstance(results["inv_1"], AgentInvocationMetric)
+        self.assertEqual(results["inv_1"].count, 15)
 
     def test_get_agent_invocations_with_invalid_count(self):
         self.mock_events_client.get_events_count_by_group.return_value = [
@@ -1377,7 +1386,8 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         )
 
         self.assertIn("quoted_value", results)
-        self.assertEqual(results["quoted_value"]["count"], 4)
+        self.assertIsInstance(results["quoted_value"], AgentInvocationMetric)
+        self.assertEqual(results["quoted_value"].count, 4)
 
     def test_get_events_lowest_value(self):
         project_uuid = uuid.uuid4()

@@ -13,6 +13,16 @@ class SalesFunnelData:
     total_orders_value: int = 0
 
 
+@dataclass
+class AgentInvocationMetric:
+    """
+    Dataclass to store agent invocation metric data.
+    """
+
+    agent_uuid: str
+    count: int = 0
+
+
 @dataclass(frozen=True)
 class CrosstabSource:
     """
