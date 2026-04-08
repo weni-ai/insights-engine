@@ -160,6 +160,12 @@ class AgentInvocationItem:
 
 
 @dataclass(frozen=True)
+class AgentInvocationMetrics:
+    invocations: list[AgentInvocationItem]
+    total: int
+
+
+@dataclass(frozen=True)
 class AbsoluteNumbersMetrics:
     """
     Dataclass for absolute numbers metrics
