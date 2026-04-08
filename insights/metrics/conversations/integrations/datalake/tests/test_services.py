@@ -1368,6 +1368,47 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 end_date=datetime.now(),
             )
 
+    def test_get_agent_invocations_with_none_agent_uuid(self):
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {
+                "payload_value": "inv_1",
+                "count": 5,
+                "metadata_key_value": None,
+            }
+        ]
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertIn("inv_1", results)
+        self.assertIsInstance(results["inv_1"], AgentInvocationMetric)
+        self.assertEqual(results["inv_1"].count, 5)
+        self.assertIsNone(results["inv_1"].agent_uuid)
+
+    def test_get_agent_invocations_with_cached_none_agent_uuid(self):
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        with patch.object(self.service, "_get_cached_results") as mock_get_cached:
+            mock_get_cached.return_value = (
+                '{"inv_1": {"count": 5, "agent_uuid": null}}'
+            )
+
+            results = self.service.get_agent_invocations(
+                project_uuid=project_uuid,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            self.assertIn("inv_1", results)
+            self.assertIsInstance(results["inv_1"], AgentInvocationMetric)
+            self.assertEqual(results["inv_1"].count, 5)
+            self.assertIsNone(results["inv_1"].agent_uuid)
+
     def test_get_agent_invocations_strips_quotes_from_payload_value(self):
         agent_uuid = str(uuid.uuid4())
 
