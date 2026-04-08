@@ -154,7 +154,7 @@ class AgentInvocationAgent:
 @dataclass(frozen=True)
 class AgentInvocationItem:
     label: str
-    agent: AgentInvocationAgent
+    agent: Optional[AgentInvocationAgent]
     value: float
     full_value: int
 
