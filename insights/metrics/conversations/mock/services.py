@@ -2,6 +2,9 @@ from uuid import UUID, uuid4
 from datetime import datetime
 
 from insights.metrics.conversations.dataclass import (
+    AgentInvocationAgent,
+    AgentInvocationItem,
+    AgentInvocationMetrics,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
     NPSMetrics,
@@ -164,6 +167,80 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
     ) -> dict:
         return {}
+
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> AgentInvocationMetrics:
+        agent_uuid = str(uuid4())
+        invocations = [
+            AgentInvocationItem(
+                label="invocation_1",
+                agent=AgentInvocationAgent(uuid=agent_uuid),
+                value=25.0,
+                full_value=50,
+            ),
+            AgentInvocationItem(
+                label="invocation_2",
+                agent=None,
+                value=15.0,
+                full_value=30,
+            ),
+            AgentInvocationItem(
+                label="invocation_3",
+                agent=AgentInvocationAgent(uuid=str(uuid4())),
+                value=12.5,
+                full_value=25,
+            ),
+            AgentInvocationItem(
+                label="invocation_4",
+                agent=AgentInvocationAgent(uuid=str(uuid4())),
+                value=10.0,
+                full_value=20,
+            ),
+            AgentInvocationItem(
+                label="invocation_5",
+                agent=None,
+                value=9.0,
+                full_value=18,
+            ),
+            AgentInvocationItem(
+                label="invocation_6",
+                agent=AgentInvocationAgent(uuid=str(uuid4())),
+                value=8.0,
+                full_value=16,
+            ),
+            AgentInvocationItem(
+                label="invocation_7",
+                agent=None,
+                value=7.5,
+                full_value=15,
+            ),
+            AgentInvocationItem(
+                label="invocation_8",
+                agent=AgentInvocationAgent(uuid=str(uuid4())),
+                value=6.0,
+                full_value=12,
+            ),
+            AgentInvocationItem(
+                label="invocation_9",
+                agent=None,
+                value=4.0,
+                full_value=8,
+            ),
+            AgentInvocationItem(
+                label="invocation_10",
+                agent=AgentInvocationAgent(uuid=str(uuid4())),
+                value=3.0,
+                full_value=6,
+            ),
+        ]
+        return AgentInvocationMetrics(
+            invocations=invocations,
+            total=200,
+        )
 
     def get_tool_results(
         self,
