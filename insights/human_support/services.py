@@ -14,6 +14,7 @@ from insights.human_support.clients.chats_time_metrics import (
 from insights.human_support.filters import HumanSupportFilterSet
 from insights.projects.models import Project
 from insights.sources.agents.clients import AgentsRESTClient
+from insights.sources.chats.clients import ChatsRESTClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
 from insights.sources.queues.usecases.query_execute import (
     QueryExecutor as QueuesQueryExecutor,
@@ -571,6 +572,46 @@ class HumanSupportDashboardService:
 
             if status_label is not None:
                 result_data["status_label"] = status_label
+
+            formatted_results.append(result_data)
+
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
+
+    def get_detailed_monitoring_agents_v2(self, filters: dict = {}):
+        params = self._get_detailed_monitoring_agents_filters(filters)
+
+        response = ChatsRESTClient().get_agents(
+            str(self.project.uuid), params
+        )
+
+        formatted_results = []
+        for agent in response.get("results", []):
+            agent_data = agent.get("agent", {})
+            status_data = agent.get("status", {})
+
+            result_data = {
+                "agent": {
+                    "name": agent_data.get("name"),
+                    "email": agent_data.get("email"),
+                    "is_deleted": agent_data.get("is_deleted", False),
+                },
+                "status": {
+                    "status": status_data.get("status", "offline"),
+                    "label": status_data.get("label"),
+                },
+                "ongoing": agent.get("opened", 0),
+                "finished": agent.get("closed", 0),
+                "average_first_response_time": agent.get("avg_first_response_time"),
+                "average_response_time": agent.get("avg_message_response_time"),
+                "average_duration": agent.get("avg_interaction_time"),
+                "time_in_service": agent.get("time_in_service"),
+                "link": agent.get("link"),
+            }
 
             formatted_results.append(result_data)
 

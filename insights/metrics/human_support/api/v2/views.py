@@ -25,6 +25,6 @@ class DetailedMonitoringAgentsViewV2(APIView):
 
         filters = get_filters_from_query_params(request.query_params)
         filters["user_request"] = request.user.email
-        data = service.get_detailed_monitoring_agents(filters=filters)
+        data = service.get_detailed_monitoring_agents_v2(filters=filters)
 
         return Response(data, status=200)
