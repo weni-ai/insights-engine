@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from insights.metrics.conversations.enums import ConversationsTimeseriesUnit
 
@@ -176,7 +177,7 @@ class SalesFunnelMetrics:
     leads_count: int
     total_orders_count: int
     total_orders_value: int  # In cents
-    currency_code: str
+    currency_code: Optional[str] = None
 
     @property
     def average_ticket(self) -> int:
@@ -219,6 +220,25 @@ class CrosstabItemData:
     title: str
     total: int  # sum of all related events
     subitems: list[CrosstabSubItemData]
+
+
+@dataclass(frozen=True)
+class AgentInvocationAgent:
+    uuid: str
+
+
+@dataclass(frozen=True)
+class AgentInvocationItem:
+    label: str
+    agent: Optional[AgentInvocationAgent]
+    value: float
+    full_value: int
+
+
+@dataclass(frozen=True)
+class AgentInvocationMetrics:
+    invocations: list[AgentInvocationItem]
+    total: int
 
 
 @dataclass(frozen=True)

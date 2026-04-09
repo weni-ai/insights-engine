@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -11,6 +12,16 @@ class SalesFunnelData:
     leads_count: int = 0
     total_orders_count: int = 0
     total_orders_value: int = 0
+
+
+@dataclass
+class AgentInvocationMetric:
+    """
+    Dataclass to store agent invocation metric data.
+    """
+
+    agent_uuid: Optional[str] = None
+    count: int = 0
 
 
 @dataclass(frozen=True)

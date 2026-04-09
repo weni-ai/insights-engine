@@ -3,6 +3,9 @@ from uuid import UUID, uuid4
 from datetime import datetime
 
 from insights.metrics.conversations.dataclass import (
+    AgentInvocationAgent,
+    AgentInvocationItem,
+    AgentInvocationMetrics,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
     NPSMetrics,
@@ -162,6 +165,32 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
     ) -> dict:
         return {}
+
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> AgentInvocationMetrics:
+        agent_uuid = str(uuid4())
+        invocations = [
+            AgentInvocationItem(
+                label="invocation_1",
+                agent=AgentInvocationAgent(uuid=agent_uuid),
+                value=66.67,
+                full_value=20,
+            ),
+            AgentInvocationItem(
+                label="invocation_2",
+                agent=None,
+                value=33.33,
+                full_value=10,
+            ),
+        ]
+        return AgentInvocationMetrics(
+            invocations=invocations,
+            total=30,
+        )
 
     def get_sales_funnel_data(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
