@@ -10,6 +10,9 @@ from insights.metrics.conversations.dataclass import (
     NPSMetrics,
     NPSMetricsField,
     SubtopicMetrics,
+    ToolResultAgent,
+    ToolResultItem,
+    ToolResultMetrics,
     TopicMetrics,
     TopicsDistributionMetrics,
     SalesFunnelMetrics,
@@ -237,6 +240,32 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         return AgentInvocationMetrics(
             invocations=invocations,
             total=200,
+        )
+
+    def get_tool_results(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ToolResultMetrics:
+        agent_uuid = str(uuid4())
+        tool_results = [
+            ToolResultItem(
+                label="tool_result_1",
+                agent=ToolResultAgent(uuid=agent_uuid),
+                value=66.67,
+                full_value=20,
+            ),
+            ToolResultItem(
+                label="tool_result_2",
+                agent=None,
+                value=33.33,
+                full_value=10,
+            ),
+        ]
+        return ToolResultMetrics(
+            tool_results=tool_results,
+            total=30,
         )
 
     def get_sales_funnel_data(
