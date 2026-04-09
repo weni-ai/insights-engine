@@ -10,6 +10,7 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.dataclass import (
+    AgentInvocationMetric,
     SalesFunnelData,
     ToolResultMetric,
 )
@@ -870,7 +871,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
         self.assertEqual(results.leads_count, 10)
         self.assertEqual(results.total_orders_count, 1)
-        self.assertEqual(results.total_orders_value, 10000)  # Sum in cents from datalake
+        self.assertEqual(
+            results.total_orders_value, 10000
+        )  # Sum in cents from datalake
         self.assertEqual(results.currency_code, "BRL")
 
     def test_get_sales_funnel_data_converts_fractional_sum_to_cents(self):
@@ -969,7 +972,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertEqual(results.total_orders_value, 0)
         self.mock_events_client.get_events.assert_not_called()
 
-    def test_get_sales_funnel_data_zero_purchase_orders_does_not_fetch_sample_event(self):
+    def test_get_sales_funnel_data_zero_purchase_orders_does_not_fetch_sample_event(
+        self,
+    ):
         self.mock_events_client.get_events.side_effect = None
         self.mock_events_client.get_events.return_value = []
         self.mock_events_client.get_events_count.side_effect = [
@@ -1171,6 +1176,258 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             key=key,
             agent_uuid=agent_uuid,
         )
+
+    def test_get_agent_invocations(self):
+        project_uuid = uuid.uuid4()
+        agent_uuid = str(uuid.uuid4())
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {
+                "payload_value": "invocation_1",
+                "count": 10,
+                "metadata_key_value": agent_uuid,
+            }
+        ]
+
+        results = self.service.get_agent_invocations(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.assertIsInstance(results, dict)
+        self.assertIn("invocation_1", results)
+        self.assertIsInstance(results["invocation_1"], AgentInvocationMetric)
+        self.assertEqual(results["invocation_1"].count, 10)
+        self.assertEqual(results["invocation_1"].agent_uuid, agent_uuid)
+
+        self.mock_events_client.get_events_count_by_group.assert_called_once_with(
+            key="agent_invocation",
+            event_name=self.service.event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            metadata_key="agent_uuid",
+        )
+
+    def test_get_agent_invocations_with_cache(self):
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        results1 = self.service.get_agent_invocations(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        results2 = self.service.get_agent_invocations(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.assertEqual(results1, results2)
+
+    def test_get_agent_invocations_with_cached_string_data(self):
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        with patch.object(self.service, "_get_cached_results") as mock_get_cached:
+            mock_get_cached.return_value = (
+                '{"inv_1": {"count": 5, "agent_uuid": "abc"}}'
+            )
+
+            results = self.service.get_agent_invocations(
+                project_uuid=project_uuid,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            self.assertIn("inv_1", results)
+            self.assertIsInstance(results["inv_1"], AgentInvocationMetric)
+            self.assertEqual(results["inv_1"].count, 5)
+            self.assertEqual(results["inv_1"].agent_uuid, "abc")
+
+    def test_get_agent_invocations_with_exception(self):
+        self.mock_events_client.get_events_count_by_group.side_effect = Exception(
+            "Test exception"
+        )
+
+        with self.assertRaises(Exception):
+            self.service.get_agent_invocations(
+                project_uuid=uuid.uuid4(),
+                start_date=datetime.now() - timedelta(days=1),
+                end_date=datetime.now(),
+            )
+
+    def test_get_agent_invocations_with_none_payload_value(self):
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {"payload_value": None, "count": 3, "metadata_key_value": "agent1"},
+            {
+                "payload_value": "valid",
+                "count": 5,
+                "metadata_key_value": "agent2",
+            },
+        ]
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertNotIn(None, results)
+        self.assertIn("valid", results)
+        self.assertIsInstance(results["valid"], AgentInvocationMetric)
+        self.assertEqual(results["valid"].count, 5)
+        self.assertEqual(results["valid"].agent_uuid, "agent2")
+
+    def test_get_agent_invocations_with_int_payload_value(self):
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {
+                "payload_value": 123,
+                "count": 7,
+                "metadata_key_value": agent_uuid,
+            }
+        ]
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertIn("123", results)
+        self.assertIsInstance(results["123"], AgentInvocationMetric)
+        self.assertEqual(results["123"].count, 7)
+        self.assertEqual(results["123"].agent_uuid, agent_uuid)
+
+    def test_get_agent_invocations_with_duplicate_payload_values(self):
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {
+                "payload_value": "same_value",
+                "count": 5,
+                "metadata_key_value": agent_uuid,
+            },
+            {
+                "payload_value": "same_value",
+                "count": 3,
+                "metadata_key_value": agent_uuid,
+            },
+        ]
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertIsInstance(results["same_value"], AgentInvocationMetric)
+        self.assertEqual(results["same_value"].count, 8)
+
+    def test_get_agent_invocations_with_string_count(self):
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {
+                "payload_value": "inv_1",
+                "count": "15",
+                "metadata_key_value": agent_uuid,
+            }
+        ]
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertIsInstance(results["inv_1"], AgentInvocationMetric)
+        self.assertEqual(results["inv_1"].count, 15)
+
+    def test_get_agent_invocations_with_invalid_count(self):
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {
+                "payload_value": "inv_1",
+                "count": "not_a_number",
+                "metadata_key_value": "agent1",
+            }
+        ]
+
+        with self.assertRaises(Exception):
+            self.service.get_agent_invocations(
+                project_uuid=uuid.uuid4(),
+                start_date=datetime.now() - timedelta(days=1),
+                end_date=datetime.now(),
+            )
+
+    def test_get_agent_invocations_with_none_agent_uuid(self):
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {
+                "payload_value": "inv_1",
+                "count": 5,
+                "metadata_key_value": None,
+            }
+        ]
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertIn("inv_1", results)
+        self.assertIsInstance(results["inv_1"], AgentInvocationMetric)
+        self.assertEqual(results["inv_1"].count, 5)
+        self.assertIsNone(results["inv_1"].agent_uuid)
+
+    def test_get_agent_invocations_with_cached_none_agent_uuid(self):
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        with patch.object(self.service, "_get_cached_results") as mock_get_cached:
+            mock_get_cached.return_value = '{"inv_1": {"count": 5, "agent_uuid": null}}'
+
+            results = self.service.get_agent_invocations(
+                project_uuid=project_uuid,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            self.assertIn("inv_1", results)
+            self.assertIsInstance(results["inv_1"], AgentInvocationMetric)
+            self.assertEqual(results["inv_1"].count, 5)
+            self.assertIsNone(results["inv_1"].agent_uuid)
+
+    def test_get_agent_invocations_strips_quotes_from_payload_value(self):
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_events_client.get_events_count_by_group.return_value = [
+            {
+                "payload_value": '"quoted_value"',
+                "count": 4,
+                "metadata_key_value": agent_uuid,
+            }
+        ]
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=datetime.now() - timedelta(days=1),
+            end_date=datetime.now(),
+        )
+
+        self.assertIn("quoted_value", results)
+        self.assertIsInstance(results["quoted_value"], AgentInvocationMetric)
+        self.assertEqual(results["quoted_value"].count, 4)
 
     def test_get_events_lowest_value(self):
         project_uuid = uuid.uuid4()

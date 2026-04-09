@@ -560,6 +560,28 @@ class AbsoluteNumbersQueryParamsSerializer(serializers.Serializer):
         return attrs
 
 
+class AgentInvocationQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for agent invocation metrics query params
+    """
+
+
+class AgentInvocationAgentSerializer(serializers.Serializer):
+    uuid = serializers.CharField()
+
+
+class AgentInvocationItemSerializer(serializers.Serializer):
+    label = serializers.CharField()
+    agent = AgentInvocationAgentSerializer(allow_null=True)
+    value = serializers.FloatField()
+    full_value = serializers.IntegerField()
+
+
+class AgentInvocationMetricsSerializer(serializers.Serializer):
+    results = AgentInvocationItemSerializer(many=True, source="invocations")
+    total = serializers.IntegerField()
+
+
 class ToolResultQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
     """
     Serializer for tool result metrics query params

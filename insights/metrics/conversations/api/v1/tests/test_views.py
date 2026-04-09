@@ -19,6 +19,9 @@ from insights.authentication.tests.decorators import (
 )
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
+    AgentInvocationAgent,
+    AgentInvocationItem,
+    AgentInvocationMetrics,
     AvailableWidgetsList,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
@@ -179,6 +182,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
+    def get_agent_invocation(self, query_params: dict) -> Response:
+        url = reverse("conversations-agent-invocation")
+
+        return self.client.get(url, query_params, format="json")
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -260,6 +268,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_tool_result_when_unauthenticated(self):
         response = self.get_tool_result({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_agent_invocation_when_unauthenticated(self):
+        response = self.get_agent_invocation({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -1039,6 +1052,140 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertIn("error", response.data)
 
+    def test_cannot_get_agent_invocation_without_project_uuid(self):
+        response = self.get_agent_invocation({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_cannot_get_agent_invocation_without_permission(self):
+        response = self.get_agent_invocation({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_cannot_get_agent_invocation_without_required_params(self):
+        response = self.get_agent_invocation({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
+    def test_get_agent_invocation(self, mock_get_agent_invocations):
+        agent_uuid = str(uuid.uuid4())
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label="invocation_1",
+                    agent=AgentInvocationAgent(uuid=agent_uuid),
+                    value=100.0,
+                    full_value=10,
+                ),
+            ],
+            total=10,
+        )
+
+        response = self.get_agent_invocation(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["label"], "invocation_1")
+        self.assertEqual(response.data["results"][0]["agent"]["uuid"], agent_uuid)
+        self.assertEqual(response.data["results"][0]["value"], 100.0)
+        self.assertEqual(response.data["results"][0]["full_value"], 10)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
+    def test_get_agent_invocation_with_null_agent(self, mock_get_agent_invocations):
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label="invocation_1",
+                    agent=None,
+                    value=100.0,
+                    full_value=10,
+                ),
+            ],
+            total=10,
+        )
+
+        response = self.get_agent_invocation(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["label"], "invocation_1")
+        self.assertIsNone(response.data["results"][0]["agent"])
+        self.assertEqual(response.data["results"][0]["value"], 100.0)
+        self.assertEqual(response.data["results"][0]["full_value"], 10)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
+    def test_get_agent_invocation_empty(self, mock_get_agent_invocations):
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[],
+            total=0,
+        )
+
+        response = self.get_agent_invocation(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["total"], 0)
+        self.assertEqual(len(response.data["results"]), 0)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
+    def test_get_agent_invocation_returns_500_on_service_error(
+        self, mock_get_agent_invocations
+    ):
+        from insights.metrics.conversations.exceptions import (
+            ConversationsMetricsError,
+        )
+
+        mock_get_agent_invocations.side_effect = ConversationsMetricsError(
+            "Service error"
+        )
+
+        response = self.get_agent_invocation(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn("error", response.data)
+
     def test_cannot_get_tool_result_without_project_uuid(self):
         response = self.get_tool_result({})
 
@@ -1075,7 +1222,6 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
             ],
             total=10,
         )
-
         response = self.get_tool_result(
             {
                 "project_uuid": self.project.uuid,
@@ -1087,7 +1233,9 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["total"], 10)
         self.assertEqual(len(response.data["results"]), 1)
+
         self.assertEqual(response.data["results"][0]["label"], "tool_result_1")
+
         self.assertEqual(response.data["results"][0]["agent"]["uuid"], agent_uuid)
         self.assertEqual(response.data["results"][0]["value"], 100.0)
         self.assertEqual(response.data["results"][0]["full_value"], 10)
@@ -1121,6 +1269,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["total"], 10)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["label"], "tool_result_1")
+
         self.assertIsNone(response.data["results"][0]["agent"])
         self.assertEqual(response.data["results"][0]["value"], 100.0)
         self.assertEqual(response.data["results"][0]["full_value"], 10)
@@ -1151,16 +1300,12 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_tool_results"
     )
-    def test_get_tool_result_returns_500_on_service_error(
-        self, mock_get_tool_results
-    ):
+    def test_get_tool_result_returns_500_on_service_error(self, mock_get_tool_results):
         from insights.metrics.conversations.exceptions import (
             ConversationsMetricsError,
         )
 
-        mock_get_tool_results.side_effect = ConversationsMetricsError(
-            "Service error"
-        )
+        mock_get_tool_results.side_effect = ConversationsMetricsError("Service error")
 
         response = self.get_tool_result(
             {
