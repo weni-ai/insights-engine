@@ -242,6 +242,25 @@ class AgentInvocationMetrics:
 
 
 @dataclass(frozen=True)
+class ToolResultAgent:
+    uuid: str
+
+
+@dataclass(frozen=True)
+class ToolResultItem:
+    label: str
+    agent: Optional[ToolResultAgent]
+    value: float
+    full_value: int
+
+
+@dataclass(frozen=True)
+class ToolResultMetrics:
+    tool_results: list[ToolResultItem]
+    total: int
+
+
+@dataclass(frozen=True)
 class AbsoluteNumbersMetrics:
     """
     Dataclass for absolute numbers metrics

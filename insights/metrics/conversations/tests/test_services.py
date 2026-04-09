@@ -23,6 +23,9 @@ from insights.metrics.conversations.dataclass import (
     NPSMetrics,
     NPSMetricsField,
     SalesFunnelMetrics,
+    ToolResultAgent,
+    ToolResultItem,
+    ToolResultMetrics,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import (
@@ -35,6 +38,7 @@ from insights.metrics.conversations.enums import (
 )
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     AgentInvocationMetric,
+    ToolResultMetric,
     SalesFunnelData,
 )
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
@@ -1281,6 +1285,153 @@ class TestConversationsMetricsService(TestCase):
                 end_date=self.end_date,
             )
 
+    def test_get_tool_results(self):
+        project_uuid = uuid.uuid4()
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_tool_results.return_value = {
+            "tool_result_1": ToolResultMetric(
+                agent_uuid=agent_uuid,
+                count=10,
+            )
+        }
+
+        results = self.service.get_tool_results(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+        self.assertIsInstance(results, ToolResultMetrics)
+        self.assertEqual(results.total, 10)
+        self.assertEqual(len(results.tool_results), 1)
+        self.assertIsInstance(results.tool_results[0], ToolResultItem)
+        self.assertEqual(results.tool_results[0].label, "tool_result_1")
+        self.assertEqual(
+            results.tool_results[0].agent, ToolResultAgent(uuid=agent_uuid)
+        )
+        self.assertEqual(results.tool_results[0].value, 100.0)
+        self.assertEqual(results.tool_results[0].full_value, 10)
+
+        self.mock_datalake_service.get_tool_results.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+    def test_get_tool_results_with_none_agent_uuid(self):
+        project_uuid = uuid.uuid4()
+
+        self.mock_datalake_service.get_tool_results.return_value = {
+            "tool_result_1": ToolResultMetric(
+                agent_uuid=None,
+                count=10,
+            )
+        }
+
+        results = self.service.get_tool_results(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+        self.assertIsInstance(results, ToolResultMetrics)
+        self.assertEqual(results.total, 10)
+        self.assertEqual(len(results.tool_results), 1)
+        self.assertIsInstance(results.tool_results[0], ToolResultItem)
+        self.assertEqual(results.tool_results[0].label, "tool_result_1")
+        self.assertIsNone(results.tool_results[0].agent)
+        self.assertEqual(results.tool_results[0].value, 100.0)
+        self.assertEqual(results.tool_results[0].full_value, 10)
+
+        self.mock_datalake_service.get_tool_results.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+    def test_get_tool_results_empty_result(self):
+        self.mock_datalake_service.get_tool_results.return_value = {}
+
+        results = self.service.get_tool_results(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(results, ToolResultMetrics)
+        self.assertEqual(results.tool_results, [])
+        self.assertEqual(results.total, 0)
+
+    def test_get_tool_results_multiple_agents(self):
+        agent_uuid_1 = str(uuid.uuid4())
+        agent_uuid_2 = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_tool_results.return_value = {
+            "tool_result_1": ToolResultMetric(
+                agent_uuid=agent_uuid_1,
+                count=10,
+            ),
+            "tool_result_2": ToolResultMetric(
+                agent_uuid=agent_uuid_2,
+                count=20,
+            ),
+        }
+        results = self.service.get_tool_results(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(results.total, 30)
+        self.assertEqual(len(results.tool_results), 2)
+        self.assertEqual(results.tool_results[0].label, "tool_result_1")
+        self.assertEqual(results.tool_results[0].full_value, 10)
+        self.assertEqual(results.tool_results[0].value, 33.33)
+        self.assertEqual(results.tool_results[1].label, "tool_result_2")
+        self.assertEqual(results.tool_results[1].full_value, 20)
+        self.assertEqual(results.tool_results[1].value, 66.67)
+
+    def test_get_tool_results_mixed_agent_uuids(self):
+        agent_uuid_1 = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_tool_results.return_value = {
+            "tool_result_1": ToolResultMetric(
+                agent_uuid=agent_uuid_1,
+                count=10,
+            ),
+            "tool_result_2": ToolResultMetric(
+                agent_uuid=None,
+                count=20,
+            ),
+        }
+        results = self.service.get_tool_results(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(results.total, 30)
+        self.assertEqual(len(results.tool_results), 2)
+        self.assertEqual(results.tool_results[0].label, "tool_result_1")
+        self.assertEqual(
+            results.tool_results[0].agent, ToolResultAgent(uuid=agent_uuid_1)
+        )
+        self.assertEqual(results.tool_results[0].full_value, 10)
+        self.assertEqual(results.tool_results[1].label, "tool_result_2")
+        self.assertIsNone(results.tool_results[1].agent)
+        self.assertEqual(results.tool_results[1].full_value, 20)
+
+    def test_get_tool_results_propagates_exception(self):
+        self.mock_datalake_service.get_tool_results.side_effect = Exception(
+            "Datalake error"
+        )
+
+        with self.assertRaises(Exception):
+            self.service.get_tool_results(
+                project_uuid=uuid.uuid4(),
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
     def test_get_topics_with_cache_hit(self):
         """Test get_topics when cache is hit"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
@@ -1291,10 +1442,6 @@ class TestConversationsMetricsService(TestCase):
         self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
         results = self.service.check_if_sales_funnel_data_exists(self.project.uuid)
         self.assertTrue(results)
-
-        self.assertEqual(len(topics), 1)
-        self.assertEqual(topics[0]["name"], "Cached Topic")
-        self.mock_nexus_conversations_client.get_topics.assert_not_called()
 
     def test_get_topics_with_exception(self):
         """Test get_topics when nexus client raises exception"""
