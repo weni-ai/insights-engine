@@ -1,8 +1,12 @@
 import traceback
+import logging
 
 import sentry_sdk
 from django.conf import settings
 from django.http import JsonResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 class InternalErrorHandlerMiddleware:
@@ -13,6 +17,7 @@ class InternalErrorHandlerMiddleware:
         return self.get_response(request)
 
     def process_exception(self, request, exception):
+        logger.exception(f"Internal error: {exception}")
         event_id = sentry_sdk.capture_exception(exception)
 
         response_data = {
