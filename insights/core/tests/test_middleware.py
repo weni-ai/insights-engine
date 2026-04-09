@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 from django.test import TestCase, RequestFactory, override_settings
@@ -19,7 +20,7 @@ class InternalErrorHandlerMiddlewareTestCase(TestCase):
         response = self.middleware.process_exception(request, exception)
 
         self.assertEqual(response.status_code, 500)
-        data = response.json()
+        data = json.loads(response.content)
         self.assertEqual(data["code"], "INTERNAL_ERROR")
         self.assertEqual(data["message"], "An internal error has occurred")
         self.assertEqual(data["event_id"], "abc123")
@@ -34,7 +35,7 @@ class InternalErrorHandlerMiddlewareTestCase(TestCase):
 
         response = self.middleware.process_exception(request, exception)
 
-        data = response.json()
+        data = json.loads(response.content)
         self.assertIn("detail", data)
         self.assertIsInstance(data["detail"], str)
 
@@ -57,7 +58,7 @@ class InternalErrorHandlerMiddlewareTestCase(TestCase):
 
         response = self.middleware.process_exception(request, exception)
 
-        data = response.json()
+        data = json.loads(response.content)
         self.assertNotIn("detail", data)
 
     @patch("insights.core.middleware.sentry_sdk.capture_exception")

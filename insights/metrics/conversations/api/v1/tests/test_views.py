@@ -994,13 +994,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
     def test_get_absolute_numbers_returns_500_on_service_error(
         self, mock_get_absolute_numbers
     ):
-        from insights.metrics.conversations.exceptions import (
-            ConversationsMetricsError,
-        )
-
-        mock_get_absolute_numbers.side_effect = ConversationsMetricsError(
-            "Service error"
-        )
+        mock_get_absolute_numbers.side_effect = RuntimeError("Service error")
 
         widget = Widget.objects.create(
             name="Test Widget",
@@ -1024,7 +1018,9 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertIn("error", response.data)
+        data = json.loads(response.content)
+        self.assertIn("code", data)
+        self.assertEqual(data["code"], "INTERNAL_ERROR")
 
 
 class BaseTestInternalConversationsMetricsViewSet(APITestCase):
