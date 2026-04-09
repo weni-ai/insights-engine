@@ -11,6 +11,9 @@ from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
     AbsoluteNumbersMetrics,
+    AgentInvocationAgent,
+    AgentInvocationItem,
+    AgentInvocationMetrics,
     AvailableWidgetsList,
     ConversationsTotalsMetrics,
     CrosstabItemData,
@@ -192,6 +195,18 @@ class BaseConversationsMetricsService(ABC):
     ) -> AvailableWidgetsList:
         """
         Get available widgets
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> AgentInvocationMetrics:
+        """
+        Get agent invocation counts grouped by agent
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -1064,6 +1079,42 @@ class ConversationsMetricsService(
             )
 
         return items
+
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> AgentInvocationMetrics:
+        """
+        Get agent invocation counts grouped by agent
+        """
+        invocations = self.datalake_service.get_agent_invocations(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        total_count = sum(item.count for item in invocations.values())
+
+        return AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label=label,
+                    agent=(
+                        AgentInvocationAgent(uuid=item.agent_uuid)
+                        if item.agent_uuid
+                        else None
+                    ),
+                    value=(
+                        round((item.count / total_count) * 100, 2) if total_count else 0
+                    ),
+                    full_value=item.count,
+                )
+                for label, item in invocations.items()
+            ],
+            total=total_count,
+        )
 
     def get_event_count(
         self,
