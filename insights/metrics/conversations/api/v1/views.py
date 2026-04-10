@@ -26,6 +26,8 @@ from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import 
 from insights.metrics.conversations.api.v1.serializers import (
     AbsoluteNumbersQueryParamsSerializer,
     AbsoluteNumbersSerializer,
+    AgentInvocationMetricsSerializer,
+    AgentInvocationQueryParamsSerializer,
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
@@ -41,6 +43,8 @@ from insights.metrics.conversations.api.v1.serializers import (
     NpsMetricsQueryParamsSerializer,
     SalesFunnelMetricsQueryParamsSerializer,
     SalesFunnelMetricsSerializer,
+    ToolResultMetricsSerializer,
+    ToolResultQueryParamsSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
     TopicsDistributionMetricsSerializer,
     NpsMetricsSerializer,
@@ -405,6 +409,43 @@ class ConversationsMetricsViewSet(
     @action(
         detail=False,
         methods=["get"],
+        url_path="agent-invocation",
+        url_name="agent-invocation",
+    )
+    def agent_invocation(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get agent invocation metrics
+        """
+        query_params = AgentInvocationQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            metrics = self.service.get_agent_invocations(
+                project_uuid=query_params.validated_data["project_uuid"],
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            logger.error(
+                "[ConversationsMetricsViewSet] Error getting agent invocation metrics: %s",
+                e,
+                exc_info=True,
+            )
+            event_id = capture_exception(e)
+            return Response(
+                {"error": f"Internal error. Event ID: {event_id}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        response_data = AgentInvocationMetricsSerializer(metrics).data
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
         url_path="available-widgets",
         url_name="available-widgets",
     )
@@ -485,6 +526,43 @@ class ConversationsMetricsViewSet(
         data = AbsoluteNumbersSerializer(metrics).data
 
         return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="tool-result",
+        url_name="tool-result",
+    )
+    def tool_result(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get tool result metrics
+        """
+        query_params = ToolResultQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            metrics = self.service.get_tool_results(
+                project_uuid=query_params.validated_data["project_uuid"],
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+            )
+        except ConversationsMetricsError as e:
+            logger.error(
+                "[ConversationsMetricsViewSet] Error getting tool result metrics: %s",
+                e,
+                exc_info=True,
+            )
+            event_id = capture_exception(e)
+            return Response(
+                {"error": f"Internal error. Event ID: {event_id}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        response_data = ToolResultMetricsSerializer(metrics).data
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class InternalConversationsMetricsViewSet(GenericViewSet):
