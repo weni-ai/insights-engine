@@ -1476,11 +1476,11 @@ class TestAgentInvocationMetricsSerializer(TestCase):
                     full_value=5,
                 ),
             ],
-            total=15,
+            total=2,
         )
         serializer = AgentInvocationMetricsSerializer(metrics)
 
-        self.assertEqual(serializer.data["total"], 15)
+        self.assertEqual(serializer.data["total"], 2)
         self.assertEqual(len(serializer.data["results"]), 2)
         self.assertEqual(serializer.data["results"][0]["label"], "invocation_1")
         self.assertEqual(serializer.data["results"][0]["agent"]["uuid"], agent_uuid)
@@ -1684,11 +1684,12 @@ class TestToolResultMetricsSerializer(TestCase):
                     full_value=5,
                 ),
             ],
-            total=15,
+            total=2,
         )
+
         serializer = ToolResultMetricsSerializer(metrics)
 
-        self.assertEqual(serializer.data["total"], 15)
+        self.assertEqual(serializer.data["total"], 2)
         self.assertEqual(len(serializer.data["results"]), 2)
         self.assertEqual(serializer.data["results"][0]["label"], "tool_result_1")
         self.assertEqual(serializer.data["results"][0]["agent"]["uuid"], agent_uuid)

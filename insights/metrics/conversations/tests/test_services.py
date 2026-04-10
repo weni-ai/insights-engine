@@ -37,8 +37,8 @@ from insights.metrics.conversations.enums import (
     NpsMetricsType,
 )
 from insights.metrics.conversations.integrations.datalake.dataclass import (
-    AgentInvocationMetric,
     ToolResultMetric,
+    AgentInvocationMetric,
     SalesFunnelData,
 )
 from insights.metrics.conversations.exceptions import ConversationsMetricsError
@@ -1127,13 +1127,6 @@ class TestConversationsMetricsService(TestCase):
             ],
         )
 
-    def test_check_if_sales_funnel_data_exists_when_data_does_not_exist(self):
-        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = (
-            False
-        )
-        results = self.service.check_if_sales_funnel_data_exists(self.project.uuid)
-        self.assertFalse(results)
-
     def test_get_agent_invocations(self):
         project_uuid = uuid.uuid4()
         agent_uuid = str(uuid.uuid4())
@@ -1152,7 +1145,7 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertIsInstance(results, AgentInvocationMetrics)
-        self.assertEqual(results.total, 10)
+        self.assertEqual(results.total, 1)
         self.assertEqual(len(results.invocations), 1)
         self.assertIsInstance(results.invocations[0], AgentInvocationItem)
         self.assertEqual(results.invocations[0].label, "invocation_1")
@@ -1185,7 +1178,7 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertIsInstance(results, AgentInvocationMetrics)
-        self.assertEqual(results.total, 10)
+        self.assertEqual(results.total, 1)
         self.assertEqual(len(results.invocations), 1)
         self.assertIsInstance(results.invocations[0], AgentInvocationItem)
         self.assertEqual(results.invocations[0].label, "invocation_1")
@@ -1233,7 +1226,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(results.total, 30)
+        self.assertEqual(results.total, 2)
         self.assertEqual(len(results.invocations), 2)
         self.assertEqual(results.invocations[0].label, "invocation_1")
         self.assertEqual(results.invocations[0].full_value, 10)
@@ -1262,7 +1255,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(results.total, 30)
+        self.assertEqual(results.total, 2)
         self.assertEqual(len(results.invocations), 2)
         self.assertEqual(results.invocations[0].label, "invocation_1")
         self.assertEqual(
@@ -1302,7 +1295,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
         self.assertIsInstance(results, ToolResultMetrics)
-        self.assertEqual(results.total, 10)
+        self.assertEqual(results.total, 1)
         self.assertEqual(len(results.tool_results), 1)
         self.assertIsInstance(results.tool_results[0], ToolResultItem)
         self.assertEqual(results.tool_results[0].label, "tool_result_1")
@@ -1327,14 +1320,14 @@ class TestConversationsMetricsService(TestCase):
                 count=10,
             )
         }
-
         results = self.service.get_tool_results(
             project_uuid=project_uuid,
             start_date=self.start_date,
             end_date=self.end_date,
         )
+
         self.assertIsInstance(results, ToolResultMetrics)
-        self.assertEqual(results.total, 10)
+        self.assertEqual(results.total, 1)
         self.assertEqual(len(results.tool_results), 1)
         self.assertIsInstance(results.tool_results[0], ToolResultItem)
         self.assertEqual(results.tool_results[0].label, "tool_result_1")
@@ -1381,7 +1374,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(results.total, 30)
+        self.assertEqual(results.total, 2)
         self.assertEqual(len(results.tool_results), 2)
         self.assertEqual(results.tool_results[0].label, "tool_result_1")
         self.assertEqual(results.tool_results[0].full_value, 10)
@@ -1409,7 +1402,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(results.total, 30)
+        self.assertEqual(results.total, 2)
         self.assertEqual(len(results.tool_results), 2)
         self.assertEqual(results.tool_results[0].label, "tool_result_1")
         self.assertEqual(

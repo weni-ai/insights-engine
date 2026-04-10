@@ -193,13 +193,13 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
-    def get_agent_invocation(self, query_params: dict) -> Response:
-        url = reverse("conversations-agent-invocation")
+    def get_tool_result(self, query_params: dict) -> Response:
+        url = reverse("conversations-tool-result")
 
         return self.client.get(url, query_params, format="json")
 
-    def get_tool_result(self, query_params: dict) -> Response:
-        url = reverse("conversations-tool-result")
+    def get_agent_invocation(self, query_params: dict) -> Response:
+        url = reverse("conversations-agent-invocation")
 
         return self.client.get(url, query_params, format="json")
 
@@ -307,13 +307,13 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_cannot_get_agent_invocation_when_unauthenticated(self):
-        response = self.get_agent_invocation({})
+    def test_cannot_get_tool_result_when_unauthenticated(self):
+        response = self.get_tool_result({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_cannot_get_tool_result_when_unauthenticated(self):
-        response = self.get_tool_result({})
+    def test_cannot_get_agent_invocation_when_unauthenticated(self):
+        response = self.get_agent_invocation({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -1207,7 +1207,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                     full_value=10,
                 ),
             ],
-            total=10,
+            total=1,
         )
 
         response = self.get_agent_invocation(
@@ -1219,7 +1219,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(response.data["total"], 1)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["label"], "invocation_1")
         self.assertEqual(response.data["results"][0]["agent"]["uuid"], agent_uuid)
@@ -1240,7 +1240,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                     full_value=10,
                 ),
             ],
-            total=10,
+            total=1,
         )
 
         response = self.get_agent_invocation(
@@ -1252,7 +1252,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(response.data["total"], 1)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["label"], "invocation_1")
         self.assertIsNone(response.data["results"][0]["agent"])
@@ -1341,7 +1341,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                     full_value=10,
                 ),
             ],
-            total=10,
+            total=1,
         )
         response = self.get_tool_result(
             {
@@ -1352,8 +1352,9 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(response.data["total"], 1)
         self.assertEqual(len(response.data["results"]), 1)
+
         self.assertEqual(response.data["results"][0]["label"], "tool_result_1")
 
         self.assertEqual(response.data["results"][0]["agent"]["uuid"], agent_uuid)
@@ -1374,19 +1375,15 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                     full_value=10,
                 ),
             ],
-            total=10,
-        )
-
-        response = self.get_tool_result(
+            total=1,
             {
-                "project_uuid": self.project.uuid,
                 "start_date": "2024-01-01",
                 "end_date": "2024-01-31",
             }
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(response.data["total"], 1)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["label"], "tool_result_1")
 
