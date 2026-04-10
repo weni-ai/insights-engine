@@ -1128,7 +1128,7 @@ class ConversationsMetricsService(
                 )
                 for label, item in invocations.items()
             ],
-            total=total_count,
+            total=len(invocations),
         )
 
     def get_tool_results(
@@ -1164,7 +1164,7 @@ class ConversationsMetricsService(
                 )
                 for label, item in tool_results.items()
             ],
-            total=total_count,
+            total=len(tool_results),
         )
 
     def get_event_count(

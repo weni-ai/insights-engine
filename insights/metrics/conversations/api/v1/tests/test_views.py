@@ -1086,7 +1086,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                     full_value=10,
                 ),
             ],
-            total=10,
+            total=1,
         )
 
         response = self.get_agent_invocation(
@@ -1098,7 +1098,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(response.data["total"], 1)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["label"], "invocation_1")
         self.assertEqual(response.data["results"][0]["agent"]["uuid"], agent_uuid)
@@ -1119,7 +1119,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                     full_value=10,
                 ),
             ],
-            total=10,
+            total=1,
         )
 
         response = self.get_agent_invocation(
@@ -1131,7 +1131,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(response.data["total"], 1)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["label"], "invocation_1")
         self.assertIsNone(response.data["results"][0]["agent"])
@@ -1220,7 +1220,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                     full_value=10,
                 ),
             ],
-            total=10,
+            total=1,
         )
         response = self.get_tool_result(
             {
@@ -1231,7 +1231,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(response.data["total"], 1)
         self.assertEqual(len(response.data["results"]), 1)
 
         self.assertEqual(response.data["results"][0]["label"], "tool_result_1")
@@ -1254,7 +1254,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
                     full_value=10,
                 ),
             ],
-            total=10,
+            total=1,
         )
 
         response = self.get_tool_result(
@@ -1266,7 +1266,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total"], 10)
+        self.assertEqual(response.data["total"], 1)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["label"], "tool_result_1")
 
