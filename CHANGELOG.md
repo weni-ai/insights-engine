@@ -1,3 +1,12 @@
+# 1.19.1
+# Fix
+  - Agent invocations and tool results total counts in metrics calculations
+
+# 1.19.0
+# Add
+  - Agent invocation metrics endpoint and service integration
+  - Tool result metrics endpoint and service integration
+
 # 1.18.2
 # Fix
   - Sales funnel event count type conversion to integers
