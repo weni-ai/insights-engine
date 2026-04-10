@@ -1,4 +1,3 @@
-import traceback
 import logging
 
 import sentry_sdk
