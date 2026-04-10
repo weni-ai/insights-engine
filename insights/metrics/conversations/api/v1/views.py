@@ -378,6 +378,9 @@ class ConversationsMetricsViewSet(
         """
         Get conversations metrics totals
         """
+        if request.query_params.get("test_error"):
+            # TEMP: Staging only
+            raise RuntimeError("Test error")
 
         query_params_serializer = ConversationTotalsMetricsQueryParamsSerializer(
             data=request.query_params,
