@@ -959,7 +959,7 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertIsInstance(results, AgentInvocationMetrics)
-        self.assertEqual(results.total, 10)
+        self.assertEqual(results.total, 1)
         self.assertEqual(len(results.invocations), 1)
         self.assertIsInstance(results.invocations[0], AgentInvocationItem)
         self.assertEqual(results.invocations[0].label, "invocation_1")
@@ -992,7 +992,7 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertIsInstance(results, AgentInvocationMetrics)
-        self.assertEqual(results.total, 10)
+        self.assertEqual(results.total, 1)
         self.assertEqual(len(results.invocations), 1)
         self.assertIsInstance(results.invocations[0], AgentInvocationItem)
         self.assertEqual(results.invocations[0].label, "invocation_1")
@@ -1040,7 +1040,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(results.total, 30)
+        self.assertEqual(results.total, 2)
         self.assertEqual(len(results.invocations), 2)
         self.assertEqual(results.invocations[0].label, "invocation_1")
         self.assertEqual(results.invocations[0].full_value, 10)
@@ -1069,7 +1069,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(results.total, 30)
+        self.assertEqual(results.total, 2)
         self.assertEqual(len(results.invocations), 2)
         self.assertEqual(results.invocations[0].label, "invocation_1")
         self.assertEqual(
@@ -1109,7 +1109,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
         self.assertIsInstance(results, ToolResultMetrics)
-        self.assertEqual(results.total, 10)
+        self.assertEqual(results.total, 1)
         self.assertEqual(len(results.tool_results), 1)
         self.assertIsInstance(results.tool_results[0], ToolResultItem)
         self.assertEqual(results.tool_results[0].label, "tool_result_1")
@@ -1141,7 +1141,7 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertIsInstance(results, ToolResultMetrics)
-        self.assertEqual(results.total, 10)
+        self.assertEqual(results.total, 1)
         self.assertEqual(len(results.tool_results), 1)
         self.assertIsInstance(results.tool_results[0], ToolResultItem)
         self.assertEqual(results.tool_results[0].label, "tool_result_1")
@@ -1189,7 +1189,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(results.total, 30)
+        self.assertEqual(results.total, 2)
         self.assertEqual(len(results.tool_results), 2)
         self.assertEqual(results.tool_results[0].label, "tool_result_1")
         self.assertEqual(results.tool_results[0].full_value, 10)
@@ -1218,7 +1218,7 @@ class TestConversationsMetricsService(TestCase):
             end_date=self.end_date,
         )
 
-        self.assertEqual(results.total, 30)
+        self.assertEqual(results.total, 2)
         self.assertEqual(len(results.tool_results), 2)
         self.assertEqual(results.tool_results[0].label, "tool_result_1")
         self.assertEqual(

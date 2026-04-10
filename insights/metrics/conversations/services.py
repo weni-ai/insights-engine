@@ -1104,13 +1104,13 @@ class ConversationsMetricsService(
         """
         Get agent invocation counts grouped by agent
         """
-        invocations = self.datalake_service.get_agent_invocations(
+        invocation_counts_by_agent = self.datalake_service.get_agent_invocations(
             project_uuid=project_uuid,
             start_date=start_date,
             end_date=end_date,
         )
 
-        total_count = sum(item.count for item in invocations.values())
+        total_count = sum(item.count for item in invocation_counts_by_agent.values())
 
         return AgentInvocationMetrics(
             invocations=[
@@ -1126,9 +1126,9 @@ class ConversationsMetricsService(
                     ),
                     full_value=item.count,
                 )
-                for label, item in invocations.items()
+                for label, item in invocation_counts_by_agent.items()
             ],
-            total=total_count,
+            total=len(invocation_counts_by_agent),
         )
 
     def get_tool_results(
@@ -1140,13 +1140,13 @@ class ConversationsMetricsService(
         """
         Get tool result counts grouped by agent
         """
-        tool_results = self.datalake_service.get_tool_results(
+        tool_results_by_agent = self.datalake_service.get_tool_results(
             project_uuid=project_uuid,
             start_date=start_date,
             end_date=end_date,
         )
 
-        total_count = sum(item.count for item in tool_results.values())
+        total_count = sum(item.count for item in tool_results_by_agent.values())
 
         return ToolResultMetrics(
             tool_results=[
@@ -1162,9 +1162,9 @@ class ConversationsMetricsService(
                     ),
                     full_value=item.count,
                 )
-                for label, item in tool_results.items()
+                for label, item in tool_results_by_agent.items()
             ],
-            total=total_count,
+            total=len(tool_results_by_agent),
         )
 
     def get_event_count(

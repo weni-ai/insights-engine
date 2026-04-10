@@ -239,7 +239,7 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         ]
         return AgentInvocationMetrics(
             invocations=invocations,
-            total=200,
+            total=10,
         )
 
     def get_tool_results(
@@ -265,7 +265,7 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         ]
         return ToolResultMetrics(
             tool_results=tool_results,
-            total=30,
+            total=2,
         )
 
     def get_sales_funnel_data(
