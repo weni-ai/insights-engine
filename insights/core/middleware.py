@@ -1,10 +1,9 @@
-import traceback
 import logging
-
+import traceback
 import sentry_sdk
-from django.conf import settings
-from django.http import JsonResponse
 
+from django.http import JsonResponse
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -29,5 +28,8 @@ class InternalErrorHandlerMiddleware:
             "message": "An internal error has occurred",
             "event_id": event_id or "unknown",
         }
+
+        if settings.DEBUG:
+            response_data["detail"] = traceback.format_exc()
 
         return JsonResponse(response_data, status=500)
