@@ -77,17 +77,6 @@ class ConversationsMetricsResponseMixin:
         """
         Prepare the response for the metrics endpoint.
         """
-        try:
-            metrics = method(**metrics_kwargs)
-        except (ConversationsMetricsError, Exception) as e:
-            # When a generic internal error occurs, we capture the exception and return a 500 error
-            # with Sentry's event ID for debugging purposes.
-            event_id = capture_exception(e)
-            return Response(
-                {
-                    "error": f"Failed to get {method.__name__} metrics. Event ID: {event_id}"
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = method(**metrics_kwargs)
 
         return Response(serializer(metrics).data, status=status.HTTP_200_OK)

@@ -409,19 +409,13 @@ class ConversationsMetricsViewSet(
         query_params = CsatMetricsQueryParamsSerializer(data=request.query_params)
         query_params.is_valid(raise_exception=True)
 
-        try:
-            csat_metrics = self.service.get_csat_metrics(
-                project_uuid=query_params.validated_data["project_uuid"],
-                widget=query_params.validated_data["widget"],
-                start_date=query_params.validated_data["start_date"].isoformat(),
-                end_date=query_params.validated_data["end_date"].isoformat(),
-                metric_type=query_params.validated_data["type"],
-            )
-        except ConversationsMetricsError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        csat_metrics = self.service.get_csat_metrics(
+            project_uuid=query_params.validated_data["project_uuid"],
+            widget=query_params.validated_data["widget"],
+            start_date=query_params.validated_data["start_date"].isoformat(),
+            end_date=query_params.validated_data["end_date"].isoformat(),
+            metric_type=query_params.validated_data["type"],
+        )
 
         return Response(csat_metrics, status=status.HTTP_200_OK)
 
@@ -450,19 +444,13 @@ class ConversationsMetricsViewSet(
             }
             return Response(mock_data, status=status.HTTP_200_OK)
 
-        try:
-            nps_metrics = self.service.get_nps_metrics(
-                project_uuid=query_params.validated_data["project_uuid"],
-                widget=query_params.validated_data["widget"],
-                start_date=query_params.validated_data["start_date"].isoformat(),
-                end_date=query_params.validated_data["end_date"].isoformat(),
-                metric_type=query_params.validated_data["type"],
-            )
-        except ConversationsMetricsError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        nps_metrics = self.service.get_nps_metrics(
+            project_uuid=query_params.validated_data["project_uuid"],
+            widget=query_params.validated_data["widget"],
+            start_date=query_params.validated_data["start_date"].isoformat(),
+            end_date=query_params.validated_data["end_date"].isoformat(),
+            metric_type=query_params.validated_data["type"],
+        )
 
         return Response(
             NpsMetricsSerializer(nps_metrics).data, status=status.HTTP_200_OK

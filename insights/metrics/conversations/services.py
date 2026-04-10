@@ -51,7 +51,6 @@ from insights.metrics.conversations.enums import (
     CsatMetricsType,
     NpsMetricsType,
 )
-from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.mixins import ConversationsServiceCachingMixin
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseDatalakeConversationsMetricsService,

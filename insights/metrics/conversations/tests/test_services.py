@@ -67,9 +67,6 @@ from insights.metrics.conversations.dataclass import (
     NPSMetrics,
 )
 from insights.metrics.conversations.integrations.chats.db.dataclass import RoomsByQueue
-from insights.metrics.conversations.tests.mock import (
-    CONVERSATIONS_SUBJECTS_METRICS_MOCK_DATA,
-)
 from insights.metrics.conversations.enums import (
     ConversationType,
     ConversationsSubjectsType,
@@ -77,11 +74,7 @@ from insights.metrics.conversations.enums import (
     CsatMetricsType,
     NpsMetricsType,
 )
-from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.services import ConversationsMetricsService
-from insights.metrics.conversations.tests.mock import (
-    CONVERSATIONS_TIMESERIES_METRICS_MOCK_DATA,
-)
 from insights.metrics.conversations.dataclass import ConversationsTotalsMetrics
 from insights.projects.models import Project
 
