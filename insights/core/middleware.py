@@ -2,7 +2,6 @@ import traceback
 import logging
 
 import sentry_sdk
-from django.conf import settings
 from django.http import JsonResponse
 
 
