@@ -1163,13 +1163,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
     def test_get_agent_invocation_returns_500_on_service_error(
         self, mock_get_agent_invocations
     ):
-        from insights.metrics.conversations.exceptions import (
-            ConversationsMetricsError,
-        )
-
-        mock_get_agent_invocations.side_effect = ConversationsMetricsError(
-            "Service error"
-        )
+        mock_get_agent_invocations.side_effect = RuntimeError("Service error")
 
         response = self.get_agent_invocation(
             {
@@ -1180,7 +1174,10 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertIn("error", response.data)
+        data = json.loads(response.content)
+        self.assertIn("code", data)
+        self.assertEqual(data["code"], "INTERNAL_ERROR")
+        self.assertIn("event_id", data)
 
     def test_cannot_get_tool_result_without_project_uuid(self):
         response = self.get_tool_result({})
@@ -1297,11 +1294,7 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_tool_results"
     )
     def test_get_tool_result_returns_500_on_service_error(self, mock_get_tool_results):
-        from insights.metrics.conversations.exceptions import (
-            ConversationsMetricsError,
-        )
-
-        mock_get_tool_results.side_effect = ConversationsMetricsError("Service error")
+        mock_get_tool_results.side_effect = RuntimeError("Service error")
 
         response = self.get_tool_result(
             {
@@ -1312,7 +1305,10 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         )
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertIn("error", response.data)
+        data = json.loads(response.content)
+        self.assertIn("code", data)
+        self.assertEqual(data["code"], "INTERNAL_ERROR")
+        self.assertIn("event_id", data)
 
 
 class BaseTestInternalConversationsMetricsViewSet(APITestCase):
