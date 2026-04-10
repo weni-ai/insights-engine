@@ -349,9 +349,7 @@ class ConversationsMetricsViewSet(
 
         totals = self.service.get_totals(
             project_uuid=query_params_serializer.validated_data["project_uuid"],
-            start_date=query_params_serializer.validated_data[
-                "start_date"
-            ].isoformat(),
+            start_date=query_params_serializer.validated_data["start_date"].isoformat(),
             end_date=query_params_serializer.validated_data["end_date"].isoformat(),
         )
 
@@ -416,28 +414,14 @@ class ConversationsMetricsViewSet(
         """
         Get agent invocation metrics
         """
-        query_params = AgentInvocationQueryParamsSerializer(
-            data=request.query_params
-        )
+        query_params = AgentInvocationQueryParamsSerializer(data=request.query_params)
         query_params.is_valid(raise_exception=True)
 
-        try:
-            metrics = self.service.get_agent_invocations(
-                project_uuid=query_params.validated_data["project_uuid"],
-                start_date=query_params.validated_data["start_date"],
-                end_date=query_params.validated_data["end_date"],
-            )
-        except ConversationsMetricsError as e:
-            logger.error(
-                "[ConversationsMetricsViewSet] Error getting agent invocation metrics: %s",
-                e,
-                exc_info=True,
-            )
-            event_id = capture_exception(e)
-            return Response(
-                {"error": f"Internal error. Event ID: {event_id}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = self.service.get_agent_invocations(
+            project_uuid=query_params.validated_data["project_uuid"],
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+        )
 
         response_data = AgentInvocationMetricsSerializer(metrics).data
 
@@ -537,28 +521,14 @@ class ConversationsMetricsViewSet(
         """
         Get tool result metrics
         """
-        query_params = ToolResultQueryParamsSerializer(
-            data=request.query_params
-        )
+        query_params = ToolResultQueryParamsSerializer(data=request.query_params)
         query_params.is_valid(raise_exception=True)
 
-        try:
-            metrics = self.service.get_tool_results(
-                project_uuid=query_params.validated_data["project_uuid"],
-                start_date=query_params.validated_data["start_date"],
-                end_date=query_params.validated_data["end_date"],
-            )
-        except ConversationsMetricsError as e:
-            logger.error(
-                "[ConversationsMetricsViewSet] Error getting tool result metrics: %s",
-                e,
-                exc_info=True,
-            )
-            event_id = capture_exception(e)
-            return Response(
-                {"error": f"Internal error. Event ID: {event_id}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = self.service.get_tool_results(
+            project_uuid=query_params.validated_data["project_uuid"],
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+        )
 
         response_data = ToolResultMetricsSerializer(metrics).data
 
