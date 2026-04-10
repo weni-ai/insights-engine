@@ -41,7 +41,6 @@ from insights.metrics.conversations.integrations.datalake.dataclass import (
     AgentInvocationMetric,
     SalesFunnelData,
 )
-from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseDatalakeConversationsMetricsService,
 )
@@ -894,7 +893,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError):
+        with self.assertRaises(ValueError):
             self.service.get_generic_metrics_by_key(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -916,7 +915,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError):
+        with self.assertRaises(ValueError):
             self.service.get_generic_metrics_by_key(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -967,7 +966,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_crosstab_data(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -994,7 +993,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_crosstab_data(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1019,7 +1018,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_crosstab_data(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1044,7 +1043,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_crosstab_data(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1444,10 +1443,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.get_topics(project_uuid)
 
-        self.assertIn("Error fetching topics", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_get_topics_with_non_success_status(self):
         """Test get_topics when response status is not success"""
@@ -1456,7 +1455,7 @@ class TestConversationsMetricsService(TestCase):
         mock_response = MockResponse(500, "Internal Server Error")
         self.mock_nexus_conversations_client.get_topics.return_value = mock_response
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.get_topics(project_uuid)
 
         self.assertIn("Error fetching topics", str(context.exception))
@@ -1469,10 +1468,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.get_subtopics(project_uuid, topic_uuid)
 
-        self.assertIn("Error fetching subtopics", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_get_subtopics_with_non_success_status(self):
         """Test get_subtopics when response status is not success"""
@@ -1481,10 +1480,10 @@ class TestConversationsMetricsService(TestCase):
         mock_response = MockResponse(404, "Not Found")
         self.mock_nexus_conversations_client.get_subtopics.return_value = mock_response
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.get_subtopics(project_uuid, topic_uuid)
 
-        self.assertIn("Error fetching topics", str(context.exception))
+        self.assertIn("Error fetching subtopics", str(context.exception))
 
     def test_create_topic_with_exception(self):
         """Test create_topic when nexus client raises exception"""
@@ -1493,10 +1492,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.create_topic(project_uuid, "Test Topic", "Test Description")
 
-        self.assertIn("Error creating topic", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_create_topic_with_json_parse_error(self):
         """Test create_topic when response.json() fails"""
@@ -1517,7 +1516,7 @@ class TestConversationsMetricsService(TestCase):
         mock_response = MockResponse(400, "Bad Request")
         self.mock_nexus_conversations_client.create_topic.return_value = mock_response
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.create_topic(project_uuid, "Test Topic", "Test Description")
 
         self.assertIn("Error creating topic", str(context.exception))
@@ -1530,12 +1529,12 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.create_subtopic(
                 project_uuid, topic_uuid, "Test Subtopic", "Test Description"
             )
 
-        self.assertIn("Error creating subtopic", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_create_subtopic_with_json_parse_error(self):
         """Test create_subtopic when response.json() fails"""
@@ -1562,7 +1561,7 @@ class TestConversationsMetricsService(TestCase):
             mock_response
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.create_subtopic(
                 project_uuid, topic_uuid, "Test Subtopic", "Test Description"
             )
@@ -1577,10 +1576,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.delete_topic(project_uuid, topic_uuid)
 
-        self.assertIn("Error deleting topic", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_delete_topic_with_non_success_status(self):
         """Test delete_topic when response status is not success"""
@@ -1589,7 +1588,7 @@ class TestConversationsMetricsService(TestCase):
         mock_response = MockResponse(404, "Not Found")
         self.mock_nexus_conversations_client.delete_topic.return_value = mock_response
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.delete_topic(project_uuid, topic_uuid)
 
         self.assertIn("Error deleting topic", str(context.exception))
@@ -1603,10 +1602,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.delete_subtopic(project_uuid, topic_uuid, subtopic_uuid)
 
-        self.assertIn("Error deleting subtopic", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_delete_subtopic_with_non_success_status(self):
         """Test delete_subtopic when response status is not success"""
@@ -1618,7 +1617,7 @@ class TestConversationsMetricsService(TestCase):
             mock_response
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.delete_subtopic(project_uuid, topic_uuid, subtopic_uuid)
 
         self.assertIn("Error deleting subtopic", str(context.exception))
@@ -1633,14 +1632,38 @@ class TestConversationsMetricsService(TestCase):
             "Datalake error"
         )
 
-    def test_get_available_widgets_with_custom_type(self):
-        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
-        available_widgets = self.service.get_available_widgets(
-            self.project, AvailableWidgetsListType.CUSTOM
+        with self.assertRaises(Exception) as context:
+            self.service.get_topics_distribution(
+                project, start_date, end_date, ConversationType.AI
+            )
+
+        self.assertIn("Datalake error", str(context.exception))
+
+    def test_get_csat_metrics_missing_flow_uuid(self):
+        """Test get_csat_metrics when flow_uuid is missing"""
+        widget = Widget.objects.create(
+            name="Test Widget",
+            dashboard=self.dashboard,
+            source="flowruns",
+            type="flow_result",
+            position=[1, 2],
+            config={
+                "filter": {},
+                "operation": "recurrence",
+                "op_field": "result",
+            },
         )
 
-        self.assertIsInstance(available_widgets, AvailableWidgetsList)
-        self.assertEqual(available_widgets.available_widgets, [])
+        with self.assertRaises(ValueError) as context:
+            self.service.get_csat_metrics(
+                project_uuid=self.project.uuid,
+                widget=widget,
+                start_date=datetime.now() - timedelta(days=30),
+                end_date=datetime.now(),
+                metric_type=CsatMetricsType.HUMAN,
+            )
+
+        self.assertIn("Flow UUID is required", str(context.exception))
 
     def test_get_csat_metrics_missing_op_field(self):
         """Test get_csat_metrics when op_field is missing"""
@@ -1658,7 +1681,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_csat_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1682,7 +1705,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_csat_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1708,7 +1731,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_nps_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1735,7 +1758,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_nps_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1759,7 +1782,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_nps_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,

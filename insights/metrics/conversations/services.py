@@ -5,12 +5,9 @@ import logging
 from typing import Callable, Optional
 from uuid import UUID
 
-import pytz
-from rest_framework import status
-
 from django.conf import settings
-from sentry_sdk import capture_exception, capture_message
 from insights.projects.parsers import parse_dict_to_json
+from rest_framework import status
 
 from insights.metrics.conversations.dataclass import (
     AbsoluteNumbersMetrics,
@@ -32,7 +29,6 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
     NPSMetrics,
 )
-from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     CrosstabSource,
 )
@@ -388,16 +384,7 @@ class ConversationsMetricsService(
         ):
             return json.loads(cached_results)
 
-        try:
-            response = self.nexus_conversations_client.get_topics(project_uuid)
-
-        except Exception as e:
-            logger.error("Error fetching topics for project %s: %s", project_uuid, e)
-            event_id = capture_exception(e)
-
-            raise ConversationsMetricsError(
-                f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
-            ) from e
+        response = self.nexus_conversations_client.get_topics(project_uuid)
 
         try:
             response_content = response.json()
@@ -406,15 +393,8 @@ class ConversationsMetricsService(
             response_content = response.text
 
         if not status.is_success(response.status_code):
-            logger.error(
-                "Error fetching topics for project %s: %s", project_uuid, response.text
-            )
-            event_id = capture_message(
+            raise RuntimeError(
                 f"Error fetching topics for project {project_uuid}: {response.text}"
-            )
-
-            raise ConversationsMetricsError(
-                f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
             )
 
         if isinstance(response_content, dict):
@@ -465,18 +445,9 @@ class ConversationsMetricsService(
         """
         Get conversation subtopics
         """
-        try:
-            response = self.nexus_conversations_client.get_subtopics(
-                project_uuid, topic_uuid
-            )
-
-        except Exception as e:
-            logger.error("Error fetching subtopics for project %s: %s", project_uuid, e)
-            event_id = capture_exception(e)
-
-            raise ConversationsMetricsError(
-                f"Error fetching subtopics for project {project_uuid}. Event_id: {event_id}"
-            ) from e
+        response = self.nexus_conversations_client.get_subtopics(
+            project_uuid, topic_uuid
+        )
 
         try:
             response_content = response.json()
@@ -485,15 +456,8 @@ class ConversationsMetricsService(
             response_content = response.text
 
         if not status.is_success(response.status_code):
-            logger.error(
-                "Error fetching topics for project %s: %s", project_uuid, response.text
-            )
-            event_id = capture_message(
-                f"Error fetching topics for project {project_uuid}: {response.text}"
-            )
-
-            raise ConversationsMetricsError(
-                f"Error fetching topics for project {project_uuid}. Event_id: {event_id}"
+            raise RuntimeError(
+                f"Error fetching subtopics for project {project_uuid}: {response.text}"
             )
 
         if isinstance(response_content, dict):
@@ -539,18 +503,9 @@ class ConversationsMetricsService(
         """
         Create a conversation topic
         """
-        try:
-            response = self.nexus_conversations_client.create_topic(
-                project_uuid, name, description
-            )
-
-        except Exception as e:
-            logger.error("Error creating topic for project %s: %s", project_uuid, e)
-            event_id = capture_exception(e)
-
-            raise ConversationsMetricsError(
-                f"Error creating topic for project {project_uuid}. Event_id: {event_id}"
-            ) from e
+        response = self.nexus_conversations_client.create_topic(
+            project_uuid, name, description
+        )
 
         try:
             response_content = response.json()
@@ -559,15 +514,8 @@ class ConversationsMetricsService(
             response_content = response.text
 
         if not status.is_success(response.status_code):
-            logger.error(
-                "Error creating topic for project %s: %s", project_uuid, response.text
-            )
-            event_id = capture_message(
+            raise RuntimeError(
                 f"Error creating topic for project {project_uuid}: {response.text}"
-            )
-
-            raise ConversationsMetricsError(
-                f"Error creating topic for project {project_uuid}"
             )
 
         self._clear_cache_for_project_resource(
@@ -583,17 +531,9 @@ class ConversationsMetricsService(
         Create a conversation subtopic
         """
 
-        try:
-            response = self.nexus_conversations_client.create_subtopic(
-                project_uuid, topic_uuid, name, description
-            )
-
-        except Exception as e:
-            logger.error("Error creating subtopic for project %s: %s", project_uuid, e)
-            event_id = capture_exception(e)
-            raise ConversationsMetricsError(
-                f"Error creating subtopic for project {project_uuid}. Event_id: {event_id}"
-            ) from e
+        response = self.nexus_conversations_client.create_subtopic(
+            project_uuid, topic_uuid, name, description
+        )
 
         try:
             response_content = response.json()
@@ -602,17 +542,8 @@ class ConversationsMetricsService(
             response_content = response.text
 
         if not status.is_success(response.status_code):
-            logger.error(
-                "Error creating subtopic for project %s: %s",
-                project_uuid,
-                response.text,
-            )
-            event_id = capture_message(
+            raise RuntimeError(
                 f"Error creating subtopic for project {project_uuid}: {response.text}"
-            )
-
-            raise ConversationsMetricsError(
-                f"Error creating subtopic for project {project_uuid}. Event_id: {event_id}"
             )
 
         self._clear_cache_for_project_resource(
@@ -626,28 +557,13 @@ class ConversationsMetricsService(
         Delete a conversation topic
         """
 
-        try:
-            response = self.nexus_conversations_client.delete_topic(
-                project_uuid, topic_uuid
-            )
-
-        except Exception as e:
-            logger.error("Error deleting topic for project %s: %s", project_uuid, e)
-            event_id = capture_exception(e)
-            raise ConversationsMetricsError(
-                f"Error deleting topic for project {project_uuid}. Event_id: {event_id}"
-            ) from e
+        response = self.nexus_conversations_client.delete_topic(
+            project_uuid, topic_uuid
+        )
 
         if not status.is_success(response.status_code):
-            logger.error(
-                "Error deleting topic for project %s: %s", project_uuid, response.text
-            )
-            event_id = capture_message(
+            raise RuntimeError(
                 f"Error deleting topic for project {project_uuid}: {response.text}"
-            )
-
-            raise ConversationsMetricsError(
-                f"Error deleting topic for project {project_uuid}. Event_id: {event_id}"
             )
 
         self._clear_cache_for_project_resource(
@@ -663,30 +579,13 @@ class ConversationsMetricsService(
         Delete a conversation subtopic
         """
 
-        try:
-            response = self.nexus_conversations_client.delete_subtopic(
-                project_uuid, topic_uuid, subtopic_uuid
-            )
-
-        except Exception as e:
-            logger.error("Error deleting subtopic for project %s: %s", project_uuid, e)
-            event_id = capture_exception(e)
-            raise ConversationsMetricsError(
-                f"Error deleting subtopic for project {project_uuid}. Event_id: {event_id}"
-            ) from e
+        response = self.nexus_conversations_client.delete_subtopic(
+            project_uuid, topic_uuid, subtopic_uuid
+        )
 
         if not status.is_success(response.status_code):
-            logger.error(
-                "Error deleting subtopic for project %s: %s",
-                project_uuid,
-                response.text,
-            )
-            event_id = capture_message(
+            raise RuntimeError(
                 f"Error deleting subtopic for project {project_uuid}: {response.text}"
-            )
-
-            raise ConversationsMetricsError(
-                f"Error deleting subtopic for project {project_uuid}. Event_id: {event_id}"
             )
 
         self._clear_cache_for_project_resource(
@@ -710,22 +609,14 @@ class ConversationsMetricsService(
         # the client will see other topics listed as "OTHER"
         current_topics_data = self.get_topics(project_uuid)
 
-        try:
-            topics = self.datalake_service.get_topics_distribution(
-                project_uuid=project_uuid,
-                start_date=start_date,
-                end_date=end_date,
-                conversation_type=conversation_type,
-                current_topics_data=current_topics_data,
-                output_language=output_language,
-            )
-        except Exception as e:
-            logger.error("Failed to get topics distribution", exc_info=True)
-            event_id = capture_exception(e)
-
-            raise ConversationsMetricsError(
-                f"Failed to get topics distribution. Event ID: {event_id}"
-            ) from e
+        topics = self.datalake_service.get_topics_distribution(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            conversation_type=conversation_type,
+            current_topics_data=current_topics_data,
+            output_language=output_language,
+        )
 
         topics_metrics = []
 
@@ -856,18 +747,10 @@ class ConversationsMetricsService(
             op_field = widget.config.get("op_field")
 
             if not flow_uuid:
-                event_id = capture_message("Flow UUID is required in the widget config")
-
-                raise ConversationsMetricsError(
-                    f"Flow UUID is required in the widget config. Event ID: {event_id}"
-                )
+                raise ValueError("Flow UUID is required in the widget config")
 
             if not op_field:
-                event_id = capture_message("Op field is required in the widget config")
-
-                raise ConversationsMetricsError(
-                    f"Op field is required in the widget config. Event ID: {event_id}"
-                )
+                raise ValueError("Op field is required in the widget config")
 
             return self._get_csat_metrics_from_flowruns(
                 flow_uuid, project_uuid, op_field, start_date, end_date
@@ -877,9 +760,7 @@ class ConversationsMetricsService(
         agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
 
         if not agent_uuid:
-            raise ConversationsMetricsError(
-                "Agent UUID is required in the widget config"
-            )
+            raise ValueError("Agent UUID is required in the widget config")
 
         return self._get_csat_metrics_from_datalake(
             project_uuid, agent_uuid, start_date, end_date
@@ -996,18 +877,10 @@ class ConversationsMetricsService(
             op_field = widget.config.get("op_field")
 
             if not flow_uuid:
-                event_id = capture_message("Flow UUID is required in the widget config")
-
-                raise ConversationsMetricsError(
-                    f"Flow UUID is required in the widget config. Event ID: {event_id}"
-                )
+                raise ValueError("Flow UUID is required in the widget config")
 
             if not op_field:
-                event_id = capture_message("Op field is required in the widget config")
-
-                raise ConversationsMetricsError(
-                    f"Op field is required in the widget config. Event ID: {event_id}"
-                )
+                raise ValueError("Op field is required in the widget config")
 
             return self._get_nps_metrics_from_flowruns(
                 flow_uuid, project_uuid, op_field, start_date, end_date
@@ -1017,11 +890,7 @@ class ConversationsMetricsService(
         agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
 
         if not agent_uuid:
-            event_id = capture_message("Agent UUID is required in the widget config")
-
-            raise ConversationsMetricsError(
-                f"Agent UUID is required in the widget config. Event ID: {event_id}"
-            )
+            raise ValueError("Agent UUID is required in the widget config")
 
         return self._get_nps_metrics_from_datalake(
             project_uuid, agent_uuid, start_date, end_date
@@ -1040,14 +909,12 @@ class ConversationsMetricsService(
         agent_uuid = widget.config.get("datalake_config", {}).get("agent_uuid")
 
         if not agent_uuid:
-            raise ConversationsMetricsError(
-                "Agent UUID is required in the widget config"
-            )
+            raise ValueError("Agent UUID is required in the widget config")
 
         key = widget.config.get("datalake_config", {}).get("key")
 
         if not key:
-            raise ConversationsMetricsError("Key is required in the widget config")
+            raise ValueError("Key is required in the widget config")
 
         metrics = self.datalake_service.get_generic_metrics_by_key(
             project_uuid, agent_uuid, start_date, end_date, key
@@ -1136,7 +1003,7 @@ class ConversationsMetricsService(
             field = "value"
 
         if not key:
-            raise ConversationsMetricsError("Key is required")
+            raise ValueError("Key is required")
 
         return CrosstabSource(key=key, field=field)
 
@@ -1150,7 +1017,7 @@ class ConversationsMetricsService(
             widget.type != "conversations.crosstab"
             or widget.source != "conversations.crosstab"
         ):
-            raise ConversationsMetricsError("Widget type or source is not valid")
+            raise ValueError("Widget type or source is not valid")
 
         config = widget.config or {}
 

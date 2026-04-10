@@ -2,11 +2,27 @@ from typing import Callable
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import serializers
-from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.resolvers import ConversationsMetricsServiceResolver
 from insights.metrics.conversations.services import BaseConversationsMetricsService
-from insights.metrics.conversations.exceptions import ConversationsMetricsError
+
+
+class ConversationsMetricsResponseMixin:
+    """
+    Mixin to handle responses from the conversations metrics service.
+    """
+
+    def prepare_metrics_response(
+        self,
+        method: Callable,
+        serializer: serializers.Serializer,
+        metrics_kwargs: dict,
+    ) -> Response:
+        """
+        Prepare the response for the metrics endpoint.
+        """
+        metrics = method(**metrics_kwargs)
+        return Response(serializer(metrics).data, status=status.HTTP_200_OK)
 
 
 class ConversationsMetricsServiceResolverMixin:

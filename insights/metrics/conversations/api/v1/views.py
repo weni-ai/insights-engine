@@ -11,7 +11,6 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
-from sentry_sdk import capture_exception
 
 from django.conf import settings
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
@@ -24,10 +23,6 @@ from insights.metrics.conversations.api.permissions import WidgetQueryParamPermi
 from insights.metrics.conversations.api.decorators import force_use_real_service
 from insights.metrics.conversations.api.mixins import (
     ConversationsMetricsServiceResolverMixin,
-)
-from insights.metrics.conversations.exceptions import (
-    ConversationsMetricsError,
-    GetProjectAiCsatMetricsError,
 )
 from insights.metrics.conversations.usecases.get_absolute_numbers_widget import (
     GetAbsoluteNumbersWidgetUseCase,
@@ -92,6 +87,55 @@ class ConversationsMetricsViewSet(
     @action(
         detail=False,
         methods=["get"],
+        url_path="csat",
+        url_name="csat",
+    )
+    def csat_metrics(self, request) -> Response:
+        """
+        Get csat metrics
+        """
+
+        query_params = CsatMetricsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        csat_metrics = self.service.get_csat_metrics(
+            project_uuid=query_params.validated_data["project_uuid"],
+            widget=query_params.validated_data["widget"],
+            start_date=query_params.validated_data["start_date"].isoformat(),
+            end_date=query_params.validated_data["end_date"].isoformat(),
+            metric_type=query_params.validated_data["type"],
+        )
+
+        return Response(csat_metrics, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="nps",
+        url_name="nps",
+    )
+    def nps_metrics(self, request) -> Response:
+        """
+        Get nps metrics
+        """
+        query_params = NpsMetricsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        nps_metrics = self.service.get_nps_metrics(
+            project_uuid=query_params.validated_data["project_uuid"],
+            widget=query_params.validated_data["widget"],
+            start_date=query_params.validated_data["start_date"].isoformat(),
+            end_date=query_params.validated_data["end_date"].isoformat(),
+            metric_type=query_params.validated_data["type"],
+        )
+
+        return Response(
+            NpsMetricsSerializer(nps_metrics).data, status=status.HTTP_200_OK
+        )
+
+    @action(
+        detail=False,
+        methods=["get"],
         url_path="topics-distribution",
         url_name="topics-distribution",
         serializer_class=TopicsDistributionMetricsSerializer,
@@ -139,29 +183,23 @@ class ConversationsMetricsViewSet(
             )
 
         try:
-            try:
-                output_language = request.user.language
-            except Exception as e:
-                logger.error(
-                    "[ConversationsMetricsViewSet] Error getting user language: %s",
-                    e,
-                    exc_info=True,
-                )
-
-                output_language = "en"
-
-            metrics = self.service.get_topics_distribution(
-                serializer.validated_data["project"].uuid,
-                serializer.validated_data["start_date"].isoformat(),
-                serializer.validated_data["end_date"].isoformat(),
-                serializer.validated_data["type"],
-                output_language,
+            output_language = request.user.language
+        except Exception as e:
+            logger.error(
+                "[ConversationsMetricsViewSet] Error getting user language: %s",
+                e,
+                exc_info=True,
             )
-        except ConversationsMetricsError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+
+            output_language = "en"
+
+        metrics = self.service.get_topics_distribution(
+            serializer.validated_data["project"].uuid,
+            serializer.validated_data["start_date"].isoformat(),
+            serializer.validated_data["end_date"].isoformat(),
+            serializer.validated_data["type"],
+            output_language,
+        )
 
         return Response(
             TopicsDistributionMetricsSerializer(metrics).data,
@@ -198,15 +236,9 @@ class ConversationsMetricsViewSet(
             ):
                 raise PermissionDenied("User does not have permission for this project")
 
-            try:
-                topics = self.service.get_topics(
-                    query_params.validated_data["project_uuid"]
-                )
-            except ConversationsMetricsError as e:
-                return Response(
-                    {"error": str(e)},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+            topics = self.service.get_topics(
+                query_params.validated_data["project_uuid"]
+            )
 
             return Response(topics, status=status.HTTP_200_OK)
         elif request.method == "POST":
@@ -218,17 +250,11 @@ class ConversationsMetricsViewSet(
             ):
                 raise PermissionDenied("User does not have permission for this project")
 
-            try:
-                topic = self.service.create_topic(
-                    serializer.validated_data["project_uuid"],
-                    serializer.validated_data["name"],
-                    serializer.validated_data["description"],
-                )
-            except ConversationsMetricsError:
-                return Response(
-                    {"error": "Internal server error"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+            topic = self.service.create_topic(
+                serializer.validated_data["project_uuid"],
+                serializer.validated_data["name"],
+                serializer.validated_data["description"],
+            )
 
             return Response(topic, status=status.HTTP_201_CREATED)
 
@@ -255,16 +281,10 @@ class ConversationsMetricsViewSet(
 
             topic_uuid = kwargs.get("topic_uuid")
 
-            try:
-                subtopics = self.service.get_subtopics(
-                    query_params.validated_data["project_uuid"],
-                    topic_uuid,
-                )
-            except ConversationsMetricsError:
-                return Response(
-                    {"error": "Internal server error"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+            subtopics = self.service.get_subtopics(
+                query_params.validated_data["project_uuid"],
+                topic_uuid,
+            )
 
             return Response(subtopics, status=status.HTTP_200_OK)
         else:
@@ -276,20 +296,14 @@ class ConversationsMetricsViewSet(
             ):
                 raise PermissionDenied("User does not have permission for this project")
 
-            try:
-                topic_uuid = kwargs.get("topic_uuid")
+            topic_uuid = kwargs.get("topic_uuid")
 
-                subtopic = self.service.create_subtopic(
-                    serializer.validated_data["project_uuid"],
-                    topic_uuid,
-                    serializer.validated_data["name"],
-                    serializer.validated_data["description"],
-                )
-            except ConversationsMetricsError:
-                return Response(
-                    {"error": "Internal server error"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+            subtopic = self.service.create_subtopic(
+                serializer.validated_data["project_uuid"],
+                topic_uuid,
+                serializer.validated_data["name"],
+                serializer.validated_data["description"],
+            )
 
             return Response(subtopic, status=status.HTTP_201_CREATED)
 
@@ -316,16 +330,10 @@ class ConversationsMetricsViewSet(
         ):
             raise PermissionDenied("User does not have permission for this project")
 
-        try:
-            self.service.delete_topic(
-                serializer.validated_data["project_uuid"],
-                topic_uuid,
-            )
-        except ConversationsMetricsError:
-            return Response(
-                {"error": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        self.service.delete_topic(
+            serializer.validated_data["project_uuid"],
+            topic_uuid,
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -349,17 +357,11 @@ class ConversationsMetricsViewSet(
         ):
             raise PermissionDenied("User does not have permission for this project")
 
-        try:
-            self.service.delete_subtopic(
-                serializer.validated_data["project_uuid"],
-                topic_uuid,
-                subtopic_uuid,
-            )
-        except ConversationsMetricsError:
-            return Response(
-                {"error": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        self.service.delete_subtopic(
+            serializer.validated_data["project_uuid"],
+            topic_uuid,
+            subtopic_uuid,
+        )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -382,20 +384,11 @@ class ConversationsMetricsViewSet(
         )
         query_params_serializer.is_valid(raise_exception=True)
 
-        try:
-            totals = self.service.get_totals(
-                project_uuid=query_params_serializer.validated_data["project_uuid"],
-                start_date=query_params_serializer.validated_data[
-                    "start_date"
-                ].isoformat(),
-                end_date=query_params_serializer.validated_data["end_date"].isoformat(),
-            )
-        except Exception as e:
-            print(e)
-            return Response(
-                {"error": "Error getting conversations metrics totals"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        totals = self.service.get_totals(
+            project_uuid=query_params_serializer.validated_data["project_uuid"],
+            start_date=query_params_serializer.validated_data["start_date"].isoformat(),
+            end_date=query_params_serializer.validated_data["end_date"].isoformat(),
+        )
 
         return Response(
             ConversationTotalsMetricsSerializer(totals).data,
@@ -488,18 +481,12 @@ class ConversationsMetricsViewSet(
         serializer = CustomMetricsQueryParamsSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
-        try:
-            metrics = self.service.get_generic_metrics_by_key(
-                project_uuid=serializer.validated_data["project_uuid"],
-                widget=serializer.validated_data["widget"],
-                start_date=serializer.validated_data["start_date"],
-                end_date=serializer.validated_data["end_date"],
-            )
-        except ConversationsMetricsError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = self.service.get_generic_metrics_by_key(
+            project_uuid=serializer.validated_data["project_uuid"],
+            widget=serializer.validated_data["widget"],
+            start_date=serializer.validated_data["start_date"],
+            end_date=serializer.validated_data["end_date"],
+        )
 
         return Response(metrics, status=status.HTTP_200_OK)
 
@@ -518,38 +505,13 @@ class ConversationsMetricsViewSet(
         )
         query_params.is_valid(raise_exception=True)
 
-        try:
-            metrics = self.service.get_sales_funnel_data(
-                project_uuid=query_params.validated_data["project_uuid"],
-                start_date=query_params.validated_data["start_date"],
-                end_date=query_params.validated_data["end_date"],
-            )
-        except ConversationsMetricsError as e:
-            logger.error(
-                "[ConversationsMetricsViewSet] Error getting sales funnel metrics: %s",
-                e,
-                exc_info=True,
-            )
-            event_id = capture_exception(e)
-            return Response(
-                {"error": f"Internal error. Event ID: {event_id}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = self.service.get_sales_funnel_data(
+            project_uuid=query_params.validated_data["project_uuid"],
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+        )
 
-        try:
-            response_data = SalesFunnelMetricsSerializer(metrics).data
-        except Exception as e:
-            logger.error(
-                "[ConversationsMetricsViewSet] Error serializing sales funnel metrics: %s",
-                e,
-                exc_info=True,
-            )
-            event_id = capture_exception(e)
-            return Response(
-                {"error": f"Internal error. Event ID: {event_id}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
+        response_data = SalesFunnelMetricsSerializer(metrics).data
         return Response(response_data, status=status.HTTP_200_OK)
 
     @action(
@@ -562,28 +524,14 @@ class ConversationsMetricsViewSet(
         """
         Get agent invocation metrics
         """
-        query_params = AgentInvocationQueryParamsSerializer(
-            data=request.query_params
-        )
+        query_params = AgentInvocationQueryParamsSerializer(data=request.query_params)
         query_params.is_valid(raise_exception=True)
 
-        try:
-            metrics = self.service.get_agent_invocations(
-                project_uuid=query_params.validated_data["project_uuid"],
-                start_date=query_params.validated_data["start_date"],
-                end_date=query_params.validated_data["end_date"],
-            )
-        except ConversationsMetricsError as e:
-            logger.error(
-                "[ConversationsMetricsViewSet] Error getting agent invocation metrics: %s",
-                e,
-                exc_info=True,
-            )
-            event_id = capture_exception(e)
-            return Response(
-                {"error": f"Internal error. Event ID: {event_id}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = self.service.get_agent_invocations(
+            project_uuid=query_params.validated_data["project_uuid"],
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+        )
 
         response_data = AgentInvocationMetricsSerializer(metrics).data
 
@@ -628,24 +576,12 @@ class ConversationsMetricsViewSet(
         )
         query_params.is_valid(raise_exception=True)
 
-        try:
-            metrics = self.service.get_crosstab_data(
-                project_uuid=query_params.validated_data["widget"].project.uuid,
-                widget=query_params.validated_data["widget"],
-                start_date=query_params.validated_data["start_date"],
-                end_date=query_params.validated_data["end_date"],
-            )
-        except ConversationsMetricsError as e:
-            logger.error(
-                "[ConversationsMetricsViewSet] Error getting crosstab metrics: %s",
-                e,
-                exc_info=True,
-            )
-            event_id = capture_exception(e)
-            return Response(
-                {"error": f"Internal error. Event ID: {event_id}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = self.service.get_crosstab_data(
+            project_uuid=query_params.validated_data["widget"].project.uuid,
+            widget=query_params.validated_data["widget"],
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+        )
 
         response_data = {
             "total_rows": len(metrics),
@@ -675,25 +611,11 @@ class ConversationsMetricsViewSet(
         )
         query_params.is_valid(raise_exception=True)
 
-        print("Service name", self.service.__class__.__name__)
-
-        try:
-            metrics = self.service.get_absolute_numbers(
-                widget=widget,
-                start_date=query_params.validated_data["start_date"],
-                end_date=query_params.validated_data["end_date"],
-            )
-        except ConversationsMetricsError as e:
-            logger.error(
-                "[ConversationsMetricsViewSet] Error getting absolute numbers metrics: %s",
-                e,
-                exc_info=True,
-            )
-            event_id = capture_exception(e)
-            return Response(
-                {"error": f"Internal error. Event ID: {event_id}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = self.service.get_absolute_numbers(
+            widget=widget,
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+        )
 
         data = AbsoluteNumbersSerializer(metrics).data
 
@@ -709,28 +631,14 @@ class ConversationsMetricsViewSet(
         """
         Get tool result metrics
         """
-        query_params = ToolResultQueryParamsSerializer(
-            data=request.query_params
-        )
+        query_params = ToolResultQueryParamsSerializer(data=request.query_params)
         query_params.is_valid(raise_exception=True)
 
-        try:
-            metrics = self.service.get_tool_results(
-                project_uuid=query_params.validated_data["project_uuid"],
-                start_date=query_params.validated_data["start_date"],
-                end_date=query_params.validated_data["end_date"],
-            )
-        except ConversationsMetricsError as e:
-            logger.error(
-                "[ConversationsMetricsViewSet] Error getting tool result metrics: %s",
-                e,
-                exc_info=True,
-            )
-            event_id = capture_exception(e)
-            return Response(
-                {"error": f"Internal error. Event ID: {event_id}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = self.service.get_tool_results(
+            project_uuid=query_params.validated_data["project_uuid"],
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+        )
 
         response_data = ToolResultMetricsSerializer(metrics).data
 
@@ -767,16 +675,10 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
         start_date = query_params.validated_data["start_date"]
         end_date = query_params.validated_data["end_date"]
 
-        try:
-            metrics = GetProjectAiCsatMetricsUseCase().execute(
-                project_uuid=project_uuid,
-                start_date=start_date,
-                end_date=end_date,
-            )
-        except GetProjectAiCsatMetricsError as e:
-            return Response(
-                {"error": f"Internal error. Event ID: {e.event_id}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        metrics = GetProjectAiCsatMetricsUseCase().execute(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         return Response(metrics, status=status.HTTP_200_OK)
