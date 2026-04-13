@@ -20,6 +20,7 @@ class TestCreateProjectUseCase(TestCase):
 
         self.assertEqual(project.uuid, project_dto.uuid)
         self.assertIsNone(project.vtex_account)
+        self.assertFalse(project.is_nexus_multi_agents_active)
 
     def test_create_project_with_vtex_account(self):
         project_dto = ProjectCreationDTO(
@@ -35,3 +36,33 @@ class TestCreateProjectUseCase(TestCase):
 
         self.assertEqual(project.uuid, project_dto.uuid)
         self.assertEqual(project.vtex_account, project_dto.vtex_account)
+
+    def test_create_project_with_inline_agent_switch_enabled(self):
+        project_dto = ProjectCreationDTO(
+            uuid=uuid4().hex,
+            name="test_name",
+            timezone="America/Bahia",
+            date_format="DD/MM/YYYY",
+            is_template=False,
+            inline_agent_switch=True,
+        )
+
+        project = ProjectsUseCase().create_project(project_dto=project_dto)
+
+        self.assertEqual(project.uuid, project_dto.uuid)
+        self.assertTrue(project.is_nexus_multi_agents_active)
+
+    def test_create_project_with_inline_agent_switch_disabled(self):
+        project_dto = ProjectCreationDTO(
+            uuid=uuid4().hex,
+            name="test_name",
+            timezone="America/Bahia",
+            date_format="DD/MM/YYYY",
+            is_template=False,
+            inline_agent_switch=False,
+        )
+
+        project = ProjectsUseCase().create_project(project_dto=project_dto)
+
+        self.assertEqual(project.uuid, project_dto.uuid)
+        self.assertFalse(project.is_nexus_multi_agents_active)
