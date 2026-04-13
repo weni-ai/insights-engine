@@ -1,4 +1,5 @@
 from insights.projects.models import Project
+from insights.projects.tasks import handle_project_created_with_inline_agent_switch
 
 from .project_dto import ProjectCreationDTO
 
@@ -47,4 +48,8 @@ class ProjectsUseCase:
             config=config,
         )
         CreateHumanService().create_dashboard(project)
+
+        if project.is_nexus_multi_agents_active:
+            handle_project_created_with_inline_agent_switch.delay(project.uuid)
+
         return project
