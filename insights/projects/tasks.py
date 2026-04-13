@@ -106,3 +106,39 @@ def check_nexus_multi_agents_status(project_uuid: UUID):
     )
 
     service.update(project)
+
+
+@app.task
+def handle_project_created_with_inline_agent_switch(project_uuid: UUID):
+    """
+    Task to handle the creation of a project with inline agent switch enabled.
+    """
+    logger.info(
+        "[ handle_project_created_with_inline_agent_switch task ] Starting task"
+    )
+
+    project = Project.objects.get(uuid=project_uuid)
+
+    if not project.is_nexus_multi_agents_active:
+        logger.info(
+            "[ handle_project_created_with_inline_agent_switch task ] Project %s does not have multi-agents active",
+            project.uuid,
+        )
+        return
+
+    service = UpdateNexusMultiAgentsStatusService(
+        nexus_client=NexusClient(),
+        cache_client=CacheClient(),
+        indexer_activation_service=ProjectIndexerActivationService(),
+    )
+
+    logger.info(
+        "[ handle_project_created_with_inline_agent_switch task ] Adding project %s to indexer queue",
+        project.uuid,
+    )
+
+    service.add_project_to_indexer_queue(project)
+
+    logger.info(
+        "[ handle_project_created_with_inline_agent_switch task ] Finished task"
+    )

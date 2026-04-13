@@ -10,6 +10,7 @@ class ProjectCreationDTO:
     date_format: str = ""
     vtex_account: str | None = None
     org_uuid: str | None = None
+    inline_agent_switch: bool = False  # Equivalent to is_nexus_multi_agents_active
 
 
 @dataclass

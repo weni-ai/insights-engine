@@ -1,4 +1,6 @@
+from insights.dashboards.tasks import create_conversation_dashboard
 from insights.projects.models import Project
+from insights.projects.tasks import handle_project_created_with_inline_agent_switch
 
 from .project_dto import ProjectCreationDTO
 
@@ -43,7 +45,13 @@ class ProjectsUseCase:
             date_format=project_dto.date_format,
             vtex_account=project_dto.vtex_account,
             org_uuid=project_dto.org_uuid,
+            is_nexus_multi_agents_active=project_dto.inline_agent_switch,
             config=config,
         )
         CreateHumanService().create_dashboard(project)
+        create_conversation_dashboard.delay(project.uuid)
+
+        if project.is_nexus_multi_agents_active:
+            handle_project_created_with_inline_agent_switch.delay(project.uuid)
+
         return project
