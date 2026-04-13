@@ -4,6 +4,7 @@ from django.conf import settings
 from rest_framework import status
 from sentry_sdk import capture_exception
 
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.dashboards.tasks import create_conversation_dashboard
 from insights.projects.services.indexer_activation import (
     BaseProjectIndexerActivationService,
@@ -68,11 +69,10 @@ class UpdateNexusMultiAgentsStatusService:
 
         self.add_project_to_indexer_queue(project)
 
-        # The dashboard is created but should NOT be shown in the dashboard list
-        # before the indexer is activated
-        # because of widgets that needs data from elasticsearch (flowruns)
-        # such as the human support widgets for CSAT and NPS
-        create_conversation_dashboard.delay(project.uuid)
+        if not Dashboard.objects.filter(
+            project__uuid=project.uuid, name=CONVERSATIONS_DASHBOARD_NAME
+        ).exists():
+            create_conversation_dashboard.delay(project.uuid)
 
     def add_project_to_indexer_queue(self, project: Project) -> None:
         if (

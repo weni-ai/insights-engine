@@ -1,3 +1,4 @@
+from insights.dashboards.tasks import create_conversation_dashboard
 from insights.projects.models import Project
 from insights.projects.tasks import handle_project_created_with_inline_agent_switch
 
@@ -48,6 +49,7 @@ class ProjectsUseCase:
             config=config,
         )
         CreateHumanService().create_dashboard(project)
+        create_conversation_dashboard.delay(project.uuid)
 
         if project.is_nexus_multi_agents_active:
             handle_project_created_with_inline_agent_switch.delay(project.uuid)

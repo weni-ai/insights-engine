@@ -157,9 +157,7 @@ class TestUpdateNexusMultiAgentsService(TestCase):
     @patch(
         "insights.projects.services.update_nexus_multi_agents_status.create_conversation_dashboard"
     )
-    def test_activate_multi_agents_when_not_active(
-        self, mock_create_dashboard
-    ):
+    def test_activate_multi_agents_when_not_active(self, mock_create_dashboard):
         self.service.activate_multi_agents(self.project, is_active=False)
         self.project.refresh_from_db(fields=["is_nexus_multi_agents_active"])
         self.assertFalse(self.project.is_nexus_multi_agents_active)
@@ -168,9 +166,7 @@ class TestUpdateNexusMultiAgentsService(TestCase):
     @patch(
         "insights.projects.services.update_nexus_multi_agents_status.create_conversation_dashboard"
     )
-    def test_activate_multi_agents_when_already_active(
-        self, mock_create_dashboard
-    ):
+    def test_activate_multi_agents_when_already_active(self, mock_create_dashboard):
         self.project.is_nexus_multi_agents_active = True
         self.project.save(update_fields=["is_nexus_multi_agents_active"])
 

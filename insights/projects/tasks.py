@@ -132,11 +132,5 @@ def handle_project_created_with_inline_agent_switch(project_uuid: UUID):
     service.add_project_to_indexer_queue(project)
 
     logger.info(
-        "[ handle_project_created_with_inline_agent_switch task ] Creating conversation dashboard for project %s",
-        project.uuid,
-    )
-    create_conversation_dashboard.delay(project.uuid)
-
-    logger.info(
         "[ handle_project_created_with_inline_agent_switch task ] Finished task"
     )
