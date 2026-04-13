@@ -153,3 +153,91 @@ class TestUpdateNexusMultiAgentsService(TestCase):
         mock_cache_get.assert_called_once_with(
             f"nexus_multi_agents_status:{self.project.uuid}"
         )
+
+    @patch(
+        "insights.projects.services.update_nexus_multi_agents_status.create_conversation_dashboard"
+    )
+    def test_activate_multi_agents_when_not_active(
+        self, mock_create_dashboard
+    ):
+        self.service.activate_multi_agents(self.project, is_active=False)
+        self.project.refresh_from_db(fields=["is_nexus_multi_agents_active"])
+        self.assertFalse(self.project.is_nexus_multi_agents_active)
+        mock_create_dashboard.delay.assert_not_called()
+
+    @patch(
+        "insights.projects.services.update_nexus_multi_agents_status.create_conversation_dashboard"
+    )
+    def test_activate_multi_agents_when_already_active(
+        self, mock_create_dashboard
+    ):
+        self.project.is_nexus_multi_agents_active = True
+        self.project.save(update_fields=["is_nexus_multi_agents_active"])
+
+        self.service.activate_multi_agents(self.project, is_active=True)
+        mock_create_dashboard.delay.assert_not_called()
+        self.service.indexer_activation_service.add_project_to_queue.assert_not_called()
+
+    @override_settings(CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION=True)
+    @patch(
+        "insights.projects.services.update_nexus_multi_agents_status.create_conversation_dashboard"
+    )
+    def test_activate_multi_agents_when_active_and_not_yet_activated(
+        self, mock_create_dashboard
+    ):
+        self.service.indexer_activation_service.is_project_active_on_indexer = (
+            MagicMock(return_value=False)
+        )
+        self.service.indexer_activation_service.is_project_queued = MagicMock(
+            return_value=False
+        )
+
+        self.service.activate_multi_agents(self.project, is_active=True)
+        self.project.refresh_from_db(fields=["is_nexus_multi_agents_active"])
+        self.assertTrue(self.project.is_nexus_multi_agents_active)
+        self.service.indexer_activation_service.add_project_to_queue.assert_called_once_with(
+            self.project
+        )
+        mock_create_dashboard.delay.assert_called_once_with(self.project.uuid)
+
+    @override_settings(CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION=True)
+    def test_add_project_to_indexer_queue_when_not_active_and_not_queued(self):
+        self.service.indexer_activation_service.is_project_active_on_indexer = (
+            MagicMock(return_value=False)
+        )
+        self.service.indexer_activation_service.is_project_queued = MagicMock(
+            return_value=False
+        )
+
+        self.service.add_project_to_indexer_queue(self.project)
+        self.service.indexer_activation_service.add_project_to_queue.assert_called_once_with(
+            self.project
+        )
+
+    @override_settings(CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION=True)
+    def test_add_project_to_indexer_queue_when_active_on_indexer(self):
+        self.service.indexer_activation_service.is_project_active_on_indexer = (
+            MagicMock(return_value=True)
+        )
+
+        self.service.add_project_to_indexer_queue(self.project)
+        self.service.indexer_activation_service.is_project_queued.assert_not_called()
+        self.service.indexer_activation_service.add_project_to_queue.assert_not_called()
+
+    @override_settings(CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION=True)
+    def test_add_project_to_indexer_queue_when_already_queued(self):
+        self.service.indexer_activation_service.is_project_active_on_indexer = (
+            MagicMock(return_value=False)
+        )
+        self.service.indexer_activation_service.is_project_queued = MagicMock(
+            return_value=True
+        )
+
+        self.service.add_project_to_indexer_queue(self.project)
+        self.service.indexer_activation_service.add_project_to_queue.assert_not_called()
+
+    @override_settings(CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION=False)
+    def test_add_project_to_indexer_queue_when_activation_not_required(self):
+        self.service.add_project_to_indexer_queue(self.project)
+        self.service.indexer_activation_service.is_project_active_on_indexer.assert_not_called()
+        self.service.indexer_activation_service.add_project_to_queue.assert_not_called()
