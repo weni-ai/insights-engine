@@ -245,6 +245,18 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_tool_result_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get tool result worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -599,6 +611,10 @@ class ConversationsReportService(BaseConversationsReportService):
             ),
             "NPS_HUMAN": (
                 self.get_nps_human_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "TOOL_RESULT": (
+                self.get_tool_result_worksheet,
                 {"report": report, "start_date": start_date, "end_date": end_date},
             ),
         }
@@ -1594,6 +1610,52 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def get_tool_result_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get tool result worksheet.
+        """
+        tool_results = self.metrics_service.get_tool_results(
+            project_uuid=report.project.uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Tool results")
+            agent_label = gettext("Agent")
+            results_label = gettext("Results")
+            percentage_label = gettext("Percentage")
+
+        data = []
+
+        for tool_result in tool_results.tool_results:
+            data.append(
+                {
+                    agent_label: tool_result.label,
+                    results_label: tool_result.full_value,
+                    percentage_label: tool_result.value,
+                }
+            )
+
+        if len(data) == 0:
+            data = [
+                {
+                    agent_label: "",
+                    results_label: "",
+                    percentage_label: "",
+                }
+            ]
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
     def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
         """
         Get available widgets.
@@ -1603,6 +1665,7 @@ class ConversationsReportService(BaseConversationsReportService):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
+            "TOOL_RESULT",
         ]
 
         special_widgets_get_functions = [

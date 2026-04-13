@@ -2063,7 +2063,7 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         result = self.service.get_available_widgets(self.project)
 
-        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
+        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN", "TOOL_RESULT"]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
         self.assertEqual(result.crosstab_widgets, [])
@@ -2146,6 +2146,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
+            "TOOL_RESULT",
             "CSAT_AI",
             "CSAT_HUMAN",
             "NPS_AI",
@@ -2201,7 +2202,7 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         result = self.service.get_available_widgets(self.project)
 
-        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
+        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN", "TOOL_RESULT"]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(
             result.custom_widgets, [custom_widget1.uuid, custom_widget2.uuid]
@@ -2265,6 +2266,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
+            "TOOL_RESULT",
             "CSAT_AI",
             "NPS_AI",
         ]
@@ -2311,6 +2313,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
+            "TOOL_RESULT",
             "CSAT_AI",
         ]
         self.assertEqual(result.sections, expected_sections)
@@ -2369,7 +2372,7 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         result = self.service.get_available_widgets(self.project)
 
-        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN"]
+        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN", "TOOL_RESULT"]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
         self.assertEqual(
@@ -3531,3 +3534,171 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(worksheet.data[0]["Total"], 100)
         self.assertEqual(worksheet.data[1]["Label"], "Row B")
         self.assertEqual(worksheet.data[1]["Total"], 200)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_tool_results"
+    )
+    def test_get_tool_result_worksheet(self, mock_get_tool_results):
+        from insights.metrics.conversations.dataclass import (
+            ToolResultAgent,
+            ToolResultItem,
+            ToolResultMetrics,
+        )
+
+        mock_get_tool_results.return_value = ToolResultMetrics(
+            tool_results=[
+                ToolResultItem(
+                    label="example_agent",
+                    agent=ToolResultAgent(uuid="agent-uuid-1"),
+                    value=44.44,
+                    full_value=12,
+                ),
+                ToolResultItem(
+                    label="test_agent",
+                    agent=ToolResultAgent(uuid="agent-uuid-2"),
+                    value=55.56,
+                    full_value=15,
+                ),
+            ],
+            total=2,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOOL_RESULT"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_tool_result_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Tool results")
+        self.assertEqual(len(worksheet.data), 2)
+
+        self.assertEqual(worksheet.data[0]["Agent"], "example_agent")
+        self.assertEqual(worksheet.data[0]["Results"], 12)
+        self.assertEqual(worksheet.data[0]["Percentage"], 44.44)
+
+        self.assertEqual(worksheet.data[1]["Agent"], "test_agent")
+        self.assertEqual(worksheet.data[1]["Results"], 15)
+        self.assertEqual(worksheet.data[1]["Percentage"], 55.56)
+
+        mock_get_tool_results.assert_called_once_with(
+            project_uuid=self.project.uuid,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_tool_results"
+    )
+    def test_get_tool_result_worksheet_with_empty_data(
+        self, mock_get_tool_results
+    ):
+        from insights.metrics.conversations.dataclass import ToolResultMetrics
+
+        mock_get_tool_results.return_value = ToolResultMetrics(
+            tool_results=[],
+            total=0,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOOL_RESULT"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_tool_result_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Tool results")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["Agent"], "")
+        self.assertEqual(worksheet.data[0]["Results"], "")
+        self.assertEqual(worksheet.data[0]["Percentage"], "")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_tool_result_worksheet"
+    )
+    def test_get_worksheets_with_tool_result_section(
+        self, mock_get_tool_result_worksheet
+    ):
+        mock_get_tool_result_worksheet.return_value = ConversationsReportWorksheet(
+            name="Tool results",
+            data=[{"Agent": "test_agent", "Results": 10}],
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOOL_RESULT"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        worksheets = self.service._get_worksheets(
+            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+        )
+
+        self.assertEqual(len(worksheets), 1)
+        mock_get_tool_result_worksheet.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_tool_results"
+    )
+    def test_get_tool_result_worksheet_with_null_agent(
+        self, mock_get_tool_results
+    ):
+        from insights.metrics.conversations.dataclass import (
+            ToolResultItem,
+            ToolResultMetrics,
+        )
+
+        mock_get_tool_results.return_value = ToolResultMetrics(
+            tool_results=[
+                ToolResultItem(
+                    label="unknown_agent",
+                    agent=None,
+                    value=100.0,
+                    full_value=5,
+                ),
+            ],
+            total=1,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOOL_RESULT"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_tool_result_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Tool results")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["Agent"], "unknown_agent")
+        self.assertEqual(worksheet.data[0]["Results"], 5)
+        self.assertEqual(worksheet.data[0]["Percentage"], 100.0)
