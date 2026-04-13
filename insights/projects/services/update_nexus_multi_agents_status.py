@@ -83,5 +83,3 @@ class UpdateNexusMultiAgentsStatusService:
             and not self.indexer_activation_service.is_project_queued(project)
         ):
             self.indexer_activation_service.add_project_to_queue(project)
-
-        return True

@@ -113,7 +113,7 @@ def handle_project_created_with_inline_agent_switch(project_uuid: UUID):
 
     if not project.is_nexus_multi_agents_active:
         logger.info(
-            "[ handle_project_created_with_inline_agent_switch task ] Project %s does not have inline agent switch enabled",
+            "[ handle_project_created_with_inline_agent_switch task ] Project %s does not have multi-agents active",
             project.uuid,
         )
         return
