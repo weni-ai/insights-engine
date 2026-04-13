@@ -350,6 +350,22 @@ msgstr "Título"
 msgid "Total"
 msgstr "Total"
 
+#: insights/metrics/conversations/reports/services.py:1629
+msgid "Agent invocations"
+msgstr "Invocaciones de agentes"
+
+#: insights/metrics/conversations/reports/services.py:1630
+msgid "Agent"
+msgstr "Agente"
+
+#: insights/metrics/conversations/reports/services.py:1631
+msgid "Invocations"
+msgstr "Invocaciones"
+
+#: insights/metrics/conversations/reports/services.py:1632
+msgid "Percentage"
+msgstr "Porcentaje"
+
 #: insights/metrics/conversations/reports/views.py:101
 msgid "There is another report being processed for this project"
 msgstr "Hay otro reporte siendo procesado para este proyecto"
@@ -865,9 +881,9 @@ msgstr "El proyecto no tiene las credenciales para acceder a la API de VTEX"
 #: insights/templates/admin/login.html:28
 msgid "Please correct the error below."
 msgid_plural "Please correct the errors below."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Corrige el error a continuación."
+msgstr[1] "Corrige los errores a continuación."
+msgstr[2] "Corrige los errores a continuación."
 
 #: insights/templates/admin/login.html:55
 msgid "Forgotten your password or username?"
