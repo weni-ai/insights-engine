@@ -45,7 +45,7 @@ class ProjectsUseCase:
             date_format=project_dto.date_format,
             vtex_account=project_dto.vtex_account,
             org_uuid=project_dto.org_uuid,
-            is_nexus_multi_agents_active=project_dto.inline_agent_switch,
+            is_nexus_multi_agents_active=project_dto.inline_agent_switch or False,
             config=config,
         )
         CreateHumanService().create_dashboard(project)
