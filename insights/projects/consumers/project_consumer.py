@@ -43,7 +43,7 @@ class ProjectConsumer(EDAConsumer):
                 timezone=body.get("timezone"),
                 vtex_account=body.get("vtex_account"),
                 org_uuid=org_uuid,
-                inline_agent_switch=body.get("inline_agent_switch"),
+                inline_agent_switch=body.get("inline_agent_switch", False),
             )
 
             authorizations = body.get("authorizations", [])
