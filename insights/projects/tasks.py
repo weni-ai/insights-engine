@@ -4,7 +4,6 @@ from uuid import UUID
 from django.conf import settings
 
 from insights.celery import app
-from insights.dashboards.tasks import create_conversation_dashboard
 from insights.projects.choices import ProjectIndexerActivationStatus
 from insights.projects.models import Project, ProjectIndexerActivation
 from insights.projects.services.indexer_activation import (
