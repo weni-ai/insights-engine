@@ -882,9 +882,3 @@ msgstr "Entrar"
 #: insights/templates/admin/login.html:64
 msgid "Login with Keycloak"
 msgstr "Entrar com Keycloak"
-
-#~ msgid "Required"
-#~ msgstr "Obrigatório"
-
-#~ msgid "Invalid date format. Use YYYY-MM-DD."
-#~ msgstr "Formato de data inválido. Use YYYY-MM-DD."
