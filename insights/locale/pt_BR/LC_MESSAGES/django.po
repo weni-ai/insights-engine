@@ -18,34 +18,44 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: insights/core/templates/core/emails/base.html:27
-msgid "Our site"
-msgstr "Nosso site"
 
+<<<<<<< HEAD
 #: insights/core/templates/core/emails/base.html:41
 msgid "Weni by VTEX. All rights reserved."
 msgstr "Weni by VTEX. Todos os direitos reservados."
+=======
+#: insights/core/templates/core/emails/base.html:51
+msgid "2026 © VTEX CX Platform. All rights reserved."
+msgstr "2026 © VTEX CX Platform. Todos os direitos reservados."
+>>>>>>> feat/new-email-templates
 
-#: insights/core/templates/core/emails/base.html:46
+#: insights/core/templates/core/emails/base.html:56
 msgid ""
-"You are receiving this mail because you registered in Weni platform. This "
-"also shows that you agree to our Terms of use and Privacy Policies."
+"You are receiving this mail because you registered in VTEX CX Platform. This "
+"also shows that you agree to our Terms of use and Privacy Policies. If you no "
+"longer want to receive mails from use, click the unsubscribe link below to "
+"unsubscribe."
 msgstr ""
-"Você está recebendo este email porque você se registrou na plataforma Weni. "
+"Você está recebendo este email porque se registrou na VTEX CX Platform. "
 "Isso também indica que você concorda com nossos Termos de uso e Política de "
-"privacidade."
+"privacidade. Se não quiser mais receber emails, clique no link abaixo para "
+"cancelar a inscrição."
 
-#: insights/core/templates/core/emails/base.html:49
+#: insights/core/templates/core/emails/base.html:59
 msgid "Privacy Policy"
 msgstr "Política de privacidade"
 
-#: insights/core/templates/core/emails/base.html:53
+#: insights/core/templates/core/emails/base.html:63
 msgid "Terms of use"
 msgstr "Termos de uso"
 
-#: insights/core/templates/core/emails/base.html:57
+#: insights/core/templates/core/emails/base.html:67
 msgid "Help Center"
-msgstr "Centro de ajuda"
+msgstr "Central de ajuda"
+
+#: insights/core/templates/core/emails/base.html:71
+msgid "Unsubscribe"
+msgstr "Cancelar inscrição"
 
 #: insights/dashboards/serializers.py:46
 msgid "Cannot set a default dashboard as non-default"
