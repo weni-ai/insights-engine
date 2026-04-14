@@ -20,9 +20,27 @@ msgstr ""
 "1 : 2;\n"
 
 
-#: insights/core/templates/core/emails/base.html:51
-msgid "2026 © VTEX CX Platform. All rights reserved."
-msgstr "2026 © VTEX CX Platform. Todos los derechos reservados."
+#: insights/core/templates/core/emails/base.html:31
+msgid "All rights reserved."
+msgstr "Todos los derechos reservados."
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
+msgid "Hi, here is your data export"
+msgstr "Hola, aquí está su exportación de datos"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
+msgid "Download"
+msgstr "Descargar"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
+#, python-format
+msgid "The data export for the %(project_name)s project is ready."
+msgstr "La exportación de datos del proyecto %(project_name)s está lista."
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
+#, python-format
+msgid "The files have been attached to this email."
+msgstr "Los archivos han sido adjuntos a este correo."
 
 #: insights/core/templates/core/emails/base.html:56
 msgid ""

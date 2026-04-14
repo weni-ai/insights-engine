@@ -19,9 +19,27 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 
-#: insights/core/templates/core/emails/base.html:51
-msgid "2026 © VTEX CX Platform. All rights reserved."
-msgstr "2026 © VTEX CX Platform. Todos os direitos reservados."
+#: insights/core/templates/core/emails/base.html:31
+msgid "All rights reserved."
+msgstr "Todos os direitos reservados."
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
+msgid "Hi, here is your data export"
+msgstr "Olá, aqui está sua exportação de dados"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
+msgid "Download"
+msgstr "Baixar"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
+#, python-format
+msgid "The data export for the %(project_name)s project is ready."
+msgstr "A exportação dos dados do projeto %(project_name)s está pronta."
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
+#, python-format
+msgid "The files have been attached to this email."
+msgstr "Os arquivos foram anexados a este email."
 
 #: insights/core/templates/core/emails/base.html:56
 msgid ""

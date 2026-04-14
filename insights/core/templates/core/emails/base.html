@@ -12,8 +12,7 @@
 <body style="display: flex;">
   <div style="margin: 0 auto;">
     <div style="width: 680px;">
-      <header
-        style="background: #F9F9F9; border-bottom: 1px solid #E2E6ED; display: flex; padding: 32px 0;">
+      <header style="background: #F9F9F9; border-bottom: 1px solid #E2E6ED; display: flex; padding: 32px 0;">
         {% block logo %}
         <a style="display: block; padding: 10px; margin: auto; line-height: 0;" rel="nofollow" href="https://weni.ai/" target="_blank">
           <img src="https://weni-media-sp.s3-sa-east-1.amazonaws.com/logo/Logo.png" alt="Logo"/>
@@ -22,13 +21,11 @@
       </header>
       {% block main-content %}{% endblock %}
 
-
       <footer style="padding: 0 32px; font-family: 'Lato', sans-serif; margin: auto; text-align: center;">
         <div style="margin: 0 auto 32px auto;">
           <div id="separator" style="width: 100%; height: 1px; background: #D0D3D9; margin-bottom: 24px;"></div>
-          <div id="separator" style="width: 100%; height: 1px; background: #D0D3D9; margin-bottom: 24px;"></div>
           <div style="font-family: 'Lato', sans-serif; font-style: normal; font-weight: normal; font-size: 12px; line-height: 20px; text-align: center; color: #3B414D">
-            {% trans '2026 © VTEX CX Platform. All rights reserved.' %}
+            {% now "Y" %} © VTEX CX Platform. {% trans 'All rights reserved.' %}
           </div>
         </div>
 
