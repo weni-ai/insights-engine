@@ -35,8 +35,11 @@ def activate_indexer():
         return
 
     pending_activations = ProjectIndexerActivation.objects.filter(
-        status=ProjectIndexerActivationStatus.PENDING
-    )
+        status__in=[
+            ProjectIndexerActivationStatus.PENDING,
+            ProjectIndexerActivationStatus.FAILED,
+        ],
+    ).order_by("created_on")
 
     if not pending_activations.exists():
         logger.info("[ activate_indexer task ] No pending activations found")
