@@ -4,6 +4,8 @@ from uuid import UUID
 from django.conf import settings
 
 from insights.celery import app
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
+from insights.dashboards.tasks import create_conversation_dashboard
 from insights.projects.choices import ProjectIndexerActivationStatus
 from insights.projects.models import Project, ProjectIndexerActivation
 from insights.projects.services.indexer_activation import (
@@ -132,6 +134,11 @@ def handle_project_created_with_inline_agent_switch(project_uuid: UUID):
     )
 
     service.add_project_to_indexer_queue(project)
+
+    if not Dashboard.objects.filter(
+        project__uuid=project.uuid, name=CONVERSATIONS_DASHBOARD_NAME
+    ).exists():
+        create_conversation_dashboard.delay(project.uuid)
 
     logger.info(
         "[ handle_project_created_with_inline_agent_switch task ] Finished task"
