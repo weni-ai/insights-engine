@@ -1,3 +1,19 @@
+# 1.19.3
+# Add
+  - New template for export
+  
+# 1.19.2
+# Add
+  - Adding name filter support to endpoint that list projects (#368)
+
+# 1.19.1
+# Fix
+  - Total of agents and tools 
+  
+# 1.19.0
+# Add
+  - Add tools for result metrics 
+
 # 1.18.2
 # Fix
   - Sales funnel event count type conversion to integers
