@@ -8,6 +8,7 @@ import json
 from django.conf import settings
 from sentry_sdk import capture_exception, capture_message
 from rest_framework import status
+from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.metrics.conversations.dataclass import (
     AbsoluteNumbersMetrics,
@@ -970,9 +971,32 @@ class ConversationsMetricsService(
         """
         Get sales funnel data
         """
-        data = self.datalake_service.get_sales_funnel_data(
-            project_uuid, start_date, end_date
+        feature_flag_key = (
+            settings.SALES_FUNNEL_USE_PARALLEL_PROCESSING_FEATURE_FLAG_KEY
         )
+        try:
+            use_parallel_processing = is_feature_active_for_attributes(
+                key=feature_flag_key,
+                attributes={
+                    "projectUUID": project_uuid,
+                },
+            )
+        except Exception as e:
+            capture_exception(e)
+            logger.error(
+                "Error on checking if sales funnel data use parallel processing is active: %s",
+                e,
+            )
+            use_parallel_processing = False
+
+        if use_parallel_processing:
+            data = self.datalake_service.get_sales_funnel_data_parallel(
+                project_uuid, start_date, end_date
+            )
+        else:
+            data = self.datalake_service.get_sales_funnel_data(
+                project_uuid, start_date, end_date
+            )
 
         return SalesFunnelMetrics(
             leads_count=data.leads_count,
