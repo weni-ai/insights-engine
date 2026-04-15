@@ -1010,29 +1010,38 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         }
 
         def fetch_leads_count():
-            return int(
-                self.events_client.get_events_count(
-                    event_name="conversion_lead",
-                    project=project_uuid,
-                    date_start=start_date,
-                    date_end=end_date,
-                )[0].get("count", 0)
+            result = self.events_client.get_events_count(
+                event_name="conversion_lead",
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
             )
+
+            if len(result) > 0 and result != [{}]:
+                return int(result[0].get("count", 0))
+
+            return 0
 
         def fetch_orders_count():
-            return int(
-                self.events_client.get_events_count(
-                    **purchase_query_kwargs,
-                )[
-                    0
-                ].get("count", 0)
+            result = self.events_client.get_events_count(
+                **purchase_query_kwargs,
             )
 
+            if len(result) > 0 and result != [{}]:
+                return int(result[0].get("count", 0))
+
+            return 0
+
         def fetch_orders_value():
-            raw = self.events_client.get_events_sum(
+            result = self.events_client.get_events_sum(
                 **purchase_query_kwargs, operation_key="value"
-            )[0].get("total", 0)
-            return int(round(float(raw) * 100))
+            )
+
+            if len(result) > 0 and result != [{}]:
+                result = result[0].get("total", 0)
+                return int(round(float(result) * 100))
+
+            return 0
 
         def fetch_sample_purchase_events():
             return self.events_client.get_events(
