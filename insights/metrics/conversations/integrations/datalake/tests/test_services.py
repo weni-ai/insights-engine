@@ -970,9 +970,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertEqual(results.leads_count, 2)
         self.assertEqual(results.total_orders_count, 0)
         self.assertEqual(results.total_orders_value, 0)
-        self.mock_events_client.get_events.assert_not_called()
+        self.assertIsNone(results.currency_code)
 
-    def test_get_sales_funnel_data_zero_purchase_orders_does_not_fetch_sample_event(
+    def test_get_sales_funnel_data_zero_purchase_orders_does_not_use_sample_event(
         self,
     ):
         self.mock_events_client.get_events.side_effect = None
@@ -993,7 +993,6 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             end_date=end_date,
         )
 
-        self.mock_events_client.get_events.assert_not_called()
         self.assertEqual(results.total_orders_count, 0)
         self.assertEqual(results.total_orders_value, 0)
         self.assertIsNone(results.currency_code)

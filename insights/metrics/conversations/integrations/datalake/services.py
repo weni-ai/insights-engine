@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 import json
 import logging
@@ -999,46 +1000,65 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 currency_code=cached_results["currency_code"],
             )
 
-        # Leads events
-        leads_count = int(
-            self.events_client.get_events_count(
-                event_name="conversion_lead",
-                project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
-            )[0].get("count", 0)
-        )
-
         currency_code = None
 
-        query_kwargs = {
+        purchase_query_kwargs = {
             "event_name": "conversion_purchase",
             "project": project_uuid,
             "date_start": start_date,
             "date_end": end_date,
         }
 
-        total_orders_count = int(
-            self.events_client.get_events_count(
-                **query_kwargs,
-            )[
-                0
-            ].get("count", 0)
-        )
-        total_orders_value_raw = self.events_client.get_events_sum(
-            **query_kwargs, operation_key="value"
-        )[0].get("total", 0)
-        total_orders_value = int(round(float(total_orders_value_raw) * 100))
+        def fetch_leads_count():
+            return int(
+                self.events_client.get_events_count(
+                    event_name="conversion_lead",
+                    project=project_uuid,
+                    date_start=start_date,
+                    date_end=end_date,
+                )[0].get("count", 0)
+            )
+
+        def fetch_orders_count():
+            return int(
+                self.events_client.get_events_count(
+                    **purchase_query_kwargs,
+                )[
+                    0
+                ].get("count", 0)
+            )
+
+        def fetch_orders_value():
+            raw = self.events_client.get_events_sum(
+                **purchase_query_kwargs, operation_key="value"
+            )[0].get("total", 0)
+            return int(round(float(raw) * 100))
+
+        def fetch_sample_purchase_events():
+            return self.events_client.get_events(
+                **purchase_query_kwargs,
+                limit=1,
+            )
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            leads_future = executor.submit(fetch_leads_count)
+            orders_count_future = executor.submit(fetch_orders_count)
+            orders_value_future = executor.submit(fetch_orders_value)
+            sample_events_future = executor.submit(fetch_sample_purchase_events)
+
+        leads_count = leads_future.result()
+        total_orders_count = orders_count_future.result()
+        total_orders_value = orders_value_future.result()
 
         if total_orders_count > 0:
-            sample_purchase_event = self.events_client.get_events(
-                **query_kwargs,
-                limit=1,
-            )[0]
-            sample_purchase_metadata = self._get_metadata_from_event(
-                sample_purchase_event
-            )
-            currency_code = sample_purchase_metadata.get("currency")
+            sample_purchase_events = sample_events_future.result()
+
+            if len(sample_purchase_events) > 0 and sample_purchase_events != [{}]:
+                sample_purchase_event = sample_purchase_events[0]
+                sample_purchase_metadata = self._get_metadata_from_event(
+                    sample_purchase_event
+                )
+                currency_code = sample_purchase_metadata.get("currency")
 
         if self.cache_results:
             self._save_results_to_cache(
