@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 import json
 import logging
@@ -131,6 +132,14 @@ class BaseDatalakeConversationsMetricsService(ABC):
     ) -> SalesFunnelData:
         """
         Get sales funnel data from Datalake.
+        """
+
+    @abstractmethod
+    def get_sales_funnel_data_parallel(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SalesFunnelData:
+        """
+        Get sales funnel data from Datalake using parallel processing.
         """
 
     @abstractmethod
@@ -1039,6 +1048,116 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 sample_purchase_event
             )
             currency_code = sample_purchase_metadata.get("currency")
+
+        if self.cache_results:
+            self._save_results_to_cache(
+                cache_key,
+                {
+                    "leads_count": leads_count,
+                    "total_orders_count": total_orders_count,
+                    "total_orders_value": total_orders_value,
+                    "currency_code": currency_code,
+                },
+            )
+
+        return SalesFunnelData(
+            leads_count=leads_count,
+            total_orders_count=total_orders_count,
+            total_orders_value=total_orders_value,
+            currency_code=currency_code,
+        )
+
+    def get_sales_funnel_data_parallel(
+        self, project_uuid: UUID, start_date: datetime, end_date: datetime
+    ) -> SalesFunnelData:
+        """
+        Get sales funnel data from Datalake.
+        """
+        cache_key = self._get_cache_key(
+            data_type="sales_funnel_data",
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results and (
+            cached_results := self._get_cached_results(cache_key)
+        ):
+            return SalesFunnelData(
+                leads_count=cached_results["leads_count"],
+                total_orders_count=cached_results["total_orders_count"],
+                total_orders_value=cached_results["total_orders_value"],
+                currency_code=cached_results["currency_code"],
+            )
+
+        currency_code = None
+
+        purchase_query_kwargs = {
+            "event_name": "conversion_purchase",
+            "project": project_uuid,
+            "date_start": start_date,
+            "date_end": end_date,
+        }
+
+        def fetch_leads_count():
+            result = self.events_client.get_events_count(
+                event_name="conversion_lead",
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+            )
+
+            if len(result) > 0 and result != [{}]:
+                return int(result[0].get("count", 0))
+
+            return 0
+
+        def fetch_orders_count():
+            result = self.events_client.get_events_count(
+                **purchase_query_kwargs,
+            )
+
+            if len(result) > 0 and result != [{}]:
+                return int(result[0].get("count", 0))
+
+            return 0
+
+        def fetch_orders_value():
+            result = self.events_client.get_events_sum(
+                **purchase_query_kwargs, operation_key="value"
+            )
+
+            if len(result) > 0 and result != [{}]:
+                result = result[0].get("total", 0)
+                return int(round(float(result) * 100))
+
+            return 0
+
+        def fetch_sample_purchase_events():
+            return self.events_client.get_events(
+                **purchase_query_kwargs,
+                limit=1,
+            )
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            leads_future = executor.submit(fetch_leads_count)
+            orders_count_future = executor.submit(fetch_orders_count)
+            orders_value_future = executor.submit(fetch_orders_value)
+            sample_events_future = executor.submit(fetch_sample_purchase_events)
+
+        leads_count = leads_future.result()
+        total_orders_count = orders_count_future.result()
+        total_orders_value = orders_value_future.result()
+
+        if total_orders_count > 0:
+            sample_purchase_events = sample_events_future.result()
+
+            if len(sample_purchase_events) > 0 and sample_purchase_events != [{}]:
+                sample_purchase_event = sample_purchase_events[0]
+                sample_purchase_metadata = self._get_metadata_from_event(
+                    sample_purchase_event
+                )
+                currency_code = sample_purchase_metadata.get("currency")
 
         if self.cache_results:
             self._save_results_to_cache(

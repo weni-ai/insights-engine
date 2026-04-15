@@ -697,7 +697,11 @@ class TestConversationsMetricsService(TestCase):
                 end_date=self.end_date,
             )
 
-    def test_get_sales_funnel_data(self):
+    @patch(
+        "insights.metrics.conversations.services.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    def test_get_sales_funnel_data(self, mock_feature_flag):
         self.mock_datalake_service.get_sales_funnel_data.return_value = SalesFunnelData(
             leads_count=100,
             total_orders_count=100,
@@ -717,11 +721,84 @@ class TestConversationsMetricsService(TestCase):
             self.start_date,
             self.end_date,
         )
+        self.mock_datalake_service.get_sales_funnel_data_parallel.assert_not_called()
 
         self.assertEqual(metrics.leads_count, 100)
         self.assertEqual(metrics.total_orders_count, 100)
         self.assertEqual(metrics.total_orders_value, 10000)
         self.assertEqual(metrics.currency_code, "BRL")
+
+    @patch(
+        "insights.metrics.conversations.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    def test_get_sales_funnel_data_uses_parallel_when_feature_flag_active(
+        self, mock_feature_flag
+    ):
+        self.mock_datalake_service.get_sales_funnel_data_parallel.return_value = (
+            SalesFunnelData(
+                leads_count=100,
+                total_orders_count=100,
+                total_orders_value=10000,
+                currency_code="BRL",
+            )
+        )
+        metrics = self.service.get_sales_funnel_data(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(metrics, SalesFunnelMetrics)
+
+        mock_feature_flag.assert_called_once_with(
+            key="insightsSalesFunnelUseParallelProcessing",
+            attributes={"projectUUID": self.project.uuid},
+        )
+        self.mock_datalake_service.get_sales_funnel_data_parallel.assert_called_once_with(
+            self.project.uuid,
+            self.start_date,
+            self.end_date,
+        )
+        self.mock_datalake_service.get_sales_funnel_data.assert_not_called()
+
+        self.assertEqual(metrics.leads_count, 100)
+        self.assertEqual(metrics.total_orders_count, 100)
+        self.assertEqual(metrics.total_orders_value, 10000)
+        self.assertEqual(metrics.currency_code, "BRL")
+
+    @patch(
+        "insights.metrics.conversations.services.is_feature_active_for_attributes",
+        side_effect=Exception("GrowthBook connection error"),
+    )
+    def test_get_sales_funnel_data_falls_back_to_sequential_on_feature_flag_error(
+        self, mock_feature_flag
+    ):
+        self.mock_datalake_service.get_sales_funnel_data.return_value = SalesFunnelData(
+            leads_count=50,
+            total_orders_count=10,
+            total_orders_value=5000,
+            currency_code="USD",
+        )
+        metrics = self.service.get_sales_funnel_data(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(metrics, SalesFunnelMetrics)
+
+        self.mock_datalake_service.get_sales_funnel_data.assert_called_once_with(
+            self.project.uuid,
+            self.start_date,
+            self.end_date,
+        )
+        self.mock_datalake_service.get_sales_funnel_data_parallel.assert_not_called()
+
+        self.assertEqual(metrics.leads_count, 50)
+        self.assertEqual(metrics.total_orders_count, 10)
+        self.assertEqual(metrics.total_orders_value, 5000)
+        self.assertEqual(metrics.currency_code, "USD")
 
     def test_check_if_sales_funnel_data_exists_when_data_does_not_exist(self):
         self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = (
