@@ -622,6 +622,42 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
+    def get_detailed_monitoring_status_v2(self, filters: dict = {}) -> dict:
+        ordering_fields = {"agent", "-agent"}
+        normalized = self._normalize_filters(filters)
+
+        params: dict = {}
+
+        if filters.get("user_request") is not None:
+            params["user_request"] = filters.get("user_request")
+        if (ordering := filters.get("ordering")) and ordering in ordering_fields:
+            params["ordering"] = ordering
+
+        for pagination_filter in ("limit", "offset"):
+            if filters.get(pagination_filter):
+                params[pagination_filter] = filters.get(pagination_filter)
+
+        mapping = {
+            "sectors": ("sector", list),
+            "queues": ("queue", list),
+            "agent": ("agent", str),
+            "start_date": ("start_date", str),
+            "end_date": ("end_date", str),
+        }
+
+        for filter_key, filter_value in mapping.items():
+            param, param_type = filter_value
+            if value := normalized.get(filter_key):
+                if param_type == list and len(value) > 0:
+                    value = value[0]
+                elif param in ("start_date", "end_date"):
+                    value = value.isoformat()
+                params[param] = str(value) if param_type == str else value
+
+        return ChatsRESTClient().get_status_by_agent(
+            str(self.project.uuid), params
+        )
+
     def get_detailed_monitoring_agents_totals(self, filters: dict = {}) -> dict:
         params = self._get_detailed_monitoring_agents_filters(filters)
         return AgentsRESTClient(self.project).agents_totals(params)
@@ -736,6 +772,36 @@ class HumanSupportDashboardService:
 
         client = CustomStatusRESTClient(self.project)
         response = client.list_custom_status_by_agent(params)
+
+        formatted_results = []
+        for agent_data in response.get("results", []):
+            formatted_results.append(
+                {
+                    "agent": agent_data.get("agent"),
+                    "agent_email": agent_data.get("agent_email"),
+                    "custom_status": agent_data.get("custom_status", []),
+                    "link": agent_data.get("link"),
+                }
+            )
+
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
+
+    def get_analysis_detailed_monitoring_status_v2(
+        self, filters: dict | None = None
+    ) -> dict:
+        ordering_fields = {"agent", "-agent"}
+        params = self._get_analysis_detailed_monitoring_status_filters(
+            filters, ordering_fields
+        )
+
+        response = ChatsRESTClient().get_status_by_agent(
+            str(self.project.uuid), params
+        )
 
         formatted_results = []
         for agent_data in response.get("results", []):

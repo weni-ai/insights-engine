@@ -28,3 +28,41 @@ class DetailedMonitoringAgentsViewV2(APIView):
         data = service.get_detailed_monitoring_agents_v2(filters=filters)
 
         return Response(data, status=200)
+
+
+class DetailedMonitoringStatusViewV2(APIView):
+    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+    feature_flag_key = "human-support-detailed-monitoring"
+
+    def get(self, request, *args, **kwargs):
+        project_uuid = request.query_params.get("project_uuid")
+        if not project_uuid:
+            return Response({"detail": "project_uuid is required"}, status=400)
+
+        project = get_object_or_404(Project, uuid=project_uuid)
+        service = HumanSupportDashboardService(project=project)
+
+        filters = get_filters_from_query_params(request.query_params)
+        filters["user_request"] = request.user.email
+        data = service.get_detailed_monitoring_status_v2(filters=filters)
+
+        return Response(data, status=200)
+
+
+class AnalysisDetailedMonitoringStatusViewV2(APIView):
+    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+    feature_flag_key = "human-support-detailed-monitoring"
+
+    def get(self, request, *args, **kwargs):
+        project_uuid = request.query_params.get("project_uuid")
+        if not project_uuid:
+            return Response({"detail": "project_uuid is required"}, status=400)
+
+        project = get_object_or_404(Project, uuid=project_uuid)
+        service = HumanSupportDashboardService(project=project)
+
+        filters = get_filters_from_query_params(request.query_params)
+        filters["user_request"] = request.user.email
+        data = service.get_analysis_detailed_monitoring_status_v2(filters=filters)
+
+        return Response(data, status=200)
