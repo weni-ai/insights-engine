@@ -751,7 +751,7 @@ class HumanSupportDashboardService:
                     value = value[0]
 
                 elif param in ("start_date", "end_date"):
-                    value = value.isoformat()
+                    value = value.strftime("%Y-%m-%d")
 
                 params[param] = str(value) if param_type == str else value
 
