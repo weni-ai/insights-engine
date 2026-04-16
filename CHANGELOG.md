@@ -1,3 +1,7 @@
+# 1.19.4
+# Add
+  - Parallel processing for sales funnel data retrieval
+
 # 1.19.3
 # Add
   - New template for export
