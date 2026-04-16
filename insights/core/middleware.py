@@ -26,6 +26,7 @@ class InternalErrorHandlerMiddleware:
             request.method,
             request.get_full_path(),
             exception,
+            exc_info=True,
         )
 
         response_data = {
