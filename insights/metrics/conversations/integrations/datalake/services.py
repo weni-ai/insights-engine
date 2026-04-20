@@ -135,14 +135,6 @@ class BaseDatalakeConversationsMetricsService(ABC):
         """
 
     @abstractmethod
-    def get_sales_funnel_data_parallel(
-        self, project_uuid: UUID, start_date: datetime, end_date: datetime
-    ) -> SalesFunnelData:
-        """
-        Get sales funnel data from Datalake using parallel processing.
-        """
-
-    @abstractmethod
     def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
         """
         Check if sales funnel data exists in Datalake.
@@ -986,88 +978,6 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         return metadata
 
     def get_sales_funnel_data(
-        self, project_uuid: UUID, start_date: datetime, end_date: datetime
-    ) -> SalesFunnelData:
-        """
-        Get sales funnel data from Datalake.
-        """
-        cache_key = self._get_cache_key(
-            data_type="sales_funnel_data",
-            project_uuid=project_uuid,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        if self.cache_results and (
-            cached_results := self._get_cached_results(cache_key)
-        ):
-            return SalesFunnelData(
-                leads_count=cached_results["leads_count"],
-                total_orders_count=cached_results["total_orders_count"],
-                total_orders_value=cached_results["total_orders_value"],
-                currency_code=cached_results["currency_code"],
-            )
-
-        # Leads events
-        leads_count = int(
-            self.events_client.get_events_count(
-                event_name="conversion_lead",
-                project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
-            )[0].get("count", 0)
-        )
-
-        currency_code = None
-
-        query_kwargs = {
-            "event_name": "conversion_purchase",
-            "project": project_uuid,
-            "date_start": start_date,
-            "date_end": end_date,
-        }
-
-        total_orders_count = int(
-            self.events_client.get_events_count(
-                **query_kwargs,
-            )[
-                0
-            ].get("count", 0)
-        )
-        total_orders_value_raw = self.events_client.get_events_sum(
-            **query_kwargs, operation_key="value"
-        )[0].get("total", 0)
-        total_orders_value = int(round(float(total_orders_value_raw) * 100))
-
-        if total_orders_count > 0:
-            sample_purchase_event = self.events_client.get_events(
-                **query_kwargs,
-                limit=1,
-            )[0]
-            sample_purchase_metadata = self._get_metadata_from_event(
-                sample_purchase_event
-            )
-            currency_code = sample_purchase_metadata.get("currency")
-
-        if self.cache_results:
-            self._save_results_to_cache(
-                cache_key,
-                {
-                    "leads_count": leads_count,
-                    "total_orders_count": total_orders_count,
-                    "total_orders_value": total_orders_value,
-                    "currency_code": currency_code,
-                },
-            )
-
-        return SalesFunnelData(
-            leads_count=leads_count,
-            total_orders_count=total_orders_count,
-            total_orders_value=total_orders_value,
-            currency_code=currency_code,
-        )
-
-    def get_sales_funnel_data_parallel(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SalesFunnelData:
         """
