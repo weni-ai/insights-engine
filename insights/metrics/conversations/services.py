@@ -8,7 +8,6 @@ import json
 from django.conf import settings
 from sentry_sdk import capture_exception, capture_message
 from rest_framework import status
-from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.metrics.conversations.dataclass import (
     AbsoluteNumbersMetrics,
