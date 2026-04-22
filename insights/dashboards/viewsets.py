@@ -122,7 +122,7 @@ class DashboardViewSet(
 
     def list(self, request, *args, **kwargs):
         if project_uuid := request.query_params.get("project"):
-            project = Project.objects.get(uuid=project_uuid)
+            project = get_object_or_404(Project, uuid=project_uuid)
             is_nexus_multi_agents_active = project.is_nexus_multi_agents_active
             is_allowed = (
                 project.is_allowed or str(project_uuid) in settings.PROJECT_ALLOW_LIST
