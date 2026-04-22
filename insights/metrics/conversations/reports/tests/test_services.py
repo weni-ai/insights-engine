@@ -2063,7 +2063,14 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         result = self.service.get_available_widgets(self.project)
 
-        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN", "TOOL_RESULT"]
+        expected_sections = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+            "AGENT_INVOCATION",
+            "TOOL_RESULT",
+        ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
         self.assertEqual(result.crosstab_widgets, [])
@@ -2146,6 +2153,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
+            "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CSAT_AI",
             "CSAT_HUMAN",
@@ -2202,7 +2210,14 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         result = self.service.get_available_widgets(self.project)
 
-        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN", "TOOL_RESULT"]
+        expected_sections = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+            "AGENT_INVOCATION",
+            "TOOL_RESULT",
+        ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(
             result.custom_widgets, [custom_widget1.uuid, custom_widget2.uuid]
@@ -2266,6 +2281,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
+            "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CSAT_AI",
             "NPS_AI",
@@ -2313,6 +2329,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
+            "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CSAT_AI",
         ]
@@ -2372,7 +2389,14 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         result = self.service.get_available_widgets(self.project)
 
-        expected_sections = ["RESOLUTIONS", "TRANSFERRED", "TOPICS_AI", "TOPICS_HUMAN", "TOOL_RESULT"]
+        expected_sections = [
+            "RESOLUTIONS",
+            "TRANSFERRED",
+            "TOPICS_AI",
+            "TOPICS_HUMAN",
+            "AGENT_INVOCATION",
+            "TOOL_RESULT",
+        ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
         self.assertEqual(
@@ -3142,9 +3166,7 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_crosstab_data"
     )
-    def test_get_crosstab_widget_worksheet_column_order(
-        self, mock_get_crosstab_data
-    ):
+    def test_get_crosstab_widget_worksheet_column_order(self, mock_get_crosstab_data):
         from insights.metrics.conversations.dataclass import (
             CrosstabItemData,
             CrosstabSubItemData,
@@ -3420,9 +3442,7 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_crosstab_data"
     )
-    def test_get_crosstab_widget_worksheet_single_item(
-        self, mock_get_crosstab_data
-    ):
+    def test_get_crosstab_widget_worksheet_single_item(self, mock_get_crosstab_data):
         from insights.metrics.conversations.dataclass import (
             CrosstabItemData,
             CrosstabSubItemData,
@@ -3469,7 +3489,9 @@ class TestConversationsReportServiceAdditional(TestCase):
         )
 
         self.assertEqual(len(worksheet.data), 1)
-        self.assertEqual(list(worksheet.data[0].keys()), ["Label", "Total", "yes", "no"])
+        self.assertEqual(
+            list(worksheet.data[0].keys()), ["Label", "Total", "yes", "no"]
+        )
         self.assertEqual(worksheet.data[0]["Label"], "Only Row")
         self.assertEqual(worksheet.data[0]["Total"], 42)
         self.assertEqual(worksheet.data[0]["yes"], 30)
@@ -3478,9 +3500,7 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_crosstab_data"
     )
-    def test_get_crosstab_widget_worksheet_no_subitems(
-        self, mock_get_crosstab_data
-    ):
+    def test_get_crosstab_widget_worksheet_no_subitems(self, mock_get_crosstab_data):
         from insights.metrics.conversations.dataclass import (
             CrosstabItemData,
         )
@@ -3599,9 +3619,7 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_tool_results"
     )
-    def test_get_tool_result_worksheet_with_empty_data(
-        self, mock_get_tool_results
-    ):
+    def test_get_tool_result_worksheet_with_empty_data(self, mock_get_tool_results):
         from insights.metrics.conversations.dataclass import ToolResultMetrics
 
         mock_get_tool_results.return_value = ToolResultMetrics(
@@ -3661,9 +3679,7 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch(
         "insights.metrics.conversations.services.ConversationsMetricsService.get_tool_results"
     )
-    def test_get_tool_result_worksheet_with_null_agent(
-        self, mock_get_tool_results
-    ):
+    def test_get_tool_result_worksheet_with_null_agent(self, mock_get_tool_results):
         from insights.metrics.conversations.dataclass import (
             ToolResultItem,
             ToolResultMetrics,
@@ -3701,4 +3717,166 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(len(worksheet.data), 1)
         self.assertEqual(worksheet.data[0]["Agent"], "unknown_agent")
         self.assertEqual(worksheet.data[0]["Results"], 5)
+        self.assertEqual(worksheet.data[0]["Percentage"], 100.0)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
+    def test_get_agent_invocation_worksheet(self, mock_get_agent_invocations):
+        from insights.metrics.conversations.dataclass import (
+            AgentInvocationAgent,
+            AgentInvocationItem,
+            AgentInvocationMetrics,
+        )
+
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label="example_agent",
+                    agent=AgentInvocationAgent(uuid="agent-uuid-1"),
+                    value=44.44,
+                    full_value=12,
+                ),
+                AgentInvocationItem(
+                    label="test_agent",
+                    agent=AgentInvocationAgent(uuid="agent-uuid-2"),
+                    value=55.56,
+                    full_value=15,
+                ),
+            ],
+            total=2,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+        worksheet = self.service.get_agent_invocation_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(len(worksheet.data), 2)
+
+        self.assertEqual(worksheet.data[0]["Agent"], "example_agent")
+        self.assertEqual(worksheet.data[0]["Invocations"], 12)
+        self.assertEqual(worksheet.data[0]["Percentage"], 44.44)
+
+        self.assertEqual(worksheet.data[1]["Agent"], "test_agent")
+        self.assertEqual(worksheet.data[1]["Invocations"], 15)
+        self.assertEqual(worksheet.data[1]["Percentage"], 55.56)
+
+        mock_get_agent_invocations.assert_called_once_with(
+            project_uuid=self.project.uuid,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
+    def test_get_agent_invocation_worksheet_with_empty_data(
+        self, mock_get_agent_invocations
+    ):
+        from insights.metrics.conversations.dataclass import AgentInvocationMetrics
+
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[],
+            total=0,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+        worksheet = self.service.get_agent_invocation_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["Agent"], "")
+        self.assertEqual(worksheet.data[0]["Invocations"], "")
+        self.assertEqual(worksheet.data[0]["Percentage"], "")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_agent_invocation_worksheet"
+    )
+    def test_get_worksheets_with_agent_invocation_section(
+        self, mock_get_agent_invocation_worksheet
+    ):
+        mock_get_agent_invocation_worksheet.return_value = ConversationsReportWorksheet(
+            name="Agent invocations",
+            data=[{"Agent": "test_agent", "Invocations": 10}],
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        worksheets = self.service._get_worksheets(
+            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+        )
+
+        self.assertEqual(len(worksheets), 1)
+        mock_get_agent_invocation_worksheet.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
+    def test_get_agent_invocation_worksheet_with_null_agent(
+        self, mock_get_agent_invocations
+    ):
+        from insights.metrics.conversations.dataclass import (
+            AgentInvocationItem,
+            AgentInvocationMetrics,
+        )
+
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label="unknown_agent",
+                    agent=None,
+                    value=100.0,
+                    full_value=5,
+                ),
+            ],
+            total=1,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+        worksheet = self.service.get_agent_invocation_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["Agent"], "unknown_agent")
+        self.assertEqual(worksheet.data[0]["Invocations"], 5)
         self.assertEqual(worksheet.data[0]["Percentage"], 100.0)
