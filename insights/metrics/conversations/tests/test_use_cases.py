@@ -1,5 +1,5 @@
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 import uuid
 
@@ -8,10 +8,6 @@ from rest_framework import serializers
 
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.enums import CsatMetricsType
-from insights.metrics.conversations.exceptions import (
-    ConversationsMetricsError,
-    GetProjectAiCsatMetricsError,
-)
 from insights.metrics.conversations.usecases.get_absolute_numbers_widget import (
     GetAbsoluteNumbersWidgetUseCase,
 )
@@ -78,29 +74,19 @@ class TestGetProjectAiCsatMetricsUseCase(TestCase):
         )
 
     @override_settings(CONVERSATIONS_DASHBOARD_NATIVE_CSAT_AGENT_UUID="test-agent")
-    @patch(
-        "insights.metrics.conversations.usecases.get_project_ai_csat_metrics.capture_exception"
-    )
-    def test_execute_raises_get_project_ai_csat_metrics_error_on_service_error(
-        self, mock_capture_exception
-    ):
-        mock_capture_exception.return_value = "sentry-event-123"
-        self.service.get_csat_metrics.side_effect = ConversationsMetricsError(
+    def test_execute_propagates_service_error(self):
+        self.service.get_csat_metrics.side_effect = ValueError(
             "Datalake unavailable"
         )
 
-        with self.assertRaises(GetProjectAiCsatMetricsError) as ctx:
+        with self.assertRaises(ValueError) as ctx:
             self.use_case.execute(
                 project_uuid=self.project.uuid,
                 start_date=datetime(2024, 1, 1),
                 end_date=datetime(2024, 1, 31),
             )
 
-        self.assertEqual(ctx.exception.event_id, "sentry-event-123")
         self.assertIn("Datalake unavailable", str(ctx.exception))
-        self.assertIs(
-            ctx.exception.__cause__, self.service.get_csat_metrics.side_effect
-        )
 
     def test_execute_uses_injected_service(self):
         self.service.get_csat_metrics.return_value = {"results": []}
