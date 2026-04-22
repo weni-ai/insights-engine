@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-13 17:27+0000\n"
+"POT-Creation-Date: 2026-04-22 21:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Kallil Souza dos Santos <kallilsouza@hotmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,54 +18,35 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-
-#: insights/core/templates/core/emails/base.html:31
+#: insights/core/templates/core/emails/base.html:28
 msgid "All rights reserved."
 msgstr "Todos os direitos reservados."
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
-msgid "Hi, here is your data export"
-msgstr "Olá, aqui está sua exportação de dados"
-
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
-msgid "Download"
-msgstr "Baixar"
-
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
-#, python-format
-msgid "The data export for the %(project_name)s project is ready."
-msgstr "A exportação dos dados do projeto %(project_name)s está pronta."
-
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html
-#, python-format
-msgid "The files have been attached to this email."
-msgstr "Os arquivos foram anexados a este email."
-
-#: insights/core/templates/core/emails/base.html:56
+#: insights/core/templates/core/emails/base.html:33
 msgid ""
 "You are receiving this mail because you registered in VTEX CX Platform. This "
-"also shows that you agree to our Terms of use and Privacy Policies. If you no "
-"longer want to receive mails from use, click the unsubscribe link below to "
-"unsubscribe."
+"also shows that you agree to our Terms of use and Privacy Policies. If you "
+"no longer want to receive mails from use, click the unsubscribe link below "
+"to unsubscribe."
 msgstr ""
-"Você está recebendo este email porque se registrou na VTEX CX Platform. "
-"Isso também indica que você concorda com nossos Termos de uso e Política de "
+"Você está recebendo este email porque se registrou na VTEX CX Platform. Isso "
+"também indica que você concorda com nossos Termos de uso e Política de "
 "privacidade. Se não quiser mais receber emails, clique no link abaixo para "
 "cancelar a inscrição."
 
-#: insights/core/templates/core/emails/base.html:59
+#: insights/core/templates/core/emails/base.html:36
 msgid "Privacy Policy"
 msgstr "Política de privacidade"
 
-#: insights/core/templates/core/emails/base.html:63
+#: insights/core/templates/core/emails/base.html:40
 msgid "Terms of use"
 msgstr "Termos de uso"
 
-#: insights/core/templates/core/emails/base.html:67
+#: insights/core/templates/core/emails/base.html:44
 msgid "Help Center"
 msgstr "Central de ajuda"
 
-#: insights/core/templates/core/emails/base.html:71
+#: insights/core/templates/core/emails/base.html:48
 msgid "Unsubscribe"
 msgstr "Cancelar inscrição"
 
@@ -222,7 +203,7 @@ msgid "Widget config is not valid, must have key for source_a and source_b"
 msgstr ""
 "A configuração do widget não é válida, deve ter key para source_a e source_b"
 
-#: insights/metrics/conversations/integrations/datalake/services.py:457
+#: insights/metrics/conversations/integrations/datalake/services.py:458
 #: insights/metrics/conversations/reports/services.py:1030
 #: insights/metrics/conversations/reports/services.py:1207
 msgid "Unclassified"
@@ -389,35 +370,36 @@ msgstr "Porcentagem"
 msgid "There is another report being processed for this project"
 msgstr "Existe outro relatório sendo processado para este projeto"
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:6
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:6
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:16
 msgid "Hi,"
 msgstr "Oi,"
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:9
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:30
 #, python-format
 msgid "Unable to generate export of %(project_name)s project data."
 msgstr "Não foi possível gerar o export dos dados do projeto %(project_name)s."
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:10
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:34
 #, python-format
-msgid ""
-"The data export for the %(project_name)s project is ready and you can "
-"download it by <a clicktracking=off style=\"color: #00A49F; text-decoration: "
-"none;\" href=\"%(file_link)s\" target=\"_blank\">clicking here</a>."
+msgid "Use the following ID to report to support: %(event_id)s."
 msgstr ""
-"A exportação dos dados do projeto %(project_name)s está pronta e você pode "
-"baixá-la <a clicktracking=off style=\"color: #00A49F; text-decoration: none;"
-"\" href=\"%(file_link)s\" target=\"_blank\">clicando aqui</a>."
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:14
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:16
+msgid "Hi, here is your data export"
+msgstr "Olá, aqui está sua exportação de dados"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:30
 #, python-format
-msgid ""
-"The data export for the %(project_name)s project is ready and the files have "
-"been attached to this email."
-msgstr ""
-"A exportação dos dados do projeto %(project_name)s está pronta e os arquivos "
-"foram anexados a este email."
+msgid "The data export for the %(project_name)s project is ready."
+msgstr "A exportação dos dados do projeto %(project_name)s está pronta."
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:63
+msgid "Download"
+msgstr "Baixar"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:67
+msgid "The files have been attached to this email."
+msgstr "Os arquivos foram anexados a este email."
 
 #: insights/metrics/conversations/usecases/get_absolute_numbers_widget.py:31
 msgid "Widget source is not absolute numbers child"
