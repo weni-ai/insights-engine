@@ -26,7 +26,10 @@ from insights.metrics.meta.tasks import (
     check_dashboards_marketing_messages_status_for_project,
 )
 from insights.projects.models import Project
-from insights.projects.tasks import check_nexus_multi_agents_status
+from insights.projects.tasks import (
+    check_nexus_multi_agents_status,
+    handle_project_created_with_inline_agent_switch,
+)
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.sources.contacts.clients import FlowsContactsRestClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
@@ -119,14 +122,21 @@ class DashboardViewSet(
 
     def list(self, request, *args, **kwargs):
         if project_uuid := request.query_params.get("project"):
-            is_nexus_multi_agents_active = (
-                Project.objects.filter(uuid=project_uuid)
-                .values_list("is_nexus_multi_agents_active", flat=True)
-                .first()
+            project = get_object_or_404(Project, uuid=project_uuid)
+            is_nexus_multi_agents_active = project.is_nexus_multi_agents_active
+            is_allowed = (
+                project.is_allowed or str(project_uuid) in settings.PROJECT_ALLOW_LIST
             )
 
             if not is_nexus_multi_agents_active:
                 check_nexus_multi_agents_status.delay(project_uuid)
+
+            if (
+                settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION
+                and is_nexus_multi_agents_active
+                and not is_allowed
+            ):
+                handle_project_created_with_inline_agent_switch.delay(project_uuid)
 
             self._check_marketing_messages_status(project_uuid)
 
