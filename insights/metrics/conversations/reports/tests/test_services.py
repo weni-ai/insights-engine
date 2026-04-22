@@ -2068,8 +2068,8 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
-            "TOOL_RESULT",
             "AGENT_INVOCATION",
+            "TOOL_RESULT",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
@@ -2215,8 +2215,8 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
-            "TOOL_RESULT",
             "AGENT_INVOCATION",
+            "TOOL_RESULT",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(
@@ -2394,8 +2394,8 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TRANSFERRED",
             "TOPICS_AI",
             "TOPICS_HUMAN",
-            "TOOL_RESULT",
             "AGENT_INVOCATION",
+            "TOOL_RESULT",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
