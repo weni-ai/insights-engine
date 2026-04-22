@@ -144,7 +144,8 @@ class QueryExecutor:
                 grouped[sector_uuid]["tags"].append(
                     {
                         "tag_name": tag_name,
-                        "is_deleted": tag_is_deleted,
+                        "is_deleted": tag_is_deleted
+                        or grouped[sector_uuid]["is_deleted"],
                         "value": row["value"],
                     }
                 )
