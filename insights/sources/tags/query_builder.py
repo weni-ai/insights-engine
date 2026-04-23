@@ -23,6 +23,6 @@ class TagSQLQueryBuilder:
     def list(self):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT tg.uuid,tg.name FROM public.sectors_sectortag AS tg {self.join_clause} WHERE {self.where_clause};"
+        query = f"SELECT tg.uuid,tg.name FROM public.sectors_sectortag AS tg {self.join_clause} WHERE {self.where_clause} AND tg.is_deleted=false;"
 
         return query, self.params

@@ -9,3 +9,5 @@ class ConversationsReportSections(TextChoices):
     CSAT_HUMAN = "CSAT_HUMAN"
     NPS_AI = "NPS_AI"
     NPS_HUMAN = "NPS_HUMAN"
+    AGENT_INVOCATION = "AGENT_INVOCATION"
+    TOOL_RESULT = "TOOL_RESULT"
