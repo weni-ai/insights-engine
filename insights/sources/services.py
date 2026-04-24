@@ -51,6 +51,52 @@ class DataSourceService(BaseDataSourceService):
     def get_source_query_executor(self, source_name: str) -> Type[BaseQueryExecutor]:
         return self.source_query_executor_factory.get_source_query_executor(source_name)
 
+    def _handle_serialized_auth(self, widget: Widget) -> dict:
+        """
+        Handle the serialized authentication for the widget
+        """
+        if widget.type != "vtex_order":
+            return {}
+
+        if widget.project.vtex_account:
+            return {
+                "domain": widget.project.vtex_account,
+                "internal_token": JWTService().generate_jwt_token(
+                    vtex_account=widget.project.vtex_account
+                ),
+            }
+
+        auth_source = self.get_source_query_executor("vtexcredentials")
+        try:
+            return auth_source.execute(
+                filters={"project": widget.project.uuid},
+                operation="get_vtex_auth",
+                parser=parse_dict_to_json,
+                return_format="",
+                query_kwargs={},
+            )
+        except VtexCredentialsNotFound:
+            raise PermissionDenied(
+                detail="VTEX credentials not configured for this project. Please configure the VTEX integration first."
+            )
+
+    def _get_extra_query_kwargs(self, widget: Widget, is_report: bool) -> dict:
+        """
+        Handle extra query keyword arguments based on the widget configuration
+        """
+        extra_query_kwargs = {}
+
+        if (
+            widget.name == "human_service_dashboard.peaks_in_human_service"
+            and is_report is False
+        ):
+            extra_query_kwargs["timeseries_hour_kwargs"] = {
+                "start_hour": 7,
+                "end_hour": 18,
+            }
+
+        return extra_query_kwargs
+
     def get_source_data_from_widget(
         self,
         widget: Widget,
@@ -70,29 +116,7 @@ class DataSourceService(BaseDataSourceService):
                     f"could not find a source with the slug {source}, make sure that the widget is configured with a supported source"
                 )
 
-            serialized_auth = {}
-            if widget.type == "vtex_order":
-                if widget.project.vtex_account:
-                    serialized_auth = {
-                        "domain": widget.project.vtex_account,
-                        "internal_token": JWTService().generate_jwt_token(
-                            vtex_account=widget.project.vtex_account
-                        ),
-                    }
-                else:
-                    auth_source = self.get_source_query_executor("vtexcredentials")
-                    try:
-                        serialized_auth: dict = auth_source.execute(
-                            filters={"project": widget.project.uuid},
-                            operation="get_vtex_auth",
-                            parser=parse_dict_to_json,
-                            return_format="",
-                            query_kwargs={},
-                        )
-                    except VtexCredentialsNotFound:
-                        raise PermissionDenied(
-                            detail="VTEX credentials not configured for this project. Please configure the VTEX integration first."
-                        )
+            serialized_auth = self._handle_serialized_auth(widget)
 
             operation_function = (
                 cross_source_data_operation
@@ -100,16 +124,7 @@ class DataSourceService(BaseDataSourceService):
                 else simple_source_data_operation
             )
 
-            extra_query_kwargs = {}
-
-            if (
-                widget.name == "human_service_dashboard.peaks_in_human_service"
-                and is_report is False
-            ):
-                extra_query_kwargs["timeseries_hour_kwargs"] = {
-                    "start_hour": 7,
-                    "end_hour": 18,
-                }
+            extra_query_kwargs = self._get_extra_query_kwargs(widget, is_report)
 
             return operation_function(
                 widget=widget,
