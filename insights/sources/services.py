@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Type
+from typing import Optional, Type
 
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.exceptions import PermissionDenied
@@ -44,7 +44,9 @@ class DataSourceService(BaseDataSourceService):
 
     def __init__(
         self,
-        source_query_executor_factory: SourceQueryExecutorFactory = SourceQueryExecutorFactory(),
+        source_query_executor_factory: Type[
+            SourceQueryExecutorFactory
+        ] = SourceQueryExecutorFactory,
     ):
         self.source_query_executor_factory = source_query_executor_factory
 
@@ -102,9 +104,10 @@ class DataSourceService(BaseDataSourceService):
         widget: Widget,
         is_report: bool = False,
         is_live: bool = False,
-        filters: dict = {},
+        filters: Optional[dict] = None,
         user_email: str = "",
     ):
+        filters = filters or {}
         try:
             source = widget.source
             if is_report:

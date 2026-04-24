@@ -244,6 +244,7 @@ class DashboardViewSet(
                     )
                 )
             else:
+                # TODO: Remove this once the data source service is rolled out to all projects
                 serialized_source = get_source_data_from_widget(
                     widget=widget,
                     is_report=False,
@@ -293,13 +294,37 @@ class DashboardViewSet(
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
-            serialized_source = get_source_data_from_widget(
-                widget=widget,
-                is_report=True,
-                filters=filters,
-                user_email=request.user.email,
-                is_live=is_live,
-            )
+
+            project = dashboard.project
+
+            feature_flag_attributes = {
+                "projectUUID": str(project.uuid),
+                "userEmail": request.user.email,
+            }
+
+            if is_feature_active_for_attributes(
+                settings.DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY,
+                attributes=feature_flag_attributes,
+            ):
+                serialized_source = (
+                    self.source_data_service.get_source_data_from_widget(
+                        widget=widget,
+                        is_report=True,
+                        filters=filters,
+                        user_email=request.user.email,
+                        is_live=is_live,
+                    )
+                )
+            else:
+                # TODO: Remove this once the data source service is rolled out to all projects
+                serialized_source = get_source_data_from_widget(
+                    widget=widget,
+                    is_report=True,
+                    filters=filters,
+                    user_email=request.user.email,
+                    is_live=is_live,
+                )
+
             return Response(serialized_source, status.HTTP_200_OK)
         except PermissionDenied:
             raise
