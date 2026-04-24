@@ -15,11 +15,12 @@ from insights.sources.orders.clients import VtexOrdersRestClient
 from insights.sources.vtex_conversions.services import VTEXOrdersConversionsService
 from insights.sources.vtexcredentials.clients import AuthRestClient
 from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
+from insights.sources.base import BaseQueryExecutor
 
 logger = logging.getLogger(__name__)
 
 
-class QueryExecutor:
+class QueryExecutor(BaseQueryExecutor):
     @classmethod
     def get_vtex_credentials(cls, project: Project):
 
