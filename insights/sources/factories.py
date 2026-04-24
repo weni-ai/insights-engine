@@ -14,8 +14,8 @@ class BaseSourceQueryExecutorFactory(ABC):
     Base class for source query executor factories
     """
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def get_source_query_executor(cls, source_name: str) -> Type[BaseQueryExecutor]:
         raise NotImplementedError("Subclasses must implement this method")
 

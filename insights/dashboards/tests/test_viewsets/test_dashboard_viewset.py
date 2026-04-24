@@ -374,7 +374,8 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
 
     @with_project_auth
     @patch("insights.dashboards.viewsets.get_source_data_from_widget")
-    def test_get_widget_data(self, mock_get_source_data):
+    @patch("insights.dashboards.viewsets.is_feature_active_for_attributes", return_value=False)
+    def test_get_widget_data(self, mock_feature_flag, mock_get_source_data):
         dashboard = Dashboard.objects.create(
             name="Test Dashboard", project=self.project
         )

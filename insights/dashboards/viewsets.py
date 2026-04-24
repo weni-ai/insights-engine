@@ -10,6 +10,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.dashboards.filters import DashboardFilter
@@ -33,6 +34,7 @@ from insights.projects.tasks import (
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.sources.contacts.clients import FlowsContactsRestClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
+from insights.sources.services import DataSourceService
 from insights.widgets.models import Report, Widget
 from insights.widgets.usecases.get_source_data import (
     get_source_data_from_widget,
@@ -61,6 +63,10 @@ class DashboardViewSet(
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = DashboardFilter
+
+    @property
+    def source_data_service(self):
+        return DataSourceService()
 
     def get_permissions(self):
         if self.action in [
@@ -216,13 +222,36 @@ class DashboardViewSet(
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
-            serialized_source = get_source_data_from_widget(
-                widget=widget,
-                is_report=False,
-                is_live=is_live,
-                filters=filters,
-                user_email=request.user.email,
-            )
+
+            project = dashboard.project
+
+            feature_flag_attributes = {
+                "projectUUID": str(project.uuid),
+                "userEmail": request.user.email,
+            }
+
+            if is_feature_active_for_attributes(
+                settings.DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY,
+                attributes=feature_flag_attributes,
+            ):
+                serialized_source = (
+                    self.source_data_service.get_source_data_from_widget(
+                        widget=widget,
+                        is_report=False,
+                        is_live=is_live,
+                        filters=filters,
+                        user_email=request.user.email,
+                    )
+                )
+            else:
+                serialized_source = get_source_data_from_widget(
+                    widget=widget,
+                    is_report=False,
+                    is_live=is_live,
+                    filters=filters,
+                    user_email=request.user.email,
+                )
+
             return Response(serialized_source, status.HTTP_200_OK)
         except PermissionDenied:
             raise
