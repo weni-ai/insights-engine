@@ -545,5 +545,5 @@ VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60
 
 # Data source service
 DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
-    "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="data_source_service"
+    "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
 )
