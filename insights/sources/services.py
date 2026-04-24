@@ -113,7 +113,7 @@ class DataSourceService(BaseDataSourceService):
             if is_report:
                 widget = widget.report
 
-            source_query_executor = self.get_source_query_executor(source.slug)
+            source_query_executor = self.get_source_query_executor(source)
             if source_query_executor is None:
                 raise Exception(
                     f"could not find a source with the slug {source}, make sure that the widget is configured with a supported source"

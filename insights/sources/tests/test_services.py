@@ -27,13 +27,10 @@ def _make_widget(
     project.vtex_account = vtex_account
     project.timezone = "America/Sao_Paulo"
 
-    source = MagicMock()
-    source.slug = source_slug
-
     widget = MagicMock()
     widget.type = widget_type
     widget.name = widget_name
-    widget.source = source
+    widget.source = source_slug
     widget.project = project
     widget.is_crossing_data = is_crossing_data
     widget.config = {}
