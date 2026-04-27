@@ -1,3 +1,7 @@
+# 1.21.1
+# Fix
+  - Update query to exclude deleted tags in TagSQLQueryBuilder
+
 # 1.21.0
 # Add
   - Inline agent switch functionality on project creation
