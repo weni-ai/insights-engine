@@ -379,12 +379,16 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(self.service.get_next_report_to_generate(), first_report)
 
     @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.should_use_parallel_processing",
+        return_value=False,
+    )
+    @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
     def test_get_datalake_events_when_no_events_exist(
-        self, mock_cache_get, mock_cache_set, mock_get_datalake_events
+        self, mock_cache_get, mock_cache_set, mock_get_datalake_events, _mock_parallel
     ):
         mock_get_datalake_events.return_value = []
         mock_cache_get.return_value = None
@@ -416,12 +420,16 @@ class TestConversationsReportService(TestCase):
         )
 
     @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.should_use_parallel_processing",
+        return_value=False,
+    )
+    @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
     def test_get_datalake_events_when_events_exist(
-        self, mock_cache_get, mock_cache_set, mock_get_datalake_events
+        self, mock_cache_get, mock_cache_set, mock_get_datalake_events, _mock_parallel
     ):
         mock_cache_get.return_value = None
         mock_cache_set.return_value = None
@@ -461,12 +469,16 @@ class TestConversationsReportService(TestCase):
         )
 
     @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.should_use_parallel_processing",
+        return_value=False,
+    )
+    @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
     def test_get_datalake_events_when_events_exist_with_multiple_pages(
-        self, mock_cache_get, mock_cache_set, mock_get_datalake_events
+        self, mock_cache_get, mock_cache_set, mock_get_datalake_events, _mock_parallel
     ):
         mock_cache_get.return_value = None
         mock_cache_set.return_value = None
@@ -506,10 +518,14 @@ class TestConversationsReportService(TestCase):
         )
 
     @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.should_use_parallel_processing",
+        return_value=False,
+    )
+    @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
     )
     def test_get_datalake_events_when_page_limit_is_reached(
-        self, mock_get_datalake_events
+        self, mock_get_datalake_events, _mock_parallel
     ):
         mock_events = [{"id": "1"}, {"id": "2"}]
 
@@ -613,9 +629,15 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(worksheet.data[1]["Subtopic"], "Unclassified")
 
     @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.should_use_parallel_processing",
+        return_value=False,
+    )
+    @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
     )
-    def test_get_datalake_events_when_report_is_failed(self, mock_get_datalake_events):
+    def test_get_datalake_events_when_report_is_failed(
+        self, mock_get_datalake_events, _mock_parallel
+    ):
         mock_events = [{"id": "1"}, {"id": "2"}]
 
         def get_datalake_events(**kwargs):
@@ -1195,7 +1217,11 @@ class TestConversationsReportServiceAdditional(TestCase):
                 self.assertEqual(report.status, ReportStatus.FAILED)
                 self.assertIn("send_email", report.errors)
 
-    def test_get_datalake_events_with_cached_data(self):
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.should_use_parallel_processing",
+        return_value=False,
+    )
+    def test_get_datalake_events_with_cached_data(self, _mock_parallel):
         """Test get_datalake_events with cached data."""
         report = Report.objects.create(
             project=self.project,
@@ -1210,13 +1236,11 @@ class TestConversationsReportServiceAdditional(TestCase):
         cached_events = [{"id": "1"}, {"id": "2"}]
         cache_key = f"datalake_events:{report.uuid}:{json.dumps({}, sort_keys=True, default=str)}"
 
-        # Mock the cache client directly on the service instance
         with patch.object(self.service.cache_client, "get") as mock_cache_get:
             with patch.object(self.service.cache_client, "set") as mock_cache_set:
                 mock_cache_get.return_value = json.dumps(cached_events)
                 mock_cache_set.return_value = None
 
-                # Mock the datalake events client to avoid hitting page limit
                 with patch.object(
                     self.service.datalake_events_client, "get_events"
                 ) as mock_get_events:
@@ -1227,7 +1251,11 @@ class TestConversationsReportServiceAdditional(TestCase):
                     self.assertEqual(events, cached_events)
                     mock_cache_get.assert_called_once_with(cache_key)
 
-    def test_get_datalake_events_with_invalid_cached_data(self):
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.should_use_parallel_processing",
+        return_value=False,
+    )
+    def test_get_datalake_events_with_invalid_cached_data(self, _mock_parallel):
         """Test get_datalake_events with invalid cached data."""
         report = Report.objects.create(
             project=self.project,
@@ -1251,7 +1279,11 @@ class TestConversationsReportServiceAdditional(TestCase):
 
                 self.assertEqual(events, [])
 
-    def test_get_datalake_events_with_empty_events(self):
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.should_use_parallel_processing",
+        return_value=False,
+    )
+    def test_get_datalake_events_with_empty_events(self, _mock_parallel):
         """Test get_datalake_events with empty events list."""
         report = Report.objects.create(
             project=self.project,
@@ -2593,9 +2625,15 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_custom_widget.assert_called_once()
 
     @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.should_use_parallel_processing",
+        return_value=False,
+    )
+    @patch(
         "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
     )
-    def test_get_datalake_events_with_datetime_objects(self, mock_get_events):
+    def test_get_datalake_events_with_datetime_objects(
+        self, mock_get_events, _mock_parallel
+    ):
         """Test get_datalake_events with datetime objects in kwargs."""
         mock_get_events.return_value = []
 
@@ -3880,3 +3918,519 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(worksheet.data[0]["Agent"], "unknown_agent")
         self.assertEqual(worksheet.data[0]["Invocations"], 5)
         self.assertEqual(worksheet.data[0]["Percentage"], 100.0)
+
+
+class TestGetEventsCount(TestCase):
+    def setUp(self):
+        self.service = ConversationsReportService(
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=MockElasticsearchClient(),
+            ),
+            events_limit_per_page=5,
+            page_limit=5,
+            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            metrics_service=ConversationsMetricsService(
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
+                nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
+                cache_client=MockCacheClient(),
+                flowruns_query_executor=MockFlowRunsQueryExecutor(),
+            ),
+            cache_client=MockCacheClient(),
+        )
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    def test_returns_count_from_datalake(self, mock_get_events_count):
+        mock_get_events_count.return_value = [{"count": 42}]
+
+        result = self.service.get_events_count(
+            event_name="weni_nexus_data", key="conversation_classification"
+        )
+
+        self.assertEqual(result, 42)
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    def test_returns_zero_when_empty_response(self, mock_get_events_count):
+        mock_get_events_count.return_value = [{}]
+
+        result = self.service.get_events_count(event_name="weni_nexus_data")
+
+        self.assertEqual(result, 0)
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    def test_returns_zero_when_no_results(self, mock_get_events_count):
+        mock_get_events_count.return_value = []
+
+        result = self.service.get_events_count(event_name="weni_nexus_data")
+
+        self.assertEqual(result, 0)
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    def test_converts_datetime_kwargs_to_isoformat(self, mock_get_events_count):
+        mock_get_events_count.return_value = [{"count": 10}]
+
+        start = datetime(2025, 1, 1)
+        end = datetime(2025, 1, 2)
+
+        self.service.get_events_count(date_start=start, date_end=end)
+
+        call_kwargs = mock_get_events_count.call_args[1]
+        self.assertIsInstance(call_kwargs["date_start"], str)
+        self.assertIsInstance(call_kwargs["date_end"], str)
+
+
+class TestShouldUseParallelProcessing(TestCase):
+    def setUp(self):
+        self.service = ConversationsReportService(
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=MockElasticsearchClient(),
+            ),
+            events_limit_per_page=5,
+            page_limit=5,
+            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            metrics_service=ConversationsMetricsService(
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
+                nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
+                cache_client=MockCacheClient(),
+                flowruns_query_executor=MockFlowRunsQueryExecutor(),
+            ),
+            cache_client=MockCacheClient(),
+        )
+        self.project = Project.objects.create(name="Test")
+        self.user = User.objects.create(email="test@test.com", language="en")
+
+    @patch("insights.metrics.conversations.reports.services.is_feature_active")
+    def test_returns_true_when_feature_flag_is_active(self, mock_is_feature_active):
+        mock_is_feature_active.return_value = True
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        self.assertTrue(self.service.should_use_parallel_processing(report))
+
+    @patch("insights.metrics.conversations.reports.services.is_feature_active")
+    def test_returns_false_when_feature_flag_is_inactive(self, mock_is_feature_active):
+        mock_is_feature_active.return_value = False
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        self.assertFalse(self.service.should_use_parallel_processing(report))
+
+    @patch("insights.metrics.conversations.reports.services.is_feature_active")
+    def test_returns_false_when_feature_flag_raises_exception(
+        self, mock_is_feature_active
+    ):
+        mock_is_feature_active.side_effect = Exception("Feature flag error")
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        self.assertFalse(self.service.should_use_parallel_processing(report))
+
+
+class TestGetDatalakeEventsDispatch(TestCase):
+    def setUp(self):
+        self.service = ConversationsReportService(
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=MockElasticsearchClient(),
+            ),
+            events_limit_per_page=5,
+            page_limit=5,
+            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            metrics_service=ConversationsMetricsService(
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
+                nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
+                cache_client=MockCacheClient(),
+                flowruns_query_executor=MockFlowRunsQueryExecutor(),
+            ),
+            cache_client=MockCacheClient(),
+        )
+        self.project = Project.objects.create(name="Test")
+        self.user = User.objects.create(email="test@test.com", language="en")
+
+    @patch.object(ConversationsReportService, "get_datalake_events_in_parallel")
+    @patch.object(
+        ConversationsReportService,
+        "should_use_parallel_processing",
+        return_value=True,
+    )
+    def test_dispatches_to_parallel_when_flag_is_active(
+        self, _mock_parallel, mock_parallel_method
+    ):
+        mock_parallel_method.return_value = [{"id": "1"}]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        result = self.service.get_datalake_events(report, key="example")
+
+        mock_parallel_method.assert_called_once_with(report, key="example")
+        self.assertEqual(result, [{"id": "1"}])
+
+    @patch.object(ConversationsReportService, "get_datalake_events_sequential")
+    @patch.object(
+        ConversationsReportService,
+        "should_use_parallel_processing",
+        return_value=False,
+    )
+    def test_dispatches_to_sequential_when_flag_is_inactive(
+        self, _mock_parallel, mock_sequential_method
+    ):
+        mock_sequential_method.return_value = [{"id": "1"}]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        result = self.service.get_datalake_events(report, key="example")
+
+        mock_sequential_method.assert_called_once_with(report, key="example")
+        self.assertEqual(result, [{"id": "1"}])
+
+
+class TestGetDatalakeEventsInParallel(TestCase):
+    def setUp(self):
+        self.service = ConversationsReportService(
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=MockElasticsearchClient(),
+            ),
+            events_limit_per_page=5,
+            page_limit=5,
+            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            metrics_service=ConversationsMetricsService(
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
+                nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
+                cache_client=MockCacheClient(),
+                flowruns_query_executor=MockFlowRunsQueryExecutor(),
+            ),
+            cache_client=MockCacheClient(),
+        )
+        self.project = Project.objects.create(name="Test")
+        self.user = User.objects.create(email="test@test.com", language="en")
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_parallel_fetch_returns_all_events(
+        self, mock_cache_get, mock_cache_set, mock_get_count, mock_get_events
+    ):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
+        mock_get_count.return_value = [{"count": 10}]
+
+        page_1 = [{"id": "1"}, {"id": "2"}, {"id": "3"}, {"id": "4"}, {"id": "5"}]
+        page_2 = [{"id": "6"}, {"id": "7"}, {"id": "8"}, {"id": "9"}, {"id": "10"}]
+
+        def get_events_side_effect(**kwargs):
+            if kwargs.get("offset") == 0:
+                return page_1
+            elif kwargs.get("offset") == 5:
+                return page_2
+            return []
+
+        mock_get_events.side_effect = get_events_side_effect
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        events = self.service.get_datalake_events_in_parallel(
+            report, key="example"
+        )
+
+        self.assertEqual(events, page_1 + page_2)
+        self.assertEqual(mock_get_events.call_count, 2)
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_parallel_fetch_returns_empty_when_count_is_zero(
+        self, mock_cache_get, mock_get_count
+    ):
+        mock_cache_get.return_value = None
+        mock_get_count.return_value = [{"count": 0}]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        events = self.service.get_datalake_events_in_parallel(report)
+
+        self.assertEqual(events, [])
+
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_parallel_fetch_returns_cached_events(self, mock_cache_get):
+        cached_events = [{"id": "cached"}]
+        mock_cache_get.return_value = json.dumps(cached_events)
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        events = self.service.get_datalake_events_in_parallel(report)
+
+        self.assertEqual(events, cached_events)
+
+    @patch.object(ConversationsReportService, "get_datalake_events_sequential")
+    @patch.object(ConversationsReportService, "get_events_count")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_parallel_fetch_falls_back_to_sequential_on_count_error(
+        self, mock_cache_get, mock_get_count, mock_sequential
+    ):
+        mock_cache_get.return_value = None
+        mock_get_count.side_effect = Exception("Count query failed")
+        mock_sequential.return_value = [{"id": "fallback"}]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        events = self.service.get_datalake_events_in_parallel(report, key="example")
+
+        self.assertEqual(events, [{"id": "fallback"}])
+        mock_sequential.assert_called_once_with(report, key="example")
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_parallel_fetch_raises_when_page_limit_exceeded(
+        self, mock_cache_get, mock_get_count
+    ):
+        mock_cache_get.return_value = None
+        mock_get_count.return_value = [{"count": 100}]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_datalake_events_in_parallel(report)
+
+        self.assertEqual(
+            str(context.exception),
+            "Report has more than 5 pages",
+        )
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_parallel_fetch_raises_when_report_not_in_progress(
+        self, mock_cache_get, mock_get_count
+    ):
+        mock_cache_get.return_value = None
+        mock_get_count.return_value = [{"count": 3}]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.FAILED,
+            errors={"send_email": "test", "event_id": "test"},
+        )
+
+        with self.assertRaises(ValueError) as context:
+            self.service.get_datalake_events_in_parallel(report)
+
+        self.assertEqual(
+            str(context.exception),
+            "Report %s is not in progress" % report.uuid,
+        )
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_parallel_fetch_preserves_page_order(
+        self, mock_cache_get, mock_cache_set, mock_get_count, mock_get_events
+    ):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
+        mock_get_count.return_value = [{"count": 15}]
+
+        page_1 = [{"id": "1"}, {"id": "2"}, {"id": "3"}, {"id": "4"}, {"id": "5"}]
+        page_2 = [{"id": "6"}, {"id": "7"}, {"id": "8"}, {"id": "9"}, {"id": "10"}]
+        page_3 = [{"id": "11"}, {"id": "12"}, {"id": "13"}, {"id": "14"}, {"id": "15"}]
+
+        def get_events_side_effect(**kwargs):
+            offset = kwargs.get("offset", 0)
+            if offset == 0:
+                return page_1
+            elif offset == 5:
+                return page_2
+            elif offset == 10:
+                return page_3
+            return []
+
+        mock_get_events.side_effect = get_events_side_effect
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        events = self.service.get_datalake_events_in_parallel(report, key="example")
+
+        self.assertEqual(events, page_1 + page_2 + page_3)
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_parallel_fetch_caches_result(
+        self, mock_cache_get, mock_cache_set, mock_get_count, mock_get_events
+    ):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
+        mock_get_count.return_value = [{"count": 2}]
+        mock_get_events.return_value = [{"id": "1"}, {"id": "2"}]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        kwargs = {"key": "example"}
+        events = self.service.get_datalake_events_in_parallel(report, **kwargs)
+
+        cache_key = (
+            f"datalake_events:{report.uuid}:{json.dumps(kwargs, sort_keys=True)}"
+        )
+
+        mock_cache_set.assert_called_once_with(
+            cache_key, json.dumps(events), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+    )
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+    )
+    @patch("insights.sources.tests.mock.MockCacheClient.set")
+    @patch("insights.sources.tests.mock.MockCacheClient.get")
+    def test_parallel_fetch_converts_datetime_kwargs(
+        self, mock_cache_get, mock_cache_set, mock_get_count, mock_get_events
+    ):
+        mock_cache_get.return_value = None
+        mock_cache_set.return_value = None
+        mock_get_count.return_value = [{"count": 2}]
+        mock_get_events.return_value = [{"id": "1"}]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        start_date = datetime(2025, 1, 1)
+        end_date = datetime(2025, 1, 2)
+
+        self.service.get_datalake_events_in_parallel(
+            report, date_start=start_date, date_end=end_date
+        )
+
+        call_kwargs = mock_get_events.call_args[1]
+        self.assertIsInstance(call_kwargs["date_start"], str)
+        self.assertIsInstance(call_kwargs["date_end"], str)
