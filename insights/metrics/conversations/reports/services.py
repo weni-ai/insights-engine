@@ -939,40 +939,12 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def get_datalake_events_in_parallel(self, report: Report, **kwargs) -> list[dict]:
+    def _fetch_pages_in_parallel(
+        self, report: Report, total_count: int, **kwargs
+    ) -> list[dict]:
         """
-        Get datalake events in parallel using a pre-flight count to
-        determine total pages, then fetching all pages concurrently.
-        Falls back to sequential fetching if the count query fails.
+        Fetch pages in parallel.
         """
-        kwargs_str = json.dumps(kwargs, sort_keys=True, default=str)
-        cache_key = f"datalake_events:{report.uuid}:{kwargs_str}"
-
-        if cached_events := self.cache_client.get(cache_key):
-            try:
-                cached_events = json.loads(cached_events)
-                self._add_cache_key(report.uuid, cache_key)
-                return cached_events
-            except Exception as e:
-                logger.error(
-                    "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached events for report %s. Error: %s",
-                    report.uuid,
-                    e,
-                )
-
-        try:
-            total_count = self.get_events_count(**kwargs)
-        except Exception as e:
-            logger.warning(
-                "[CONVERSATIONS REPORT SERVICE] Failed to get events count for report %s, falling back to sequential. Error: %s",
-                report.uuid,
-                e,
-            )
-            return self.get_datalake_events_sequential(report, **kwargs)
-
-        if total_count == 0:
-            return []
-
         limit = self.events_limit_per_page
         page_limit = self.page_limit
         total_pages = math.ceil(total_count / limit)
@@ -1043,6 +1015,44 @@ class ConversationsReportService(BaseConversationsReportService):
                     results[page_index] = page_events
 
         events = [event for page in results if page is not None for event in page]
+
+        return events
+
+    def get_datalake_events_in_parallel(self, report: Report, **kwargs) -> list[dict]:
+        """
+        Get datalake events in parallel using a pre-flight count to
+        determine total pages, then fetching all pages concurrently.
+        Falls back to sequential fetching if the count query fails.
+        """
+        kwargs_str = json.dumps(kwargs, sort_keys=True, default=str)
+        cache_key = f"datalake_events:{report.uuid}:{kwargs_str}"
+
+        if cached_events := self.cache_client.get(cache_key):
+            try:
+                cached_events = json.loads(cached_events)
+                self._add_cache_key(report.uuid, cache_key)
+                return cached_events
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached events for report %s. Error: %s",
+                    report.uuid,
+                    e,
+                )
+
+        try:
+            total_count = self.get_events_count(**kwargs)
+        except Exception as e:
+            logger.warning(
+                "[CONVERSATIONS REPORT SERVICE] Failed to get events count for report %s, falling back to sequential. Error: %s",
+                report.uuid,
+                e,
+            )
+            return self.get_datalake_events_sequential(report, **kwargs)
+
+        if total_count == 0:
+            return []
+
+        events = self._fetch_pages_in_parallel(report, total_count, **kwargs)
 
         self.cache_client.set(
             cache_key, json.dumps(events), ex=settings.REPORT_GENERATION_TIMEOUT
