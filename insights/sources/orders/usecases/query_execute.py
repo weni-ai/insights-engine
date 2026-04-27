@@ -1,9 +1,12 @@
+from insights.sources.base import BaseQueryExecutor
 from insights.sources.orders.clients import VtexOrdersRestClient
 from insights.sources.cache import CacheClient
 
 
-class QueryExecutor:
+class QueryExecutor(BaseQueryExecutor):
+    @classmethod
     def execute(
+        cls,
         filters: dict,
         operation: str,
         parser: callable,
