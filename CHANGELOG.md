@@ -1,3 +1,20 @@
+# 1.21.1
+# Fix
+  - Update query to exclude deleted tags in TagSQLQueryBuilder
+
+# 1.21.0
+# Add
+  - Inline agent switch functionality on project creation
+
+# 1.20.0
+# Add
+  - Agent invocations metrics to report export
+  - Tool result metrics to report export
+  - Internal errors response middleware
+# Remove
+  - ConversationsMetricsError in favor of simplified error handling
+  - Sales funnel parallel processing feature flag
+
 # 1.19.4
 # Add
   - Parallel processing for sales funnel data retrieval
