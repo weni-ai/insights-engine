@@ -1,6 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 import io
 import json
+import math
 from uuid import UUID
 import logging
 from abc import ABC, abstractmethod
@@ -17,6 +19,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
+from weni.feature_flags.shortcuts import is_feature_active
 
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.reports.available_widgets import (
@@ -147,6 +150,34 @@ class BaseConversationsReportService(ABC):
     def get_next_report_to_generate(self) -> Report | None:
         """
         Get the next report to generate.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_events_count(self, **kwargs) -> int:
+        """
+        Get events count.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_datalake_events_sequential(self, report: Report, **kwargs) -> list[dict]:
+        """
+        Get datalake events sequentially.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_datalake_events_in_parallel(self, report: Report, **kwargs) -> list[dict]:
+        """
+        Get datalake events in parallel.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def should_use_parallel_processing(self, report: Report) -> bool:
+        """
+        Check if parallel processing should be used.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -806,7 +837,27 @@ class ConversationsReportService(BaseConversationsReportService):
             .first()
         )
 
-    def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
+    def get_events_count(self, **kwargs) -> int:
+        """
+        Get events count.
+        """
+        date_start = kwargs.get("date_start")
+        date_end = kwargs.get("date_end")
+
+        if date_start and isinstance(date_start, datetime):
+            kwargs["date_start"] = date_start.isoformat()
+
+        if date_end and isinstance(date_end, datetime):
+            kwargs["date_end"] = date_end.isoformat()
+
+        result = self.datalake_events_client.get_events_count(**kwargs)
+
+        if len(result) > 0 and result != [{}]:
+            return int(result[0].get("count", 0))
+
+        return 0
+
+    def get_datalake_events_sequential(self, report: Report, **kwargs) -> list[dict]:
         """
         Get datalake events.
         """
@@ -887,6 +938,162 @@ class ConversationsReportService(BaseConversationsReportService):
         self._add_cache_key(report.uuid, cache_key)
 
         return events
+
+    def _fetch_pages_in_parallel(
+        self, report: Report, total_count: int, **kwargs
+    ) -> list[dict]:
+        """
+        Fetch pages in parallel.
+        """
+        limit = self.events_limit_per_page
+        page_limit = self.page_limit
+        total_pages = math.ceil(total_count / limit)
+
+        if total_pages >= page_limit:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Report %s has more than %s pages. Finishing datalake events retrieval",
+                report.uuid,
+                page_limit,
+            )
+            raise ValueError("Report has more than %s pages" % page_limit)
+
+        report.refresh_from_db(fields=["status"])
+        if report.status != ReportStatus.IN_PROGRESS:
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress. Finishing datalake events retrieval",
+                report.uuid,
+            )
+            raise ValueError("Report %s is not in progress" % report.uuid)
+
+        date_start = kwargs.get("date_start")
+        date_end = kwargs.get("date_end")
+
+        if date_start and isinstance(date_start, datetime):
+            kwargs["date_start"] = date_start.isoformat()
+
+        if date_end and isinstance(date_end, datetime):
+            kwargs["date_end"] = date_end.isoformat()
+
+        max_workers = min(total_pages, settings.REPORT_PARALLEL_FETCH_MAX_WORKERS)
+
+        logger.info(
+            "[CONVERSATIONS REPORT SERVICE] Fetching %s pages in parallel (max_workers=%s) for report %s",
+            total_pages,
+            max_workers,
+            report.uuid,
+        )
+
+        def fetch_page(page_index: int) -> list[dict]:
+            offset = page_index * limit
+            return self.datalake_events_client.get_events(
+                **kwargs,
+                limit=limit,
+                offset=offset,
+            )
+
+        results: list[list[dict] | None] = [None] * total_pages
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_index = {
+                executor.submit(fetch_page, i): i for i in range(total_pages)
+            }
+
+            for future in as_completed(future_to_index):
+                page_index = future_to_index[future]
+                try:
+                    page_events = future.result()
+                except Exception as e:
+                    logger.error(
+                        "[CONVERSATIONS REPORT SERVICE] Failed to fetch page %s for report %s. Error: %s",
+                        page_index,
+                        report.uuid,
+                        e,
+                    )
+                    raise
+
+                if page_events and page_events != [{}]:
+                    results[page_index] = page_events
+
+        events = [event for page in results if page is not None for event in page]
+
+        return events
+
+    def get_datalake_events_in_parallel(self, report: Report, **kwargs) -> list[dict]:
+        """
+        Get datalake events in parallel using a pre-flight count to
+        determine total pages, then fetching all pages concurrently.
+        Falls back to sequential fetching if the count query fails.
+        """
+        kwargs_str = json.dumps(kwargs, sort_keys=True, default=str)
+        cache_key = f"datalake_events:{report.uuid}:{kwargs_str}"
+
+        if cached_events := self.cache_client.get(cache_key):
+            try:
+                cached_events = json.loads(cached_events)
+                self._add_cache_key(report.uuid, cache_key)
+                return cached_events
+            except Exception as e:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Failed to deserialize cached events for report %s. Error: %s",
+                    report.uuid,
+                    e,
+                )
+
+        try:
+            total_count = self.get_events_count(**kwargs)
+        except Exception as e:
+            logger.warning(
+                "[CONVERSATIONS REPORT SERVICE] Failed to get events count for report %s, falling back to sequential. Error: %s",
+                report.uuid,
+                e,
+            )
+            return self.get_datalake_events_sequential(report, **kwargs)
+
+        if total_count == 0:
+            return []
+
+        events = self._fetch_pages_in_parallel(report, total_count, **kwargs)
+
+        self.cache_client.set(
+            cache_key, json.dumps(events), ex=settings.REPORT_GENERATION_TIMEOUT
+        )
+        self._add_cache_key(report.uuid, cache_key)
+
+        return events
+
+    def should_use_parallel_processing(self, report: Report) -> bool:
+        """
+        Check if parallel processing should be used.
+        """
+        feature_flag_key = (
+            settings.REPORT_GENERATION_USE_PARALLEL_PROCESSING_FEATURE_FLAG_KEY
+        )
+
+        try:
+            is_feature_flag_active = is_feature_active(
+                key=feature_flag_key,
+                user_email=report.requested_by.email,
+                project_uuid=report.project.uuid,
+            )
+            return is_feature_flag_active
+
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Failed to check if parallel processing should be used for report %s. Error: %s",
+                report.uuid,
+                e,
+            )
+            capture_exception(e)
+            return False
+
+    def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
+        """
+        Get datalake events.
+        """
+        if self.should_use_parallel_processing(report):
+            return self.get_datalake_events_in_parallel(report, **kwargs)
+        else:
+            return self.get_datalake_events_sequential(report, **kwargs)
 
     def _format_date(self, original_date: str | int, report: Report) -> str:
         """
