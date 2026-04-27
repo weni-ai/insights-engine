@@ -154,7 +154,7 @@ class BaseConversationsReportService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
-    def get_events_count(self, report: Report, **kwargs) -> int:
+    def get_events_count(self, **kwargs) -> int:
         """
         Get events count.
         """
@@ -1028,14 +1028,21 @@ class ConversationsReportService(BaseConversationsReportService):
 
             for future in as_completed(future_to_index):
                 page_index = future_to_index[future]
-                page_events = future.result()
+                try:
+                    page_events = future.result()
+                except Exception as e:
+                    logger.error(
+                        "[CONVERSATIONS REPORT SERVICE] Failed to fetch page %s for report %s. Error: %s",
+                        page_index,
+                        report.uuid,
+                        e,
+                    )
+                    raise
 
                 if page_events and page_events != [{}]:
                     results[page_index] = page_events
 
-        events = [
-            event for page in results if page is not None for event in page
-        ]
+        events = [event for page in results if page is not None for event in page]
 
         self.cache_client.set(
             cache_key, json.dumps(events), ex=settings.REPORT_GENERATION_TIMEOUT
