@@ -14,7 +14,8 @@ from insights.sources.rooms.query_builder import RoomSQLQueryBuilder
 
 
 class QueryExecutor(BaseQueryExecutor):
-    def _get_list_operation_results(self, project: object, filters: dict) -> dict:
+    @classmethod
+    def _get_list_operation_results(cls, project: object, filters: dict) -> dict:
         client = RoomRESTClient(project=project)
         query_results = client.list(filters)
         nxt = query_results.get("next")
@@ -30,8 +31,9 @@ class QueryExecutor(BaseQueryExecutor):
         }
         return paginated_results  # parser(paginated_results)
 
+    @classmethod
     def _get_sql_operation_results(
-        self, filters: dict, operation: str, query_kwargs: dict
+        cls, filters: dict, operation: str, query_kwargs: dict
     ) -> dict:
         query_generator = RoomSQLQueryGenerator(
             filter_strategy=PostgreSQLFilterStrategy,
