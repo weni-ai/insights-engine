@@ -14,33 +14,25 @@ from insights.sources.rooms.query_builder import RoomSQLQueryBuilder
 
 
 class QueryExecutor(BaseQueryExecutor):
-    @classmethod
-    def execute(
-        cls,
-        filters: dict,
-        operation: str,
-        parser: callable,
-        project: object,
-        query_kwargs: dict = {},
-        *args,
-        **kwargs
-    ):
-        if operation == "list":
-            client = RoomRESTClient(project=project)
-            query_results = client.list(filters)
-            nxt = query_results.get("next")
-            nxt = None if nxt is None else nxt.split("?")[1]
-            prev = query_results.get("previous")
-            prev = None if prev is None else prev.split("?")[1]
-            count = query_results.get("count", 0)
-            paginated_results = {
-                "next": nxt,
-                "previous": prev,
-                "count": count,
-                "results": query_results.get("results", []),
-            }
-            return paginated_results  # parser(paginated_results)
+    def _get_list_operation_results(self, project: object, filters: dict) -> dict:
+        client = RoomRESTClient(project=project)
+        query_results = client.list(filters)
+        nxt = query_results.get("next")
+        nxt = None if nxt is None else nxt.split("?")[1]
+        prev = query_results.get("previous")
+        prev = None if prev is None else prev.split("?")[1]
+        count = query_results.get("count", 0)
+        paginated_results = {
+            "next": nxt,
+            "previous": prev,
+            "count": count,
+            "results": query_results.get("results", []),
+        }
+        return paginated_results  # parser(paginated_results)
 
+    def _get_sql_operation_results(
+        self, filters: dict, operation: str, query_kwargs: dict
+    ) -> dict:
         query_generator = RoomSQLQueryGenerator(
             filter_strategy=PostgreSQLFilterStrategy,
             query_builder=RoomSQLQueryBuilder,
@@ -56,6 +48,24 @@ class QueryExecutor(BaseQueryExecutor):
                 query_results = dictfetchone(query_exec)
             else:
                 query_results = dictfetchall(query_exec)
+
+        return query_results
+
+    @classmethod
+    def execute(
+        cls,
+        filters: dict,
+        operation: str,
+        parser: callable,
+        project: object,
+        query_kwargs: dict = {},
+        *args,
+        **kwargs
+    ):
+        if operation == "list":
+            return cls._get_list_operation_results(project, filters)
+
+        query_results = cls._get_sql_operation_results(filters, operation, query_kwargs)
 
         if operation in ["count", "avg"]:
             paginated_results = query_results
