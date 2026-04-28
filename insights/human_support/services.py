@@ -868,64 +868,6 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
-    def get_finished_rooms(self, filters: dict | None = None) -> dict:
-        """
-        Lista de salas finalizadas.
-        Retorna { next, previous, count, results: [...] }.
-        Critérios: is_active=False.
-        """
-        normalized = self._normalize_filters(filters)
-
-        params: dict = {
-            "is_active": False,
-        }
-
-        filter_to_rooms_field = {"sectors": "sector", "queues": "queue", "tags": "tags"}
-        for filter_key, rooms_field in filter_to_rooms_field.items():
-            value = normalized.get(filter_key)
-            if value:
-                params[rooms_field] = value
-
-        if normalized.get("start_date"):
-            params["ended_at__gte"] = normalized["start_date"].isoformat()
-        if normalized.get("end_date"):
-            params["ended_at__lte"] = normalized["end_date"].isoformat()
-
-        if normalized.get("agent"):
-            params["agent"] = str(normalized["agent"])
-
-        if normalized.get("contact"):
-            params["contact_external_id"] = str(normalized["contact"])
-
-        if normalized.get("ticket_id"):
-            params["protocol"] = str(normalized["ticket_id"])
-
-        if filters:
-            if filters.get("limit") is not None:
-                params["limit"] = filters.get("limit")
-            if filters.get("offset") is not None:
-                params["offset"] = filters.get("offset")
-            ordering = filters.get("ordering")
-            if ordering is not None:
-                prefix = "-" if ordering.startswith("-") else ""
-                field = ordering.lstrip("-")
-                field_mapping = {
-                    "agent": "user_full_name",
-                    "sector": "queue__sector__name",
-                    "queue": "queue__name",
-                    "contact": "contact__name",
-                    "ticket_id": "protocol",
-                    "protocol": "protocol",
-                    "awaiting_time": "waiting_time",
-                    "first_response_time": "first_response_time",
-                    "duration": "duration",
-                    "ended_at": "ended_at",
-                }
-                mapped_field = field_mapping.get(field, field)
-                params["ordering"] = f"{prefix}{mapped_field}"
-
-        return params
-
     @staticmethod
     def _chats_url_to_query_string(url: str | None) -> str | None:
         if url is None:
