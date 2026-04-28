@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 import json
 import logging
@@ -18,8 +19,10 @@ from insights.metrics.conversations.dataclass import (
 )
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.integrations.datalake.dataclass import (
+    AgentInvocationMetric,
     CrosstabSource,
     SalesFunnelData,
+    ToolResultMetric,
 )
 from insights.metrics.conversations.integrations.datalake.serializers import (
     CrosstabDataSerializer,
@@ -99,6 +102,28 @@ class BaseDatalakeConversationsMetricsService(ABC):
     ) -> dict:
         """
         Get generic metrics grouped by value from Datalake.
+        """
+
+    @abstractmethod
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict[str, AgentInvocationMetric]:
+        """
+        Get agent invocation counts grouped by agent from Datalake.
+        """
+
+    @abstractmethod
+    def get_tool_results(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict[str, ToolResultMetric]:
+        """
+        Get tool result counts grouped by agent from Datalake.
         """
 
     @abstractmethod
@@ -778,6 +803,162 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
 
         return values
 
+    def get_agent_invocations(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict[str, AgentInvocationMetric]:
+        cache_key = self._get_cache_key(
+            data_type="agent_invocations",
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
+
+                return {
+                    key: AgentInvocationMetric(**value)
+                    for key, value in cached_results.items()
+                }
+
+        try:
+            events = self.events_client.get_events_count_by_group(
+                key="agent_invocation",
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                metadata_key="agent_uuid",
+            )
+        except Exception as e:
+            logger.error("Failed to get agent invocations: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        values: dict[str, AgentInvocationMetric] = {}
+
+        for event in events:
+            payload_value = event.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            count = event.get("count", 0)
+
+            if not isinstance(count, int):
+                try:
+                    count = int(count)
+                except Exception as e:
+                    logger.error("Error on converting count to int: %s" % e)
+                    raise e
+
+            agent_uuid = event.get("metadata_key_value")
+
+            if payload_value in values:
+                values[payload_value].count += count
+            else:
+                values[payload_value] = AgentInvocationMetric(
+                    count=count,
+                    agent_uuid=agent_uuid,
+                )
+
+        if self.cache_results:
+            self._save_results_to_cache(
+                cache_key,
+                {key: asdict(value) for key, value in values.items()},
+            )
+
+        return values
+
+    def get_tool_results(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict[str, ToolResultMetric]:
+        cache_key = self._get_cache_key(
+            data_type="tool_results",
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if self.cache_results:
+            if cached_results := self._get_cached_results(cache_key):
+                if not isinstance(cached_results, dict):
+                    cached_results = json.loads(cached_results)
+
+                return {
+                    key: ToolResultMetric(**value)
+                    for key, value in cached_results.items()
+                }
+
+        try:
+            events = self.events_client.get_events_count_by_group(
+                key="tool_result",
+                event_name=self.event_name,
+                project=project_uuid,
+                date_start=start_date,
+                date_end=end_date,
+                metadata_key="agent_uuid",
+            )
+        except Exception as e:
+            logger.error("Failed to get tool results: %s", e)
+            capture_exception(e)
+
+            raise e
+
+        values: dict[str, ToolResultMetric] = {}
+
+        for event in events:
+            payload_value = event.get("payload_value")
+
+            if payload_value is None:
+                continue
+
+            if isinstance(payload_value, int):
+                payload_value = str(payload_value)
+
+            payload_value = payload_value.strip('"')
+
+            count = event.get("count", 0)
+
+            if not isinstance(count, int):
+                try:
+                    count = int(count)
+                except Exception as e:
+                    logger.error("Error on converting count to int: %s" % e)
+                    raise e
+
+            agent_uuid = event.get("metadata_key_value")
+
+            if payload_value in values:
+                values[payload_value].count += count
+            else:
+                values[payload_value] = ToolResultMetric(
+                    count=count,
+                    agent_uuid=agent_uuid,
+                )
+
+        if self.cache_results:
+            self._save_results_to_cache(
+                cache_key,
+                {key: asdict(value) for key, value in values.items()},
+            )
+
+        return values
+
     def _get_metadata_from_event(self, event: dict) -> dict:
         """
         Get metadata from event.
@@ -819,68 +1000,74 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 currency_code=cached_results["currency_code"],
             )
 
-        # Leads events
-        leads_count = self.events_client.get_events_count(
-            event_name="conversion_lead",
-            project=project_uuid,
-            date_start=start_date,
-            date_end=end_date,
-        )[0].get("count", 0)
-
-        max_pages = settings.SALES_FUNNEL_EVENTS_MAX_PAGES
-        page_size = settings.SALES_FUNNEL_EVENTS_PAGE_SIZE
-        page = 1
-
         currency_code = None
 
-        total_orders_count = 0
-        total_orders_value = 0
+        purchase_query_kwargs = {
+            "event_name": "conversion_purchase",
+            "project": project_uuid,
+            "date_start": start_date,
+            "date_end": end_date,
+        }
 
-        while page <= max_pages:
-            events = self.events_client.get_events(
-                event_name="conversion_purchase",
+        def fetch_leads_count():
+            result = self.events_client.get_events_count(
+                event_name="conversion_lead",
                 project=project_uuid,
                 date_start=start_date,
                 date_end=end_date,
-                limit=page_size,
-                offset=(page - 1) * page_size,
             )
 
-            length = len(events)
+            if len(result) > 0 and result != [{}]:
+                return int(result[0].get("count", 0))
 
-            if length == 0:
-                break
+            return 0
 
-            total_orders_count += length
+        def fetch_orders_count():
+            result = self.events_client.get_events_count(
+                **purchase_query_kwargs,
+            )
 
-            for event in events:
-                metadata = self._get_metadata_from_event(event)
+            if len(result) > 0 and result != [{}]:
+                return int(result[0].get("count", 0))
 
-                if not currency_code:
-                    currency_code = metadata.get("currency")
+            return 0
 
-                try:
-                    value = metadata.get("value", 0)
+        def fetch_orders_value():
+            result = self.events_client.get_events_sum(
+                **purchase_query_kwargs, operation_key="value"
+            )
 
-                    if not isinstance(value, float):
-                        try:
-                            value = float(value)
-                        except Exception as e:
-                            logger.error("Error on converting value to float: %s" % e)
-                            raise e
+            if len(result) > 0 and result != [{}]:
+                result = result[0].get("total", 0)
+                return int(round(float(result) * 100))
 
-                    order_value = int(value * 100)  # convert to cents
-                except Exception as e:
-                    logger.error("Error on converting value to int: %s" % e)
-                    capture_exception(e)
-                    order_value = 0
+            return 0
 
-                total_orders_value += order_value
+        def fetch_sample_purchase_events():
+            return self.events_client.get_events(
+                **purchase_query_kwargs,
+                limit=1,
+            )
 
-            if page >= max_pages:
-                raise ValueError("Max pages reached")
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            leads_future = executor.submit(fetch_leads_count)
+            orders_count_future = executor.submit(fetch_orders_count)
+            orders_value_future = executor.submit(fetch_orders_value)
+            sample_events_future = executor.submit(fetch_sample_purchase_events)
 
-            page += 1
+        leads_count = leads_future.result()
+        total_orders_count = orders_count_future.result()
+        total_orders_value = orders_value_future.result()
+
+        if total_orders_count > 0:
+            sample_purchase_events = sample_events_future.result()
+
+            if len(sample_purchase_events) > 0 and sample_purchase_events != [{}]:
+                sample_purchase_event = sample_purchase_events[0]
+                sample_purchase_metadata = self._get_metadata_from_event(
+                    sample_purchase_event
+                )
+                currency_code = sample_purchase_metadata.get("currency")
 
         if self.cache_results:
             self._save_results_to_cache(

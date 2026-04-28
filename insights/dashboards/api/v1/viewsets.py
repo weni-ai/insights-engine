@@ -10,6 +10,8 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.core.filters import get_filters_from_query_params
@@ -31,10 +33,14 @@ from insights.metrics.meta.tasks import (
     check_dashboards_marketing_messages_status_for_project,
 )
 from insights.projects.models import Project
-from insights.projects.tasks import check_nexus_multi_agents_status
+from insights.projects.tasks import (
+    check_nexus_multi_agents_status,
+    handle_project_created_with_inline_agent_switch,
+)
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.sources.contacts.clients import FlowsContactsRestClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
+from insights.sources.services import DataSourceService
 from insights.widgets.models import Report, Widget
 from insights.widgets.usecases.get_source_data import get_source_data_from_widget
 
@@ -50,6 +56,10 @@ class DashboardViewSet(
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = DashboardFilter
+
+    @property
+    def source_data_service(self):
+        return DataSourceService()
 
     def get_permissions(self):
         if self.action in [
@@ -111,14 +121,21 @@ class DashboardViewSet(
 
     def list(self, request, *args, **kwargs):
         if project_uuid := request.query_params.get("project"):
-            is_nexus_multi_agents_active = (
-                Project.objects.filter(uuid=project_uuid)
-                .values_list("is_nexus_multi_agents_active", flat=True)
-                .first()
+            project = get_object_or_404(Project, uuid=project_uuid)
+            is_nexus_multi_agents_active = project.is_nexus_multi_agents_active
+            is_allowed = (
+                project.is_allowed or str(project_uuid) in settings.PROJECT_ALLOW_LIST
             )
 
             if not is_nexus_multi_agents_active:
                 check_nexus_multi_agents_status.delay(project_uuid)
+
+            if (
+                settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION
+                and is_nexus_multi_agents_active
+                and not is_allowed
+            ):
+                handle_project_created_with_inline_agent_switch.delay(project_uuid)
 
             self._check_marketing_messages_status(project_uuid)
 
@@ -198,13 +215,37 @@ class DashboardViewSet(
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
-            serialized_source = get_source_data_from_widget(
-                widget=widget,
-                is_report=False,
-                is_live=is_live,
-                filters=filters,
-                user_email=request.user.email,
-            )
+
+            project = dashboard.project
+
+            feature_flag_attributes = {
+                "projectUUID": str(project.uuid),
+                "userEmail": request.user.email,
+            }
+
+            if is_feature_active_for_attributes(
+                settings.DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY,
+                attributes=feature_flag_attributes,
+            ):
+                serialized_source = (
+                    self.source_data_service.get_source_data_from_widget(
+                        widget=widget,
+                        is_report=False,
+                        is_live=is_live,
+                        filters=filters,
+                        user_email=request.user.email,
+                    )
+                )
+            else:
+                # TODO: Remove this once the data source service is rolled out to all projects
+                serialized_source = get_source_data_from_widget(
+                    widget=widget,
+                    is_report=False,
+                    is_live=is_live,
+                    filters=filters,
+                    user_email=request.user.email,
+                )
+
             return Response(serialized_source, status.HTTP_200_OK)
         except PermissionDenied:
             raise
@@ -246,13 +287,37 @@ class DashboardViewSet(
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
-            serialized_source = get_source_data_from_widget(
-                widget=widget,
-                is_report=True,
-                filters=filters,
-                user_email=request.user.email,
-                is_live=is_live,
-            )
+
+            project = dashboard.project
+
+            feature_flag_attributes = {
+                "projectUUID": str(project.uuid),
+                "userEmail": request.user.email,
+            }
+
+            if is_feature_active_for_attributes(
+                settings.DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY,
+                attributes=feature_flag_attributes,
+            ):
+                serialized_source = (
+                    self.source_data_service.get_source_data_from_widget(
+                        widget=widget,
+                        is_report=True,
+                        filters=filters,
+                        user_email=request.user.email,
+                        is_live=is_live,
+                    )
+                )
+            else:
+                # TODO: Remove this once the data source service is rolled out to all projects
+                serialized_source = get_source_data_from_widget(
+                    widget=widget,
+                    is_report=True,
+                    filters=filters,
+                    user_email=request.user.email,
+                    is_live=is_live,
+                )
+
             return Response(serialized_source, status.HTTP_200_OK)
         except PermissionDenied:
             raise

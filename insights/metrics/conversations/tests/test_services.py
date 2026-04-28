@@ -10,6 +10,9 @@ from django.core.cache import cache
 
 from insights.dashboards.models import Dashboard
 from insights.metrics.conversations.dataclass import (
+    AgentInvocationAgent,
+    AgentInvocationItem,
+    AgentInvocationMetrics,
     AvailableWidgetsList,
     ConversationsTotalsMetrics,
     ConversationsTotalsMetric,
@@ -18,6 +21,9 @@ from insights.metrics.conversations.dataclass import (
     NPSMetrics,
     NPSMetricsField,
     SalesFunnelMetrics,
+    ToolResultAgent,
+    ToolResultItem,
+    ToolResultMetrics,
     TopicsDistributionMetrics,
 )
 from insights.metrics.conversations.enums import (
@@ -29,9 +35,10 @@ from insights.metrics.conversations.enums import (
     NpsMetricsType,
 )
 from insights.metrics.conversations.integrations.datalake.dataclass import (
+    ToolResultMetric,
+    AgentInvocationMetric,
     SalesFunnelData,
 )
-from insights.metrics.conversations.exceptions import ConversationsMetricsError
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseDatalakeConversationsMetricsService,
 )
@@ -659,7 +666,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError):
+        with self.assertRaises(ValueError):
             self.service.get_generic_metrics_by_key(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -681,7 +688,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError):
+        with self.assertRaises(ValueError):
             self.service.get_generic_metrics_by_key(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -773,7 +780,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_crosstab_data(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -800,7 +807,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_crosstab_data(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -825,7 +832,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_crosstab_data(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -850,7 +857,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_crosstab_data(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -933,6 +940,306 @@ class TestConversationsMetricsService(TestCase):
             ],
         )
 
+    def test_get_agent_invocations(self):
+        project_uuid = uuid.uuid4()
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_agent_invocations.return_value = {
+            "invocation_1": AgentInvocationMetric(
+                agent_uuid=agent_uuid,
+                count=10,
+            )
+        }
+
+        results = self.service.get_agent_invocations(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(results, AgentInvocationMetrics)
+        self.assertEqual(results.total, 1)
+        self.assertEqual(len(results.invocations), 1)
+        self.assertIsInstance(results.invocations[0], AgentInvocationItem)
+        self.assertEqual(results.invocations[0].label, "invocation_1")
+        self.assertEqual(
+            results.invocations[0].agent, AgentInvocationAgent(uuid=agent_uuid)
+        )
+        self.assertEqual(results.invocations[0].value, 100.0)
+        self.assertEqual(results.invocations[0].full_value, 10)
+
+        self.mock_datalake_service.get_agent_invocations.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+    def test_get_agent_invocations_with_none_agent_uuid(self):
+        project_uuid = uuid.uuid4()
+
+        self.mock_datalake_service.get_agent_invocations.return_value = {
+            "invocation_1": AgentInvocationMetric(
+                agent_uuid=None,
+                count=10,
+            )
+        }
+
+        results = self.service.get_agent_invocations(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(results, AgentInvocationMetrics)
+        self.assertEqual(results.total, 1)
+        self.assertEqual(len(results.invocations), 1)
+        self.assertIsInstance(results.invocations[0], AgentInvocationItem)
+        self.assertEqual(results.invocations[0].label, "invocation_1")
+        self.assertIsNone(results.invocations[0].agent)
+        self.assertEqual(results.invocations[0].value, 100.0)
+        self.assertEqual(results.invocations[0].full_value, 10)
+
+        self.mock_datalake_service.get_agent_invocations.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+    def test_get_agent_invocations_empty_result(self):
+        self.mock_datalake_service.get_agent_invocations.return_value = {}
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(results, AgentInvocationMetrics)
+        self.assertEqual(results.invocations, [])
+        self.assertEqual(results.total, 0)
+
+    def test_get_agent_invocations_multiple_agents(self):
+        agent_uuid_1 = str(uuid.uuid4())
+        agent_uuid_2 = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_agent_invocations.return_value = {
+            "invocation_1": AgentInvocationMetric(
+                agent_uuid=agent_uuid_1,
+                count=10,
+            ),
+            "invocation_2": AgentInvocationMetric(
+                agent_uuid=agent_uuid_2,
+                count=20,
+            ),
+        }
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(results.total, 2)
+        self.assertEqual(len(results.invocations), 2)
+        self.assertEqual(results.invocations[0].label, "invocation_1")
+        self.assertEqual(results.invocations[0].full_value, 10)
+        self.assertEqual(results.invocations[0].value, 33.33)
+        self.assertEqual(results.invocations[1].label, "invocation_2")
+        self.assertEqual(results.invocations[1].full_value, 20)
+        self.assertEqual(results.invocations[1].value, 66.67)
+
+    def test_get_agent_invocations_mixed_agent_uuids(self):
+        agent_uuid_1 = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_agent_invocations.return_value = {
+            "invocation_1": AgentInvocationMetric(
+                agent_uuid=agent_uuid_1,
+                count=10,
+            ),
+            "invocation_2": AgentInvocationMetric(
+                agent_uuid=None,
+                count=20,
+            ),
+        }
+
+        results = self.service.get_agent_invocations(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(results.total, 2)
+        self.assertEqual(len(results.invocations), 2)
+        self.assertEqual(results.invocations[0].label, "invocation_1")
+        self.assertEqual(
+            results.invocations[0].agent, AgentInvocationAgent(uuid=agent_uuid_1)
+        )
+        self.assertEqual(results.invocations[0].full_value, 10)
+        self.assertEqual(results.invocations[1].label, "invocation_2")
+        self.assertIsNone(results.invocations[1].agent)
+        self.assertEqual(results.invocations[1].full_value, 20)
+
+    def test_get_agent_invocations_propagates_exception(self):
+        self.mock_datalake_service.get_agent_invocations.side_effect = Exception(
+            "Datalake error"
+        )
+
+        with self.assertRaises(Exception):
+            self.service.get_agent_invocations(
+                project_uuid=uuid.uuid4(),
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+    def test_get_tool_results(self):
+        project_uuid = uuid.uuid4()
+        agent_uuid = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_tool_results.return_value = {
+            "tool_result_1": ToolResultMetric(
+                agent_uuid=agent_uuid,
+                count=10,
+            )
+        }
+
+        results = self.service.get_tool_results(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+        self.assertIsInstance(results, ToolResultMetrics)
+        self.assertEqual(results.total, 1)
+        self.assertEqual(len(results.tool_results), 1)
+        self.assertIsInstance(results.tool_results[0], ToolResultItem)
+        self.assertEqual(results.tool_results[0].label, "tool_result_1")
+        self.assertEqual(
+            results.tool_results[0].agent, ToolResultAgent(uuid=agent_uuid)
+        )
+        self.assertEqual(results.tool_results[0].value, 100.0)
+        self.assertEqual(results.tool_results[0].full_value, 10)
+
+        self.mock_datalake_service.get_tool_results.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+    def test_get_tool_results_with_none_agent_uuid(self):
+        project_uuid = uuid.uuid4()
+
+        self.mock_datalake_service.get_tool_results.return_value = {
+            "tool_result_1": ToolResultMetric(
+                agent_uuid=None,
+                count=10,
+            )
+        }
+        results = self.service.get_tool_results(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(results, ToolResultMetrics)
+        self.assertEqual(results.total, 1)
+        self.assertEqual(len(results.tool_results), 1)
+        self.assertIsInstance(results.tool_results[0], ToolResultItem)
+        self.assertEqual(results.tool_results[0].label, "tool_result_1")
+        self.assertIsNone(results.tool_results[0].agent)
+        self.assertEqual(results.tool_results[0].value, 100.0)
+        self.assertEqual(results.tool_results[0].full_value, 10)
+
+        self.mock_datalake_service.get_tool_results.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+    def test_get_tool_results_empty_result(self):
+        self.mock_datalake_service.get_tool_results.return_value = {}
+
+        results = self.service.get_tool_results(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(results, ToolResultMetrics)
+        self.assertEqual(results.tool_results, [])
+        self.assertEqual(results.total, 0)
+
+    def test_get_tool_results_multiple_agents(self):
+        agent_uuid_1 = str(uuid.uuid4())
+        agent_uuid_2 = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_tool_results.return_value = {
+            "tool_result_1": ToolResultMetric(
+                agent_uuid=agent_uuid_1,
+                count=10,
+            ),
+            "tool_result_2": ToolResultMetric(
+                agent_uuid=agent_uuid_2,
+                count=20,
+            ),
+        }
+
+        results = self.service.get_tool_results(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(results.total, 2)
+        self.assertEqual(len(results.tool_results), 2)
+        self.assertEqual(results.tool_results[0].label, "tool_result_1")
+        self.assertEqual(results.tool_results[0].full_value, 10)
+        self.assertEqual(results.tool_results[0].value, 33.33)
+        self.assertEqual(results.tool_results[1].label, "tool_result_2")
+        self.assertEqual(results.tool_results[1].full_value, 20)
+        self.assertEqual(results.tool_results[1].value, 66.67)
+
+    def test_get_tool_results_mixed_agent_uuids(self):
+        agent_uuid_1 = str(uuid.uuid4())
+
+        self.mock_datalake_service.get_tool_results.return_value = {
+            "tool_result_1": ToolResultMetric(
+                agent_uuid=agent_uuid_1,
+                count=10,
+            ),
+            "tool_result_2": ToolResultMetric(
+                agent_uuid=None,
+                count=20,
+            ),
+        }
+
+        results = self.service.get_tool_results(
+            project_uuid=uuid.uuid4(),
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(results.total, 2)
+        self.assertEqual(len(results.tool_results), 2)
+        self.assertEqual(results.tool_results[0].label, "tool_result_1")
+        self.assertEqual(
+            results.tool_results[0].agent, ToolResultAgent(uuid=agent_uuid_1)
+        )
+        self.assertEqual(results.tool_results[0].full_value, 10)
+        self.assertEqual(results.tool_results[1].label, "tool_result_2")
+        self.assertIsNone(results.tool_results[1].agent)
+        self.assertEqual(results.tool_results[1].full_value, 20)
+
+    def test_get_tool_results_propagates_exception(self):
+        self.mock_datalake_service.get_tool_results.side_effect = Exception(
+            "Datalake error"
+        )
+
+        with self.assertRaises(Exception):
+            self.service.get_tool_results(
+                project_uuid=uuid.uuid4(),
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
     def test_get_topics_with_cache_hit(self):
         """Test get_topics when cache is hit"""
         project_uuid = UUID("2026cedc-67f6-4a04-977a-55cc581defa9")
@@ -953,10 +1260,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.get_topics(project_uuid)
 
-        self.assertIn("Error fetching topics", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_get_topics_with_non_success_status(self):
         """Test get_topics when response status is not success"""
@@ -965,7 +1272,7 @@ class TestConversationsMetricsService(TestCase):
         mock_response = MockResponse(500, "Internal Server Error")
         self.mock_nexus_conversations_client.get_topics.return_value = mock_response
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.get_topics(project_uuid)
 
         self.assertIn("Error fetching topics", str(context.exception))
@@ -978,10 +1285,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.get_subtopics(project_uuid, topic_uuid)
 
-        self.assertIn("Error fetching subtopics", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_get_subtopics_with_non_success_status(self):
         """Test get_subtopics when response status is not success"""
@@ -990,10 +1297,10 @@ class TestConversationsMetricsService(TestCase):
         mock_response = MockResponse(404, "Not Found")
         self.mock_nexus_conversations_client.get_subtopics.return_value = mock_response
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.get_subtopics(project_uuid, topic_uuid)
 
-        self.assertIn("Error fetching topics", str(context.exception))
+        self.assertIn("Error fetching subtopics", str(context.exception))
 
     def test_create_topic_with_exception(self):
         """Test create_topic when nexus client raises exception"""
@@ -1002,10 +1309,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.create_topic(project_uuid, "Test Topic", "Test Description")
 
-        self.assertIn("Error creating topic", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_create_topic_with_json_parse_error(self):
         """Test create_topic when response.json() fails"""
@@ -1026,7 +1333,7 @@ class TestConversationsMetricsService(TestCase):
         mock_response = MockResponse(400, "Bad Request")
         self.mock_nexus_conversations_client.create_topic.return_value = mock_response
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.create_topic(project_uuid, "Test Topic", "Test Description")
 
         self.assertIn("Error creating topic", str(context.exception))
@@ -1039,12 +1346,12 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.create_subtopic(
                 project_uuid, topic_uuid, "Test Subtopic", "Test Description"
             )
 
-        self.assertIn("Error creating subtopic", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_create_subtopic_with_json_parse_error(self):
         """Test create_subtopic when response.json() fails"""
@@ -1071,7 +1378,7 @@ class TestConversationsMetricsService(TestCase):
             mock_response
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.create_subtopic(
                 project_uuid, topic_uuid, "Test Subtopic", "Test Description"
             )
@@ -1086,10 +1393,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.delete_topic(project_uuid, topic_uuid)
 
-        self.assertIn("Error deleting topic", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_delete_topic_with_non_success_status(self):
         """Test delete_topic when response status is not success"""
@@ -1098,7 +1405,7 @@ class TestConversationsMetricsService(TestCase):
         mock_response = MockResponse(404, "Not Found")
         self.mock_nexus_conversations_client.delete_topic.return_value = mock_response
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.delete_topic(project_uuid, topic_uuid)
 
         self.assertIn("Error deleting topic", str(context.exception))
@@ -1112,10 +1419,10 @@ class TestConversationsMetricsService(TestCase):
             "Network error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.delete_subtopic(project_uuid, topic_uuid, subtopic_uuid)
 
-        self.assertIn("Error deleting subtopic", str(context.exception))
+        self.assertIn("Network error", str(context.exception))
 
     def test_delete_subtopic_with_non_success_status(self):
         """Test delete_subtopic when response status is not success"""
@@ -1127,7 +1434,7 @@ class TestConversationsMetricsService(TestCase):
             mock_response
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(RuntimeError) as context:
             self.service.delete_subtopic(project_uuid, topic_uuid, subtopic_uuid)
 
         self.assertIn("Error deleting subtopic", str(context.exception))
@@ -1142,12 +1449,12 @@ class TestConversationsMetricsService(TestCase):
             "Datalake error"
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(Exception) as context:
             self.service.get_topics_distribution(
                 project, start_date, end_date, ConversationType.AI
             )
 
-        self.assertIn("Failed to get topics distribution", str(context.exception))
+        self.assertIn("Datalake error", str(context.exception))
 
     def test_get_csat_metrics_missing_flow_uuid(self):
         """Test get_csat_metrics when flow_uuid is missing"""
@@ -1164,7 +1471,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_csat_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1191,7 +1498,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_csat_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1215,7 +1522,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_csat_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1241,7 +1548,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_nps_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1268,7 +1575,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_nps_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,
@@ -1292,7 +1599,7 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
-        with self.assertRaises(ConversationsMetricsError) as context:
+        with self.assertRaises(ValueError) as context:
             self.service.get_nps_metrics(
                 project_uuid=self.project.uuid,
                 widget=widget,

@@ -5,11 +5,14 @@ from insights.sources.agents.clients import (
 )
 from insights.sources.agents.filtersets import AgentFilterSet
 from insights.sources.agents.query_builder import AgentSQLQueryBuilder
+from insights.sources.base import BaseQueryExecutor
 from insights.sources.filter_strategies import PostgreSQLFilterStrategy
 
 
-class QueryExecutor:
+class QueryExecutor(BaseQueryExecutor):
+    @classmethod
     def execute(
+        cls,
         filters: dict,
         operation: str,
         parser: callable,

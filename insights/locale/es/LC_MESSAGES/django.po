@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-01 17:59+0000\n"
+"POT-Creation-Date: 2026-04-22 21:20+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Kallil Souza dos Santos <kallilsouza@hotmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,34 +19,37 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
 "1 : 2;\n"
 
-#: insights/core/templates/core/emails/base.html:27
-msgid "Our site"
-msgstr "Nuestro sitio"
+#: insights/core/templates/core/emails/base.html:28
+msgid "All rights reserved."
+msgstr "Todos los derechos reservados."
 
-#: insights/core/templates/core/emails/base.html:41
-msgid "2025 © Weni by VTEX. All rights reserved."
-msgstr "2025 © Weni by VTEX. Todos los derechos reservados."
-
-#: insights/core/templates/core/emails/base.html:46
+#: insights/core/templates/core/emails/base.html:33
 msgid ""
-"You are receiving this mail because you registered in Weni platform. This "
-"also shows that you agree to our Terms of use and Privacy Policies."
+"You are receiving this mail because you registered in VTEX CX Platform. This "
+"also shows that you agree to our Terms of use and Privacy Policies. If you "
+"no longer want to receive mails from use, click the unsubscribe link below "
+"to unsubscribe."
 msgstr ""
-"Estás recibiendo este correo porque te has registrado en la plataforma Weni. "
-"Esto también muestra que aceptas nuestros Términos de uso y Política de "
-"privacidade."
+"Estás recibiendo este correo porque te registraste en VTEX CX Platform. Esto "
+"también indica que aceptas nuestros Términos de uso y Política de "
+"privacidad. Si ya no deseas recibir correos, haz clic en el enlace de abajo "
+"para cancelar la suscripción."
 
-#: insights/core/templates/core/emails/base.html:49
+#: insights/core/templates/core/emails/base.html:36
 msgid "Privacy Policy"
 msgstr "Política de privacidad"
 
-#: insights/core/templates/core/emails/base.html:53
+#: insights/core/templates/core/emails/base.html:40
 msgid "Terms of use"
 msgstr "Términos de uso"
 
-#: insights/core/templates/core/emails/base.html:57
+#: insights/core/templates/core/emails/base.html:44
 msgid "Help Center"
 msgstr "Centro de ayuda"
+
+#: insights/core/templates/core/emails/base.html:48
+msgid "Unsubscribe"
+msgstr "Cancelar suscripción"
 
 #: insights/dashboards/serializers.py:46
 msgid "Cannot set a default dashboard as non-default"
@@ -204,14 +207,14 @@ msgstr ""
 "La configuración del widget no es válida, debe tener key para source_a y "
 "source_b"
 
-#: insights/metrics/conversations/integrations/datalake/services.py:433
-#: insights/metrics/conversations/reports/services.py:1014
-#: insights/metrics/conversations/reports/services.py:1191
+#: insights/metrics/conversations/integrations/datalake/services.py:458
+#: insights/metrics/conversations/reports/services.py:1049
+#: insights/metrics/conversations/reports/services.py:1226
 msgid "Unclassified"
 msgstr "No clasificada"
 
 #: insights/metrics/conversations/reports/file_processors.py:87
-#: insights/metrics/conversations/reports/services.py:382
+#: insights/metrics/conversations/reports/services.py:405
 msgid "Conversations dashboard report"
 msgstr "Reporte dash de conversas"
 
@@ -222,7 +225,8 @@ msgstr "La fecha de inicio debe ser antes de la fecha de fin"
 
 #: insights/metrics/conversations/reports/serializers.py:96
 msgid "Sections, custom widgets, or crosstab widgets are required"
-msgstr "Las secciones, widgets personalizados, o widgets de crosstab son requeridos"
+msgstr ""
+"Las secciones, widgets personalizados, o widgets de crosstab son requeridos"
 
 #: insights/metrics/conversations/reports/serializers.py:114
 #: insights/metrics/conversations/reports/serializers.py:135
@@ -265,126 +269,152 @@ msgstr "Widget NPS Humano no encontrado o no configurado correctamente"
 msgid "Conversations dashboard not found"
 msgstr "Dashboard de conversas no encontrado"
 
-#: insights/metrics/conversations/reports/services.py:1005
+#: insights/metrics/conversations/reports/services.py:1040
 msgid "Resolutions"
 msgstr "Resoluciones"
 
-#: insights/metrics/conversations/reports/services.py:1007
+#: insights/metrics/conversations/reports/services.py:1042
 msgid "Resolution"
 msgstr "Resolución"
 
-#: insights/metrics/conversations/reports/services.py:1008
-#: insights/metrics/conversations/reports/services.py:1188
-#: insights/metrics/conversations/reports/services.py:1256
-#: insights/metrics/conversations/reports/services.py:1315
-#: insights/metrics/conversations/reports/services.py:1386
-#: insights/metrics/conversations/reports/services.py:1455
-#: insights/metrics/conversations/reports/services.py:1517
+#: insights/metrics/conversations/reports/services.py:1043
+#: insights/metrics/conversations/reports/services.py:1223
+#: insights/metrics/conversations/reports/services.py:1291
+#: insights/metrics/conversations/reports/services.py:1350
+#: insights/metrics/conversations/reports/services.py:1421
+#: insights/metrics/conversations/reports/services.py:1490
+#: insights/metrics/conversations/reports/services.py:1552
 msgid "Date"
 msgstr "Fecha"
 
-#: insights/metrics/conversations/reports/services.py:1010
+#: insights/metrics/conversations/reports/services.py:1045
 msgid "AI-Assisted"
 msgstr "Atendido por IA"
 
-#: insights/metrics/conversations/reports/services.py:1011
+#: insights/metrics/conversations/reports/services.py:1046
 msgid "Not assisted"
 msgstr "No Atendido"
 
-#: insights/metrics/conversations/reports/services.py:1012
+#: insights/metrics/conversations/reports/services.py:1047
 msgid "Transferred to human support"
 msgstr "Transferidas a soporte humano"
 
-#: insights/metrics/conversations/reports/services.py:1015
+#: insights/metrics/conversations/reports/services.py:1050
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: insights/metrics/conversations/reports/services.py:1184
+#: insights/metrics/conversations/reports/services.py:1219
 msgid "Topics Distribution AI"
 msgstr "Distribución de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1186
+#: insights/metrics/conversations/reports/services.py:1221
 msgid "Topics Distribution Human"
 msgstr "Distribución de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1189
+#: insights/metrics/conversations/reports/services.py:1224
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1190
+#: insights/metrics/conversations/reports/services.py:1225
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1255
+#: insights/metrics/conversations/reports/services.py:1290
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1257
-#: insights/metrics/conversations/reports/services.py:1316
-#: insights/metrics/conversations/reports/services.py:1387
-#: insights/metrics/conversations/reports/services.py:1456
+#: insights/metrics/conversations/reports/services.py:1292
+#: insights/metrics/conversations/reports/services.py:1351
+#: insights/metrics/conversations/reports/services.py:1422
+#: insights/metrics/conversations/reports/services.py:1491
 msgid "Rating"
 msgstr "Avaliación"
 
-#: insights/metrics/conversations/reports/services.py:1314
+#: insights/metrics/conversations/reports/services.py:1349
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1385
+#: insights/metrics/conversations/reports/services.py:1420
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1454
+#: insights/metrics/conversations/reports/services.py:1489
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1518
+#: insights/metrics/conversations/reports/services.py:1553
 msgid "Value"
 msgstr "Valor"
 
-#: insights/metrics/conversations/reports/services.py:1565
+#: insights/metrics/conversations/reports/services.py:1600
 msgid "Label"
 msgstr "Título"
 
-#: insights/metrics/conversations/reports/services.py:1566
+#: insights/metrics/conversations/reports/services.py:1601
 msgid "Total"
 msgstr "Total"
+
+#: insights/metrics/conversations/reports/services.py:1648
+msgid "Tool results"
+msgstr "Resultados de herramientas"
+
+#: insights/metrics/conversations/reports/services.py:1649
+#: insights/metrics/conversations/reports/services.py:1695
+msgid "Agent"
+msgstr "Agente"
+
+#: insights/metrics/conversations/reports/services.py:1650
+msgid "Results"
+msgstr "Resultados"
+
+#: insights/metrics/conversations/reports/services.py:1651
+#: insights/metrics/conversations/reports/services.py:1697
+msgid "Percentage"
+msgstr "Porcentaje"
+
+#: insights/metrics/conversations/reports/services.py:1694
+msgid "Agent invocations"
+msgstr "Invocaciones de agente"
+
+#: insights/metrics/conversations/reports/services.py:1696
+msgid "Invocations"
+msgstr "Invocaciones"
 
 #: insights/metrics/conversations/reports/views.py:101
 msgid "There is another report being processed for this project"
 msgstr "Hay otro reporte siendo procesado para este proyecto"
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:6
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:6
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:16
 msgid "Hi,"
 msgstr "Hola,"
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:9
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:30
 #, python-format
 msgid "Unable to generate export of %(project_name)s project data."
 msgstr ""
 "No se puede generar el export de los datos del proyecto %(project_name)s."
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:10
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:34
 #, python-format
-msgid ""
-"The data export for the %(project_name)s project is ready and you can "
-"download it by <a clicktracking=off style=\"color: #00A49F; text-decoration: "
-"none;\" href=\"%(file_link)s\" target=\"_blank\">clicking here</a>."
+msgid "Use the following ID to report to support: %(event_id)s."
 msgstr ""
-"El export de los datos del proyecto %(project_name)s está listo y puedes "
-"descargarlo haciendo <a clicktracking=off style=\"color: #00A49F; text-"
-"decoration: none;\" href=\"%(file_link)s\" target=\"_blank\">clicando aquí</"
-"a>."
 
-#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:14
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:16
+msgid "Hi, here is your data export"
+msgstr "Hola, aquí está su exportación de datos"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:30
 #, python-format
-msgid ""
-"The data export for the %(project_name)s project is ready and the files have "
-"been attached to this email."
-msgstr ""
-"El export de los datos del proyecto %(project_name)s está listo y los "
-"archivos han sido adjuntos a este email."
+msgid "The data export for the %(project_name)s project is ready."
+msgstr "La exportación de datos del proyecto %(project_name)s está lista."
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:63
+msgid "Download"
+msgstr "Descargar"
+
+#: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:67
+msgid "The files have been attached to this email."
+msgstr "Los archivos han sido adjuntos a este correo."
 
 #: insights/metrics/conversations/usecases/get_absolute_numbers_widget.py:31
 msgid "Widget source is not absolute numbers child"
@@ -754,14 +784,6 @@ msgstr "Plantilla no en favoritos"
 msgid "WABA id is required"
 msgstr "El ID de WABA es requerido"
 
-#: insights/metrics/vtex/views.py:34
-msgid "Required"
-msgstr "Requerido"
-
-#: insights/metrics/vtex/views.py:54
-msgid "Invalid date format. Use YYYY-MM-DD."
-msgstr "Formato de fecha inválido. Use YYYY-MM-DD."
-
 #: insights/projects/choices.py:10 insights/reports/choices.py:27
 msgid "Pending"
 msgstr "Pendiente"
@@ -865,9 +887,9 @@ msgstr "El proyecto no tiene las credenciales para acceder a la API de VTEX"
 #: insights/templates/admin/login.html:28
 msgid "Please correct the error below."
 msgid_plural "Please correct the errors below."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Corrija el error a continuación."
+msgstr[1] "Corrija los errores a continuación."
+msgstr[2] "Corrija los errores a continuación."
 
 #: insights/templates/admin/login.html:55
 msgid "Forgotten your password or username?"

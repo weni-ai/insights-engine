@@ -10,7 +10,11 @@ class UserProjectsView(ListAPIView):
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
-        return Project.objects.filter(
+        queryset = Project.objects.filter(
             authorizations__user=self.request.user,
             authorizations__role=1,
         )
+        name = self.request.query_params.get("name")
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+        return queryset

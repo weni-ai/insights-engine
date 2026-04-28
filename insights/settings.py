@@ -88,6 +88,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "insights.core.middleware.InternalErrorHandlerMiddleware",
 ]
 
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
@@ -477,8 +478,6 @@ CONVERSATIONS_DASHBOARD_FORCE_USE_MOCK_SERVICE = env.bool(
 )
 
 # Sales Funnel
-SALES_FUNNEL_EVENTS_MAX_PAGES = env.int("SALES_FUNNEL_EVENTS_MAX_PAGES", default=200)
-SALES_FUNNEL_EVENTS_PAGE_SIZE = env.int("SALES_FUNNEL_EVENTS_PAGE_SIZE", default=2000)
 SALES_FUNNEL_EVENTS_START_DATE = env.str(
     "SALES_FUNNEL_EVENTS_START_DATE", default="2025-01-01T00:00:00-03:00"
 )
@@ -543,3 +542,8 @@ ABANDONED_CART_MAX_TEMPLATE_IDS = env.int("ABANDONED_CART_MAX_TEMPLATE_IDS", def
 
 # VTEX Orders API Cache TTL
 VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60)
+
+# Data source service
+DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
+    "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
+)

@@ -14,6 +14,7 @@ from insights.human_support.clients.chats_time_metrics import (
 from insights.human_support.filters import HumanSupportFilterSet
 from insights.projects.models import Project
 from insights.sources.agents.clients import AgentsRESTClient
+from insights.sources.chats.clients import ChatsRESTClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
 from insights.sources.queues.usecases.query_execute import (
     QueryExecutor as QueuesQueryExecutor,
@@ -581,6 +582,78 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
+    def get_detailed_monitoring_agents_v2(self, filters: dict = {}):
+        params = self._get_detailed_monitoring_agents_filters(filters)
+
+        response = ChatsRESTClient().get_agents(str(self.project.uuid), params)
+
+        formatted_results = []
+        for agent in response.get("results", []):
+            agent_data = agent.get("agent", {})
+            status_data = agent.get("status", {})
+
+            result_data = {
+                "agent": {
+                    "name": agent_data.get("name"),
+                    "email": agent_data.get("email"),
+                    "is_deleted": agent_data.get("is_deleted", False),
+                },
+                "status": {
+                    "status": status_data.get("status", "offline"),
+                    "label": status_data.get("label"),
+                },
+                "ongoing": agent.get("opened", 0),
+                "finished": agent.get("closed", 0),
+                "average_first_response_time": agent.get("avg_first_response_time"),
+                "average_response_time": agent.get("avg_message_response_time"),
+                "average_duration": agent.get("avg_interaction_time"),
+                "time_in_service": agent.get("time_in_service"),
+                "link": agent.get("link"),
+            }
+
+            formatted_results.append(result_data)
+
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
+
+    def get_detailed_monitoring_status_v2(self, filters: dict = {}) -> dict:
+        ordering_fields = {"agent", "-agent"}
+        normalized = self._normalize_filters(filters)
+
+        params: dict = {}
+
+        if filters.get("user_request") is not None:
+            params["user_request"] = filters.get("user_request")
+        if (ordering := filters.get("ordering")) and ordering in ordering_fields:
+            params["ordering"] = ordering
+
+        for pagination_filter in ("limit", "offset"):
+            if filters.get(pagination_filter):
+                params[pagination_filter] = filters.get(pagination_filter)
+
+        mapping = {
+            "sectors": ("sector", list),
+            "queues": ("queue", list),
+            "agent": ("agent", str),
+            "start_date": ("start_date", str),
+            "end_date": ("end_date", str),
+        }
+
+        for filter_key, filter_value in mapping.items():
+            param, param_type = filter_value
+            if value := normalized.get(filter_key):
+                if param_type == list and len(value) > 0:
+                    value = value[0]
+                elif param in ("start_date", "end_date"):
+                    value = value.isoformat()
+                params[param] = str(value) if param_type == str else value
+
+        return ChatsRESTClient().get_status_by_agent(str(self.project.uuid), params)
+
     def get_detailed_monitoring_agents_totals(self, filters: dict = {}) -> dict:
         params = self._get_detailed_monitoring_agents_filters(filters)
         return AgentsRESTClient(self.project).agents_totals(params)
@@ -674,7 +747,7 @@ class HumanSupportDashboardService:
                     value = value[0]
 
                 elif param in ("start_date", "end_date"):
-                    value = value.isoformat()
+                    value = value.strftime("%Y-%m-%d")
 
                 params[param] = str(value) if param_type == str else value
 
@@ -717,6 +790,92 @@ class HumanSupportDashboardService:
     def _params_for_finished_rooms_list(
         self, normalized: dict, filters: dict | None
     ) -> dict:
+        params: dict = {
+            "is_active": False,
+        }
+
+        filter_to_rooms_field = {"sectors": "sector", "queues": "queue", "tags": "tags"}
+        for filter_key, rooms_field in filter_to_rooms_field.items():
+            value = normalized.get(filter_key)
+            if value:
+                params[rooms_field] = value
+
+        if normalized.get("start_date"):
+            params["ended_at__gte"] = normalized["start_date"].isoformat()
+        if normalized.get("end_date"):
+            params["ended_at__lte"] = normalized["end_date"].isoformat()
+
+        if normalized.get("agent"):
+            params["agent"] = str(normalized["agent"])
+
+        if normalized.get("contact"):
+            params["contact_external_id"] = str(normalized["contact"])
+
+        if normalized.get("ticket_id"):
+            params["protocol"] = str(normalized["ticket_id"])
+
+        if filters:
+            if filters.get("limit") is not None:
+                params["limit"] = filters.get("limit")
+            if filters.get("offset") is not None:
+                params["offset"] = filters.get("offset")
+            ordering = filters.get("ordering")
+            if ordering is not None:
+                prefix = "-" if ordering.startswith("-") else ""
+                field = ordering.lstrip("-")
+                field_mapping = {
+                    "agent": "user_full_name",
+                    "sector": "queue__sector__name",
+                    "queue": "queue__name",
+                    "contact": "contact__name",
+                    "ticket_id": "protocol",
+                    "protocol": "protocol",
+                    "awaiting_time": "waiting_time",
+                    "first_response_time": "first_response_time",
+                    "duration": "duration",
+                    "ended_at": "ended_at",
+                }
+                mapped_field = field_mapping.get(field, field)
+                params["ordering"] = f"{prefix}{mapped_field}"
+
+        return params
+
+    def get_analysis_detailed_monitoring_status_v2(
+        self, filters: dict | None = None
+    ) -> dict:
+        ordering_fields = {"agent", "-agent"}
+        params = self._get_analysis_detailed_monitoring_status_filters(
+            filters, ordering_fields
+        )
+
+        response = ChatsRESTClient().get_status_by_agent(str(self.project.uuid), params)
+
+        formatted_results = []
+        for agent_data in response.get("results", []):
+            formatted_results.append(
+                {
+                    "agent": agent_data.get("agent"),
+                    "agent_email": agent_data.get("agent_email"),
+                    "custom_status": agent_data.get("custom_status", []),
+                    "link": agent_data.get("link"),
+                }
+            )
+
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
+
+    def get_finished_rooms(self, filters: dict | None = None) -> dict:
+        """
+        Lista de salas finalizadas.
+        Retorna { next, previous, count, results: [...] }.
+        Critérios: is_active=False.
+        """
+        normalized = self._normalize_filters(filters)
+
         params: dict = {
             "is_active": False,
         }

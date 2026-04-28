@@ -78,7 +78,7 @@ class TestVtexOrdersViewAsAuthenticatedUser(BaseTestVtexOrdersView):
         response = self.get_metrics_from_utm_source(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["detail"][0].code, "invalid_date_format")
+        self.assertEqual(response.data["end_date"][0].code, "invalid")
 
     @with_project_auth
     @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
@@ -157,7 +157,7 @@ class TestInternalVTEXOrdersViewWithJWTAuthentication(BaseTestInternalVTEXOrders
         self.assertEqual(response.data["project_uuid"][0].code, "required")
 
     @patch(
-        "insights.metrics.vtex.services.orders_service.OrdersService.get_metrics_from_utm_source"
+        "insights.metrics.vtex.usecases.utm_source_metrics.OrdersService.get_metrics_from_utm_source"
     )
     def test_get_metrics_from_utm_source(self, mock_get_metrics_from_utm_source):
         mock_get_metrics_from_utm_source.return_value = {
@@ -211,7 +211,7 @@ class TestInternalVTEXOrdersViewWithInternalAuthentication(
 
     @with_internal_auth
     @patch(
-        "insights.metrics.vtex.services.orders_service.OrdersService.get_metrics_from_utm_source"
+        "insights.metrics.vtex.usecases.utm_source_metrics.OrdersService.get_metrics_from_utm_source"
     )
     def test_can_get_metrics_from_utm_source_with_internal_authentication(
         self, mock_get_metrics_from_utm_source

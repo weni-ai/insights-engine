@@ -1,3 +1,56 @@
+# 1.21.1
+# Fix
+  - Update query to exclude deleted tags in TagSQLQueryBuilder
+
+# 1.21.0
+# Add
+  - Inline agent switch functionality on project creation
+
+# 1.20.0
+# Add
+  - Agent invocations metrics to report export
+  - Tool result metrics to report export
+  - Internal errors response middleware
+# Remove
+  - ConversationsMetricsError in favor of simplified error handling
+  - Sales funnel parallel processing feature flag
+
+# 1.19.4
+# Add
+  - Parallel processing for sales funnel data retrieval
+
+# 1.19.3
+# Add
+  - New template for export
+  
+# 1.19.2
+# Add
+  - Adding name filter support to endpoint that list projects (#368)
+
+# 1.19.1
+# Fix
+  - Total of agents and tools 
+  
+# 1.19.0
+# Add
+  - Add tools for result metrics 
+
+# 1.18.2
+# Fix
+  - Sales funnel event count type conversion to integers
+
+# 1.18.1
+# Add
+  - Absolute numbers operations support in sales funnel metrics
+  - UTM source metrics endpoint for VTEX orders
+
+# 1.18.0
+# Add
+  - Crosstab widgets in human support exports and report worksheets
+  - Validation for crosstab widgets when building reports
+  - Spanish and Portuguese locale updates for export-related messages
+  - Tests for crosstab worksheet export
+
 # 1.17.7
 # Fix
   - Only send operation key when not null in datalake conversations metrics

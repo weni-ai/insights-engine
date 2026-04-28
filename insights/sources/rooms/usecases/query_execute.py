@@ -9,11 +9,14 @@ from insights.sources.rooms.clients import (
     RoomSQLQueryGenerator,
 )
 from insights.sources.rooms.filtersets import RoomFilterSet
+from insights.sources.base import BaseQueryExecutor
 from insights.sources.rooms.query_builder import RoomSQLQueryBuilder
 
 
-class QueryExecutor:
+class QueryExecutor(BaseQueryExecutor):
+    @classmethod
     def execute(
+        cls,
         filters: dict,
         operation: str,
         parser: callable,
@@ -73,13 +76,28 @@ class QueryExecutor:
             for row in query_results:
                 sector_uuid = row["sector_uuid"]
                 if sector_uuid not in grouped:
+                    sector_name = row["sector_name"]
+                    sector_is_deleted = row["sector_is_deleted"]
+
+                    if sector_is_deleted and "_is_deleted_" in sector_name:
+                        sector_name = sector_name.split("_is_deleted_")[0]
+
                     grouped[sector_uuid] = {
-                        "sector_name": row["sector_name"],
+                        "sector_name": sector_name,
+                        "is_deleted": sector_is_deleted,
                         "queues": [],
                     }
+
+                queue_name = row["queue_name"]
+                queue_is_deleted = row["queue_is_deleted"]
+
+                if queue_is_deleted and "_is_deleted_" in queue_name:
+                    queue_name = queue_name.split("_is_deleted_")[0]
+
                 grouped[sector_uuid]["queues"].append(
                     {
-                        "queue_name": row["queue_name"],
+                        "queue_name": queue_name,
+                        "is_deleted": queue_is_deleted,
                         "value": row["value"],
                     }
                 )
@@ -102,13 +120,29 @@ class QueryExecutor:
             for row in query_results:
                 sector_uuid = row["sector_uuid"]
                 if sector_uuid not in grouped:
+                    sector_name = row["sector_name"]
+                    sector_is_deleted = row["sector_is_deleted"]
+
+                    if sector_is_deleted and "_is_deleted_" in sector_name:
+                        sector_name = sector_name.split("_is_deleted_")[0]
+
                     grouped[sector_uuid] = {
-                        "sector_name": row["sector_name"],
+                        "sector_name": sector_name,
+                        "is_deleted": sector_is_deleted,
                         "tags": [],
                     }
+
+                tag_name = row["tag_name"]
+                tag_is_deleted = row["tag_is_deleted"]
+
+                if tag_is_deleted and "_is_deleted_" in tag_name:
+                    tag_name = tag_name.split("_is_deleted_")[0]
+
                 grouped[sector_uuid]["tags"].append(
                     {
-                        "tag_name": row["tag_name"],
+                        "tag_name": tag_name,
+                        "is_deleted": tag_is_deleted
+                        or grouped[sector_uuid]["is_deleted"],
                         "value": row["value"],
                     }
                 )

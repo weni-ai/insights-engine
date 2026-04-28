@@ -1,8 +1,11 @@
+from insights.sources.base import BaseQueryExecutor
 from insights.sources.vtexcredentials.clients import AuthRestClient
 
 
-class QueryExecutor:
+class QueryExecutor(BaseQueryExecutor):
+    @classmethod
     def execute(
+        cls,
         filters: dict,
         operation: str,
         parser: callable,

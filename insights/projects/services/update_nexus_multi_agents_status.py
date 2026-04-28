@@ -4,6 +4,7 @@ from django.conf import settings
 from rest_framework import status
 from sentry_sdk import capture_exception
 
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.dashboards.tasks import create_conversation_dashboard
 from insights.projects.services.indexer_activation import (
     BaseProjectIndexerActivationService,
@@ -55,23 +56,30 @@ class UpdateNexusMultiAgentsStatusService:
 
         self.cache_client.set(cache_key, str(is_active), cache_ttl)
 
-        if is_active and not project.is_nexus_multi_agents_active:
-            project.is_nexus_multi_agents_active = True
-            project.save(update_fields=["is_nexus_multi_agents_active"])
-
-            if (
-                settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION
-                and not self.indexer_activation_service.is_project_active_on_indexer(
-                    project
-                )
-                and not self.indexer_activation_service.is_project_queued(project)
-            ):
-                self.indexer_activation_service.add_project_to_queue(project)
-
-            # The dashboard is created but should NOT be shown in the dashboard list
-            # before the indexer is activated
-            # because of widgets that needs data from elasticsearch (flowruns)
-            # such as the human support widgets for CSAT and NPS
-            create_conversation_dashboard.delay(project.uuid)
+        self.activate_multi_agents(project, is_active)
 
         return is_active
+
+    def activate_multi_agents(self, project: Project, is_active: bool) -> None:
+        if not is_active or project.is_nexus_multi_agents_active:
+            return
+
+        project.is_nexus_multi_agents_active = True
+        project.save(update_fields=["is_nexus_multi_agents_active"])
+
+        self.add_project_to_indexer_queue(project)
+
+        if not Dashboard.objects.filter(
+            project__uuid=project.uuid, name=CONVERSATIONS_DASHBOARD_NAME
+        ).exists():
+            create_conversation_dashboard.delay(project.uuid)
+
+    def add_project_to_indexer_queue(self, project: Project) -> None:
+        if (
+            settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION
+            and not self.indexer_activation_service.is_project_active_on_indexer(
+                project
+            )
+            and not self.indexer_activation_service.is_project_queued(project)
+        ):
+            self.indexer_activation_service.add_project_to_queue(project)

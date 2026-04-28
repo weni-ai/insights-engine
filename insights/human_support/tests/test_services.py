@@ -247,6 +247,20 @@ class TestHumanSupportDashboardService(TestCase):
         result = self.service.get_detailed_monitoring_status()
         self.assertEqual(result["count"], 1)
 
+    @patch("insights.human_support.services.ChatsRESTClient")
+    def test_get_detailed_monitoring_status_v2(self, mock_client_class):
+        mock_client = MagicMock()
+        mock_client.get_status_by_agent.return_value = {
+            "results": [{"agent": "a1", "custom_status": []}],
+            "next": None,
+            "previous": None,
+            "count": 1,
+        }
+        mock_client_class.return_value = mock_client
+        result = self.service.get_detailed_monitoring_status_v2()
+        self.assertEqual(result["count"], 1)
+        mock_client.get_status_by_agent.assert_called_once()
+
     def test_csat_score_by_agents_with_mock_chats_client(self):
         mock_chats = MagicMock()
         mock_chats.csat_score_by_agents.return_value = {"results": []}
@@ -279,6 +293,28 @@ class TestHumanSupportDashboardService(TestCase):
         result = self.service.get_analysis_detailed_monitoring_status(filters={})
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["results"][0]["custom_status"], [{"name": "Break"}])
+
+    @patch("insights.human_support.services.ChatsRESTClient")
+    def test_get_analysis_detailed_monitoring_status_v2(self, mock_client_class):
+        mock_client = MagicMock()
+        mock_client.get_status_by_agent.return_value = {
+            "results": [
+                {
+                    "agent": "a1",
+                    "agent_email": "a1@x.com",
+                    "custom_status": [{"name": "Break"}],
+                    "link": "https://link",
+                },
+            ],
+            "next": None,
+            "previous": None,
+            "count": 1,
+        }
+        mock_client_class.return_value = mock_client
+        result = self.service.get_analysis_detailed_monitoring_status_v2(filters={})
+        self.assertEqual(result["count"], 1)
+        self.assertEqual(result["results"][0]["custom_status"], [{"name": "Break"}])
+        mock_client.get_status_by_agent.assert_called_once()
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_finished_rooms(self, mock_rooms):
@@ -457,6 +493,23 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(call_args.get("ordering"), "agent")
         self.assertEqual(call_args.get("limit"), 5)
         self.assertEqual(call_args.get("offset"), 10)
+
+    @patch("insights.human_support.services.ChatsRESTClient")
+    def test_get_detailed_monitoring_status_v2_with_ordering(self, mock_client_class):
+        mock_client_class.return_value.get_status_by_agent.return_value = {
+            "results": [],
+            "next": None,
+            "previous": None,
+            "count": 0,
+        }
+        self.service.get_detailed_monitoring_status_v2(
+            filters={"ordering": "agent", "limit": 5, "offset": 10}
+        )
+        call_args = mock_client_class.return_value.get_status_by_agent.call_args
+        params = call_args[0][1]
+        self.assertEqual(params.get("ordering"), "agent")
+        self.assertEqual(params.get("limit"), 5)
+        self.assertEqual(params.get("offset"), 10)
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_finished_rooms_with_ordering_and_dates(self, mock_rooms):

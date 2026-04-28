@@ -2,11 +2,14 @@ from insights.db.postgres.django.connection import dictfetchall, get_cursor
 from insights.sources.filter_strategies import PostgreSQLFilterStrategy
 from insights.sources.sectors.clients import SectorSQLQueryGenerator
 from insights.sources.sectors.filtersets import SectorFilterSet
+from insights.sources.base import BaseQueryExecutor
 from insights.sources.sectors.query_builder import SectorSQLQueryBuilder
 
 
-class QueryExecutor:
+class QueryExecutor(BaseQueryExecutor):
+    @classmethod
     def execute(
+        cls,
         filters: dict,
         operation: str,
         parser: callable,
