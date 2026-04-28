@@ -10,7 +10,6 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.authentication.permissions import ProjectAuthPermission
