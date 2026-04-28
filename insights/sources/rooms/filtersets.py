@@ -13,8 +13,8 @@ class RoomFilterSet:
         source_field="uuid",
         table_alias="p",
         join_clause={
-            "q": "INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id AND q.is_deleted=false",
-            "s": "INNER JOIN public.sectors_sector AS s ON s.uuid=q.sector_id AND s.is_deleted=false",
+            "q": "INNER JOIN public.queues_queue AS q ON q.uuid=r.queue_id",
+            "s": "INNER JOIN public.sectors_sector AS s ON s.uuid=q.sector_id",
             "p": "INNER JOIN public.projects_project AS p ON p.uuid=s.project_id",
         },
     )
