@@ -19,3 +19,14 @@ class ChatsRESTClient(InternalAuthentication):
         )
 
         return response.json()
+
+    def get_agents(self, project_uuid: str, query_filters: dict) -> dict:
+        response = request_with_retry(
+            url=f"{self.base_url}/v2/internal/dashboard/{project_uuid}/agent/",
+            headers=self.headers,
+            params=query_filters,
+            method="GET",
+            timeout=60,
+            max_retries=3,
+        )
+        return response.json()
