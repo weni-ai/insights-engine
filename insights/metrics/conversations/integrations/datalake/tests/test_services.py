@@ -1709,7 +1709,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         start_date = datetime.now() - timedelta(days=1)
         end_date = datetime.now()
 
-        self.mock_events_client.get_unique_contacts_count.return_value = 42
+        self.mock_events_client.get_unique_contacts_count.return_value = [
+            {"unique_contact_urns": 42}
+        ]
 
         result = self.service.get_unique_contacts_count(
             project_uuid=project_uuid,
@@ -1732,7 +1734,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         start_date = datetime.now() - timedelta(days=1)
         end_date = datetime.now()
 
-        self.mock_events_client.get_unique_contacts_count.return_value = 42
+        self.mock_events_client.get_unique_contacts_count.return_value = [
+            {"unique_contact_urns": 42}
+        ]
         self.mock_cache_client.get.return_value = json.dumps(42)
 
         result = self.service.get_unique_contacts_count(
@@ -1761,7 +1765,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         start_date = datetime.now() - timedelta(days=1)
         end_date = datetime.now()
 
-        self.mock_events_client.get_returning_contacts_count.return_value = 15
+        self.mock_events_client.get_returning_contacts_count.return_value = [
+            {"recurring_contact_urns": 15}
+        ]
 
         result = self.service.get_returning_contacts_count(
             project_uuid=project_uuid,
@@ -1784,7 +1790,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         start_date = datetime.now() - timedelta(days=1)
         end_date = datetime.now()
 
-        self.mock_events_client.get_returning_contacts_count.return_value = 15
+        self.mock_events_client.get_returning_contacts_count.return_value = [
+            {"recurring_contact_urns": 15}
+        ]
         self.mock_cache_client.get.return_value = json.dumps(15)
 
         result = self.service.get_returning_contacts_count(
