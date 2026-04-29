@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 import logging
 from typing import Callable, Optional
 from uuid import UUID
@@ -15,11 +16,14 @@ from insights.metrics.conversations.dataclass import (
     AgentInvocationItem,
     AgentInvocationMetrics,
     AvailableWidgetsList,
+    AvgConversationsPerContactMetricsData,
+    ContactMetricsData,
     ConversationsTotalsMetrics,
     CrosstabItemData,
     CrosstabSubItemData,
     NPSMetrics,
     NPSMetricsField,
+    ReturningContactsMetricsData,
     SalesFunnelMetrics,
     SubtopicMetrics,
     ToolResultAgent,
@@ -27,7 +31,7 @@ from insights.metrics.conversations.dataclass import (
     ToolResultMetrics,
     TopicMetrics,
     TopicsDistributionMetrics,
-    NPSMetrics,
+    UniqueContactsMetricsData,
 )
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     CrosstabSource,
@@ -336,6 +340,17 @@ class BaseConversationsMetricsService(ABC):
     ) -> dict:
         """
         Get absolute numbers
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    def get_contacts_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ContactMetricsData:
+        """
+        Get contacts metrics
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -1328,3 +1343,52 @@ class ConversationsMetricsService(
         )
 
         return AbsoluteNumbersMetrics(value=value)
+
+    def get_contacts_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ContactMetricsData:
+        common_kwargs = {
+            "project_uuid": project_uuid,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            unique_future = executor.submit(
+                self.datalake_service.get_unique_contacts_count, **common_kwargs
+            )
+            returning_future = executor.submit(
+                self.datalake_service.get_returning_contacts_count, **common_kwargs
+            )
+            totals_future = executor.submit(
+                self.datalake_service.get_conversations_totals, **common_kwargs
+            )
+
+        unique_contacts_count = unique_future.result()
+        returning_contacts_count = returning_future.result()
+        total_conversations = totals_future.result().total_conversations.value
+
+        returning_percentage = (
+            round((returning_contacts_count / unique_contacts_count) * 100, 2)
+            if unique_contacts_count > 0
+            else 0
+        )
+        avg_conversations_per_contact = (
+            round(total_conversations / unique_contacts_count, 2)
+            if unique_contacts_count > 0
+            else 0
+        )
+
+        return ContactMetricsData(
+            unique=UniqueContactsMetricsData(value=unique_contacts_count),
+            returning=ReturningContactsMetricsData(
+                value=returning_contacts_count,
+                percentage=returning_percentage,
+            ),
+            avg_conversations_per_contact=AvgConversationsPerContactMetricsData(
+                value=avg_conversations_per_contact,
+            ),
+        )

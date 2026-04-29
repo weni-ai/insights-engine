@@ -16,17 +16,21 @@ from insights.metrics.conversations.dataclass import (
     AgentInvocationItem,
     AgentInvocationMetrics,
     AvailableWidgetsList,
+    AvgConversationsPerContactMetricsData,
+    ContactMetricsData,
     ConversationsTotalsMetrics,
     ConversationsTotalsMetric,
     CrosstabItemData,
     CrosstabSubItemData,
     NPSMetrics,
     NPSMetricsField,
+    ReturningContactsMetricsData,
     SalesFunnelMetrics,
     ToolResultAgent,
     ToolResultItem,
     ToolResultMetrics,
     TopicsDistributionMetrics,
+    UniqueContactsMetricsData,
 )
 from insights.metrics.conversations.enums import (
     AbsoluteNumbersMetricsType,
@@ -2155,3 +2159,99 @@ class TestConversationsMetricsService(TestCase):
                 start_date=self.start_date,
                 end_date=self.end_date,
             )
+
+    def test_get_contacts_metrics(self):
+        project_uuid = self.project.uuid
+
+        self.mock_datalake_service.get_unique_contacts_count.return_value = 50
+        self.mock_datalake_service.get_returning_contacts_count.return_value = 10
+        self.mock_datalake_service.get_conversations_totals.return_value = (
+            ConversationsTotalsMetrics(
+                total_conversations=ConversationsTotalsMetric(
+                    value=200, percentage=100
+                ),
+                resolved=ConversationsTotalsMetric(value=120, percentage=60),
+                unresolved=ConversationsTotalsMetric(value=80, percentage=40),
+                transferred_to_human=ConversationsTotalsMetric(value=0, percentage=0),
+            )
+        )
+
+        result = self.service.get_contacts_metrics(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(result, ContactMetricsData)
+        self.assertEqual(result.unique, UniqueContactsMetricsData(value=50))
+        self.assertEqual(
+            result.returning,
+            ReturningContactsMetricsData(value=10, percentage=20.0),
+        )
+        self.assertEqual(
+            result.avg_conversations_per_contact,
+            AvgConversationsPerContactMetricsData(value=4.0),
+        )
+
+        self.mock_datalake_service.get_unique_contacts_count.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+        self.mock_datalake_service.get_returning_contacts_count.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+        self.mock_datalake_service.get_conversations_totals.assert_called_once_with(
+            project_uuid=project_uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+    def test_get_contacts_metrics_with_zero_unique_contacts(self):
+        self.mock_datalake_service.get_unique_contacts_count.return_value = 0
+        self.mock_datalake_service.get_returning_contacts_count.return_value = 0
+        self.mock_datalake_service.get_conversations_totals.return_value = (
+            ConversationsTotalsMetrics(
+                total_conversations=ConversationsTotalsMetric(value=0, percentage=100),
+                resolved=ConversationsTotalsMetric(value=0, percentage=0),
+                unresolved=ConversationsTotalsMetric(value=0, percentage=0),
+                transferred_to_human=ConversationsTotalsMetric(value=0, percentage=0),
+            )
+        )
+
+        result = self.service.get_contacts_metrics(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertIsInstance(result, ContactMetricsData)
+        self.assertEqual(result.unique.value, 0)
+        self.assertEqual(result.returning.value, 0)
+        self.assertEqual(result.returning.percentage, 0)
+        self.assertEqual(result.avg_conversations_per_contact.value, 0)
+
+    def test_get_contacts_metrics_returning_percentage_calculation(self):
+        self.mock_datalake_service.get_unique_contacts_count.return_value = 80
+        self.mock_datalake_service.get_returning_contacts_count.return_value = 25
+        self.mock_datalake_service.get_conversations_totals.return_value = (
+            ConversationsTotalsMetrics(
+                total_conversations=ConversationsTotalsMetric(
+                    value=150, percentage=100
+                ),
+                resolved=ConversationsTotalsMetric(value=90, percentage=60),
+                unresolved=ConversationsTotalsMetric(value=60, percentage=40),
+                transferred_to_human=ConversationsTotalsMetric(value=0, percentage=0),
+            )
+        )
+
+        result = self.service.get_contacts_metrics(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(result.returning.percentage, 31.25)
+        self.assertEqual(result.avg_conversations_per_contact.value, 1.88)

@@ -824,34 +824,6 @@ class HumanSupportDashboardService:
             "results": formatted_results,
         }
 
-    def get_analysis_detailed_monitoring_status_v2(
-        self, filters: dict | None = None
-    ) -> dict:
-        ordering_fields = {"agent", "-agent"}
-        params = self._get_analysis_detailed_monitoring_status_filters(
-            filters, ordering_fields
-        )
-
-        response = ChatsRESTClient().get_status_by_agent(str(self.project.uuid), params)
-
-        formatted_results = []
-        for agent_data in response.get("results", []):
-            formatted_results.append(
-                {
-                    "agent": agent_data.get("agent"),
-                    "agent_email": agent_data.get("agent_email"),
-                    "custom_status": agent_data.get("custom_status", []),
-                    "link": agent_data.get("link"),
-                }
-            )
-
-        return {
-            "next": response.get("next"),
-            "previous": response.get("previous"),
-            "count": response.get("count"),
-            "results": formatted_results,
-        }
-
     def _params_for_finished_rooms_list(
         self, normalized: dict, filters: dict | None
     ) -> dict:
@@ -904,6 +876,34 @@ class HumanSupportDashboardService:
                 params["ordering"] = f"{prefix}{mapped_field}"
 
         return params
+
+    def get_analysis_detailed_monitoring_status_v2(
+        self, filters: dict | None = None
+    ) -> dict:
+        ordering_fields = {"agent", "-agent"}
+        params = self._get_analysis_detailed_monitoring_status_filters(
+            filters, ordering_fields
+        )
+
+        response = ChatsRESTClient().get_status_by_agent(str(self.project.uuid), params)
+
+        formatted_results = []
+        for agent_data in response.get("results", []):
+            formatted_results.append(
+                {
+                    "agent": agent_data.get("agent"),
+                    "agent_email": agent_data.get("agent_email"),
+                    "custom_status": agent_data.get("custom_status", []),
+                    "link": agent_data.get("link"),
+                }
+            )
+
+        return {
+            "next": response.get("next"),
+            "previous": response.get("previous"),
+            "count": response.get("count"),
+            "results": formatted_results,
+        }
 
     @staticmethod
     def _chats_url_to_query_string(url: str | None) -> str | None:

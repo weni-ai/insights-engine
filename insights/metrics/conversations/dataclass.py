@@ -267,3 +267,26 @@ class AbsoluteNumbersMetrics:
     """
 
     value: float
+
+
+@dataclass(frozen=True)
+class UniqueContactsMetricsData:
+    value: int
+
+
+@dataclass(frozen=True)
+class ReturningContactsMetricsData:
+    value: int
+    percentage: float
+
+
+@dataclass(frozen=True)
+class AvgConversationsPerContactMetricsData:
+    value: float
+
+
+@dataclass(frozen=True)
+class ContactMetricsData:
+    unique: UniqueContactsMetricsData
+    returning: ReturningContactsMetricsData
+    avg_conversations_per_contact: AvgConversationsPerContactMetricsData

@@ -24,7 +24,7 @@ from insights.metrics.conversations.services import (
     ConversationsMetricsService,
 )
 from insights.sources.dl_events.tests.mock_client import (
-    ClassificationMockDataLakeEventsClient,
+    MockDataLakeEventsClient,
 )
 from insights.sources.integrations.clients import NexusConversationsAPIClient
 from insights.users.models import User
@@ -51,7 +51,7 @@ class TestConversationsReportService(TestCase):
             ),
             events_limit_per_page=5,
             page_limit=5,
-            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            datalake_events_client=MockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
@@ -379,7 +379,7 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(self.service.get_next_report_to_generate(), first_report)
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
@@ -416,7 +416,7 @@ class TestConversationsReportService(TestCase):
         )
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
@@ -461,7 +461,7 @@ class TestConversationsReportService(TestCase):
         )
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
@@ -506,7 +506,7 @@ class TestConversationsReportService(TestCase):
         )
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     def test_get_datalake_events_when_page_limit_is_reached(
         self, mock_get_datalake_events
@@ -613,7 +613,7 @@ class TestConversationsReportService(TestCase):
         self.assertEqual(worksheet.data[1]["Subtopic"], "Unclassified")
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     def test_get_datalake_events_when_report_is_failed(self, mock_get_datalake_events):
         mock_events = [{"id": "1"}, {"id": "2"}]
@@ -1024,7 +1024,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             ),
             events_limit_per_page=5,
             page_limit=5,
-            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            datalake_events_client=MockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
@@ -1243,7 +1243,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             mock_cache_get.return_value = "invalid json"
 
             with patch(
-                "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+                "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
             ) as mock_get_events:
                 mock_get_events.return_value = []
 
@@ -1264,7 +1264,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         )
 
         with patch(
-            "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+            "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
         ) as mock_get_events:
             mock_get_events.return_value = [{}]  # Empty dict
 
@@ -2593,7 +2593,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_custom_widget.assert_called_once()
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     def test_get_datalake_events_with_datetime_objects(self, mock_get_events):
         """Test get_datalake_events with datetime objects in kwargs."""

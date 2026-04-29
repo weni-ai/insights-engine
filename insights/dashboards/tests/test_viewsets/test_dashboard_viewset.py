@@ -389,9 +389,9 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertIsInstance(response.data, dict)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.get_source_data_from_widget")
+    @patch("insights.dashboards.api.v1.viewsets.get_source_data_from_widget")
     @patch(
-        "insights.dashboards.viewsets.is_feature_active_for_attributes",
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
         return_value=False,
     )
     def test_get_widget_data(self, mock_feature_flag, mock_get_source_data):
@@ -421,9 +421,9 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.DataSourceService")
+    @patch("insights.dashboards.api.v1.viewsets.DataSourceService")
     @patch(
-        "insights.dashboards.viewsets.is_feature_active_for_attributes",
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
         return_value=True,
     )
     def test_get_widget_data_with_feature_flag_enabled(
@@ -458,9 +458,9 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.get_source_data_from_widget")
+    @patch("insights.dashboards.api.v1.viewsets.get_source_data_from_widget")
     @patch(
-        "insights.dashboards.viewsets.is_feature_active_for_attributes",
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
         return_value=False,
     )
     def test_get_widget_data_feature_flag_disabled_uses_legacy(
@@ -488,7 +488,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
 
     @with_project_auth
     @patch(
-        "insights.dashboards.viewsets.is_feature_active_for_attributes",
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
         return_value=True,
     )
     def test_get_widget_data_feature_flag_passes_correct_attributes(
@@ -506,7 +506,9 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             position={},
         )
 
-        with patch("insights.dashboards.viewsets.DataSourceService") as MockService:
+        with patch(
+            "insights.dashboards.api.v1.viewsets.DataSourceService"
+        ) as MockService:
             mock_service = MockService.return_value
             mock_service.get_source_data_from_widget.return_value = {}
 
@@ -571,9 +573,9 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.get_source_data_from_widget")
+    @patch("insights.dashboards.api.v1.viewsets.get_source_data_from_widget")
     @patch(
-        "insights.dashboards.viewsets.is_feature_active_for_attributes",
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
         return_value=False,
     )
     def test_get_report_data(self, mock_feature_flag, mock_get_source_data):

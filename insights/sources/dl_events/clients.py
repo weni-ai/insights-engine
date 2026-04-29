@@ -71,6 +71,18 @@ class BaseDataLakeEventsClient(ABC):
         Get the minimum of events from the DataLakeEvents source.
         """
 
+    @abstractmethod
+    def get_unique_contacts_count(self, **query_kwargs) -> int:
+        """
+        Get the count of unique contacts from the DataLakeEvents source.
+        """
+
+    @abstractmethod
+    def get_returning_contacts_count(self, **query_kwargs) -> int:
+        """
+        Get the count of returning contacts from the DataLakeEvents source.
+        """
+
 
 class DataLakeEventsClient(BaseDataLakeEventsClient):
     """
@@ -170,3 +182,11 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
         Get the minimum of events from the DataLakeEvents source.
         """
         return get_events_min(**query_kwargs)
+
+    def get_unique_contacts_count(self, **query_kwargs) -> int:
+        # TODO: Implement this once the functions become available
+        return 0
+
+    def get_returning_contacts_count(self, **query_kwargs) -> int:
+        # TODO: Implement this once the functions become available
+        return 0

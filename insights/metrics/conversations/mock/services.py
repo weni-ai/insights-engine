@@ -6,10 +6,13 @@ from insights.metrics.conversations.dataclass import (
     AgentInvocationAgent,
     AgentInvocationItem,
     AgentInvocationMetrics,
+    AvgConversationsPerContactMetricsData,
+    ContactMetricsData,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
     NPSMetrics,
     NPSMetricsField,
+    ReturningContactsMetricsData,
     SubtopicMetrics,
     ToolResultAgent,
     ToolResultItem,
@@ -18,6 +21,7 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
     SalesFunnelMetrics,
     AvailableWidgetsList,
+    UniqueContactsMetricsData,
 )
 from insights.metrics.conversations.enums import (
     AvailableWidgetsListType,
@@ -286,6 +290,20 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         self, project_uuid: UUID, widget_type: AvailableWidgetsListType | None = None
     ) -> AvailableWidgetsList:
         return []
+
+    def get_contacts_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ContactMetricsData:
+        return ContactMetricsData(
+            unique=UniqueContactsMetricsData(value=50),
+            returning=ReturningContactsMetricsData(value=10, percentage=20.0),
+            avg_conversations_per_contact=AvgConversationsPerContactMetricsData(
+                value=4.0
+            ),
+        )
 
     def get_crosstab_data(
         self,

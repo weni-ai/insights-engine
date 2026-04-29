@@ -37,6 +37,8 @@ from insights.metrics.conversations.api.v1.serializers import (
     AgentInvocationQueryParamsSerializer,
     AvailableWidgetsQueryParamsSerializer,
     AvailableWidgetsSerializer,
+    ContactsMetricsQueryParamsSerializer,
+    ContactsMetricsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
     ConversationTotalsMetricsSerializer,
     CreateTopicSerializer,
@@ -634,6 +636,30 @@ class ConversationsMetricsViewSet(
         response_data = ToolResultMetricsSerializer(metrics).data
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="contacts",
+        url_name="contacts",
+    )
+    def get_contacts_metrics(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get contacts metrics
+        """
+        query_params = ContactsMetricsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        metrics = self.service.get_contacts_metrics(
+            project_uuid=query_params.validated_data["project_uuid"],
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+        )
+
+        return Response(
+            ContactsMetricsSerializer(metrics).data,
+            status=status.HTTP_200_OK,
+        )
 
 
 class InternalConversationsMetricsViewSet(GenericViewSet):

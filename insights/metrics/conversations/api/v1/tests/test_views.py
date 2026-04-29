@@ -23,14 +23,18 @@ from insights.metrics.conversations.dataclass import (
     AgentInvocationItem,
     AgentInvocationMetrics,
     AvailableWidgetsList,
+    AvgConversationsPerContactMetricsData,
+    ContactMetricsData,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
     CrosstabItemData,
     CrosstabSubItemData,
+    ReturningContactsMetricsData,
     SalesFunnelMetrics,
     ToolResultAgent,
     ToolResultItem,
     ToolResultMetrics,
+    UniqueContactsMetricsData,
 )
 from insights.metrics.conversations.enums import (
     AvailableWidgets,
@@ -203,6 +207,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
+    def get_contacts_metrics(self, query_params: dict) -> Response:
+        url = reverse("conversations-contacts")
+
+        return self.client.get(url, query_params, format="json")
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -314,6 +323,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_agent_invocation_when_unauthenticated(self):
         response = self.get_agent_invocation({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_contacts_metrics_when_unauthenticated(self):
+        response = self.get_contacts_metrics({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -1414,6 +1428,75 @@ class TestConversationsMetricsViewSetAsAuthenticatedUser(
         mock_get_tool_results.side_effect = RuntimeError("Service error")
 
         response = self.get_tool_result(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        data = json.loads(response.content)
+        self.assertIn("code", data)
+        self.assertEqual(data["code"], "INTERNAL_ERROR")
+        self.assertIn("event_id", data)
+
+    def test_cannot_get_contacts_metrics_without_project_uuid(self):
+        response = self.get_contacts_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_cannot_get_contacts_metrics_without_permission(self):
+        response = self.get_contacts_metrics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_cannot_get_contacts_metrics_without_required_params(self):
+        response = self.get_contacts_metrics({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_contacts_metrics"
+    )
+    def test_get_contacts_metrics(self, mock_get_contacts_metrics):
+        mock_get_contacts_metrics.return_value = ContactMetricsData(
+            unique=UniqueContactsMetricsData(value=80),
+            returning=ReturningContactsMetricsData(value=28, percentage=35.0),
+            avg_conversations_per_contact=AvgConversationsPerContactMetricsData(
+                value=1.25
+            ),
+        )
+
+        response = self.get_contacts_metrics(
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["unique"]["value"], 80)
+        self.assertEqual(response.data["returning"]["value"], 28)
+        self.assertEqual(response.data["returning"]["percentage"], 35.0)
+        self.assertEqual(response.data["avg_conversations_per_contact"]["value"], 1.25)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_contacts_metrics"
+    )
+    def test_get_contacts_metrics_returns_500_on_service_error(
+        self, mock_get_contacts_metrics
+    ):
+        mock_get_contacts_metrics.side_effect = RuntimeError("Service error")
+
+        response = self.get_contacts_metrics(
             {
                 "project_uuid": self.project.uuid,
                 "start_date": "2024-01-01",
