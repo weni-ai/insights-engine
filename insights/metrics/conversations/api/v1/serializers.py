@@ -610,3 +610,28 @@ class AbsoluteNumbersSerializer(serializers.Serializer):
     """
 
     value = serializers.FloatField()
+
+
+class ContactsMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for contacts metrics query params
+    """
+
+
+class UniqueContactsMetricsSerializer(serializers.Serializer):
+    value = serializers.IntegerField()
+
+
+class ReturningContactsMetricsSerializer(serializers.Serializer):
+    value = serializers.IntegerField()
+    percentage = serializers.FloatField()
+
+
+class AvgConversationsPerContactMetricsSerializer(serializers.Serializer):
+    value = serializers.FloatField()
+
+
+class ContactsMetricsSerializer(serializers.Serializer):
+    unique = UniqueContactsMetricsSerializer()
+    returning = ReturningContactsMetricsSerializer()
+    avg_conversations_per_contact = AvgConversationsPerContactMetricsSerializer()
