@@ -7,10 +7,13 @@ from insights.metrics.conversations.dataclass import (
     AgentInvocationAgent,
     AgentInvocationItem,
     AgentInvocationMetrics,
+    AvgConversationsPerContactMetricsData,
+    ContactMetricsData,
     ConversationsTotalsMetric,
     ConversationsTotalsMetrics,
     CrosstabItemData,
     CrosstabSubItemData,
+    ReturningContactsMetricsData,
     SalesFunnelMetrics,
     SubtopicMetrics,
     ToolResultAgent,
@@ -18,6 +21,7 @@ from insights.metrics.conversations.dataclass import (
     ToolResultMetrics,
     TopicMetrics,
     TopicsDistributionMetrics,
+    UniqueContactsMetricsData,
 )
 from insights.metrics.conversations.enums import (
     ConversationType,
@@ -29,6 +33,8 @@ from insights.metrics.conversations.api.v1.serializers import (
     AgentInvocationItemSerializer,
     AgentInvocationMetricsSerializer,
     AgentInvocationQueryParamsSerializer,
+    ContactsMetricsQueryParamsSerializer,
+    ContactsMetricsSerializer,
     ConversationBaseQueryParamsSerializer,
     ConversationTotalsMetricsQueryParamsSerializer,
     ConversationTotalsMetricsSerializer,
@@ -1246,3 +1252,116 @@ class TestToolResultMetricsSerializer(TestCase):
 
         self.assertEqual(serializer.data["total"], 0)
         self.assertEqual(len(serializer.data["results"]), 0)
+
+
+class TestContactsMetricsQueryParamsSerializer(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+        )
+
+    def test_serializer_valid(self):
+        serializer = ContactsMetricsQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertIn("project", serializer.validated_data)
+        self.assertEqual(
+            str(serializer.validated_data["project_uuid"]), str(self.project.uuid)
+        )
+        self.assertEqual(serializer.validated_data["project"], self.project)
+
+    def test_serializer_missing_project_uuid(self):
+        serializer = ContactsMetricsQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("project_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["project_uuid"][0].code, "required")
+
+    def test_serializer_missing_start_date(self):
+        serializer = ContactsMetricsQueryParamsSerializer(
+            data={
+                "end_date": "2021-01-02",
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+
+    def test_serializer_missing_end_date(self):
+        serializer = ContactsMetricsQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("end_date", serializer.errors)
+
+    def test_serializer_invalid_project_uuid(self):
+        serializer = ContactsMetricsQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-01",
+                "end_date": "2021-01-02",
+                "project_uuid": "123e4567-e89b-12d3-a456-426614174000",
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("project_uuid", serializer.errors)
+        self.assertEqual(serializer.errors["project_uuid"][0].code, "project_not_found")
+
+    def test_serializer_invalid_date_range(self):
+        serializer = ContactsMetricsQueryParamsSerializer(
+            data={
+                "start_date": "2021-01-02",
+                "end_date": "2021-01-01",
+                "project_uuid": self.project.uuid,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+        self.assertEqual(
+            serializer.errors["start_date"][0].code, "start_date_after_end_date"
+        )
+
+
+class TestContactsMetricsSerializer(TestCase):
+    def test_serializer(self):
+        metrics = ContactMetricsData(
+            unique=UniqueContactsMetricsData(value=80),
+            returning=ReturningContactsMetricsData(value=28, percentage=35.0),
+            avg_conversations_per_contact=AvgConversationsPerContactMetricsData(
+                value=1.25
+            ),
+        )
+        serializer = ContactsMetricsSerializer(metrics)
+        data = serializer.data
+
+        self.assertEqual(data["unique"]["value"], 80)
+        self.assertEqual(data["returning"]["value"], 28)
+        self.assertEqual(data["returning"]["percentage"], 35.0)
+        self.assertEqual(data["avg_conversations_per_contact"]["value"], 1.25)
+
+    def test_serializer_with_zero_values(self):
+        metrics = ContactMetricsData(
+            unique=UniqueContactsMetricsData(value=0),
+            returning=ReturningContactsMetricsData(value=0, percentage=0.0),
+            avg_conversations_per_contact=AvgConversationsPerContactMetricsData(
+                value=0.0
+            ),
+        )
+        serializer = ContactsMetricsSerializer(metrics)
+        data = serializer.data
+
+        self.assertEqual(data["unique"]["value"], 0)
+        self.assertEqual(data["returning"]["value"], 0)
+        self.assertEqual(data["returning"]["percentage"], 0.0)
+        self.assertEqual(data["avg_conversations_per_contact"]["value"], 0.0)
