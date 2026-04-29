@@ -1723,6 +1723,8 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             project=project_uuid,
             date_start=start_date,
             date_end=end_date,
+            key="conversation_classification",
+            table="conversation_classification",
         )
 
     def test_get_unique_contacts_count_with_cache(self):
@@ -1773,6 +1775,8 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             project=project_uuid,
             date_start=start_date,
             date_end=end_date,
+            key="conversation_classification",
+            table="conversation_classification",
         )
 
     def test_get_returning_contacts_count_with_cache(self):

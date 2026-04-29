@@ -1527,6 +1527,8 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 project=project_uuid,
                 date_start=start_date,
                 date_end=end_date,
+                key="conversation_classification",
+                table="conversation_classification",
             )
         except Exception as e:
             logger.error("Failed to get unique contacts count: %s", e)
@@ -1562,6 +1564,8 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 project=project_uuid,
                 date_start=start_date,
                 date_end=end_date,
+                key="conversation_classification",
+                table="conversation_classification",
             )
         except Exception as e:
             logger.error("Failed to get returning contacts count: %s", e)

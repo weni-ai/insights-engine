@@ -14,6 +14,10 @@ from weni_datalake_sdk.clients.redshift.events import (
     get_events_avg,
     get_events_max,
     get_events_min,
+    get_events_unique_contact_urns,
+    get_events_recurring_contact_urns,
+    get_events_silver_unique_contact_urns,
+    get_events_silver_recurring_contact_urns,
 )
 
 
@@ -174,10 +178,30 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
         """
         return get_events_min(**query_kwargs)
 
-    def get_unique_contacts_count(self, **query_kwargs) -> int:
-        # TODO: Implement this once the functions become available
-        return 0
+    def get_unique_contacts_count(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> int:
+        if table is not None and USE_SILVER_TABLES:
+            query_kwargs["table"] = table
+            method = get_events_silver_unique_contact_urns
+        else:
+            method = get_events_unique_contact_urns
 
-    def get_returning_contacts_count(self, **query_kwargs) -> int:
-        # TODO: Implement this once the functions become available
-        return 0
+        try:
+            return method(**query_kwargs)
+        except Exception as e:
+            raise e
+
+    def get_returning_contacts_count(
+        self, table: Optional[str] = None, **query_kwargs
+    ) -> int:
+        if table is not None and USE_SILVER_TABLES:
+            query_kwargs["table"] = table
+            method = get_events_silver_recurring_contact_urns
+        else:
+            method = get_events_recurring_contact_urns
+
+        try:
+            return method(**query_kwargs)
+        except Exception as e:
+            raise e
