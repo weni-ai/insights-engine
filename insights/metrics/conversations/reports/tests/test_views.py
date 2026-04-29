@@ -263,6 +263,43 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
             call_kwargs["source_config"]["crosstab_widgets"],
         )
 
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_current_report_for_project"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.request_generation"
+    )
+    def test_request_generation_with_contacts_section(
+        self,
+        mock_request_generation,
+        mock_get_current_report_for_project,
+    ):
+        report = Report(
+            project=self.project,
+            source=ReportSource.CONVERSATIONS_DASHBOARD,
+            status=ReportStatus.PENDING,
+            requested_by=self.user,
+        )
+        mock_request_generation.return_value = report
+        mock_get_current_report_for_project.return_value = None
+
+        response = self.request_generation(
+            {
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-02",
+                "sections": ["CONTACTS"],
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.data["status"], ReportStatus.PENDING)
+
+        call_kwargs = mock_request_generation.call_args[1]
+        self.assertEqual(call_kwargs["source_config"]["sections"], ["CONTACTS"])
+
 
 class BaseTestAvailableWidgetsViewSet(APITestCase):
     def get_available_widgets(self, query_params: dict) -> Response:
