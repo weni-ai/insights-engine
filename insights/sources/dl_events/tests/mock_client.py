@@ -2,7 +2,7 @@ from insights.sources.dl_events.clients import BaseDataLakeEventsClient
 from insights.sources.dl_events.tests.factories import ClassificationEventFactory
 
 
-class ClassificationMockDataLakeEventsClient(BaseDataLakeEventsClient):
+class MockDataLakeEventsClient(BaseDataLakeEventsClient):
     """
     Mock client for the DataLakeEvents source.
     """
@@ -39,3 +39,9 @@ class ClassificationMockDataLakeEventsClient(BaseDataLakeEventsClient):
 
     def get_events_min(self, **query_kwargs) -> dict:
         return [{"min_value": 1.0}]
+
+    def get_unique_contacts_count(self, **query_kwargs) -> int:
+        return 0
+
+    def get_returning_contacts_count(self, **query_kwargs) -> int:
+        return 0
