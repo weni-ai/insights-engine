@@ -11,3 +11,4 @@ class ConversationsReportSections(TextChoices):
     NPS_HUMAN = "NPS_HUMAN"
     AGENT_INVOCATION = "AGENT_INVOCATION"
     TOOL_RESULT = "TOOL_RESULT"
+    CONTACTS = "CONTACTS"

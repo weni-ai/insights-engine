@@ -718,6 +718,23 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             [ConversationsReportSections.AGENT_INVOCATION],
         )
 
+    def test_serializer_with_contacts_section(self):
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.CONTACTS],
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["project"], self.project)
+        self.assertEqual(
+            serializer.validated_data["sections"],
+            [ConversationsReportSections.CONTACTS],
+        )
+
     def test_serializer_without_sections_custom_widgets_and_crosstab_widgets(self):
         serializer = RequestConversationsReportGenerationSerializer(
             data={

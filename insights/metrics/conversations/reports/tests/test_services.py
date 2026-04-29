@@ -2070,6 +2070,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
@@ -2155,6 +2156,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
             "CSAT_AI",
             "CSAT_HUMAN",
             "NPS_AI",
@@ -2217,6 +2219,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(
@@ -2283,6 +2286,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
             "CSAT_AI",
             "NPS_AI",
         ]
@@ -2331,6 +2335,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
             "CSAT_AI",
         ]
         self.assertEqual(result.sections, expected_sections)
@@ -2396,6 +2401,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
@@ -3880,3 +3886,128 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(worksheet.data[0]["Agent"], "unknown_agent")
         self.assertEqual(worksheet.data[0]["Invocations"], 5)
         self.assertEqual(worksheet.data[0]["Percentage"], 100.0)
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_contacts_metrics"
+    )
+    def test_get_contacts_worksheet(self, mock_get_contacts_metrics):
+        from insights.metrics.conversations.dataclass import (
+            ContactMetricsData,
+            UniqueContactsMetricsData,
+            ReturningContactsMetricsData,
+            AvgConversationsPerContactMetricsData,
+        )
+
+        mock_get_contacts_metrics.return_value = ContactMetricsData(
+            unique=UniqueContactsMetricsData(value=80),
+            returning=ReturningContactsMetricsData(value=28, percentage=35.0),
+            avg_conversations_per_contact=AvgConversationsPerContactMetricsData(
+                value=1.25
+            ),
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["CONTACTS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_contacts_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Contacts")
+        self.assertEqual(len(worksheet.data), 3)
+
+        self.assertEqual(worksheet.data[0]["Metric"], "Unique contacts")
+        self.assertEqual(worksheet.data[0]["Value"], 80)
+        self.assertEqual(worksheet.data[0]["Percentage"], "")
+
+        self.assertEqual(worksheet.data[1]["Metric"], "Returning contacts")
+        self.assertEqual(worksheet.data[1]["Value"], 28)
+        self.assertEqual(worksheet.data[1]["Percentage"], 35.0)
+
+        self.assertEqual(
+            worksheet.data[2]["Metric"], "Avg conversations per contact"
+        )
+        self.assertEqual(worksheet.data[2]["Value"], 1.25)
+        self.assertEqual(worksheet.data[2]["Percentage"], "")
+
+        mock_get_contacts_metrics.assert_called_once_with(
+            project_uuid=self.project.uuid,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_contacts_metrics"
+    )
+    def test_get_contacts_worksheet_with_zero_values(self, mock_get_contacts_metrics):
+        from insights.metrics.conversations.dataclass import (
+            ContactMetricsData,
+            UniqueContactsMetricsData,
+            ReturningContactsMetricsData,
+            AvgConversationsPerContactMetricsData,
+        )
+
+        mock_get_contacts_metrics.return_value = ContactMetricsData(
+            unique=UniqueContactsMetricsData(value=0),
+            returning=ReturningContactsMetricsData(value=0, percentage=0.0),
+            avg_conversations_per_contact=AvgConversationsPerContactMetricsData(
+                value=0.0
+            ),
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["CONTACTS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_contacts_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Contacts")
+        self.assertEqual(len(worksheet.data), 3)
+        self.assertEqual(worksheet.data[0]["Value"], 0)
+        self.assertEqual(worksheet.data[1]["Value"], 0)
+        self.assertEqual(worksheet.data[1]["Percentage"], 0.0)
+        self.assertEqual(worksheet.data[2]["Value"], 0.0)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_contacts_worksheet"
+    )
+    def test_get_worksheets_with_contacts_section(self, mock_get_contacts_worksheet):
+        mock_get_contacts_worksheet.return_value = ConversationsReportWorksheet(
+            name="Contacts",
+            data=[{"Metric": "Unique contacts", "Value": 80, "Percentage": ""}],
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["CONTACTS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        worksheets = self.service._get_worksheets(
+            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+        )
+
+        self.assertEqual(len(worksheets), 1)
+        mock_get_contacts_worksheet.assert_called_once()

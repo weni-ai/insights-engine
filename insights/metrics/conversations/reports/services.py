@@ -266,6 +266,18 @@ class BaseConversationsReportService(ABC):
         """
         raise NotImplementedError("Subclasses must implement this method")
 
+    @abstractmethod
+    def get_contacts_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get contacts worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
 
 class ConversationsReportService(BaseConversationsReportService):
     """
@@ -632,6 +644,10 @@ class ConversationsReportService(BaseConversationsReportService):
             ),
             "AGENT_INVOCATION": (
                 self.get_agent_invocation_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "CONTACTS": (
+                self.get_contacts_worksheet,
                 {"report": report, "start_date": start_date, "end_date": end_date},
             ),
         }
@@ -1771,6 +1787,53 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def get_contacts_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        contacts_metrics = self.metrics_service.get_contacts_metrics(
+            project_uuid=report.project.uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Contacts")
+            metric_label = gettext("Metric")
+            value_label = gettext("Value")
+            percentage_label = gettext("Percentage")
+
+            unique_contacts_label = gettext("Unique contacts")
+            returning_contacts_label = gettext("Returning contacts")
+            avg_conversations_per_contact_label = gettext(
+                "Avg conversations per contact"
+            )
+
+        data = [
+            {
+                metric_label: unique_contacts_label,
+                value_label: contacts_metrics.unique.value,
+                percentage_label: "",
+            },
+            {
+                metric_label: returning_contacts_label,
+                value_label: contacts_metrics.returning.value,
+                percentage_label: contacts_metrics.returning.percentage,
+            },
+            {
+                metric_label: avg_conversations_per_contact_label,
+                value_label: contacts_metrics.avg_conversations_per_contact.value,
+                percentage_label: "",
+            },
+        ]
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
     def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
         """
         Get available widgets.
@@ -1782,6 +1845,7 @@ class ConversationsReportService(BaseConversationsReportService):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
         ]
 
         special_widgets_get_functions = [
