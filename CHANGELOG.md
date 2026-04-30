@@ -1,3 +1,7 @@
+# 1.23.4
+# Add
+  - Update weni-datalake-sdk version to 0.8.0
+
 # 1.23.3
 # Fix
   - SQL join conditions for removed queues and sectors in room filters
