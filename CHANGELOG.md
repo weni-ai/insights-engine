@@ -1,3 +1,28 @@
+# 1.23.3
+# Fix
+  - SQL join conditions for removed queues and sectors in room filters
+
+# 1.23.2
+# Fix
+  - List operation results handling in QueryExecutor
+
+# 1.23.1
+# Add
+  - Finished rooms V2 with restructured query execution
+# Fix
+  - CI complexity configuration
+
+# 1.23.0
+# Add
+  - Detailed monitoring endpoints for agent status
+  - Deletion status tracking for queues, sectors, and tags in room query results
+# Fix
+  - Date formatting in human support dashboard service
+
+# 1.22.0
+# Add
+  - Data source service integration with feature flag support
+
 # 1.21.1
 # Fix
   - Update query to exclude deleted tags in TagSQLQueryBuilder
