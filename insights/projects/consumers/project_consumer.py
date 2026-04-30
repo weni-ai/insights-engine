@@ -83,48 +83,43 @@ class WeniEDAProjectConsumer(WeniEDAConsumer):
 
     def consume(self, message: amqp.Message):
         """
-        Process an incoming project creation message from the Weni EDA.
+        Process an incoming project creation message.
         """
-        channel = message.channel
         print(f"[WeniEDAProjectConsumer] - Consuming a message. Body: {message.body}")
         body = JSONParser.parse(message.body)
 
-        try:
-            if body.get("organization_uuid"):
-                try:
-                    org_uuid = UUID(body.get("organization_uuid"))
-                except ValueError as e:
-                    logger.error(
-                        "[WeniEDAProjectConsumer] - Invalid organization uuid: %s. Saving as None",
-                        body.get("organization_uuid"),
-                    )
-                    capture_exception(e)
-                    org_uuid = None
-            else:
+        if body.get("organization_uuid"):
+            try:
+                org_uuid = UUID(body.get("organization_uuid"))
+            except ValueError as e:
+                logger.error(
+                    "[WeniEDAProjectConsumer] - Invalid organization uuid: %s. Saving as None",
+                    body.get("organization_uuid"),
+                )
+                capture_exception(e)
                 org_uuid = None
+        else:
+            org_uuid = None
 
-            project_dto = ProjectCreationDTO(
-                uuid=body.get("uuid"),
-                name=body.get("name"),
-                is_template=body.get("is_template"),
-                date_format=body.get("date_format"),
-                timezone=body.get("timezone"),
-                vtex_account=body.get("vtex_account"),
-                org_uuid=org_uuid,
-                inline_agent_switch=get_inline_agent_switch(body),
-            )
+        project_dto = ProjectCreationDTO(
+            uuid=body.get("uuid"),
+            name=body.get("name"),
+            is_template=body.get("is_template"),
+            date_format=body.get("date_format"),
+            timezone=body.get("timezone"),
+            vtex_account=body.get("vtex_account"),
+            org_uuid=org_uuid,
+            inline_agent_switch=get_inline_agent_switch(body),
+        )
 
-            authorizations = body.get("authorizations", [])
+        authorizations = body.get("authorizations", [])
 
-            project_creation = ProjectsUseCase()
-            project = project_creation.create_project(project_dto)
+        project_creation = ProjectsUseCase()
+        project = project_creation.create_project(project_dto)
 
-            auth_creation = ProjectAuthCreationUseCase()
-            auth_creation.bulk_create(
-                project=str(project.uuid), authorizations=authorizations
-            )
+        auth_creation = ProjectAuthCreationUseCase()
+        auth_creation.bulk_create(
+            project=str(project.uuid), authorizations=authorizations
+        )
 
-            channel.basic_ack(message.delivery_tag)
-        except Exception as exception:
-            channel.basic_reject(message.delivery_tag, requeue=False)
-            print(f"[WeniEDAProjectConsumer] - Message rejected by: {exception}")
+        self.ack()
