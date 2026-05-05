@@ -11,6 +11,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import override, gettext
 from sentry_sdk import capture_exception
+from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
@@ -1185,25 +1186,55 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             "date_end": end_date,
         }
 
-        logger.info(
-            "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting source A events for project %s with source A %s",
-            project_uuid,
-            source_a.key,
-        )
-        source_a_events = self.get_raw_events_data(
-            key=source_a.key,
-            **common_kwargs,
-        )
+        try:
+            use_parallel = is_feature_active_for_attributes(
+                settings.CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY,
+                attributes={"projectUUID": str(project_uuid)},
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to check if crosstab parallel fetching is active: %s", e
+            )
+            use_parallel = False
 
-        logger.info(
-            "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting source B events for project %s with source B %s",
-            project_uuid,
-            source_b.key,
-        )
-        source_b_events = self.get_raw_events_data(
-            key=source_b.key,
-            **common_kwargs,
-        )
+        if use_parallel:
+            logger.info(
+                "[DATALAKE CONVERSATIONS METRICS SERVICE] Fetching source A and B events in parallel for project %s",
+                project_uuid,
+            )
+
+            def fetch_source_a():
+                return self.get_raw_events_data(key=source_a.key, **common_kwargs)
+
+            def fetch_source_b():
+                return self.get_raw_events_data(key=source_b.key, **common_kwargs)
+
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                source_a_future = executor.submit(fetch_source_a)
+                source_b_future = executor.submit(fetch_source_b)
+
+            source_a_events = source_a_future.result()
+            source_b_events = source_b_future.result()
+        else:
+            logger.info(
+                "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting source A events for project %s with source A %s",
+                project_uuid,
+                source_a.key,
+            )
+            source_a_events = self.get_raw_events_data(
+                key=source_a.key,
+                **common_kwargs,
+            )
+
+            logger.info(
+                "[DATALAKE CONVERSATIONS METRICS SERVICE] Getting source B events for project %s with source B %s",
+                project_uuid,
+                source_b.key,
+            )
+            source_b_events = self.get_raw_events_data(
+                key=source_b.key,
+                **common_kwargs,
+            )
 
         labels_data = CrosstabLabelsSerializer(
             source_a_events, source_a.field, reference_field=reference_field
