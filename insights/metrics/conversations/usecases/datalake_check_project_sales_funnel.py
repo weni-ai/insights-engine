@@ -71,7 +71,8 @@ class CheckProjectSalesFunnelOnDatalakeUseCase:
 
         cache_key = self._get_cache_key(project_uuid)
 
-        if cached_exists_on_datalake := cache.get(cache_key):
+        cached_exists_on_datalake = cache.get(cache_key)
+        if cached_exists_on_datalake is not None:
             return cached_exists_on_datalake
 
         exists_on_datalake = self.datalake_service.check_if_sales_funnel_data_exists(
