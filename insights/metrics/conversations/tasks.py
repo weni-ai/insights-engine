@@ -21,7 +21,7 @@ from insights.metrics.conversations.integrations.elasticsearch.services import (
 from insights.metrics.conversations.integrations.elasticsearch.clients import (
     ElasticsearchClient,
 )
-from insights.metrics.conversations.usecases.check_project_sales_funnel_on_datalake import (
+from insights.metrics.conversations.usecases.datalake_check_project_sales_funnel import (
     CheckProjectSalesFunnelOnDatalakeUseCase,
 )
 

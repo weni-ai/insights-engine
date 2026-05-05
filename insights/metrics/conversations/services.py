@@ -54,7 +54,7 @@ from insights.sources.integrations.clients import (
     BaseNexusConversationsAPIClient,
 )
 from insights.widgets.models import Widget
-from insights.metrics.conversations.usecases.check_project_sales_funnel_on_dashboard import (
+from insights.metrics.conversations.usecases.dashboard_check_project_sales_funnel import (
     CheckProjectSalesFunnelOnDashboardUseCase,
 )
 
@@ -865,9 +865,7 @@ class ConversationsMetricsService(
             check_project_sales_funnel_on_datalake,
         )
 
-        exists_on_dashboard = self.check_sales_funnel_use_case.execute(
-            project_uuid
-        )
+        exists_on_dashboard = self.check_sales_funnel_use_case.execute(project_uuid)
 
         if not exists_on_dashboard:
             check_project_sales_funnel_on_datalake.delay(project_uuid)

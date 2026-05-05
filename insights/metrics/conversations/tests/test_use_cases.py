@@ -1,13 +1,22 @@
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 import uuid
 
 from django.test import TestCase, override_settings
 from rest_framework import serializers
 
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.metrics.conversations.enums import CsatMetricsType
+from insights.metrics.conversations.integrations.datalake.services import (
+    BaseDatalakeConversationsMetricsService,
+)
+from insights.metrics.conversations.usecases.dashboard_check_project_sales_funnel import (
+    CheckProjectSalesFunnelOnDashboardUseCase,
+)
+from insights.metrics.conversations.usecases.datalake_check_project_sales_funnel import (
+    CheckProjectSalesFunnelOnDatalakeUseCase,
+)
 from insights.metrics.conversations.usecases.get_absolute_numbers_widget import (
     GetAbsoluteNumbersWidgetUseCase,
 )
@@ -183,4 +192,210 @@ class TestGetAbsoluteNumbersWidgetUseCase(TestCase):
         self.assertEqual(
             ctx.exception.detail["widget_uuid"].code,
             "widget_agent_uuid_not_valid",
+        )
+
+
+class TestCheckProjectSalesFunnelOnDashboardUseCase(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.use_case = CheckProjectSalesFunnelOnDashboardUseCase()
+
+    def test_execute_returns_false_when_dashboard_does_not_exist(self):
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertFalse(result)
+
+    def test_execute_returns_false_when_config_has_no_sales_funnel(self):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config={},
+        )
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertFalse(result)
+
+    def test_execute_returns_false_when_has_data_is_false(self):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config={"sales_funnel": {"has_data": False}},
+        )
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertFalse(result)
+
+    def test_execute_returns_true_when_has_data_is_true(self):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config={"sales_funnel": {"has_data": True}},
+        )
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertTrue(result)
+
+    def test_execute_returns_false_when_config_is_none(self):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config=None,
+        )
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertFalse(result)
+
+    def test_execute_ignores_dashboards_with_different_name(self):
+        Dashboard.objects.create(
+            project=self.project,
+            name="other_dashboard",
+            config={"sales_funnel": {"has_data": True}},
+        )
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertFalse(result)
+
+
+class TestCheckProjectSalesFunnelOnDatalakeUseCase(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.datalake_service = MagicMock(
+            spec=BaseDatalakeConversationsMetricsService
+        )
+        self.use_case = CheckProjectSalesFunnelOnDatalakeUseCase(
+            datalake_service=self.datalake_service
+        )
+
+    def test_execute_returns_false_when_dashboard_does_not_exist(self):
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertFalse(result)
+        self.datalake_service.check_if_sales_funnel_data_exists.assert_not_called()
+
+    def test_execute_returns_true_when_dashboard_config_already_has_data(self):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config={"sales_funnel": {"has_data": True}},
+        )
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertTrue(result)
+        self.datalake_service.check_if_sales_funnel_data_exists.assert_not_called()
+
+    @override_settings(SALES_FUNNEL_CHECK_COOLDOWN_TTL=30)
+    @patch("insights.metrics.conversations.usecases.datalake_check_project_sales_funnel.cache")
+    def test_execute_returns_cached_value_when_available(self, mock_cache):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config={},
+        )
+        mock_cache.get.return_value = True
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertTrue(result)
+        self.datalake_service.check_if_sales_funnel_data_exists.assert_not_called()
+
+    @override_settings(SALES_FUNNEL_CHECK_COOLDOWN_TTL=30)
+    @patch("insights.metrics.conversations.usecases.datalake_check_project_sales_funnel.cache")
+    def test_execute_returns_false_when_datalake_has_no_data(self, mock_cache):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config={},
+        )
+        mock_cache.get.return_value = None
+        self.datalake_service.check_if_sales_funnel_data_exists.return_value = False
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertFalse(result)
+        mock_cache.set.assert_called_once_with(
+            f"sales_funnel_check:{self.project.uuid}",
+            False,
+            timeout=30,
+        )
+
+    @override_settings(SALES_FUNNEL_CHECK_COOLDOWN_TTL=30)
+    @patch("insights.metrics.conversations.usecases.datalake_check_project_sales_funnel.cache")
+    def test_execute_updates_config_and_creates_widget_when_datalake_has_data(
+        self, mock_cache
+    ):
+        dashboard = Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config={},
+        )
+        mock_cache.get.return_value = None
+        self.datalake_service.check_if_sales_funnel_data_exists.return_value = True
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertTrue(result)
+        dashboard.refresh_from_db()
+        self.assertTrue(dashboard.config["sales_funnel"]["has_data"])
+        self.assertTrue(
+            Widget.objects.filter(
+                dashboard=dashboard,
+                name=CheckProjectSalesFunnelOnDatalakeUseCase.WIDGET_NAME,
+                type=CheckProjectSalesFunnelOnDatalakeUseCase.WIDGET_TYPE,
+                source=CheckProjectSalesFunnelOnDatalakeUseCase.WIDGET_SOURCE,
+            ).exists()
+        )
+
+    @override_settings(SALES_FUNNEL_CHECK_COOLDOWN_TTL=30)
+    @patch("insights.metrics.conversations.usecases.datalake_check_project_sales_funnel.cache")
+    def test_execute_does_not_duplicate_widget_when_already_exists(self, mock_cache):
+        dashboard = Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config={},
+        )
+        Widget.objects.create(
+            dashboard=dashboard,
+            name=CheckProjectSalesFunnelOnDatalakeUseCase.WIDGET_NAME,
+            type=CheckProjectSalesFunnelOnDatalakeUseCase.WIDGET_TYPE,
+            source=CheckProjectSalesFunnelOnDatalakeUseCase.WIDGET_SOURCE,
+            config={},
+            position={},
+        )
+        mock_cache.get.return_value = None
+        self.datalake_service.check_if_sales_funnel_data_exists.return_value = True
+
+        result = self.use_case.execute(project_uuid=self.project.uuid)
+
+        self.assertTrue(result)
+        self.assertEqual(
+            Widget.objects.filter(
+                dashboard=dashboard,
+                name=CheckProjectSalesFunnelOnDatalakeUseCase.WIDGET_NAME,
+            ).count(),
+            1,
+        )
+
+    @override_settings(SALES_FUNNEL_CHECK_COOLDOWN_TTL=60)
+    @patch("insights.metrics.conversations.usecases.datalake_check_project_sales_funnel.cache")
+    def test_execute_caches_datalake_result_with_configured_ttl(self, mock_cache):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CONVERSATIONS_DASHBOARD_NAME,
+            config={},
+        )
+        mock_cache.get.return_value = None
+        self.datalake_service.check_if_sales_funnel_data_exists.return_value = True
+
+        self.use_case.execute(project_uuid=self.project.uuid)
+
+        mock_cache.set.assert_called_once_with(
+            f"sales_funnel_check:{self.project.uuid}",
+            True,
+            timeout=60,
         )

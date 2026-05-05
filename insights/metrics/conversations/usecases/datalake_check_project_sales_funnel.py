@@ -32,7 +32,7 @@ class CheckProjectSalesFunnelOnDatalakeUseCase:
 
     def _update_dashboard_config(self, dashboard: Dashboard) -> None:
         config: dict = dashboard.config or {}
-        sales_funnel_config: Optional[dict] = config.get("sales_funnel", {})
+        sales_funnel_config: dict = config.setdefault("sales_funnel", {})
         sales_funnel_config["has_data"] = True
         dashboard.config = config
         dashboard.save(update_fields=["config"])
