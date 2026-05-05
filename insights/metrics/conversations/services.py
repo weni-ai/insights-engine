@@ -254,6 +254,7 @@ class ConversationsMetricsService(
         cache_client: CacheClient = CacheClient(),
         nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
+        check_sales_funnel_use_case: CheckProjectSalesFunnelOnDashboardUseCase = CheckProjectSalesFunnelOnDashboardUseCase(),
     ):
         self.datalake_service: BaseDatalakeConversationsMetricsService = (
             datalake_service
@@ -264,6 +265,9 @@ class ConversationsMetricsService(
         self.cache_client: CacheClient = cache_client
         self.nexus_conversations_cache_ttl: int = nexus_conversations_cache_ttl
         self.flowruns_query_executor: FlowRunsQueryExecutor = flowruns_query_executor
+        self.check_sales_funnel_use_case: CheckProjectSalesFunnelOnDashboardUseCase = (
+            check_sales_funnel_use_case
+        )
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
         """
@@ -861,7 +865,7 @@ class ConversationsMetricsService(
             check_project_sales_funnel_on_datalake,
         )
 
-        exists_on_dashboard = CheckProjectSalesFunnelOnDashboardUseCase().execute(
+        exists_on_dashboard = self.check_sales_funnel_use_case.execute(
             project_uuid
         )
 
