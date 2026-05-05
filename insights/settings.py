@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_spectacular",
     "weni.feature_flags",
+    "weni.eda.django.eda_app",
 ]
 
 if ADMIN_ENABLED is True:
@@ -303,6 +304,9 @@ if USE_SENTRY:
 
 USE_EDA = env.bool("USE_EDA", default=False)
 
+# TODO: Remove this once we permanently migrate to Weni EDA
+USE_WENI_EDA_FOR_PROJECTS = env.bool("USE_WENI_EDA_FOR_PROJECTS", default=False)
+
 if USE_EDA:
     EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"
     EDA_CONSUMERS_HANDLE = "insights.event_driven.handle.handle_consumers"
@@ -316,6 +320,7 @@ if USE_EDA:
 
     FLOWS_TICKETER_EXCHANGE = env("FLOWS_TICKETER_EXCHANGE", default="sectors.topic")
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
+
 
 CHATS_URL = env("CHATS_URL", default="")
 
