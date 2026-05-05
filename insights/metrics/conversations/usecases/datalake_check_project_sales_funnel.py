@@ -51,7 +51,9 @@ class CheckProjectSalesFunnelOnDatalakeUseCase:
             name=self.WIDGET_NAME,
             type=self.WIDGET_TYPE,
             source=self.WIDGET_SOURCE,
-            config={},
+            config={
+                "auto_created": True,
+            },
             position={},
         )
 
