@@ -54,6 +54,9 @@ from insights.sources.integrations.clients import (
     BaseNexusConversationsAPIClient,
 )
 from insights.widgets.models import Widget
+from insights.metrics.conversations.usecases.check_project_sales_funnel_on_dashboard import (
+    CheckProjectSalesFunnelOnDashboardUseCase,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -854,7 +857,18 @@ class ConversationsMetricsService(
         """
         Check if sales funnel data exists in Datalake.
         """
-        return self.datalake_service.check_if_sales_funnel_data_exists(project_uuid)
+        from insights.metrics.conversations.tasks import (
+            check_project_sales_funnel_on_datalake,
+        )
+
+        exists_on_dashboard = CheckProjectSalesFunnelOnDashboardUseCase().execute(
+            project_uuid
+        )
+
+        if not exists_on_dashboard:
+            check_project_sales_funnel_on_datalake.delay(project_uuid)
+
+        return exists_on_dashboard
 
     def _get_native_available_widgets(
         self, project_uuid: UUID
