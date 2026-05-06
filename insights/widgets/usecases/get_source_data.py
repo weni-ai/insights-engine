@@ -199,6 +199,7 @@ def get_source_data_from_widget(
     filters: dict = {},
     user_email: str = "",
 ):
+    # TODO: Remove this function once the data source service is rolled out to all projects
     try:
         source = widget.source
         if is_report:

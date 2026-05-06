@@ -49,6 +49,14 @@ class MockConversationsReportService(BaseConversationsReportService):
     ) -> ConversationsReportWorksheet:
         pass
 
+    def get_contacts_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        pass
+
     def get_flowsrun_results_by_contacts(
         self,
         report: Report,
@@ -70,4 +78,5 @@ class MockConversationsReportService(BaseConversationsReportService):
         self.project_can_receive_new_reports_generation = MagicMock()
         self.get_datalake_events = MagicMock()
         self.get_resolutions_worksheet = MagicMock()
+        self.get_contacts_worksheet = MagicMock()
         self.get_flowsrun_results_by_contacts = MagicMock()

@@ -2,11 +2,14 @@ from insights.db.postgres.psycopg.connection import get_cursor
 from insights.sources.filter_strategies import PostgreSQLFilterStrategy
 from insights.sources.flows.clients import FlowSQLQueryGenerator
 from insights.sources.flows.filtersets import FlowFilterSet
+from insights.sources.base import BaseQueryExecutor
 from insights.sources.flows.query_builder import FlowSQLQueryBuilder
 
 
-class QueryExecutor:
+class QueryExecutor(BaseQueryExecutor):
+    @classmethod
     def execute(
+        cls,
         filters: dict,
         operation: str,
         parser: callable,

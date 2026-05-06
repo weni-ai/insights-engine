@@ -3,23 +3,29 @@ from uuid import UUID
 
 from django.conf import settings
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
+from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.authentication.permissions import ProjectAuthPermission
+from insights.core.filters import get_filters_from_query_params
+from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 from insights.dashboards.filters import DashboardFilter
-from insights.dashboards.models import (
-    CONVERSATIONS_DASHBOARD_NAME,
-    Dashboard,
+from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
+from insights.dashboards.serializers import (
+    DashboardEditSerializer,
+    DashboardIsDefaultSerializer,
+    DashboardSerializer,
+    DashboardWidgetsSerializer,
+    ReportSerializer,
 )
-from insights.dashboards.usecases.flows_dashboard_creation import (
-    CreateFlowsDashboard,
-)
+from insights.dashboards.usecases import dashboard_filters
+from insights.dashboards.usecases.flows_dashboard_creation import CreateFlowsDashboard
 from insights.dashboards.utils import DefaultPagination
 from insights.human_support.services import HumanSupportDashboardService
 from insights.metrics.meta.tasks import (
@@ -33,21 +39,9 @@ from insights.projects.tasks import (
 from insights.projects.usecases.dashboard_dto import FlowsDashboardCreationDTO
 from insights.sources.contacts.clients import FlowsContactsRestClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
+from insights.sources.services import DataSourceService
 from insights.widgets.models import Report, Widget
-from insights.widgets.usecases.get_source_data import (
-    get_source_data_from_widget,
-)
-from insights.core.filters import get_filters_from_query_params
-from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
-
-from .serializers import (
-    DashboardEditSerializer,
-    DashboardIsDefaultSerializer,
-    DashboardSerializer,
-    DashboardWidgetsSerializer,
-    ReportSerializer,
-)
-from .usecases import dashboard_filters
+from insights.widgets.usecases.get_source_data import get_source_data_from_widget
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +55,10 @@ class DashboardViewSet(
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = DashboardFilter
+
+    @property
+    def source_data_service(self):
+        return DataSourceService()
 
     def get_permissions(self):
         if self.action in [
@@ -216,13 +214,37 @@ class DashboardViewSet(
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
-            serialized_source = get_source_data_from_widget(
-                widget=widget,
-                is_report=False,
-                is_live=is_live,
-                filters=filters,
-                user_email=request.user.email,
-            )
+
+            project = dashboard.project
+
+            feature_flag_attributes = {
+                "projectUUID": str(project.uuid),
+                "userEmail": request.user.email,
+            }
+
+            if is_feature_active_for_attributes(
+                settings.DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY,
+                attributes=feature_flag_attributes,
+            ):
+                serialized_source = (
+                    self.source_data_service.get_source_data_from_widget(
+                        widget=widget,
+                        is_report=False,
+                        is_live=is_live,
+                        filters=filters,
+                        user_email=request.user.email,
+                    )
+                )
+            else:
+                # TODO: Remove this once the data source service is rolled out to all projects
+                serialized_source = get_source_data_from_widget(
+                    widget=widget,
+                    is_report=False,
+                    is_live=is_live,
+                    filters=filters,
+                    user_email=request.user.email,
+                )
+
             return Response(serialized_source, status.HTTP_200_OK)
         except PermissionDenied:
             raise
@@ -264,13 +286,37 @@ class DashboardViewSet(
             filters = dict(request.data or request.query_params or {})
             filters.pop("project", None)
             is_live = filters.pop("is_live", False)
-            serialized_source = get_source_data_from_widget(
-                widget=widget,
-                is_report=True,
-                filters=filters,
-                user_email=request.user.email,
-                is_live=is_live,
-            )
+
+            project = dashboard.project
+
+            feature_flag_attributes = {
+                "projectUUID": str(project.uuid),
+                "userEmail": request.user.email,
+            }
+
+            if is_feature_active_for_attributes(
+                settings.DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY,
+                attributes=feature_flag_attributes,
+            ):
+                serialized_source = (
+                    self.source_data_service.get_source_data_from_widget(
+                        widget=widget,
+                        is_report=True,
+                        filters=filters,
+                        user_email=request.user.email,
+                        is_live=is_live,
+                    )
+                )
+            else:
+                # TODO: Remove this once the data source service is rolled out to all projects
+                serialized_source = get_source_data_from_widget(
+                    widget=widget,
+                    is_report=True,
+                    filters=filters,
+                    user_email=request.user.email,
+                    is_live=is_live,
+                )
+
             return Response(serialized_source, status.HTTP_200_OK)
         except PermissionDenied:
             raise

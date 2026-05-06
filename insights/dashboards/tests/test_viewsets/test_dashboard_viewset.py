@@ -373,8 +373,12 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertIsInstance(response.data, dict)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.get_source_data_from_widget")
-    def test_get_widget_data(self, mock_get_source_data):
+    @patch("insights.dashboards.api.v1.viewsets.get_source_data_from_widget")
+    @patch(
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    def test_get_widget_data(self, mock_feature_flag, mock_get_source_data):
         dashboard = Dashboard.objects.create(
             name="Test Dashboard", project=self.project
         )
@@ -399,6 +403,104 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
             filters={},
             user_email=self.user.email,
         )
+
+    @with_project_auth
+    @patch("insights.dashboards.api.v1.viewsets.DataSourceService")
+    @patch(
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    def test_get_widget_data_with_feature_flag_enabled(
+        self, mock_feature_flag, MockDataSourceService
+    ):
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        widget = Widget.objects.create(
+            dashboard=dashboard,
+            name="Widget 1",
+            source="TestSource",
+            type="TestType",
+            config={},
+            position={},
+        )
+        mock_service = MockDataSourceService.return_value
+        mock_service.get_source_data_from_widget.return_value = {
+            "data": "service_data",
+        }
+
+        response = self.get_widget_data(str(dashboard.uuid), str(widget.uuid))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"data": "service_data"})
+        mock_service.get_source_data_from_widget.assert_called_once_with(
+            widget=widget,
+            is_report=False,
+            is_live=False,
+            filters={},
+            user_email=self.user.email,
+        )
+
+    @with_project_auth
+    @patch("insights.dashboards.api.v1.viewsets.get_source_data_from_widget")
+    @patch(
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    def test_get_widget_data_feature_flag_disabled_uses_legacy(
+        self, mock_feature_flag, mock_get_source_data
+    ):
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        widget = Widget.objects.create(
+            dashboard=dashboard,
+            name="Widget 1",
+            source="TestSource",
+            type="TestType",
+            config={},
+            position={},
+        )
+        mock_get_source_data.return_value = {"data": "legacy_data"}
+
+        response = self.get_widget_data(str(dashboard.uuid), str(widget.uuid))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"data": "legacy_data"})
+        mock_feature_flag.assert_called_once()
+        mock_get_source_data.assert_called_once()
+
+    @with_project_auth
+    @patch(
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    def test_get_widget_data_feature_flag_passes_correct_attributes(
+        self, mock_feature_flag
+    ):
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        widget = Widget.objects.create(
+            dashboard=dashboard,
+            name="Widget 1",
+            source="TestSource",
+            type="TestType",
+            config={},
+            position={},
+        )
+
+        with patch("insights.dashboards.api.v1.viewsets.DataSourceService") as MockService:
+            mock_service = MockService.return_value
+            mock_service.get_source_data_from_widget.return_value = {}
+
+            self.get_widget_data(str(dashboard.uuid), str(widget.uuid))
+
+        mock_feature_flag.assert_called_once()
+        call_kwargs = mock_feature_flag.call_args
+        attributes = call_kwargs[1]["attributes"]
+        self.assertEqual(attributes["projectUUID"], str(self.project.uuid))
+        self.assertEqual(attributes["userEmail"], self.user.email)
 
     @with_project_auth
     def test_get_widget_report(self):
@@ -453,8 +555,12 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.get_source_data_from_widget")
-    def test_get_report_data(self, mock_get_source_data):
+    @patch("insights.dashboards.api.v1.viewsets.get_source_data_from_widget")
+    @patch(
+        "insights.dashboards.api.v1.viewsets.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    def test_get_report_data(self, mock_feature_flag, mock_get_source_data):
         dashboard = Dashboard.objects.create(
             name="Test Dashboard", project=self.project
         )
@@ -517,7 +623,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertIn(widget2.source, response_sources)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.CreateFlowsDashboard")
+    @patch("insights.dashboards.api.v1.viewsets.CreateFlowsDashboard")
     def test_create_flows_dashboard(self, MockCreateFlowsDashboard):
         mock_dashboard_instance = Dashboard(
             name="Flows Dashboard", project=self.project
@@ -537,7 +643,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         MockCreateFlowsDashboard.assert_called_once()
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.CreateFlowsDashboard")
+    @patch("insights.dashboards.api.v1.viewsets.CreateFlowsDashboard")
     def test_create_flows_dashboard_project_not_found(self, MockCreateFlowsDashboard):
         data = {
             "name": "New Flows Dashboard",
@@ -548,7 +654,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         MockCreateFlowsDashboard.assert_not_called()
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.FlowsContactsRestClient")
+    @patch("insights.dashboards.api.v1.viewsets.FlowsContactsRestClient")
     def test_get_contacts_results(self, MockFlowsContactsRestClient):
         mock_client_instance = MockFlowsContactsRestClient.return_value
         mock_client_instance.get_flows_contacts.return_value = {"contacts": []}
@@ -575,7 +681,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.CustomStatusRESTClient")
+    @patch("insights.dashboards.api.v1.viewsets.CustomStatusRESTClient")
     def test_get_custom_status(self, MockCustomStatusRESTClient):
         mock_client_instance = MockCustomStatusRESTClient.return_value
         mock_client_instance.list_custom_status.return_value = {"status": "ok"}
@@ -590,7 +696,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.CustomStatusRESTClient")
+    @patch("insights.dashboards.api.v1.viewsets.CustomStatusRESTClient")
     def test_get_custom_status_project_not_found(self, MockCustomStatusRESTClient):
         non_existent_project_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
         response = self.get_custom_status({"project": non_existent_project_uuid})
@@ -600,7 +706,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         MockCustomStatusRESTClient.assert_not_called()
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
     def test_get_monitoring_csat_totals(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.csat_score_by_agents.return_value = {
@@ -625,7 +731,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
     def test_get_monitoring_csat_ratings(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.get_csat_ratings.return_value = {
@@ -683,7 +789,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         )
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
     def test_get_analysis_csat_totals(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.csat_score_by_agents.return_value = {
@@ -714,7 +820,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @with_project_auth
-    @patch("insights.dashboards.viewsets.HumanSupportDashboardService")
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
     def test_get_analysis_csat_ratings(self, MockHumanSupportDashboardService):
         mock_service_instance = MockHumanSupportDashboardService.return_value
         mock_service_instance.get_csat_ratings.return_value = {

@@ -24,7 +24,7 @@ from insights.metrics.conversations.services import (
     ConversationsMetricsService,
 )
 from insights.sources.dl_events.tests.mock_client import (
-    ClassificationMockDataLakeEventsClient,
+    MockDataLakeEventsClient,
 )
 from insights.sources.integrations.clients import NexusConversationsAPIClient
 from insights.users.models import User
@@ -51,7 +51,7 @@ class TestConversationsReportService(TestCase):
             ),
             events_limit_per_page=5,
             page_limit=5,
-            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            datalake_events_client=MockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
@@ -383,7 +383,7 @@ class TestConversationsReportService(TestCase):
         return_value=False,
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
@@ -424,7 +424,7 @@ class TestConversationsReportService(TestCase):
         return_value=False,
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
@@ -473,7 +473,7 @@ class TestConversationsReportService(TestCase):
         return_value=False,
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
@@ -522,7 +522,7 @@ class TestConversationsReportService(TestCase):
         return_value=False,
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     def test_get_datalake_events_when_page_limit_is_reached(
         self, mock_get_datalake_events, _mock_parallel
@@ -633,7 +633,7 @@ class TestConversationsReportService(TestCase):
         return_value=False,
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     def test_get_datalake_events_when_report_is_failed(
         self, mock_get_datalake_events, _mock_parallel
@@ -1046,7 +1046,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             ),
             events_limit_per_page=5,
             page_limit=5,
-            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            datalake_events_client=MockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
@@ -1271,7 +1271,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             mock_cache_get.return_value = "invalid json"
 
             with patch(
-                "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+                "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
             ) as mock_get_events:
                 mock_get_events.return_value = []
 
@@ -1296,7 +1296,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         )
 
         with patch(
-            "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+            "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
         ) as mock_get_events:
             mock_get_events.return_value = [{}]  # Empty dict
 
@@ -2102,6 +2102,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
@@ -2187,6 +2188,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
             "CSAT_AI",
             "CSAT_HUMAN",
             "NPS_AI",
@@ -2249,6 +2251,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(
@@ -2315,6 +2318,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
             "CSAT_AI",
             "NPS_AI",
         ]
@@ -2363,6 +2367,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
             "CSAT_AI",
         ]
         self.assertEqual(result.sections, expected_sections)
@@ -2428,6 +2433,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "TOPICS_HUMAN",
             "AGENT_INVOCATION",
             "TOOL_RESULT",
+            "CONTACTS",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
@@ -2629,7 +2635,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         return_value=False,
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     def test_get_datalake_events_with_datetime_objects(
         self, mock_get_events, _mock_parallel
@@ -3928,7 +3934,7 @@ class TestGetEventsCount(TestCase):
             ),
             events_limit_per_page=5,
             page_limit=5,
-            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            datalake_events_client=MockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
@@ -3939,7 +3945,7 @@ class TestGetEventsCount(TestCase):
         )
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     def test_returns_count_from_datalake(self, mock_get_events_count):
         mock_get_events_count.return_value = [{"count": 42}]
@@ -3951,7 +3957,7 @@ class TestGetEventsCount(TestCase):
         self.assertEqual(result, 42)
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     def test_returns_zero_when_empty_response(self, mock_get_events_count):
         mock_get_events_count.return_value = [{}]
@@ -3961,7 +3967,7 @@ class TestGetEventsCount(TestCase):
         self.assertEqual(result, 0)
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     def test_returns_zero_when_no_results(self, mock_get_events_count):
         mock_get_events_count.return_value = []
@@ -3971,7 +3977,7 @@ class TestGetEventsCount(TestCase):
         self.assertEqual(result, 0)
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     def test_converts_datetime_kwargs_to_isoformat(self, mock_get_events_count):
         mock_get_events_count.return_value = [{"count": 10}]
@@ -3994,7 +4000,7 @@ class TestShouldUseParallelProcessing(TestCase):
             ),
             events_limit_per_page=5,
             page_limit=5,
-            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            datalake_events_client=MockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
@@ -4062,7 +4068,7 @@ class TestGetDatalakeEventsDispatch(TestCase):
             ),
             events_limit_per_page=5,
             page_limit=5,
-            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            datalake_events_client=MockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
@@ -4135,7 +4141,7 @@ class TestGetDatalakeEventsInParallel(TestCase):
             ),
             events_limit_per_page=5,
             page_limit=5,
-            datalake_events_client=ClassificationMockDataLakeEventsClient(),
+            datalake_events_client=MockDataLakeEventsClient(),
             metrics_service=ConversationsMetricsService(
                 datalake_service=MagicMock(spec=BaseConversationsMetricsService),
                 nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
@@ -4148,10 +4154,10 @@ class TestGetDatalakeEventsInParallel(TestCase):
         self.user = User.objects.create(email="test@test.com", language="en")
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
@@ -4184,15 +4190,13 @@ class TestGetDatalakeEventsInParallel(TestCase):
             status=ReportStatus.IN_PROGRESS,
         )
 
-        events = self.service.get_datalake_events_in_parallel(
-            report, key="example"
-        )
+        events = self.service.get_datalake_events_in_parallel(report, key="example")
 
         self.assertEqual(events, page_1 + page_2)
         self.assertEqual(mock_get_events.call_count, 2)
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.get")
     def test_parallel_fetch_returns_empty_when_count_is_zero(
@@ -4260,7 +4264,7 @@ class TestGetDatalakeEventsInParallel(TestCase):
         mock_sequential.assert_called_once_with(report, key="example")
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.get")
     def test_parallel_fetch_raises_when_page_limit_exceeded(
@@ -4288,7 +4292,7 @@ class TestGetDatalakeEventsInParallel(TestCase):
         )
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.get")
     def test_parallel_fetch_raises_when_report_not_in_progress(
@@ -4317,10 +4321,10 @@ class TestGetDatalakeEventsInParallel(TestCase):
         )
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
@@ -4362,10 +4366,10 @@ class TestGetDatalakeEventsInParallel(TestCase):
         self.assertEqual(events, page_1 + page_2 + page_3)
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")
@@ -4399,10 +4403,10 @@ class TestGetDatalakeEventsInParallel(TestCase):
         )
 
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
     @patch(
-        "insights.sources.dl_events.tests.mock_client.ClassificationMockDataLakeEventsClient.get_events_count"
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
     )
     @patch("insights.sources.tests.mock.MockCacheClient.set")
     @patch("insights.sources.tests.mock.MockCacheClient.get")

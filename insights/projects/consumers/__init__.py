@@ -1,3 +1,3 @@
 from .auth_consumer import ProjectAuthConsumer
-from .project_consumer import ProjectConsumer
+from .project_consumer import OldProjectConsumer, WeniEDAProjectConsumer
 from .update_project_consumer import UpdateProjectConsumer

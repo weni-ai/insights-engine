@@ -1,3 +1,49 @@
+# 1.23.4
+# Add
+  - Update weni-datalake-sdk version to 0.8.0
+
+# 1.23.3
+# Fix
+  - SQL join conditions for removed queues and sectors in room filters
+
+# 1.23.2
+# Fix
+  - List operation results handling in QueryExecutor
+
+# 1.23.1
+# Add
+  - Finished rooms V2 with restructured query execution
+# Fix
+  - CI complexity configuration
+
+# 1.23.0
+# Add
+  - Detailed monitoring endpoints for agent status
+  - Deletion status tracking for queues, sectors, and tags in room query results
+# Fix
+  - Date formatting in human support dashboard service
+
+# 1.22.0
+# Add
+  - Data source service integration with feature flag support
+
+# 1.21.1
+# Fix
+  - Update query to exclude deleted tags in TagSQLQueryBuilder
+
+# 1.21.0
+# Add
+  - Inline agent switch functionality on project creation
+
+# 1.20.0
+# Add
+  - Agent invocations metrics to report export
+  - Tool result metrics to report export
+  - Internal errors response middleware
+# Remove
+  - ConversationsMetricsError in favor of simplified error handling
+  - Sales funnel parallel processing feature flag
+
 # 1.19.4
 # Add
   - Parallel processing for sales funnel data retrieval

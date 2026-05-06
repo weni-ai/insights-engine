@@ -4,4 +4,5 @@ namespace = "insights_metrics_v2"
 
 urlpatterns = [
     path("conversations/", include("insights.metrics.conversations.api.v2.urls")),
+    path("human-support/", include("insights.metrics.human_support.api.v2.urls")),
 ]

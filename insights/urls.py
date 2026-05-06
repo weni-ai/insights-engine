@@ -27,7 +27,7 @@ from rest_framework.routers import DefaultRouter
 from weni.feature_flags.views import FeatureFlagsWebhookView
 
 from insights.authentication.admin_sso import admin_oidc_login, admin_oidc_logout
-from insights.dashboards.viewsets import DashboardViewSet
+from insights.dashboards.api.v1.viewsets import DashboardViewSet
 from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
 from insights.widgets.viewsets import WidgetViewSet
@@ -63,6 +63,7 @@ urlpatterns += [
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("v1/metrics/", include("insights.metrics.api.v1.urls")),
     path("v2/metrics/", include("insights.metrics.api.v2.urls")),
+    path("v2/dashboards/", include("insights.dashboards.api.v2.urls")),
     path(
         "v1/internal/", include("insights.internals.api.urls", namespace="internal_api")
     ),

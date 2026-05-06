@@ -7,5 +7,5 @@ urlpatterns = [
     path("meta/", include("insights.metrics.meta.urls")),
     path("skills/", include("insights.metrics.skills.urls")),
     path("conversations/", include("insights.metrics.conversations.api.v1.urls")),
-    path("human-support/", include("insights.metrics.human_support.urls")),
+    path("human-support/", include("insights.metrics.human_support.api.v1.urls")),
 ]

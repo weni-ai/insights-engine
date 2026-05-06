@@ -1,4 +1,5 @@
 from insights.db.elasticsearch.connection import Connection
+from insights.sources.base import BaseQueryExecutor
 from insights.sources.filter_strategies import ElasticSearchFilterStrategy
 from insights.sources.flowruns.clients import (
     FlowRunElasticSearchQueryGenerator,
@@ -31,8 +32,10 @@ def transform_results_data(
     return transformed_results
 
 
-class QueryExecutor:
+class QueryExecutor(BaseQueryExecutor):
+    @classmethod
     def execute(
+        cls,
         filters: dict,
         operation: str,
         parser: callable,
