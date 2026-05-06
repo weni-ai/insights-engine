@@ -1588,16 +1588,23 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             return cached_results
 
         try:
-            count = self.events_client.get_unique_contacts_count(
+            data = self.events_client.get_unique_contacts_count(
                 event_name=self.event_name,
                 project=project_uuid,
                 date_start=start_date,
                 date_end=end_date,
+                key="conversation_classification",
+                table="conversation_classification",
             )
         except Exception as e:
             logger.error("Failed to get unique contacts count: %s", e)
             capture_exception(e)
             raise e
+
+        if not isinstance(data, list) or (isinstance(data, list) and len(data) == 0):
+            return 0
+
+        count = data[0].get("unique_contact_urns", 0)
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, count)
@@ -1623,16 +1630,23 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             return cached_results
 
         try:
-            count = self.events_client.get_returning_contacts_count(
+            data = self.events_client.get_returning_contacts_count(
                 event_name=self.event_name,
                 project=project_uuid,
                 date_start=start_date,
                 date_end=end_date,
+                key="conversation_classification",
+                table="conversation_classification",
             )
         except Exception as e:
             logger.error("Failed to get returning contacts count: %s", e)
             capture_exception(e)
             raise e
+
+        if not isinstance(data, list) or (isinstance(data, list) and len(data) == 0):
+            return 0
+
+        count = data[0].get("recurring_contact_urns", 0)
 
         if self.cache_results:
             self._save_results_to_cache(cache_key, count)
