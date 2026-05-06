@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from insights.authentication.permissions import ProjectAuthQueryParamPermission
-from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
+from insights.core.urls.proxy_pagination import get_limit_offset_pagination_urls
 from insights.human_support.services import HumanSupportDashboardService
 from insights.projects.models import Project
 from insights.core.filters import get_filters_from_query_params
@@ -28,9 +28,10 @@ class DetailedMonitoringAgentsViewV2(APIView):
         filters["user_request"] = request.user.email
         data = service.get_detailed_monitoring_agents_v2(filters=filters)
 
-        pagination_urls = get_cursor_based_pagination_urls(request, data)
+        pagination_urls = get_limit_offset_pagination_urls(request, data)
 
         response_data = {
+            "count": data.get("count"),
             "results": data.get("results", []),
             "next": pagination_urls.next_url,
             "previous": pagination_urls.previous_url,
