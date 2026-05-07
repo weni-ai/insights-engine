@@ -601,6 +601,7 @@ class ConversationsMetricsService(
             "created_on__gte": self._convert_to_iso_string(start_date),
             "created_on__lte": self._convert_to_iso_string(end_date),
             "flow": flow_uuid,
+            "project": project_uuid,
         }
 
         return self.flowruns_query_executor.execute(
