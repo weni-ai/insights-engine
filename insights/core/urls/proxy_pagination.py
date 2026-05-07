@@ -118,4 +118,3 @@ def get_limit_offset_pagination_urls(
         next_url=next_url,
         previous_url=previous_url,
     )
-
