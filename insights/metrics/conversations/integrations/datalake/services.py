@@ -657,34 +657,44 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 logger.warning(f"Cache retrieval failed: {e}")
 
         try:
-            resolved_events_count = self.events_client.get_events_count(
-                project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name=self.event_name,
-                key="conversation_classification",
-                value="resolved",
-                table="conversation_classification",
-            )[0].get("count", 0)
-            unresolved_events_count = self.events_client.get_events_count(
-                project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name=self.event_name,
-                key="conversation_classification",
-                value="unresolved",
-                table="conversation_classification",
-            )[0].get("count", 0)
-            transferred_to_human_events_count = self.events_client.get_events_count(
-                project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name=self.event_name,
-                key="conversation_classification",
-                metadata_key="human_support",
-                metadata_value="true",
-                table="conversation_classification",
-            )[0].get("count", 0)
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                resolved_future = executor.submit(
+                    self.events_client.get_events_count,
+                    project=project_uuid,
+                    date_start=start_date,
+                    date_end=end_date,
+                    event_name=self.event_name,
+                    key="conversation_classification",
+                    value="resolved",
+                    table="conversation_classification",
+                )
+                unresolved_future = executor.submit(
+                    self.events_client.get_events_count,
+                    project=project_uuid,
+                    date_start=start_date,
+                    date_end=end_date,
+                    event_name=self.event_name,
+                    key="conversation_classification",
+                    value="unresolved",
+                    table="conversation_classification",
+                )
+                transferred_future = executor.submit(
+                    self.events_client.get_events_count,
+                    project=project_uuid,
+                    date_start=start_date,
+                    date_end=end_date,
+                    event_name=self.event_name,
+                    key="conversation_classification",
+                    metadata_key="human_support",
+                    metadata_value="true",
+                    table="conversation_classification",
+                )
+
+                resolved_events_count = resolved_future.result()[0].get("count", 0)
+                unresolved_events_count = unresolved_future.result()[0].get("count", 0)
+                transferred_to_human_events_count = transferred_future.result()[0].get(
+                    "count", 0
+                )
         except Exception as e:
             capture_exception(e)
             logger.error(e)
