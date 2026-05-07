@@ -26,9 +26,20 @@ class ConversationsElasticsearchService:
         op_field: str,
         page_size: int,
         search_after: list[str] | None = None,
+        include_values: list[str] | None = None,
     ) -> list[dict]:
         start_date = self._format_date(start_date)
         end_date = self._format_date(end_date)
+
+        nested_clauses = [{"term": {"values.name": op_field}}]
+        if include_values:
+            nested_clauses.append({"terms": {"values.value": include_values}})
+
+        nested_query = (
+            {"bool": {"must": nested_clauses}}
+            if len(nested_clauses) > 1
+            else nested_clauses[0]
+        )
 
         query = {
             "_source": [
@@ -49,7 +60,7 @@ class ConversationsElasticsearchService:
                         {
                             "nested": {
                                 "path": "values",
-                                "query": {"term": {"values.name": op_field}},
+                                "query": nested_query,
                             }
                         },
                         {

@@ -587,6 +587,8 @@ class ConversationsMetricsService(
             end_date=end_date,
         )
 
+    VALID_CSAT_RATINGS = ["1", "2", "3", "4", "5"]
+
     def _get_csat_metrics_from_flowruns(
         self,
         flow_uuid: UUID,
@@ -599,6 +601,7 @@ class ConversationsMetricsService(
             "created_on__gte": self._convert_to_iso_string(start_date),
             "created_on__lte": self._convert_to_iso_string(end_date),
             "flow": flow_uuid,
+            "project": project_uuid,
         }
 
         return self.flowruns_query_executor.execute(
@@ -608,6 +611,7 @@ class ConversationsMetricsService(
             query_kwargs={
                 "project": project_uuid,
                 "op_field": op_field,
+                "include_values": self.VALID_CSAT_RATINGS,
             },
         )
 
