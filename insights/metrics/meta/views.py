@@ -200,7 +200,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
-        parameters=FavoriteTemplatesQueryParamsSerializer,
+        parameters=[FavoriteTemplatesQueryParamsSerializer],
         responses={status.HTTP_200_OK: FavoriteTemplatesSerializer(many=True)},
     )
     @action(
