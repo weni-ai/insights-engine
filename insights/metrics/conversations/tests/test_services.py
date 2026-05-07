@@ -199,11 +199,14 @@ class TestConversationsMetricsService(TestCase):
         self.mock_cache_client.set.return_value = True
         self.mock_cache_client.delete.return_value = True
 
+        self.mock_check_sales_funnel_use_case = Mock()
+
         self.service = ConversationsMetricsService(
             datalake_service=self.mock_datalake_service,
             nexus_conversations_client=self.mock_nexus_conversations_client,
             cache_client=self.mock_cache_client,
             flowruns_query_executor=self.mock_flowruns_query_executor,
+            check_sales_funnel_use_case=self.mock_check_sales_funnel_use_case,
         )
         self.start_date = datetime.now() - timedelta(days=30)
         self.end_date = datetime.now()
@@ -726,21 +729,25 @@ class TestConversationsMetricsService(TestCase):
         self.assertEqual(metrics.total_orders_value, 10000)
         self.assertEqual(metrics.currency_code, "BRL")
 
-    def test_check_if_sales_funnel_data_exists_when_data_does_not_exist(self):
-        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = (
-            False
-        )
+    @patch(
+        "insights.metrics.conversations.tasks.check_project_sales_funnel_on_datalake"
+    )
+    def test_check_if_sales_funnel_data_exists_when_data_does_not_exist(
+        self, mock_task
+    ):
+        self.mock_check_sales_funnel_use_case.execute.return_value = False
         results = self.service.check_if_sales_funnel_data_exists(self.project.uuid)
         self.assertFalse(results)
+        mock_task.delay.assert_called_once_with(self.project.uuid)
 
     def test_check_if_sales_funnel_data_exists_when_data_exists(self):
-        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        self.mock_check_sales_funnel_use_case.execute.return_value = True
         results = self.service.check_if_sales_funnel_data_exists(self.project.uuid)
         self.assertTrue(results)
 
     def test_get_available_widgets(self):
-        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
-        available_widgets = self.service.get_available_widgets(self.project)
+        self.mock_check_sales_funnel_use_case.execute.return_value = True
+        available_widgets = self.service.get_available_widgets(self.project.uuid)
 
         self.assertIsInstance(available_widgets, AvailableWidgetsList)
         self.assertEqual(
@@ -748,9 +755,9 @@ class TestConversationsMetricsService(TestCase):
         )
 
     def test_get_available_widgets_with_native_type(self):
-        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
+        self.mock_check_sales_funnel_use_case.execute.return_value = True
         available_widgets = self.service.get_available_widgets(
-            self.project, AvailableWidgetsListType.NATIVE
+            self.project.uuid, AvailableWidgetsListType.NATIVE
         )
 
         self.assertIsInstance(available_widgets, AvailableWidgetsList)
@@ -759,9 +766,8 @@ class TestConversationsMetricsService(TestCase):
         )
 
     def test_get_available_widgets_with_custom_type(self):
-        self.mock_datalake_service.check_if_sales_funnel_data_exists.return_value = True
         available_widgets = self.service.get_available_widgets(
-            self.project, AvailableWidgetsListType.CUSTOM
+            self.project.uuid, AvailableWidgetsListType.CUSTOM
         )
 
         self.assertIsInstance(available_widgets, AvailableWidgetsList)
