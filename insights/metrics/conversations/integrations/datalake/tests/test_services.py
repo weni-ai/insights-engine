@@ -1671,7 +1671,9 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         end_date = datetime.now()
 
         with patch.object(self.service, "_get_cached_results") as mock_get_cached:
-            mock_get_cached.return_value = '{"tool_1": {"count": 5, "agent_uuid": null}}'
+            mock_get_cached.return_value = (
+                '{"tool_1": {"count": 5, "agent_uuid": null}}'
+            )
 
             results = self.service.get_tool_results(
                 project_uuid=project_uuid,
@@ -1847,3 +1849,115 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
             )
 
         self.assertEqual(parallel_result, sequential_result)
+
+    def test_get_unique_contacts_count(self):
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        self.mock_events_client.get_unique_contacts_count.return_value = [
+            {"unique_contact_urns": 42}
+        ]
+
+        result = self.service.get_unique_contacts_count(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.assertEqual(result, 42)
+        self.mock_events_client.get_unique_contacts_count.assert_called_once_with(
+            event_name=self.service.event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key="conversation_classification",
+            table="conversation_classification",
+        )
+
+    def test_get_unique_contacts_count_with_cache(self):
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        self.mock_events_client.get_unique_contacts_count.return_value = [
+            {"unique_contact_urns": 42}
+        ]
+        self.mock_cache_client.get.return_value = json.dumps(42)
+
+        result = self.service.get_unique_contacts_count(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.assertEqual(result, 42)
+        self.mock_events_client.get_unique_contacts_count.assert_not_called()
+
+    def test_get_unique_contacts_count_with_exception(self):
+        self.mock_events_client.get_unique_contacts_count.side_effect = Exception(
+            "Test exception"
+        )
+
+        with self.assertRaises(Exception):
+            self.service.get_unique_contacts_count(
+                project_uuid=uuid.uuid4(),
+                start_date=datetime.now() - timedelta(days=1),
+                end_date=datetime.now(),
+            )
+
+    def test_get_returning_contacts_count(self):
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        self.mock_events_client.get_returning_contacts_count.return_value = [
+            {"recurring_contact_urns": 15}
+        ]
+
+        result = self.service.get_returning_contacts_count(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.assertEqual(result, 15)
+        self.mock_events_client.get_returning_contacts_count.assert_called_once_with(
+            event_name=self.service.event_name,
+            project=project_uuid,
+            date_start=start_date,
+            date_end=end_date,
+            key="conversation_classification",
+            table="conversation_classification",
+        )
+
+    def test_get_returning_contacts_count_with_cache(self):
+        project_uuid = uuid.uuid4()
+        start_date = datetime.now() - timedelta(days=1)
+        end_date = datetime.now()
+
+        self.mock_events_client.get_returning_contacts_count.return_value = [
+            {"recurring_contact_urns": 15}
+        ]
+        self.mock_cache_client.get.return_value = json.dumps(15)
+
+        result = self.service.get_returning_contacts_count(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.assertEqual(result, 15)
+        self.mock_events_client.get_returning_contacts_count.assert_not_called()
+
+    def test_get_returning_contacts_count_with_exception(self):
+        self.mock_events_client.get_returning_contacts_count.side_effect = Exception(
+            "Test exception"
+        )
+
+        with self.assertRaises(Exception):
+            self.service.get_returning_contacts_count(
+                project_uuid=uuid.uuid4(),
+                start_date=datetime.now() - timedelta(days=1),
+                end_date=datetime.now(),
+            )

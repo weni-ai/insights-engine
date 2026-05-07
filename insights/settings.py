@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_spectacular",
     "weni.feature_flags",
+    "weni.eda.django.eda_app",
 ]
 
 if ADMIN_ENABLED is True:
@@ -303,6 +304,9 @@ if USE_SENTRY:
 
 USE_EDA = env.bool("USE_EDA", default=False)
 
+# TODO: Remove this once we permanently migrate to Weni EDA
+USE_WENI_EDA_FOR_PROJECTS = env.bool("USE_WENI_EDA_FOR_PROJECTS", default=False)
+
 if USE_EDA:
     EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"
     EDA_CONSUMERS_HANDLE = "insights.event_driven.handle.handle_consumers"
@@ -316,6 +320,7 @@ if USE_EDA:
 
     FLOWS_TICKETER_EXCHANGE = env("FLOWS_TICKETER_EXCHANGE", default="sectors.topic")
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
+
 
 CHATS_URL = env("CHATS_URL", default="")
 
@@ -398,6 +403,13 @@ REPORT_GENERATION_MAX_CONCURRENT_REPORTS = env.int(
 REPORT_GENERATION_TIMEOUT = env.int(
     "REPORT_GENERATION_TIMEOUT", default=60 * 60
 )  # 1 hour
+REPORT_GENERATION_USE_PARALLEL_PROCESSING_FEATURE_FLAG_KEY = env.str(
+    "REPORT_GENERATION_USE_PARALLEL_PROCESSING_FEATURE_FLAG_KEY",
+    default="insightsReportGenerationUseParallelProcessing",
+)
+REPORT_PARALLEL_FETCH_MAX_WORKERS = env.int(
+    "REPORT_PARALLEL_FETCH_MAX_WORKERS", default=5
+)
 
 SEND_EMAILS = env.bool("SEND_EMAILS", default=False)
 

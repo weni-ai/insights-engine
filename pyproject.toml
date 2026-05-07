@@ -39,6 +39,7 @@ standardwebhooks = "^1.0.0"
 django-model-utils = "^5.0.0"
 weni-commons = "^1.1.0"
 pyjwt = "^2.11.0"
+weni-eda = "^0.1.1"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.22.2"

@@ -1,3 +1,17 @@
+# 1.24.2
+# Add
+  - Parallel processing for datalake events retrieval in conversations report export
+# Fix
+  - Agents metrics pagination
+
+# 1.24.1
+# Add
+  - Project consumer using Weni EDA
+
+# 1.24.0
+# Add
+  - Contacts metrics in datalake service, metrics service, endpoint, and export
+
 # 1.23.4
 # Add
   - Update weni-datalake-sdk version to 0.8.0
