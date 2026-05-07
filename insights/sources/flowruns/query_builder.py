@@ -68,15 +68,19 @@ class FlowRunElasticSearchQueryBuilder:
     def min(self, op_field, *args, **kwargs):
         return self._base_operation("min", op_field)
 
-    def recurrence(self, op_field: str, limit: int = 100, *args, **kwargs):
+    def recurrence(
+        self, op_field: str, limit: int = 100, include_values: list = None, *args, **kwargs
+    ):
+        filter_clauses = [{"term": {"values.name": op_field}}]
+        if include_values:
+            filter_clauses.append({"terms": {"values.value": include_values}})
+
         aggs = {
             "values": {
                 "nested": {"path": "values"},
                 "aggs": {
                     "agg_field": {
-                        "filter": {
-                            "bool": {"filter": [{"term": {"values.name": op_field}}]}
-                        },
+                        "filter": {"bool": {"filter": filter_clauses}},
                         "aggs": {
                             "agg_value": {
                                 "terms": {
