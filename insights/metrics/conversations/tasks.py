@@ -21,6 +21,9 @@ from insights.metrics.conversations.integrations.elasticsearch.services import (
 from insights.metrics.conversations.integrations.elasticsearch.clients import (
     ElasticsearchClient,
 )
+from insights.metrics.conversations.integrations.datalake.services import (
+    DatalakeConversationsMetricsService,
+)
 from insights.metrics.conversations.usecases.datalake_check_project_sales_funnel import (
     CheckProjectSalesFunnelOnDatalakeUseCase,
 )
@@ -182,4 +185,5 @@ def check_project_sales_funnel_on_datalake(project_uuid: UUID):
         project_uuid,
     )
 
-    CheckProjectSalesFunnelOnDatalakeUseCase().execute(project_uuid)
+    datalake_service = DatalakeConversationsMetricsService()
+    CheckProjectSalesFunnelOnDatalakeUseCase(datalake_service).execute(project_uuid)
