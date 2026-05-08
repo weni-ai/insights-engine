@@ -23,6 +23,7 @@ from insights.metrics.conversations.reports.serializers import (
     RequestConversationsReportGenerationSerializer,
 )
 from insights.reports.choices import ReportStatus
+from insights.reports.usecases.report_status_cache import ReportStatusCacheUseCase
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import DataLakeEventsClient
 from insights.metrics.conversations.services import ConversationsMetricsService
@@ -59,9 +60,14 @@ class ConversationsReportsViewSet(APIView):
         )
         query_params.is_valid(raise_exception=True)
 
-        report = self.service.get_current_report_for_project(
-            query_params.validated_data["project"]
-        )
+        project = query_params.validated_data["project"]
+        project_uuid = str(project.uuid)
+
+        report, cache_hit = ReportStatusCacheUseCase.get(project_uuid)
+
+        if not cache_hit:
+            report = self.service.get_current_report_for_project(project)
+            ReportStatusCacheUseCase.set(project_uuid, report)
 
         response_body = (
             GetConversationsReportStatusResponseSerializer(instance=report).data

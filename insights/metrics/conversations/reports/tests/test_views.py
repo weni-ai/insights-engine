@@ -11,6 +11,7 @@ from insights.projects.models import Project
 from insights.authentication.tests.decorators import with_project_auth
 from insights.reports.choices import ReportStatus, ReportSource, ReportFormat
 from insights.reports.models import Report
+from insights.reports.usecases.report_status_cache import ReportStatusCacheUseCase
 from insights.widgets.models import Widget
 
 
@@ -94,6 +95,84 @@ class TestConversationsReportsViewSetAsAuthenticatedUser(
         self.assertEqual(response.data["report_uuid"], str(report.uuid))
 
         mock_get_current_report_for_project.assert_called_once_with(self.project)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_current_report_for_project"
+    )
+    def test_get_status_returns_cached_response(
+        self, mock_get_current_report_for_project
+    ):
+        project_uuid = str(self.project.uuid)
+        report = Report.objects.create(
+            project=self.project,
+            source=ReportSource.CONVERSATIONS_DASHBOARD,
+            status=ReportStatus.PENDING,
+            requested_by=self.user,
+        )
+        ReportStatusCacheUseCase.set(project_uuid, report)
+
+        response = self.get_status({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], ReportStatus.PENDING)
+        self.assertEqual(response.data["email"], self.user.email)
+        self.assertEqual(response.data["report_uuid"], str(report.uuid))
+        mock_get_current_report_for_project.assert_not_called()
+
+        ReportStatusCacheUseCase.invalidate(project_uuid)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_current_report_for_project"
+    )
+    def test_get_status_sets_cache_on_miss(
+        self, mock_get_current_report_for_project
+    ):
+        project_uuid = str(self.project.uuid)
+        ReportStatusCacheUseCase.invalidate(project_uuid)
+
+        report = Report.objects.create(
+            project=self.project,
+            source=ReportSource.CONVERSATIONS_DASHBOARD,
+            status=ReportStatus.PENDING,
+            requested_by=self.user,
+        )
+        mock_get_current_report_for_project.return_value = report
+
+        response = self.get_status({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        cached_report, cache_hit = ReportStatusCacheUseCase.get(project_uuid)
+        self.assertTrue(cache_hit)
+        self.assertIsNotNone(cached_report)
+        self.assertEqual(cached_report.uuid, report.uuid)
+
+        ReportStatusCacheUseCase.invalidate(project_uuid)
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_current_report_for_project"
+    )
+    def test_get_status_cache_miss_without_report(
+        self, mock_get_current_report_for_project
+    ):
+        project_uuid = str(self.project.uuid)
+        ReportStatusCacheUseCase.invalidate(project_uuid)
+
+        mock_get_current_report_for_project.return_value = None
+
+        response = self.get_status({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], ReportStatus.READY)
+
+        cached_report, cache_hit = ReportStatusCacheUseCase.get(project_uuid)
+        self.assertTrue(cache_hit)
+        self.assertIsNone(cached_report)
+
+        ReportStatusCacheUseCase.invalidate(project_uuid)
 
     def test_request_generation_without_project_uuid(self):
         response = self.request_generation({})
