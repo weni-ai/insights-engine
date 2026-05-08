@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from uuid import UUID
 
 from django.db.models import Q
 from django.db.models.query import QuerySet
@@ -19,6 +20,12 @@ from insights.metrics.conversations.integrations.elasticsearch.services import (
 )
 from insights.metrics.conversations.integrations.elasticsearch.clients import (
     ElasticsearchClient,
+)
+from insights.metrics.conversations.integrations.datalake.services import (
+    DatalakeConversationsMetricsService,
+)
+from insights.metrics.conversations.usecases.datalake_check_project_sales_funnel import (
+    CheckProjectSalesFunnelOnDatalakeUseCase,
 )
 
 
@@ -166,3 +173,17 @@ def timeout_reports():
     logger.info(
         "[ timeout_reports task ] Timed out %s reports", in_progress_reports.count()
     )
+
+
+@app.task
+def check_project_sales_funnel_on_datalake(project_uuid: UUID):
+    """
+    Check if sales funnel data exists for a project on the datalake.
+    """
+    logger.info(
+        "[ check_project_sales_funnel_on_datalake task ] Starting task for project %s",
+        project_uuid,
+    )
+
+    datalake_service = DatalakeConversationsMetricsService()
+    CheckProjectSalesFunnelOnDatalakeUseCase(datalake_service).execute(project_uuid)

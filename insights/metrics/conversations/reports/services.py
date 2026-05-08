@@ -215,6 +215,33 @@ class BaseConversationsReportService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_flowsrun_results_by_contacts(
+        self,
+        report: Report,
+        flow_uuid: str,
+        start_date: str,
+        end_date: str,
+        op_field: str,
+        include_values: list[str] | None = None,
+    ) -> list[dict]:
+        """
+        Get flowsrun results by contacts.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_csat_ai_worksheet(
         self, report: Report, start_date: datetime, end_date: datetime
     ) -> ConversationsReportWorksheet:
@@ -1162,6 +1189,7 @@ class ConversationsReportService(BaseConversationsReportService):
         start_date: str,
         end_date: str,
         op_field: str,
+        include_values: list[str] | None = None,
     ) -> list[dict]:
         """
         Get flowsrun results by contacts.
@@ -1220,6 +1248,7 @@ class ConversationsReportService(BaseConversationsReportService):
                     op_field=op_field,
                     page_size=page_size,
                     search_after=search_after,
+                    include_values=include_values,
                 )
             )
 
@@ -1656,12 +1685,15 @@ class ConversationsReportService(BaseConversationsReportService):
                 % (report.uuid, ", ".join(missing_fields))
             )
 
+        valid_ratings = ["1", "2", "3", "4", "5"]
+
         docs = self.get_flowsrun_results_by_contacts(
             report=report,
             flow_uuid=flow_uuid,
             start_date=start_date,
             end_date=end_date,
             op_field=op_field,
+            include_values=valid_ratings,
         )
 
         with override(report.requested_by.language or "en"):

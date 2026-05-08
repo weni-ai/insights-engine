@@ -69,6 +69,9 @@ from insights.sources.integrations.clients import (
     BaseNexusConversationsAPIClient,
 )
 from insights.widgets.models import Widget
+from insights.metrics.conversations.usecases.dashboard_check_project_sales_funnel import (
+    CheckProjectSalesFunnelOnDashboardUseCase,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -369,6 +372,7 @@ class ConversationsMetricsService(
         cache_client: CacheClient = CacheClient(),
         nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
+        check_sales_funnel_use_case: CheckProjectSalesFunnelOnDashboardUseCase = CheckProjectSalesFunnelOnDashboardUseCase(),
     ):
         self.datalake_service: BaseDatalakeConversationsMetricsService = (
             datalake_service
@@ -379,6 +383,9 @@ class ConversationsMetricsService(
         self.cache_client: CacheClient = cache_client
         self.nexus_conversations_cache_ttl: int = nexus_conversations_cache_ttl
         self.flowruns_query_executor: FlowRunsQueryExecutor = flowruns_query_executor
+        self.check_sales_funnel_use_case: CheckProjectSalesFunnelOnDashboardUseCase = (
+            check_sales_funnel_use_case
+        )
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
         """
@@ -690,6 +697,8 @@ class ConversationsMetricsService(
             end_date=end_date,
         )
 
+    VALID_CSAT_RATINGS = ["1", "2", "3", "4", "5"]
+
     def _get_csat_metrics_from_flowruns(
         self,
         flow_uuid: UUID,
@@ -702,6 +711,7 @@ class ConversationsMetricsService(
             "created_on__gte": self._convert_to_iso_string(start_date),
             "created_on__lte": self._convert_to_iso_string(end_date),
             "flow": flow_uuid,
+            "project": str(project_uuid),
         }
 
         return self.flowruns_query_executor.execute(
@@ -711,6 +721,7 @@ class ConversationsMetricsService(
             query_kwargs={
                 "project": project_uuid,
                 "op_field": op_field,
+                "include_values": self.VALID_CSAT_RATINGS,
             },
         )
 
@@ -977,7 +988,16 @@ class ConversationsMetricsService(
         """
         Check if sales funnel data exists in Datalake.
         """
-        return self.datalake_service.check_if_sales_funnel_data_exists(project_uuid)
+        from insights.metrics.conversations.tasks import (
+            check_project_sales_funnel_on_datalake,
+        )
+
+        exists_on_dashboard = self.check_sales_funnel_use_case.execute(project_uuid)
+
+        if not exists_on_dashboard:
+            check_project_sales_funnel_on_datalake.delay(project_uuid)
+
+        return exists_on_dashboard
 
     def _get_native_available_widgets(
         self, project_uuid: UUID

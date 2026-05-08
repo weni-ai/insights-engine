@@ -480,6 +480,13 @@ CONVERSATIONS_REPORT_ELASTIC_PAGE_SIZE = env.int(
 CONVERSATIONS_REPORT_ELASTIC_PAGE_LIMIT = env.int(
     "CONVERSATIONS_REPORT_ELASTIC_PAGE_LIMIT", default=100
 )
+CONVERSATIONS_REPORT_STATUS_CACHE_TTL = env.int(
+    "CONVERSATIONS_REPORT_STATUS_CACHE_TTL", default=120
+)
+CONVERSATIONS_REPORT_STATUS_CACHE_KEY = env.str(
+    "CONVERSATIONS_REPORT_STATUS_CACHE_KEY",
+    default="conversations_report_status:{project_uuid}",
+)
 
 # Conversations dashboard
 
@@ -518,6 +525,9 @@ STG_MOCK_CUSTOM_FLOWRUNS = env.list("STG_MOCK_CUSTOM_FLOWRUNS", default=[])
 # Sales Funnel
 SALES_FUNNEL_EVENTS_START_DATE = env.str(
     "SALES_FUNNEL_EVENTS_START_DATE", default="2025-01-01T00:00:00-03:00"
+)
+SALES_FUNNEL_CHECK_COOLDOWN_TTL = env.int(
+    "SALES_FUNNEL_CHECK_COOLDOWN_TTL", default=30
 )
 
 # Feature flags
@@ -584,4 +594,10 @@ VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60
 # Data source service
 DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
     "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
+)
+
+# Crosstab parallel fetching
+CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY = env.str(
+    "CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY",
+    default="insightsCrosstabParallelFetching",
 )
