@@ -1707,11 +1707,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertIsInstance(results["quoted_value"], ToolResultMetric)
         self.assertEqual(results["quoted_value"].count, 4)
 
-    @patch(
-        "insights.metrics.conversations.integrations.datalake.services.is_feature_active_for_attributes",
-        return_value=True,
-    )
-    def test_get_crosstab_data_parallel_fetching(self, mock_feature_flag):
+    def test_get_crosstab_data_parallel_fetching(self):
         project_uuid = uuid.uuid4()
         start_date = datetime.now() - timedelta(days=1)
         end_date = datetime.now()
@@ -1746,109 +1742,6 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
                 date_start=start_date,
                 date_end=end_date,
             )
-
-        mock_feature_flag.assert_called_once_with(
-            "insightsCrosstabParallelFetching",
-            attributes={"projectUUID": str(project_uuid)},
-        )
-
-    @patch(
-        "insights.metrics.conversations.integrations.datalake.services.is_feature_active_for_attributes",
-        return_value=False,
-    )
-    def test_get_crosstab_data_sequential_fetching(self, mock_feature_flag):
-        project_uuid = uuid.uuid4()
-        start_date = datetime.now() - timedelta(days=1)
-        end_date = datetime.now()
-        source_a = CrosstabSource(key="source_a_key", field="value")
-        source_b = CrosstabSource(key="source_b_key", field="value")
-
-        self.mock_events_client.get_events.return_value = []
-
-        with patch.object(
-            self.service, "get_raw_events_data", return_value=[]
-        ) as mock_get_raw:
-            self.service.get_crosstab_data(
-                project_uuid=project_uuid,
-                source_a=source_a,
-                source_b=source_b,
-                start_date=start_date,
-                end_date=end_date,
-            )
-
-            self.assertEqual(mock_get_raw.call_count, 2)
-            mock_get_raw.assert_any_call(
-                key="source_a_key",
-                event_name=self.service.event_name,
-                project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
-            )
-            mock_get_raw.assert_any_call(
-                key="source_b_key",
-                event_name=self.service.event_name,
-                project=project_uuid,
-                date_start=start_date,
-                date_end=end_date,
-            )
-
-        mock_feature_flag.assert_called_once_with(
-            "insightsCrosstabParallelFetching",
-            attributes={"projectUUID": str(project_uuid)},
-        )
-
-    @patch(
-        "insights.metrics.conversations.integrations.datalake.services.is_feature_active_for_attributes",
-        return_value=True,
-    )
-    def test_get_crosstab_data_parallel_returns_same_result_as_sequential(
-        self, mock_feature_flag
-    ):
-        project_uuid = uuid.uuid4()
-        start_date = datetime.now() - timedelta(days=1)
-        end_date = datetime.now()
-        source_a = CrosstabSource(key="source_a_key", field="value")
-        source_b = CrosstabSource(key="source_b_key", field="value")
-
-        source_a_events = [
-            {"value": "label_1", "join_key": "jk1"},
-            {"value": "label_2", "join_key": "jk2"},
-        ]
-        source_b_events = [
-            {"value": "data_1", "join_key": "jk1"},
-            {"value": "data_2", "join_key": "jk2"},
-        ]
-
-        def get_raw_side_effect(**kwargs):
-            if kwargs.get("key") == "source_a_key":
-                return source_a_events
-            return source_b_events
-
-        with patch.object(
-            self.service, "get_raw_events_data", side_effect=get_raw_side_effect
-        ):
-            parallel_result = self.service.get_crosstab_data(
-                project_uuid=project_uuid,
-                source_a=source_a,
-                source_b=source_b,
-                start_date=start_date,
-                end_date=end_date,
-            )
-
-        mock_feature_flag.return_value = False
-
-        with patch.object(
-            self.service, "get_raw_events_data", side_effect=get_raw_side_effect
-        ):
-            sequential_result = self.service.get_crosstab_data(
-                project_uuid=project_uuid,
-                source_a=source_a,
-                source_b=source_b,
-                start_date=start_date,
-                end_date=end_date,
-            )
-
-        self.assertEqual(parallel_result, sequential_result)
 
     def test_get_unique_contacts_count(self):
         project_uuid = uuid.uuid4()
