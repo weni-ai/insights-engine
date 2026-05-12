@@ -17,6 +17,7 @@ from insights.metrics.skills.services.abandoned_cart import (
     AbandonedCartSkillService,
 )
 from insights.metrics.skills.services.dataclass import AbandonedCartWhatsAppTemplate
+from insights.dashboards.models import Dashboard
 from insights.projects.models import Project
 from insights.sources.cache import CacheClient
 from insights.metrics.meta.utils import (
@@ -80,17 +81,15 @@ class TestAbandonedCartSkillService(TestCase):
             service.validate_filters(filters)
 
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
-    @patch(
-        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
-    )
     def test_cannot_whatsapp_template_id_and_waba_when_template_is_not_found(
-        self, mock_wabas, mock_templates_list
+        self, mock_templates_list
     ):
-        mock_wabas.return_value = [
-            {
-                "waba_id": "123456789098765",
-            },
-        ]
+        Dashboard.objects.create(
+            project=self.project,
+            name="dash",
+            description="",
+            config={"is_whatsapp_integration": True, "waba_id": "123456789098765"},
+        )
         mock_templates_list.return_value = {"data": []}
 
         with self.assertRaises(TemplateNotFound):
@@ -100,22 +99,19 @@ class TestAbandonedCartSkillService(TestCase):
     @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
-    @patch(
-        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
-    )
     def test_get_metrics(
         self,
-        mock_wabas,
         mock_templates_list,
         mock_messages_analytics,
         mock_get_vtex_auth,
         mock_vtex_orders_list,
     ):
-        mock_wabas.return_value = [
-            {
-                "waba_id": "123456789098765",
-            },
-        ]
+        Dashboard.objects.create(
+            project=self.project,
+            name="dash",
+            description="",
+            config={"is_whatsapp_integration": True, "waba_id": "123456789098765"},
+        )
         mock_templates_list.return_value = {
             "data": [
                 {
@@ -213,13 +209,15 @@ class TestAbandonedCartSkillService(TestCase):
         self.assertEqual(json.loads(self.cache_client.get(cache_key)), expected_metrics)
 
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
-    @patch(
-        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
-    )
     def test_whatsapp_template_ids_returns_all_templates_sorted_desc(
-        self, mock_wabas, mock_templates_list
+        self, mock_templates_list
     ):
-        mock_wabas.return_value = [{"waba_id": "waba_123"}]
+        Dashboard.objects.create(
+            project=self.project,
+            name="dash",
+            description="",
+            config={"is_whatsapp_integration": True, "waba_id": "waba_123"},
+        )
         mock_templates_list.return_value = {
             "data": [
                 {"name": "weni_abandoned_cart_1700000000", "id": "t1"},
@@ -241,13 +239,15 @@ class TestAbandonedCartSkillService(TestCase):
         self.assertEqual(templates[2].ids, ["t1"])
 
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
-    @patch(
-        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
-    )
     def test_whatsapp_template_ids_groups_ids_by_name(
-        self, mock_wabas, mock_templates_list
+        self, mock_templates_list
     ):
-        mock_wabas.return_value = [{"waba_id": "waba_123"}]
+        Dashboard.objects.create(
+            project=self.project,
+            name="dash",
+            description="",
+            config={"is_whatsapp_integration": True, "waba_id": "waba_123"},
+        )
         mock_templates_list.return_value = {
             "data": [
                 {"name": "weni_abandoned_cart_1700000000", "id": "t1"},
@@ -324,13 +324,15 @@ class TestAbandonedCartSkillService(TestCase):
 
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
-    @patch(
-        "insights.sources.integrations.clients.WeniIntegrationsClient.get_wabas_for_project"
-    )
     def test_get_message_templates_metrics_combines_chunked_results(
-        self, mock_wabas, mock_templates_list, mock_analytics
+        self, mock_templates_list, mock_analytics
     ):
-        mock_wabas.return_value = [{"waba_id": "waba_123"}]
+        Dashboard.objects.create(
+            project=self.project,
+            name="dash",
+            description="",
+            config={"is_whatsapp_integration": True, "waba_id": "waba_123"},
+        )
         mock_templates_list.return_value = {
             "data": [
                 {"name": f"weni_abandoned_cart_{1700000000 + i}", "id": str(i)}
