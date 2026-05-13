@@ -403,10 +403,6 @@ REPORT_GENERATION_MAX_CONCURRENT_REPORTS = env.int(
 REPORT_GENERATION_TIMEOUT = env.int(
     "REPORT_GENERATION_TIMEOUT", default=60 * 60
 )  # 1 hour
-REPORT_GENERATION_USE_PARALLEL_PROCESSING_FEATURE_FLAG_KEY = env.str(
-    "REPORT_GENERATION_USE_PARALLEL_PROCESSING_FEATURE_FLAG_KEY",
-    default="insightsReportGenerationUseParallelProcessing",
-)
 REPORT_PARALLEL_FETCH_MAX_WORKERS = env.int(
     "REPORT_PARALLEL_FETCH_MAX_WORKERS", default=5
 )
@@ -561,10 +557,4 @@ VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60
 # Data source service
 DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
     "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
-)
-
-# Crosstab parallel fetching
-CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY = env.str(
-    "CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY",
-    default="insightsCrosstabParallelFetching",
 )
