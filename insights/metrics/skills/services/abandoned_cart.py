@@ -1,4 +1,3 @@
-from functools import cached_property
 import json
 import logging
 
@@ -24,8 +23,8 @@ from insights.settings import (
     ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST,
     ABANDONED_CART_METRICS_START_DATE_MAX_DAYS,
 )
+from insights.dashboards.models import Dashboard
 from insights.sources.cache import CacheClient
-from insights.sources.integrations.clients import WeniIntegrationsClient
 
 logger = logging.getLogger(__name__)
 
@@ -66,23 +65,24 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
         return valid_fields
 
-    @cached_property
+    @property
     def _project_wabas(self) -> list[dict]:
-        client = WeniIntegrationsClient()
-        try:
-            wabas = client.get_wabas_for_project(self.project.uuid)
-        except ValueError as e:
-            logger.error(
-                "Error fetching wabas in AbandonedCartSkillService for project %s: %s",
-                self.project.uuid,
-                e,
-            )
+        configs = Dashboard.objects.filter(
+            project=self.project,
+            config__is_whatsapp_integration=True,
+        ).values_list("config", flat=True)
 
-            raise e
+        seen = set()
+        wabas = []
+        for config in configs:
+            waba_id = config.get("waba_id")
+            if waba_id and waba_id not in seen:
+                seen.add(waba_id)
+                wabas.append({"waba_id": waba_id})
 
-        return [waba for waba in wabas if waba["waba_id"]]
+        return wabas
 
-    @cached_property
+    @property
     def _whatsapp_template_ids_and_waba(self):
         name = "weni_abandoned_cart"
 
@@ -138,7 +138,9 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         self, waba_id, template_ids, start_date, end_date, product_type
     ) -> list[dict]:
         data_points = []
-        for i in range(0, len(template_ids), ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST):
+        for i in range(
+            0, len(template_ids), ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST
+        ):
             chunk = template_ids[i : i + ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST]
             metrics = self.meta_api_client.get_messages_analytics(
                 waba_id=waba_id,
