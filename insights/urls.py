@@ -74,6 +74,7 @@ urlpatterns += [
         name="feature_flags_webhook",
     ),
     path("v1/user-projects/", UserProjectsView.as_view(), name="user-projects"),
+    path("v1/commerce/", include("insights.commerce.urls")),
     path("v1/", include(router.urls)),
 ]
 
