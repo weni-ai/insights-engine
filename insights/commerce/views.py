@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -31,6 +32,10 @@ PROJECT_UUID_PARAM = OpenApiParameter(
 )
 
 
+STUB_ABANDONED_CART_STATUS_RESPONSE = {"active": True}
+STUB_MARKETING_PRICING_RESPONSE = {"value": 0.4, "currency": "BRL"}
+
+
 class AbandonedCartStatusView(APIView):
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
 
@@ -39,6 +44,12 @@ class AbandonedCartStatusView(APIView):
         responses={status.HTTP_200_OK: AbandonedCartStatusResponseSerializer},
     )
     def get(self, request: Request) -> Response:
+        if settings.COMMERCE_USE_STUB_RESPONSES:
+            return Response(
+                STUB_ABANDONED_CART_STATUS_RESPONSE,
+                status=status.HTTP_200_OK,
+            )
+
         project_uuid = request.query_params.get("project_uuid")
 
         service = AbandonedCartStatusService()
@@ -55,6 +66,12 @@ class MarketingPricingView(APIView):
         responses={status.HTTP_200_OK: MarketingPricingResponseSerializer},
     )
     def get(self, request: Request) -> Response:
+        if settings.COMMERCE_USE_STUB_RESPONSES:
+            return Response(
+                STUB_MARKETING_PRICING_RESPONSE,
+                status=status.HTTP_200_OK,
+            )
+
         project_uuid = request.query_params.get("project_uuid")
 
         service = MarketingPricingService()

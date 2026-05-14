@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -104,3 +105,48 @@ class TestMarketingPricingView(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+
+
+@override_settings(COMMERCE_USE_STUB_RESPONSES=True)
+class TestStubResponses(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create(language="pt_BR")
+        self.project = Project.objects.create(name="test_project")
+        self.client.force_authenticate(self.user)
+
+    @with_project_auth
+    @patch("insights.commerce.views.AbandonedCartStatusService.is_active")
+    def test_abandoned_cart_returns_stub_without_calling_service(
+        self, mock_is_active
+    ):
+        response = self.client.get(
+            ABANDONED_CART_URL, {"project_uuid": str(self.project.uuid)}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"active": True})
+        mock_is_active.assert_not_called()
+
+    @with_project_auth
+    @patch("insights.commerce.views.MarketingPricingService.get_marketing_pricing")
+    def test_marketing_pricing_returns_stub_without_calling_service(
+        self, mock_get_pricing
+    ):
+        response = self.client.get(
+            MARKETING_PRICING_URL, {"project_uuid": str(self.project.uuid)}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"value": 0.4, "currency": "BRL"})
+        mock_get_pricing.assert_not_called()
+
+    def test_stub_still_requires_authentication(self):
+        self.client.force_authenticate(user=None)
+
+        cart_response = self.client.get(ABANDONED_CART_URL)
+        pricing_response = self.client.get(MARKETING_PRICING_URL)
+
+        self.assertEqual(cart_response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(
+            pricing_response.status_code, status.HTTP_401_UNAUTHORIZED
+        )

@@ -337,6 +337,10 @@ INTEGRATIONS_URL = env("INTEGRATIONS_URL", default="")
 RETAIL_URL = env("RETAIL_URL", default="")
 BILLING_URL = env("BILLING_URL", default="")
 
+COMMERCE_USE_STUB_RESPONSES = env.bool(
+    "COMMERCE_USE_STUB_RESPONSES", default=True
+)
+
 REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
 STATIC_API_TOKEN = env.str("STATIC_API_TOKEN", default="")
 # channels
