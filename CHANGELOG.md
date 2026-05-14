@@ -1,3 +1,23 @@
+# 1.25.2
+# Add
+  - Report status caching mechanism for export endpoint
+  - WABA retrieval from Dashboard model in abandoned cart skill
+# Remove
+  - Parallel processing feature flags for crosstab and conversations totals
+
+# 1.25.1
+# Fix
+  - Project UUID conversion in sales funnel task
+
+# 1.25.0
+# Add
+  - Auto-creation of sales funnel widget on project setup
+  - Parallel processing for conversations totals retrieval
+  - Parallel processing for crosstab data fetching
+# Fix
+  - Only show expected ratings on conversation CSAT
+  - Parameter format in WhatsApp message templates API schema
+
 # 1.24.2
 # Add
   - Parallel processing for datalake events retrieval in conversations report export
