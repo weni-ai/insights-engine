@@ -8,9 +8,7 @@ from insights.authentication.tests.decorators import with_project_auth
 from insights.projects.models import Project
 
 
-SERVICE_PATH = (
-    "insights.human_support.services.HumanSupportDashboardService"
-)
+SERVICE_PATH = "insights.human_support.services.HumanSupportDashboardService"
 
 
 class BaseHumanSupportViewTest(APITestCase):
