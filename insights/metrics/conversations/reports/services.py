@@ -2053,10 +2053,12 @@ class ConversationsReportService(BaseConversationsReportService):
             if urn:
                 urn_counts[urn] = urn_counts.get(urn, 0) + 1
 
-        unique_data = [{"URN": urn} for urn in urn_counts]
-        returning_data = [
-            {"URN": urn} for urn, count in urn_counts.items() if count > 1
-        ]
+        unique_data = []
+        returning_data = []
+        for urn, count in urn_counts.items():
+            unique_data.append({"URN": urn})
+            if count > 1:
+                returning_data.append({"URN": urn})
 
         with override(report.requested_by.language or "en"):
             unique_worksheet_name = gettext("Unique contacts")
