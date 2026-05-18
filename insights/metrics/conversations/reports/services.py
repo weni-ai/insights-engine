@@ -19,6 +19,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
+from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.reports.available_widgets import (
@@ -214,6 +215,7 @@ class BaseConversationsReportService(ABC):
         report: Report,
         start_date: datetime,
         end_date: datetime,
+        conversation_classification_events: list[dict] | None = None,
     ) -> ConversationsReportWorksheet:
         """
         Get the resolutions worksheet.
@@ -298,9 +300,22 @@ class BaseConversationsReportService(ABC):
         report: Report,
         start_date: datetime,
         end_date: datetime,
-    ) -> ConversationsReportWorksheet:
+        conversation_classification_events: list[dict] | None = None,
+    ) -> list[ConversationsReportWorksheet]:
         """
         Get contacts worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_contacts_absolute_numbers_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get contacts absolute numbers worksheet.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -625,10 +640,30 @@ class ConversationsReportService(BaseConversationsReportService):
         custom_widgets = source_config.get("custom_widgets", [])
         worksheets = []
 
+        conversation_classification_events = None
+
+        if "RESOLUTIONS" in sections or "CONTACTS" in sections:
+            # Fetching only once for resolutions and contacts worksheets
+            # instead of fetching for each worksheet
+            conversation_classification_events = self.get_datalake_events(
+                report=report,
+                project=report.project.uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name="weni_nexus_data",
+                key="conversation_classification",
+                table="conversation_classification",
+            )
+
         worksheets_mapping = {
             "RESOLUTIONS": (
                 self.get_resolutions_worksheet,
-                {"report": report, "start_date": start_date, "end_date": end_date},
+                {
+                    "report": report,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "conversation_classification_events": conversation_classification_events,
+                },
             ),
             "TOPICS_AI": (
                 self.get_topics_distribution_worksheet,
@@ -674,13 +709,22 @@ class ConversationsReportService(BaseConversationsReportService):
             ),
             "CONTACTS": (
                 self.get_contacts_worksheet,
-                {"report": report, "start_date": start_date, "end_date": end_date},
+                {
+                    "report": report,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "conversation_classification_events": conversation_classification_events,
+                },
             ),
         }
 
         for section, (worksheet_function, worksheet_args) in worksheets_mapping.items():
             if section in sections:
-                worksheets.append(worksheet_function(**worksheet_args))
+                result = worksheet_function(**worksheet_args)
+                if isinstance(result, list):
+                    worksheets.extend(result)
+                else:
+                    worksheets.append(result)
 
         if custom_widgets:
             widgets = Widget.objects.filter(
@@ -1212,19 +1256,23 @@ class ConversationsReportService(BaseConversationsReportService):
         report: Report,
         start_date: datetime,
         end_date: datetime,
+        conversation_classification_events: list[dict] | None = None,
     ) -> ConversationsReportWorksheet:
         """
         Get the resolutions worksheet.
         """
-        events = self.get_datalake_events(
-            report=report,
-            project=report.project.uuid,
-            date_start=start_date,
-            date_end=end_date,
-            event_name="weni_nexus_data",
-            key="conversation_classification",
-            table="conversation_classification",
-        )
+        if conversation_classification_events is not None:
+            events = conversation_classification_events
+        else:
+            events = self.get_datalake_events(
+                report=report,
+                project=report.project.uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name="weni_nexus_data",
+                key="conversation_classification",
+                table="conversation_classification",
+            )
 
         with override(report.requested_by.language):
             worksheet_name = gettext("Resolutions")
@@ -1914,7 +1962,7 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
-    def get_contacts_worksheet(
+    def get_contacts_absolute_numbers_worksheet(
         self,
         report: Report,
         start_date: datetime,
@@ -1960,6 +2008,70 @@ class ConversationsReportService(BaseConversationsReportService):
             name=worksheet_name,
             data=data,
         )
+
+    def get_contacts_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_classification_events: list[dict] | None = None,
+    ) -> list[ConversationsReportWorksheet]:
+        try:
+            attributes = {
+                "projectUUID": str(report.project.uuid),
+            }
+            if report.requested_by and report.requested_by.email:
+                attributes["userEmail"] = report.requested_by.email
+
+            flag_enabled = is_feature_active_for_attributes(
+                key=settings.CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY,
+                attributes=attributes,
+            )
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Error checking contacts worksheet feature flag: %s. Defaulting to absolute numbers.",
+                e,
+                exc_info=True,
+            )
+            capture_exception(e)
+            flag_enabled = False
+
+        if not flag_enabled:
+            return [
+                self.get_contacts_absolute_numbers_worksheet(
+                    report=report,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            ]
+
+        events = conversation_classification_events or []
+
+        urn_counts: dict[str, int] = {}
+        for event in events:
+            urn = event.get("contact_urn", "")
+            if urn:
+                urn_counts[urn] = urn_counts.get(urn, 0) + 1
+
+        unique_data = [{"URN": urn} for urn in urn_counts]
+        returning_data = [
+            {"URN": urn} for urn, count in urn_counts.items() if count > 1
+        ]
+
+        with override(report.requested_by.language or "en"):
+            unique_worksheet_name = gettext("Unique contacts")
+            returning_worksheet_name = gettext("Returning contacts")
+
+        return [
+            ConversationsReportWorksheet(
+                name=unique_worksheet_name,
+                data=unique_data,
+            ),
+            ConversationsReportWorksheet(
+                name=returning_worksheet_name,
+                data=returning_data,
+            ),
+        ]
 
     def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
         """
