@@ -308,7 +308,7 @@ class BaseConversationsReportService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
-    def get_contacts_absolute_numbers_worksheet(
+    def get_contacts_summary_worksheet(
         self,
         report: Report,
         start_date: datetime,
@@ -1962,7 +1962,7 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
-    def get_contacts_absolute_numbers_worksheet(
+    def get_contacts_summary_worksheet(
         self,
         report: Report,
         start_date: datetime,
@@ -2038,7 +2038,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
         if not flag_enabled:
             return [
-                self.get_contacts_absolute_numbers_worksheet(
+                self.get_contacts_summary_worksheet(
                     report=report,
                     start_date=start_date,
                     end_date=end_date,
