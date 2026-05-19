@@ -20,7 +20,6 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
-from weni.feature_flags.shortcuts import is_feature_active
 
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.reports.available_widgets import (
@@ -172,13 +171,6 @@ class BaseConversationsReportService(ABC):
     def get_datalake_events_in_parallel(self, report: Report, **kwargs) -> list[dict]:
         """
         Get datalake events in parallel.
-        """
-        raise NotImplementedError("Subclasses must implement this method")
-
-    @abstractmethod
-    def should_use_parallel_processing(self, report: Report) -> bool:
-        """
-        Check if parallel processing should be used.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -1103,39 +1095,11 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def should_use_parallel_processing(self, report: Report) -> bool:
-        """
-        Check if parallel processing should be used.
-        """
-        feature_flag_key = (
-            settings.REPORT_GENERATION_USE_PARALLEL_PROCESSING_FEATURE_FLAG_KEY
-        )
-
-        try:
-            is_feature_flag_active = is_feature_active(
-                key=feature_flag_key,
-                user_email=report.requested_by.email,
-                project_uuid=report.project.uuid,
-            )
-            return is_feature_flag_active
-
-        except Exception as e:
-            logger.error(
-                "[CONVERSATIONS REPORT SERVICE] Failed to check if parallel processing should be used for report %s. Error: %s",
-                report.uuid,
-                e,
-            )
-            capture_exception(e)
-            return False
-
     def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
         """
         Get datalake events.
         """
-        if self.should_use_parallel_processing(report):
-            return self.get_datalake_events_in_parallel(report, **kwargs)
-        else:
-            return self.get_datalake_events_sequential(report, **kwargs)
+        return self.get_datalake_events_in_parallel(report, **kwargs)
 
     def _format_date(self, original_date: str | int, report: Report) -> str:
         """

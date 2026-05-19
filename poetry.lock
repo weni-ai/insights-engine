@@ -3405,19 +3405,20 @@ amqp = ">=5.2.0,<6.0.0"
 
 [[package]]
 name = "weni-feature-flags"
-version = "2.1.0"
+version = "2.2.0a2"
 description = "Weni's feature flags SDK for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_feature_flags-2.1.0-py3-none-any.whl", hash = "sha256:ff5ac66c809f0eff56818f85f7d3ba67b19164ffcf3493cd0a278497bf165e34"},
-    {file = "weni_feature_flags-2.1.0.tar.gz", hash = "sha256:026647c8ca97e09360df7f162b5655bc23d367cd21464f7688d7891047a865fd"},
+    {file = "weni_feature_flags-2.2.0a2-py3-none-any.whl", hash = "sha256:a673f870e7aedf81a57e3f7babd1fb4cc3bebd388ecf149f452c03a23a978ad8"},
+    {file = "weni_feature_flags-2.2.0a2.tar.gz", hash = "sha256:e96c653ce9289400defbc4326932774b5eb1ad9082b0103617a7a633077f4181"},
 ]
 
 [package.dependencies]
 celery = ">=5.0.0,<6.0"
 django = ">=3.2.22,<6.0"
-django-redis = ">=4.0.0,<6.0"
+django-celery-beat = ">=2.5.0,<3.0"
+django-redis = ">=4.0.0,<=6.0"
 djangorestframework = ">=3.12.0,<4.0"
 growthbook = ">=1.0.0,<2.0"
 requests = ">=2.25.0,<3.0"
@@ -3752,4 +3753,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "fcbd53fd5aa8bd2a7a5fc28fe830a913190d04bdeb247731cd65264f8a123812"
+content-hash = "1aa9a2134a0653b94ac299c1ed53116b32794ae74a8161f2750dfb6fc14239a9"
