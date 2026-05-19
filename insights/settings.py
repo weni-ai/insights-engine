@@ -568,3 +568,9 @@ VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60
 DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
     "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
 )
+
+# Contacts worksheet detailed list
+CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY = env.str(
+    "CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY",
+    default="insightsContactsWorksheetDetailedList",
+)
