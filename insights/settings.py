@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "insights.reports",
     "insights.core",
     "insights.feedback",
+    "insights.commerce",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -331,6 +332,8 @@ GROQ_CHATGPT_TOKEN = env.str("GROQ_CHATGPT_TOKEN", default="")
 GROQ_OPEN_AI_GPT_VERSION = env.str("GROQ_OPEN_AI_GPT_VERSION", default="")
 
 INTEGRATIONS_URL = env("INTEGRATIONS_URL", default="")
+RETAIL_URL = env("RETAIL_URL", default="")
+BILLING_URL = env("BILLING_URL", default="")
 
 REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
 STATIC_API_TOKEN = env.str("STATIC_API_TOKEN", default="")
@@ -564,4 +567,10 @@ VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60
 # Data source service
 DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
     "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
+)
+
+# Contacts worksheet detailed list
+CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY = env.str(
+    "CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY",
+    default="insightsContactsWorksheetDetailedList",
 )
