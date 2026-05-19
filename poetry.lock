@@ -3267,13 +3267,13 @@ amqp = ">=5.2.0,<6.0.0"
 
 [[package]]
 name = "weni-feature-flags"
-version = "2.2.0a1"
+version = "2.2.0a2"
 description = "Weni's feature flags SDK for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_feature_flags-2.2.0a1-py3-none-any.whl", hash = "sha256:9411d35d57b75f17acab0ec6658fb56a24b4422a700da1dc0751b653d442730f"},
-    {file = "weni_feature_flags-2.2.0a1.tar.gz", hash = "sha256:cf5acfcbe211cb67a31b6de5d25bcc9508f608bce2a5659e7b876d4b40097565"},
+    {file = "weni_feature_flags-2.2.0a2-py3-none-any.whl", hash = "sha256:a673f870e7aedf81a57e3f7babd1fb4cc3bebd388ecf149f452c03a23a978ad8"},
+    {file = "weni_feature_flags-2.2.0a2.tar.gz", hash = "sha256:e96c653ce9289400defbc4326932774b5eb1ad9082b0103617a7a633077f4181"},
 ]
 
 [package.dependencies]
@@ -3620,4 +3620,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ee2085a611631a1939e27619168c03cbf2b63f39996d0807af8e1362939da456"
+content-hash = "1aa9a2134a0653b94ac299c1ed53116b32794ae74a8161f2750dfb6fc14239a9"
