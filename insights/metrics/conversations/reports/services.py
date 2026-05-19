@@ -345,7 +345,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
         self.cache_keys[report_uuid].add(cache_key)
 
-    def _is_detailed_events_enabled(self, report: Report) -> bool:
+    def _is_agents_tools_urn_list_enabled(self, report: Report) -> bool:
         attributes = {
             "projectUUID": str(report.project.uuid),
         }
@@ -353,7 +353,7 @@ class ConversationsReportService(BaseConversationsReportService):
             attributes["userEmail"] = report.requested_by.email
         try:
             return is_feature_active_for_attributes(
-                settings.CONVERSATIONS_REPORT_DETAILED_EVENTS_FEATURE_FLAG_KEY,
+                settings.CONVERSATIONS_REPORT_AGENTS_TOOLS_URN_LIST_FEATURE_FLAG_KEY,
                 attributes=attributes,
             )
         except Exception as e:
@@ -1850,7 +1850,7 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get tool result worksheet.
         """
-        if self._is_detailed_events_enabled(report):
+        if self._is_agents_tools_urn_list_enabled(report):
             return self._get_tool_result_detailed_worksheet(
                 report, start_date, end_date
             )
@@ -1956,7 +1956,7 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get agent invocation worksheet.
         """
-        if self._is_detailed_events_enabled(report):
+        if self._is_agents_tools_urn_list_enabled(report):
             return self._get_agent_invocation_detailed_worksheet(
                 report, start_date, end_date
             )
