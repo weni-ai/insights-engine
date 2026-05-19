@@ -3894,22 +3894,14 @@ class TestConversationsReportServiceAdditional(TestCase):
             {
                 "contact_urn": "tel:+5511999999999",
                 "date": "2025-01-01T10:30:00.000000Z",
-                "metadata": json.dumps(
-                    {
-                        "tool_result": {
-                            "function_name": "get_order_status",
-                        }
-                    }
-                ),
+                "value": "get_order_status",
+                "metadata": None,
             },
             {
                 "contact_urn": "tel:+5511888888888",
                 "date": "2025-01-01T11:00:00.000000Z",
-                "metadata": {
-                    "tool_result": {
-                        "function_name": "search_products",
-                    }
-                },
+                "value": "search_products",
+                "metadata": None
             },
         ]
 
@@ -4096,22 +4088,22 @@ class TestConversationsReportServiceAdditional(TestCase):
             {
                 "contact_urn": "tel:+5511999999999",
                 "date": "2025-01-01T10:30:00.000000Z",
+                "value": "orders_agent",
                 "metadata": json.dumps(
                     {
-                        "agent_collaboration": {
-                            "agent_name": "orders_agent",
-                        }
+                        "agent_uuid": "agent-uuid-1",
                     }
                 ),
             },
             {
                 "contact_urn": "tel:+5511888888888",
                 "date": "2025-01-01T11:00:00.000000Z",
-                "metadata": {
-                    "agent_collaboration": {
-                        "agent_name": "support_agent",
+                "value": "support_agent",
+                "metadata": json.dumps(
+                    {
+                        "agent_uuid": "agent-uuid-2",
                     }
-                },
+                ),
             },
         ]
 
@@ -4136,10 +4128,12 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         self.assertEqual(worksheet.data[0]["URN"], "tel:+5511999999999")
         self.assertEqual(worksheet.data[0]["Agent name"], "orders_agent")
+        self.assertEqual(worksheet.data[0]["Agent UUID"], "agent-uuid-1")
         self.assertIn("Date", worksheet.data[0])
 
         self.assertEqual(worksheet.data[1]["URN"], "tel:+5511888888888")
         self.assertEqual(worksheet.data[1]["Agent name"], "support_agent")
+        self.assertEqual(worksheet.data[1]["Agent UUID"], "agent-uuid-2")
         self.assertIn("Date", worksheet.data[1])
 
         mock_get_datalake_events.assert_called_once_with(
@@ -4183,6 +4177,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(len(worksheet.data), 1)
         self.assertEqual(worksheet.data[0]["URN"], "")
         self.assertEqual(worksheet.data[0]["Agent name"], "")
+        self.assertEqual(worksheet.data[0]["Agent UUID"], "")
         self.assertEqual(worksheet.data[0]["Date"], "")
 
     @patch(
@@ -4298,12 +4293,9 @@ class TestConversationsReportServiceAdditional(TestCase):
             {
                 "contact_urn": "tel:+5511999999999",
                 "date": "2025-01-01T10:30:00.000000Z",
+                "value": "nested_tool",
                 "metadata": json.dumps(
-                    {
-                        "tool_result": json.dumps(
-                            {"function_name": "nested_tool"}
-                        ),
-                    }
+                    {}
                 ),
             },
         ]
@@ -4343,11 +4335,10 @@ class TestConversationsReportServiceAdditional(TestCase):
             {
                 "contact_urn": "tel:+5511999999999",
                 "date": "2025-01-01T10:30:00.000000Z",
+                "value": "nested_agent",
                 "metadata": json.dumps(
                     {
-                        "agent_collaboration": json.dumps(
-                            {"agent_name": "nested_agent"}
-                        ),
+                        "agent_uuid": "agent-uuid-1",
                     }
                 ),
             },
@@ -4373,6 +4364,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(len(worksheet.data), 1)
         self.assertEqual(worksheet.data[0]["URN"], "tel:+5511999999999")
         self.assertEqual(worksheet.data[0]["Agent name"], "nested_agent")
+        self.assertEqual(worksheet.data[0]["Agent UUID"], "agent-uuid-1")
 
 
 class TestGetEventsCount(TestCase):

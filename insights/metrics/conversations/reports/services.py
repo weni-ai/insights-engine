@@ -1924,15 +1924,7 @@ class ConversationsReportService(BaseConversationsReportService):
                 except Exception:
                     continue
 
-            tool_name = ""
-            if metadata:
-                tool_result_data = metadata.get("tool_result", {})
-                if isinstance(tool_result_data, str):
-                    try:
-                        tool_result_data = json.loads(tool_result_data)
-                    except Exception:
-                        tool_result_data = {}
-                tool_name = tool_result_data.get("function_name", "")
+            tool_name = event.get("value", "")
 
             data.append(
                 {
@@ -2017,6 +2009,7 @@ class ConversationsReportService(BaseConversationsReportService):
             worksheet_name = gettext("Agent invocations")
             urn_label = gettext("URN")
             agent_name_label = gettext("Agent name")
+            agent_uuid_label = gettext("Agent UUID")
             date_label = gettext("Date")
 
         data = []
@@ -2030,26 +2023,30 @@ class ConversationsReportService(BaseConversationsReportService):
                 except Exception:
                     continue
 
-            agent_name = ""
+            agent_name = event.get("value", "")
+            agent_uuid = ""
+
             if metadata:
-                agent_collaboration = metadata.get("agent_collaboration", {})
-                if isinstance(agent_collaboration, str):
-                    try:
-                        agent_collaboration = json.loads(agent_collaboration)
-                    except Exception:
-                        agent_collaboration = {}
-                agent_name = agent_collaboration.get("agent_name", "")
+                agent_uuid = metadata.get("agent_uuid", None)
 
             data.append(
                 {
                     urn_label: event.get("contact_urn", ""),
                     agent_name_label: agent_name,
+                    agent_uuid_label: agent_uuid,
                     date_label: self._format_date(event.get("date", ""), report),
                 }
             )
 
         if len(data) == 0:
-            data = [{urn_label: "", agent_name_label: "", date_label: ""}]
+            data = [
+                {
+                    urn_label: "",
+                    agent_name_label: "",
+                    agent_uuid_label: "",
+                    date_label: "",
+                }
+            ]
 
         return ConversationsReportWorksheet(name=worksheet_name, data=data)
 
