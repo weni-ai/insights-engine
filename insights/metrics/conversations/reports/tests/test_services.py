@@ -3880,6 +3880,500 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(worksheet.data[0]["Invocations"], 5)
         self.assertEqual(worksheet.data[0]["Percentage"], 100.0)
 
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_tool_result_worksheet_detailed(
+        self, mock_get_datalake_events, mock_feature_flag
+    ):
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "tel:+5511999999999",
+                "date": "2025-01-01T10:30:00.000000Z",
+                "metadata": json.dumps(
+                    {
+                        "tool_result": {
+                            "function_name": "get_order_status",
+                        }
+                    }
+                ),
+            },
+            {
+                "contact_urn": "tel:+5511888888888",
+                "date": "2025-01-01T11:00:00.000000Z",
+                "metadata": {
+                    "tool_result": {
+                        "function_name": "search_products",
+                    }
+                },
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOOL_RESULT"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_tool_result_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Tool results")
+        self.assertEqual(len(worksheet.data), 2)
+
+        self.assertEqual(worksheet.data[0]["URN"], "tel:+5511999999999")
+        self.assertEqual(worksheet.data[0]["Tool name"], "get_order_status")
+        self.assertIn("Date", worksheet.data[0])
+
+        self.assertEqual(worksheet.data[1]["URN"], "tel:+5511888888888")
+        self.assertEqual(worksheet.data[1]["Tool name"], "search_products")
+        self.assertIn("Date", worksheet.data[1])
+
+        mock_get_datalake_events.assert_called_once_with(
+            report=report,
+            project=self.project.uuid,
+            date_start=datetime.fromisoformat("2025-01-01"),
+            date_end=datetime.fromisoformat("2025-01-02"),
+            event_name="weni_nexus_data",
+            key="tool_result",
+        )
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_tool_result_worksheet_detailed_empty(
+        self, mock_get_datalake_events, mock_feature_flag
+    ):
+        mock_get_datalake_events.return_value = []
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOOL_RESULT"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_tool_result_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Tool results")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "")
+        self.assertEqual(worksheet.data[0]["Tool name"], "")
+        self.assertEqual(worksheet.data[0]["Date"], "")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_tool_results"
+    )
+    def test_get_tool_result_worksheet_flag_off_uses_aggregation(
+        self, mock_get_tool_results, mock_feature_flag
+    ):
+        from insights.metrics.conversations.dataclass import (
+            ToolResultAgent,
+            ToolResultItem,
+            ToolResultMetrics,
+        )
+
+        mock_get_tool_results.return_value = ToolResultMetrics(
+            tool_results=[
+                ToolResultItem(
+                    label="example_agent",
+                    agent=ToolResultAgent(uuid="agent-uuid-1"),
+                    value=100.0,
+                    full_value=10,
+                ),
+            ],
+            total=1,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOOL_RESULT"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_tool_result_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Tool results")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["Agent"], "example_agent")
+        self.assertEqual(worksheet.data[0]["Results"], 10)
+        self.assertEqual(worksheet.data[0]["Percentage"], 100.0)
+        mock_get_tool_results.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        side_effect=Exception("GrowthBook unavailable"),
+    )
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_tool_results"
+    )
+    def test_get_tool_result_worksheet_flag_exception_falls_back(
+        self, mock_get_tool_results, mock_feature_flag
+    ):
+        from insights.metrics.conversations.dataclass import (
+            ToolResultItem,
+            ToolResultMetrics,
+        )
+
+        mock_get_tool_results.return_value = ToolResultMetrics(
+            tool_results=[
+                ToolResultItem(
+                    label="fallback_agent",
+                    agent=None,
+                    value=100.0,
+                    full_value=3,
+                ),
+            ],
+            total=1,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOOL_RESULT"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_tool_result_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Tool results")
+        self.assertEqual(worksheet.data[0]["Agent"], "fallback_agent")
+        self.assertEqual(worksheet.data[0]["Results"], 3)
+        mock_get_tool_results.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_agent_invocation_worksheet_detailed(
+        self, mock_get_datalake_events, mock_feature_flag
+    ):
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "tel:+5511999999999",
+                "date": "2025-01-01T10:30:00.000000Z",
+                "metadata": json.dumps(
+                    {
+                        "agent_collaboration": {
+                            "agent_name": "orders_agent",
+                        }
+                    }
+                ),
+            },
+            {
+                "contact_urn": "tel:+5511888888888",
+                "date": "2025-01-01T11:00:00.000000Z",
+                "metadata": {
+                    "agent_collaboration": {
+                        "agent_name": "support_agent",
+                    }
+                },
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_agent_invocation_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(len(worksheet.data), 2)
+
+        self.assertEqual(worksheet.data[0]["URN"], "tel:+5511999999999")
+        self.assertEqual(worksheet.data[0]["Agent name"], "orders_agent")
+        self.assertIn("Date", worksheet.data[0])
+
+        self.assertEqual(worksheet.data[1]["URN"], "tel:+5511888888888")
+        self.assertEqual(worksheet.data[1]["Agent name"], "support_agent")
+        self.assertIn("Date", worksheet.data[1])
+
+        mock_get_datalake_events.assert_called_once_with(
+            report=report,
+            project=self.project.uuid,
+            date_start=datetime.fromisoformat("2025-01-01"),
+            date_end=datetime.fromisoformat("2025-01-02"),
+            event_name="weni_nexus_data",
+            key="agent_invocation",
+        )
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_agent_invocation_worksheet_detailed_empty(
+        self, mock_get_datalake_events, mock_feature_flag
+    ):
+        mock_get_datalake_events.return_value = []
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_agent_invocation_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "")
+        self.assertEqual(worksheet.data[0]["Agent name"], "")
+        self.assertEqual(worksheet.data[0]["Date"], "")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
+    def test_get_agent_invocation_worksheet_flag_off_uses_aggregation(
+        self, mock_get_agent_invocations, mock_feature_flag
+    ):
+        from insights.metrics.conversations.dataclass import (
+            AgentInvocationAgent,
+            AgentInvocationItem,
+            AgentInvocationMetrics,
+        )
+
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label="example_agent",
+                    agent=AgentInvocationAgent(uuid="agent-uuid-1"),
+                    value=100.0,
+                    full_value=10,
+                ),
+            ],
+            total=1,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_agent_invocation_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["Agent"], "example_agent")
+        self.assertEqual(worksheet.data[0]["Invocations"], 10)
+        self.assertEqual(worksheet.data[0]["Percentage"], 100.0)
+        mock_get_agent_invocations.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        side_effect=Exception("GrowthBook unavailable"),
+    )
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_agent_invocations"
+    )
+    def test_get_agent_invocation_worksheet_flag_exception_falls_back(
+        self, mock_get_agent_invocations, mock_feature_flag
+    ):
+        from insights.metrics.conversations.dataclass import (
+            AgentInvocationItem,
+            AgentInvocationMetrics,
+        )
+
+        mock_get_agent_invocations.return_value = AgentInvocationMetrics(
+            invocations=[
+                AgentInvocationItem(
+                    label="fallback_agent",
+                    agent=None,
+                    value=100.0,
+                    full_value=3,
+                ),
+            ],
+            total=1,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_agent_invocation_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(worksheet.data[0]["Agent"], "fallback_agent")
+        self.assertEqual(worksheet.data[0]["Invocations"], 3)
+        mock_get_agent_invocations.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_tool_result_worksheet_detailed_with_metadata_as_string(
+        self, mock_get_datalake_events, mock_feature_flag
+    ):
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "tel:+5511999999999",
+                "date": "2025-01-01T10:30:00.000000Z",
+                "metadata": json.dumps(
+                    {
+                        "tool_result": json.dumps(
+                            {"function_name": "nested_tool"}
+                        ),
+                    }
+                ),
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["TOOL_RESULT"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_tool_result_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Tool results")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "tel:+5511999999999")
+        self.assertEqual(worksheet.data[0]["Tool name"], "nested_tool")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_agent_invocation_worksheet_detailed_with_metadata_as_string(
+        self, mock_get_datalake_events, mock_feature_flag
+    ):
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "tel:+5511999999999",
+                "date": "2025-01-01T10:30:00.000000Z",
+                "metadata": json.dumps(
+                    {
+                        "agent_collaboration": json.dumps(
+                            {"agent_name": "nested_agent"}
+                        ),
+                    }
+                ),
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_agent_invocation_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "tel:+5511999999999")
+        self.assertEqual(worksheet.data[0]["Agent name"], "nested_agent")
+
 
 class TestGetEventsCount(TestCase):
     def setUp(self):

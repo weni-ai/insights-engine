@@ -19,6 +19,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext, override
 from django.utils import translation, timezone
 from sentry_sdk import capture_exception
+from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.metrics.conversations.enums import ConversationType
 from insights.metrics.conversations.reports.available_widgets import (
@@ -343,6 +344,24 @@ class ConversationsReportService(BaseConversationsReportService):
             self.cache_keys[report_uuid] = set()
 
         self.cache_keys[report_uuid].add(cache_key)
+
+    def _is_detailed_events_enabled(self, report: Report) -> bool:
+        attributes = {
+            "projectUUID": str(report.project.uuid),
+        }
+        if report.requested_by:
+            attributes["userEmail"] = report.requested_by.email
+        try:
+            return is_feature_active_for_attributes(
+                settings.CONVERSATIONS_REPORT_DETAILED_EVENTS_FEATURE_FLAG_KEY,
+                attributes=attributes,
+            )
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Feature flag check failed: %s", e
+            )
+            capture_exception(e)
+            return False
 
     def _clear_cache_keys(self, report_uuid: UUID) -> None:
         """
@@ -1831,6 +1850,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get tool result worksheet.
         """
+        if self._is_detailed_events_enabled(report):
+            return self._get_tool_result_detailed_worksheet(
+                report, start_date, end_date
+            )
+
         tool_results = self.metrics_service.get_tool_results(
             project_uuid=report.project.uuid,
             start_date=start_date,
@@ -1868,6 +1892,61 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def _get_tool_result_detailed_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="tool_result",
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Tool results")
+            urn_label = gettext("URN")
+            tool_name_label = gettext("Tool name")
+            date_label = gettext("Date")
+
+        data = []
+
+        for event in events:
+            metadata = event.get("metadata")
+
+            if metadata and not isinstance(metadata, dict):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    continue
+
+            tool_name = ""
+            if metadata:
+                tool_result_data = metadata.get("tool_result", {})
+                if isinstance(tool_result_data, str):
+                    try:
+                        tool_result_data = json.loads(tool_result_data)
+                    except Exception:
+                        tool_result_data = {}
+                tool_name = tool_result_data.get("function_name", "")
+
+            data.append(
+                {
+                    urn_label: event.get("contact_urn", ""),
+                    tool_name_label: tool_name,
+                    date_label: self._format_date(event.get("date", ""), report),
+                }
+            )
+
+        if len(data) == 0:
+            data = [{urn_label: "", tool_name_label: "", date_label: ""}]
+
+        return ConversationsReportWorksheet(name=worksheet_name, data=data)
+
     def get_agent_invocation_worksheet(
         self,
         report: Report,
@@ -1877,6 +1956,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get agent invocation worksheet.
         """
+        if self._is_detailed_events_enabled(report):
+            return self._get_agent_invocation_detailed_worksheet(
+                report, start_date, end_date
+            )
+
         agent_invocations = self.metrics_service.get_agent_invocations(
             project_uuid=report.project.uuid,
             start_date=start_date,
@@ -1913,6 +1997,61 @@ class ConversationsReportService(BaseConversationsReportService):
             name=worksheet_name,
             data=data,
         )
+
+    def _get_agent_invocation_detailed_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="agent_invocation",
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Agent invocations")
+            urn_label = gettext("URN")
+            agent_name_label = gettext("Agent name")
+            date_label = gettext("Date")
+
+        data = []
+
+        for event in events:
+            metadata = event.get("metadata")
+
+            if metadata and not isinstance(metadata, dict):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    continue
+
+            agent_name = ""
+            if metadata:
+                agent_collaboration = metadata.get("agent_collaboration", {})
+                if isinstance(agent_collaboration, str):
+                    try:
+                        agent_collaboration = json.loads(agent_collaboration)
+                    except Exception:
+                        agent_collaboration = {}
+                agent_name = agent_collaboration.get("agent_name", "")
+
+            data.append(
+                {
+                    urn_label: event.get("contact_urn", ""),
+                    agent_name_label: agent_name,
+                    date_label: self._format_date(event.get("date", ""), report),
+                }
+            )
+
+        if len(data) == 0:
+            data = [{urn_label: "", agent_name_label: "", date_label: ""}]
+
+        return ConversationsReportWorksheet(name=worksheet_name, data=data)
 
     def get_contacts_worksheet(
         self,
