@@ -6,13 +6,28 @@ from rest_framework.request import Request
 from rest_framework.views import APIView
 from weni.feature_flags.shortcuts import is_feature_active
 
+from insights.authentication.services.project_auth import (
+    has_external_general_project_permission,
+)
 from insights.dashboards.models import Dashboard
 from insights.projects.models import Project, ProjectAuth
+
+
+def _is_local_admin(user, *, project=None, project_uuid=None) -> bool:
+    qs = ProjectAuth.objects.filter(user=user, role=1)
+    if project is not None:
+        qs = qs.filter(project=project)
+    else:
+        qs = qs.filter(project__uuid=project_uuid)
+    return qs.exists()
 
 
 class ProjectAuthPermission(permissions.BasePermission):
     """
     Permission that verifies if the user has access to the project.
+
+    Local admins (role=1) keep full access. Otherwise, the external project
+    authorization service decides — only the "viewer" role is allowed through.
     """
 
     def has_object_permission(self, request, view, obj) -> bool:
@@ -22,9 +37,10 @@ class ProjectAuthPermission(permissions.BasePermission):
             assert hasattr(obj, "project"), "Object must have a project attribute"
             project = obj.project
 
-        return ProjectAuth.objects.filter(
-            project=project, user=request.user, role=1
-        ).exists()
+        if _is_local_admin(request.user, project=project):
+            return True
+
+        return has_external_general_project_permission(request, project.uuid)
 
 
 class ProjectAuthQueryParamPermission(permissions.BasePermission):
@@ -38,9 +54,10 @@ class ProjectAuthQueryParamPermission(permissions.BasePermission):
                 {project_uuid_field: ["This field is required"]}, code="required"
             )
 
-        return ProjectAuth.objects.filter(
-            project__uuid=project_uuid, user=request.user, role=1
-        ).exists()
+        if _is_local_admin(request.user, project_uuid=project_uuid):
+            return True
+
+        return has_external_general_project_permission(request, project_uuid)
 
 
 class ProjectAuthBodyPermission(permissions.BasePermission):
@@ -52,9 +69,10 @@ class ProjectAuthBodyPermission(permissions.BasePermission):
                 {"project_uuid": ["This field is required"]}, code="required"
             )
 
-        return ProjectAuth.objects.filter(
-            project__uuid=project_uuid, user=request.user, role=1
-        ).exists()
+        if _is_local_admin(request.user, project_uuid=project_uuid):
+            return True
+
+        return has_external_general_project_permission(request, project_uuid)
 
 
 class InternalAuthenticationPermission(permissions.BasePermission):

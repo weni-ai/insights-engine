@@ -599,3 +599,13 @@ VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60
 DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
     "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
 )
+
+# Crosstab parallel fetching
+CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY = env.str(
+    "CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY",
+    default="insightsCrosstabParallelFetching",
+)
+
+# External project authorization service
+PROJECT_AUTH_API_BASE_URL = env.str("PROJECT_AUTH_API_BASE_URL", default="")
+PROJECT_AUTH_API_TIMEOUT = env.int("PROJECT_AUTH_API_TIMEOUT", default=3)
