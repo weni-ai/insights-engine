@@ -1,3 +1,18 @@
+# 1.26.2
+# Add
+  - DateTime query parameter normalization to ISO 8601 format in DataLakeEventsClient
+# Fix
+  - Empty unique and returning contacts data handling in reports
+
+# 1.26.1
+# Add
+  - Unique and returning contacts full list on export
+  - Contacts worksheet feature flag
+
+# 1.26.0
+# Add
+  - Abandoned cart for insights widget
+
 # 1.25.2
 # Add
   - Report status caching mechanism for export endpoint
