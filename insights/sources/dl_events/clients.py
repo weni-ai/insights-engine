@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import date, datetime
 from typing import Optional
 
 from django.conf import settings
@@ -22,6 +23,19 @@ from weni_datalake_sdk.clients.redshift.events import (
 
 
 USE_SILVER_TABLES = settings.CONVERSATIONS_DASHBOARD_USE_SILVER_TABLES
+
+
+def _normalize_query_kwargs(query_kwargs: dict) -> dict:
+    """
+    Convert datetime/date values to ISO 8601 strings before forwarding them
+    to the SDK. The SDK uses `requests` with `params=...`, which serializes
+    datetimes via `str()` ("YYYY-MM-DD HH:MM:SS") instead of ISO 8601
+    ("YYYY-MM-DDTHH:MM:SS"); the upstream API parses these inconsistently.
+    """
+    return {
+        key: value.isoformat() if isinstance(value, (date, datetime)) else value
+        for key, value in query_kwargs.items()
+    }
 
 
 class BaseDataLakeEventsClient(ABC):
@@ -107,7 +121,7 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
 
         try:
             events = method(
-                **query_kwargs,
+                **_normalize_query_kwargs(query_kwargs),
             )
         except Exception as e:
             raise e
@@ -126,7 +140,7 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
 
         try:
             events = method(
-                **query_kwargs,
+                **_normalize_query_kwargs(query_kwargs),
             )
         except Exception as e:
             raise e
@@ -147,7 +161,7 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
 
         try:
             events = method(
-                **query_kwargs,
+                **_normalize_query_kwargs(query_kwargs),
             )
         except Exception as e:
             raise e
@@ -158,25 +172,25 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
         """
         Get the sum of events from the DataLakeEvents source.
         """
-        return get_events_sum(**query_kwargs)
+        return get_events_sum(**_normalize_query_kwargs(query_kwargs))
 
     def get_events_avg(self, **query_kwargs) -> dict:
         """
         Get the average of events from the DataLakeEvents source.
         """
-        return get_events_avg(**query_kwargs)
+        return get_events_avg(**_normalize_query_kwargs(query_kwargs))
 
     def get_events_max(self, **query_kwargs) -> dict:
         """
         Get the maximum of events from the DataLakeEvents source.
         """
-        return get_events_max(**query_kwargs)
+        return get_events_max(**_normalize_query_kwargs(query_kwargs))
 
     def get_events_min(self, **query_kwargs) -> dict:
         """
         Get the minimum of events from the DataLakeEvents source.
         """
-        return get_events_min(**query_kwargs)
+        return get_events_min(**_normalize_query_kwargs(query_kwargs))
 
     def get_unique_contacts_count(
         self, table: Optional[str] = None, **query_kwargs
@@ -188,7 +202,7 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
             method = get_events_unique_contact_urns
 
         try:
-            return method(**query_kwargs)
+            return method(**_normalize_query_kwargs(query_kwargs))
         except Exception as e:
             raise e
 
@@ -202,6 +216,6 @@ class DataLakeEventsClient(BaseDataLakeEventsClient):
             method = get_events_recurring_contact_urns
 
         try:
-            return method(**query_kwargs)
+            return method(**_normalize_query_kwargs(query_kwargs))
         except Exception as e:
             raise e

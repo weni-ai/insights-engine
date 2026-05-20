@@ -4428,7 +4428,7 @@ class TestGetDatalakeEventsInParallel(TestCase):
     def test_get_contacts_worksheet_flag_enabled_empty_events(
         self, mock_feature_flag
     ):
-        """Test get_contacts_worksheet returns empty worksheets when no events exist."""
+        """Test get_contacts_worksheet returns placeholder rows when no events exist."""
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
@@ -4448,9 +4448,9 @@ class TestGetDatalakeEventsInParallel(TestCase):
         self.assertIsInstance(result, list)
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0].name, "Unique contacts")
-        self.assertEqual(result[0].data, [])
+        self.assertEqual(result[0].data, [{"URN": ""}])
         self.assertEqual(result[1].name, "Returning contacts")
-        self.assertEqual(result[1].data, [])
+        self.assertEqual(result[1].data, [{"URN": ""}])
 
     @patch(
         "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",

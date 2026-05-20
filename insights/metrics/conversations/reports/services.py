@@ -2064,6 +2064,20 @@ class ConversationsReportService(BaseConversationsReportService):
             unique_worksheet_name = gettext("Unique contacts")
             returning_worksheet_name = gettext("Returning contacts")
 
+        if len(unique_data) == 0:
+            unique_data = [
+                {
+                    "URN": "",
+                }
+            ]
+
+        if len(returning_data) == 0:
+            returning_data = [
+                {
+                    "URN": "",
+                }
+            ]
+
         return [
             ConversationsReportWorksheet(
                 name=unique_worksheet_name,
