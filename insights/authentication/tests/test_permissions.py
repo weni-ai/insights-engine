@@ -7,6 +7,7 @@ from insights.authentication.permissions import (
     ProjectAuthBodyPermission,
     ProjectAuthPermission,
     ProjectAuthQueryParamPermission,
+    ProjectQueryParamPermission,
 )
 from insights.authentication.services.project_auth import EXISTING_ROLES
 from insights.projects.models import Project, ProjectAuth
@@ -232,3 +233,69 @@ class ProjectAuthBodyPermissionTests(TestCase):
 
         with self.assertRaises(ValidationError):
             self.permission.has_permission(request, self.view)
+
+
+@override_settings(
+    PROJECT_AUTH_API_BASE_URL="http://fake-auth",
+    PROJECT_AUTH_API_TIMEOUT=3,
+)
+class ProjectQueryParamPermissionTests(TestCase):
+    def setUp(self):
+        self.permission = ProjectQueryParamPermission()
+        self.project = Project.objects.create(name="Test Project")
+        self.user = User.objects.create_user(email="someone@x.com")
+        self.view = MagicMock()
+
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_external_viewer_passes_on_get(self, mock_get):
+        mock_get.return_value = _viewer_response()
+        request = _build_request(
+            user=self.user,
+            method="GET",
+            query_params={"project_uuid": str(self.project.uuid)},
+        )
+
+        self.assertTrue(self.permission.has_permission(request, self.view))
+
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_external_viewer_blocked_without_token(self, mock_get):
+        mock_get.return_value = _viewer_response()
+        request = _build_request(
+            user=self.user,
+            method="GET",
+            query_params={"project_uuid": str(self.project.uuid)},
+            token=None,
+        )
+
+        self.assertFalse(self.permission.has_permission(request, self.view))
+        mock_get.assert_not_called()
+
+    def test_local_admin_passes_without_external_call(self):
+        ProjectAuth.objects.create(project=self.project, user=self.user, role=1)
+        request = _build_request(
+            user=self.user,
+            method="GET",
+            query_params={"project_uuid": str(self.project.uuid)},
+            token=None,
+        )
+
+        with patch(
+            "insights.authentication.services.project_auth.requests.get"
+        ) as mock_get:
+            self.assertTrue(self.permission.has_permission(request, self.view))
+            mock_get.assert_not_called()
+
+    def test_non_admin_local_project_auth_is_denied_without_external(self):
+        ProjectAuth.objects.create(project=self.project, user=self.user, role=0)
+        request = _build_request(
+            user=self.user,
+            method="GET",
+            query_params={"project_uuid": str(self.project.uuid)},
+            token=None,
+        )
+
+        with patch(
+            "insights.authentication.services.project_auth.requests.get"
+        ) as mock_get:
+            self.assertFalse(self.permission.has_permission(request, self.view))
+            mock_get.assert_not_called()

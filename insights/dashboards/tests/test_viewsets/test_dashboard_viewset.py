@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from unittest.mock import patch
 
 from insights.authentication.authentication import User
+from insights.authentication.services.project_auth import EXISTING_ROLES
 from insights.authentication.tests.decorators import with_project_auth
 from insights.dashboards.models import Dashboard
 from insights.projects.models import Project, ProjectAuth
@@ -220,6 +221,59 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["results"], [])
+
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_list_dashboards_for_external_viewer_with_project_filter(self, mock_get):
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "user": "viewer@x.com",
+            "project_authorization": EXISTING_ROLES["viewer"],
+        }
+
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard 1",
+            project=self.project,
+        )
+
+        response = self.client.get(
+            reverse("dashboard-list"),
+            {"project": str(self.project.uuid)},
+            HTTP_AUTHORIZATION="Bearer fake-token",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_dashboards = {d["uuid"] for d in response.data["results"]}
+        self.assertIn(str(dashboard.uuid), response_dashboards)
+
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_list_widgets_for_external_viewer(self, mock_get):
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "user": "viewer@x.com",
+            "project_authorization": EXISTING_ROLES["viewer"],
+        }
+
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard 1",
+            project=self.project,
+        )
+        widget = Widget.objects.create(
+            dashboard=dashboard,
+            name="Widget 1",
+            source="TestSource",
+            type="TestType",
+            config={},
+            position={},
+        )
+
+        url = reverse("dashboard-list-widgets", kwargs={"pk": str(dashboard.uuid)})
+        response = self.client.get(url, HTTP_AUTHORIZATION="Bearer fake-token")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_widgets = {w["uuid"] for w in response.data["results"]}
+        self.assertIn(str(widget.uuid), response_widgets)
 
     @with_project_auth
     def test_list_dashboards_filtering_by_project(self):

@@ -13,10 +13,14 @@ from rest_framework.response import Response
 from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.authentication.permissions import ProjectAuthPermission
+from insights.authentication.project_access import (
+    get_dashboard_queryset_for_request,
+    get_project_with_read_access,
+)
 from insights.core.filters import get_filters_from_query_params
 from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 from insights.dashboards.filters import DashboardFilter
-from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
+from insights.dashboards.models import Dashboard
 from insights.dashboards.serializers import (
     DashboardEditSerializer,
     DashboardIsDefaultSerializer,
@@ -81,29 +85,9 @@ class DashboardViewSet(
         return super().get_permissions()
 
     def get_queryset(self):
-        queryset = (
-            Dashboard.objects.filter(project__authorizations__user=self.request.user)
-            .exclude(
-                Q(name="Resultados de fluxos")
-                & ~Q(project_id__in=settings.PROJECT_ALLOW_LIST)
-            )
-            .exclude(
-                Q(name=CONVERSATIONS_DASHBOARD_NAME)
-                & Q(project__is_nexus_multi_agents_active=False),
-            )
+        return get_dashboard_queryset_for_request(
+            self.request, dashboard_pk=self.kwargs.get("pk")
         )
-
-        if settings.CONVERSATIONS_DASHBOARD_EXCLUDE_FROM_LIST_IF_INDEXER_IS_NOT_ACTIVE:
-            queryset = queryset.exclude(
-                Q(name=CONVERSATIONS_DASHBOARD_NAME)
-                & (
-                    Q(project__is_allowed=False)
-                    & ~Q(project__uuid__in=settings.PROJECT_ALLOW_LIST)
-                )
-            )
-        queryset = queryset.order_by("created_on")
-
-        return queryset
 
     def _check_marketing_messages_status(self, project_uuid: UUID):
         should_check_marketing_messages_status = Dashboard.objects.filter(
@@ -429,7 +413,7 @@ class DashboardViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        get_object_or_404(Project, uuid=project_uuid, authorizations__user=request.user)
+        get_project_with_read_access(request, project_uuid)
 
         flow_uuid = request.query_params.get("flow_uuid")
         page_number = request.query_params.get("page_number")
@@ -468,9 +452,7 @@ class DashboardViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        project = get_object_or_404(
-            Project, uuid=project_uuid, authorizations__user=request.user
-        )
+        project = get_project_with_read_access(request, project_uuid)
 
         custom_status_client = CustomStatusRESTClient(project)
 

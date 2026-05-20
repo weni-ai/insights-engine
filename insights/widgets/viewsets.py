@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 
 from insights.authentication.permissions import ProjectAuthPermission
-from insights.projects.models import ProjectAuth
+from insights.authentication.project_access import get_dashboard_queryset_for_request
 from insights.widgets.permissions import CanCreateWidgetPermission
 
 from insights.widgets.models import Report, Widget
@@ -32,14 +32,13 @@ class WidgetViewSet(
         return [IsAuthenticated, ProjectAuthPermission]
 
     def get_queryset(self) -> QuerySet[Widget]:
-        project_auths = ProjectAuth.objects.filter(
-            user=self.request.user, role=1
-        ).values_list("project", flat=True)
-
-        return self.queryset.filter(
-            Q(dashboard__project__in=project_auths)
-            | Q(parent__dashboard__project__in=project_auths),
+        accessible_dashboards = get_dashboard_queryset_for_request(
+            self.request, widget_pk=self.kwargs.get("pk")
         )
+        return self.queryset.filter(
+            Q(dashboard__in=accessible_dashboards)
+            | Q(parent__dashboard__in=accessible_dashboards),
+        ).distinct()
 
     def _update(self, widget, update_data, partial):
         serializer = self.get_serializer(widget, data=update_data, partial=partial)
