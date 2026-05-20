@@ -318,9 +318,7 @@ class DataLakeEventsClientSilverTablesTestCase(TestCase):
         self._assert_normalized_with_table(mock_silver)
 
     @patch("insights.sources.dl_events.clients.USE_SILVER_TABLES", True)
-    @patch(
-        "insights.sources.dl_events.clients.get_events_silver_unique_contact_urns"
-    )
+    @patch("insights.sources.dl_events.clients.get_events_silver_unique_contact_urns")
     def test_get_unique_contacts_count_silver_branch_normalizes_datetime(
         self, mock_silver
     ):
@@ -358,9 +356,7 @@ class DataLakeEventsClientSilverTablesTestCase(TestCase):
     @patch("insights.sources.dl_events.clients.USE_SILVER_TABLES", False)
     @patch("insights.sources.dl_events.clients.get_events_silver_count")
     @patch("insights.sources.dl_events.clients.get_events_count")
-    def test_silver_flag_off_uses_non_silver_method(
-        self, mock_non_silver, mock_silver
-    ):
+    def test_silver_flag_off_uses_non_silver_method(self, mock_non_silver, mock_silver):
         mock_non_silver.return_value = [{"count": 1}]
 
         self.client.get_events_count(
