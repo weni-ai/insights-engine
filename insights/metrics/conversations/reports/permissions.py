@@ -1,6 +1,7 @@
 from rest_framework.permissions import BasePermission
 from rest_framework.exceptions import ValidationError
 
+from insights.authentication.project_access import has_project_read_access
 from insights.projects.models import Project, ProjectAuth
 
 
@@ -13,14 +14,10 @@ class CanCheckReportGenerationStatusPermission(BasePermission):
                 {"project_uuid": ["This field is required"]}, code="required"
             )
 
-        project = Project.objects.filter(uuid=project_uuid).first()
-
-        if not project:
+        if not Project.objects.filter(uuid=project_uuid).exists():
             return False
 
-        return ProjectAuth.objects.filter(
-            project__uuid=project_uuid, user=request.user, role=1
-        ).exists()
+        return has_project_read_access(request, project_uuid)
 
 
 class CanGenerateConversationsReportPermission(BasePermission):
