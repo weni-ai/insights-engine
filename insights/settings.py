@@ -609,3 +609,8 @@ CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY = env.str(
 # External project authorization service
 PROJECT_AUTH_API_BASE_URL = env.str("PROJECT_AUTH_API_BASE_URL", default="")
 PROJECT_AUTH_API_TIMEOUT = env.int("PROJECT_AUTH_API_TIMEOUT", default=3)
+# Contacts worksheet detailed list
+CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY = env.str(
+    "CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY",
+    default="insightsContactsWorksheetDetailedList",
+)

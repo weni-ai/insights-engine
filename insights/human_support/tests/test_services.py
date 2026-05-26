@@ -104,6 +104,7 @@ class TestHumanSupportDashboardService(TestCase):
                     "queue": "Q1",
                     "contact": "C1",
                     "link": "https://link/1",
+                    "pending_response": True,
                 },
             ],
             "next": None,
@@ -116,6 +117,7 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["results"][0]["agent"], "Agent 1")
         self.assertEqual(result["results"][0]["duration"], 120)
         self.assertEqual(result["results"][0]["link"], "https://link/1")
+        self.assertTrue(result["results"][0]["pending_response"])
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_detailed_monitoring_on_going_with_filters_and_ordering(
@@ -135,6 +137,22 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(call_kwargs.get("limit"), 10)
         self.assertEqual(call_kwargs.get("offset"), 0)
         self.assertEqual(call_kwargs.get("ordering"), "-duration")
+
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_detailed_monitoring_on_going_with_pending_response_ordering(
+        self, mock_rooms
+    ):
+        mock_rooms.execute.return_value = {
+            "results": [],
+            "next": None,
+            "previous": None,
+            "count": 0,
+        }
+        self.service.get_detailed_monitoring_on_going(
+            filters={"ordering": "-pending_response"}
+        )
+        call_kwargs = mock_rooms.execute.call_args[0][0]
+        self.assertEqual(call_kwargs.get("ordering"), "-pending_response")
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_detailed_monitoring_awaiting(self, mock_rooms):

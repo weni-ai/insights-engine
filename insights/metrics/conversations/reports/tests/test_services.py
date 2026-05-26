@@ -4292,3 +4292,355 @@ class TestGetDatalakeEventsInParallel(TestCase):
         call_kwargs = mock_get_events.call_args[1]
         self.assertIsInstance(call_kwargs["date_start"], str)
         self.assertIsInstance(call_kwargs["date_end"], str)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_contacts_metrics"
+    )
+    def test_get_contacts_worksheet_flag_disabled(
+        self, mock_get_contacts_metrics, mock_feature_flag
+    ):
+        """Test get_contacts_worksheet delegates to absolute numbers when flag is disabled."""
+        mock_get_contacts_metrics.return_value = MagicMock(
+            unique=MagicMock(value=10),
+            returning=MagicMock(value=3, percentage=30.0),
+            avg_conversations_per_contact=MagicMock(value=2.5),
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        result = self.service.get_contacts_worksheet(
+            report=report,
+            start_date=datetime(2025, 1, 1),
+            end_date=datetime(2025, 1, 2),
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, "Contacts")
+        self.assertEqual(len(result[0].data), 3)
+
+        mock_feature_flag.assert_called_once_with(
+            key=settings.CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY,
+            attributes={
+                "projectUUID": str(self.project.uuid),
+                "userEmail": self.user.email,
+            },
+        )
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    def test_get_contacts_worksheet_flag_enabled_unique_contacts(
+        self, mock_feature_flag
+    ):
+        """Test get_contacts_worksheet returns unique contacts when flag is enabled."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        events = [
+            {"contact_urn": "urn:tel:+5511111111111"},
+            {"contact_urn": "urn:tel:+5522222222222"},
+            {"contact_urn": "urn:tel:+5511111111111"},
+            {"contact_urn": "urn:tel:+5533333333333"},
+        ]
+
+        result = self.service.get_contacts_worksheet(
+            report=report,
+            start_date=datetime(2025, 1, 1),
+            end_date=datetime(2025, 1, 2),
+            conversation_classification_events=events,
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
+
+        unique_ws = result[0]
+        self.assertEqual(unique_ws.name, "Unique contacts")
+        unique_urns = [row["URN"] for row in unique_ws.data]
+        self.assertEqual(len(unique_urns), 3)
+        self.assertIn("urn:tel:+5511111111111", unique_urns)
+        self.assertIn("urn:tel:+5522222222222", unique_urns)
+        self.assertIn("urn:tel:+5533333333333", unique_urns)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    def test_get_contacts_worksheet_flag_enabled_returning_contacts(
+        self, mock_feature_flag
+    ):
+        """Test get_contacts_worksheet returns only returning contacts in second worksheet."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        events = [
+            {"contact_urn": "urn:tel:+5511111111111"},
+            {"contact_urn": "urn:tel:+5522222222222"},
+            {"contact_urn": "urn:tel:+5511111111111"},
+            {"contact_urn": "urn:tel:+5533333333333"},
+            {"contact_urn": "urn:tel:+5533333333333"},
+            {"contact_urn": "urn:tel:+5533333333333"},
+        ]
+
+        result = self.service.get_contacts_worksheet(
+            report=report,
+            start_date=datetime(2025, 1, 1),
+            end_date=datetime(2025, 1, 2),
+            conversation_classification_events=events,
+        )
+
+        returning_ws = result[1]
+        self.assertEqual(returning_ws.name, "Returning contacts")
+        returning_urns = [row["URN"] for row in returning_ws.data]
+        self.assertEqual(len(returning_urns), 2)
+        self.assertIn("urn:tel:+5511111111111", returning_urns)
+        self.assertIn("urn:tel:+5533333333333", returning_urns)
+        self.assertNotIn("urn:tel:+5522222222222", returning_urns)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    def test_get_contacts_worksheet_flag_enabled_empty_events(
+        self, mock_feature_flag
+    ):
+        """Test get_contacts_worksheet returns placeholder rows when no events exist."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        result = self.service.get_contacts_worksheet(
+            report=report,
+            start_date=datetime(2025, 1, 1),
+            end_date=datetime(2025, 1, 2),
+            conversation_classification_events=[],
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0].name, "Unique contacts")
+        self.assertEqual(result[0].data, [{"URN": ""}])
+        self.assertEqual(result[1].name, "Returning contacts")
+        self.assertEqual(result[1].data, [{"URN": ""}])
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    def test_get_contacts_worksheet_flag_enabled_ignores_empty_urns(
+        self, mock_feature_flag
+    ):
+        """Test get_contacts_worksheet ignores events with empty contact_urn."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        events = [
+            {"contact_urn": "urn:tel:+5511111111111"},
+            {"contact_urn": ""},
+            {"contact_urn": "urn:tel:+5511111111111"},
+            {},
+        ]
+
+        result = self.service.get_contacts_worksheet(
+            report=report,
+            start_date=datetime(2025, 1, 1),
+            end_date=datetime(2025, 1, 2),
+            conversation_classification_events=events,
+        )
+
+        unique_ws = result[0]
+        self.assertEqual(len(unique_ws.data), 1)
+        self.assertEqual(unique_ws.data[0]["URN"], "urn:tel:+5511111111111")
+
+        returning_ws = result[1]
+        self.assertEqual(len(returning_ws.data), 1)
+        self.assertEqual(returning_ws.data[0]["URN"], "urn:tel:+5511111111111")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+    )
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_contacts_metrics"
+    )
+    def test_get_contacts_worksheet_flag_check_exception_falls_back(
+        self, mock_get_contacts_metrics, mock_feature_flag
+    ):
+        """Test get_contacts_worksheet falls back to absolute numbers on feature flag error."""
+        mock_feature_flag.side_effect = Exception("connection error")
+        mock_get_contacts_metrics.return_value = MagicMock(
+            unique=MagicMock(value=5),
+            returning=MagicMock(value=2, percentage=40.0),
+            avg_conversations_per_contact=MagicMock(value=1.5),
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        result = self.service.get_contacts_worksheet(
+            report=report,
+            start_date=datetime(2025, 1, 1),
+            end_date=datetime(2025, 1, 2),
+        )
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].name, "Contacts")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    @patch(
+        "insights.metrics.conversations.services.ConversationsMetricsService.get_contacts_metrics"
+    )
+    def test_get_worksheets_handles_list_return(
+        self, mock_get_contacts_metrics, mock_get_events, mock_feature_flag
+    ):
+        """Test _get_worksheets properly extends worksheets list when function returns a list."""
+        mock_get_events.return_value = []
+        mock_get_contacts_metrics.return_value = MagicMock(
+            unique=MagicMock(value=5),
+            returning=MagicMock(value=2, percentage=40.0),
+            avg_conversations_per_contact=MagicMock(value=1.5),
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["CONTACTS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        start_date = datetime(2025, 1, 1)
+        end_date = datetime(2025, 1, 2)
+
+        worksheets = self.service._get_worksheets(report, start_date, end_date)
+
+        self.assertIsInstance(worksheets, list)
+        self.assertTrue(len(worksheets) >= 1)
+        for ws in worksheets:
+            self.assertIsInstance(ws, ConversationsReportWorksheet)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_resolutions_worksheet_uses_prefetched_events(self, mock_get_events):
+        """Test get_resolutions_worksheet uses pre-fetched events and skips datalake call."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        prefetched_events = [
+            {
+                "contact_urn": "urn:tel:+5511111111111",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "value": "resolved",
+            },
+        ]
+
+        worksheet = self.service.get_resolutions_worksheet(
+            report=report,
+            start_date=datetime(2025, 1, 1),
+            end_date=datetime(2025, 1, 2),
+            conversation_classification_events=prefetched_events,
+        )
+
+        mock_get_events.assert_not_called()
+        self.assertEqual(worksheet.name, "Resolutions")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "urn:tel:+5511111111111")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_worksheets_prefetches_events_for_resolutions_and_contacts(
+        self, mock_get_events, mock_feature_flag
+    ):
+        """Test _get_worksheets pre-fetches conversation_classification events only once."""
+        mock_events = [
+            {
+                "contact_urn": "urn:tel:+5511111111111",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "value": "resolved",
+            },
+            {
+                "contact_urn": "urn:tel:+5522222222222",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "value": "unresolved",
+            },
+        ]
+        mock_get_events.return_value = mock_events
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS", "CONTACTS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        start_date = datetime(2025, 1, 1)
+        end_date = datetime(2025, 1, 2)
+
+        worksheets = self.service._get_worksheets(report, start_date, end_date)
+
+        mock_get_events.assert_called_once()
+        self.assertTrue(len(worksheets) >= 3)

@@ -387,6 +387,8 @@ class HumanSupportDashboardService:
                     "queue": "queue__name",
                     "Contact": "contact__name",
                     "contact": "contact__name",
+                    "Pending response": "pending_response",
+                    "pending_response": "pending_response",
                 }
                 mapped_field = field_mapping.get(field, field)
                 params["ordering"] = f"{prefix}{mapped_field}"
@@ -408,6 +410,7 @@ class HumanSupportDashboardService:
                     "queue": room.get("queue"),
                     "contact": room.get("contact"),
                     "link": room.get("link"),
+                    "pending_response": room.get("pending_response"),
                 }
             )
 
