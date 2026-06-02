@@ -14,7 +14,7 @@ from insights.authentication.services.project_auth import (
     has_external_general_project_permission,
 )
 from insights.dashboards.models import Dashboard
-from insights.projects.models import Project
+from insights.projects.models import Project, ProjectAuth
 
 
 def _is_local_admin(user, *, project=None, project_uuid=None) -> bool:
