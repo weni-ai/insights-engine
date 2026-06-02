@@ -150,7 +150,7 @@ def simple_source_data_operation(
     return serialized_source
 
 
-def get_subwidget_data(data):
+def get_subwidget_data(data={}) -> dict:
     if "results" in data:
         if len(data["results"]) == 0:
             return {}
