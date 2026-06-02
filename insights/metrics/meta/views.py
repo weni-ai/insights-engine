@@ -302,6 +302,13 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         methods=["get"],
         url_name="conversations-by-category",
         url_path="conversations-by-category",
+        permission_classes=[
+            IsAuthenticated,
+            (
+                (ProjectAuthQueryParamPermission & ProjectDashboardWABAPermission)
+                | InternalAuthenticationPermission
+            ),
+        ],
     )
     def get_conversations_by_category(self, request: Request) -> Response:
         serializer = ConversationsByCategoryQueryParamsSerializer(
