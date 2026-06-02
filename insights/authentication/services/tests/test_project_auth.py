@@ -198,9 +198,7 @@ class HasExternalGeneralProjectPermissionTests(TestCase):
                 "project_authorization": EXISTING_ROLES["viewer"],
             },
         )
-        request = self.factory.get(
-            "/whatever", HTTP_AUTHORIZATION="Bearer fake-token"
-        )
+        request = self.factory.get("/whatever", HTTP_AUTHORIZATION="Bearer fake-token")
 
         self.assertTrue(
             has_external_general_project_permission(request, self.project_uuid)
@@ -218,9 +216,7 @@ class HasExternalGeneralProjectPermissionTests(TestCase):
                 "project_authorization": EXISTING_ROLES["viewer"],
             },
         )
-        request = self.factory.post(
-            "/whatever", HTTP_AUTHORIZATION="Bearer fake-token"
-        )
+        request = self.factory.post("/whatever", HTTP_AUTHORIZATION="Bearer fake-token")
 
         self.assertFalse(
             has_external_general_project_permission(request, self.project_uuid)
@@ -235,9 +231,7 @@ class HasExternalGeneralProjectPermissionTests(TestCase):
                 "project_authorization": EXISTING_ROLES["moderator"],
             },
         )
-        request = self.factory.get(
-            "/whatever", HTTP_AUTHORIZATION="Bearer fake-token"
-        )
+        request = self.factory.get("/whatever", HTTP_AUTHORIZATION="Bearer fake-token")
 
         self.assertFalse(
             has_external_general_project_permission(request, self.project_uuid)
@@ -246,9 +240,7 @@ class HasExternalGeneralProjectPermissionTests(TestCase):
     @patch("insights.authentication.services.project_auth.requests.get")
     def test_returns_false_when_external_service_unavailable(self, mock_get):
         mock_get.side_effect = requests.ConnectionError("boom")
-        request = self.factory.get(
-            "/whatever", HTTP_AUTHORIZATION="Bearer fake-token"
-        )
+        request = self.factory.get("/whatever", HTTP_AUTHORIZATION="Bearer fake-token")
 
         self.assertFalse(
             has_external_general_project_permission(request, self.project_uuid)
@@ -257,18 +249,14 @@ class HasExternalGeneralProjectPermissionTests(TestCase):
     @patch("insights.authentication.services.project_auth.requests.get")
     def test_returns_false_when_response_is_404(self, mock_get):
         mock_get.return_value = _make_response(status_code=404)
-        request = self.factory.get(
-            "/whatever", HTTP_AUTHORIZATION="Bearer fake-token"
-        )
+        request = self.factory.get("/whatever", HTTP_AUTHORIZATION="Bearer fake-token")
 
         self.assertFalse(
             has_external_general_project_permission(request, self.project_uuid)
         )
 
     @patch("insights.authentication.services.project_auth.requests.get")
-    def test_returns_false_when_token_user_does_not_match_request_user(
-        self, mock_get
-    ):
+    def test_returns_false_when_token_user_does_not_match_request_user(self, mock_get):
         mock_get.return_value = _make_response(
             status_code=200,
             payload={
@@ -276,17 +264,13 @@ class HasExternalGeneralProjectPermissionTests(TestCase):
                 "project_authorization": EXISTING_ROLES["viewer"],
             },
         )
-        request = self.factory.get(
-            "/whatever", HTTP_AUTHORIZATION="Bearer fake-token"
-        )
+        request = self.factory.get("/whatever", HTTP_AUTHORIZATION="Bearer fake-token")
         request.user = MagicMock(email="impersonated@x.com")
 
         self.assertFalse(
             has_external_general_project_permission(request, self.project_uuid)
         )
-        self.assertIsNone(
-            getattr(request, "project_auth_user_email", None)
-        )
+        self.assertIsNone(getattr(request, "project_auth_user_email", None))
 
     @patch("insights.authentication.services.project_auth.requests.get")
     def test_returns_true_when_token_user_matches_request_user(self, mock_get):
@@ -297,9 +281,7 @@ class HasExternalGeneralProjectPermissionTests(TestCase):
                 "project_authorization": EXISTING_ROLES["viewer"],
             },
         )
-        request = self.factory.get(
-            "/whatever", HTTP_AUTHORIZATION="Bearer fake-token"
-        )
+        request = self.factory.get("/whatever", HTTP_AUTHORIZATION="Bearer fake-token")
         request.user = MagicMock(email="viewer@x.com")
 
         self.assertTrue(
@@ -315,9 +297,7 @@ class HasExternalGeneralProjectPermissionTests(TestCase):
                 "project_authorization": EXISTING_ROLES["viewer"],
             },
         )
-        request = self.factory.get(
-            "/whatever", HTTP_AUTHORIZATION="Bearer fake-token"
-        )
+        request = self.factory.get("/whatever", HTTP_AUTHORIZATION="Bearer fake-token")
 
         has_external_general_project_permission(request, self.project_uuid)
         has_external_general_project_permission(request, self.project_uuid)

@@ -31,7 +31,9 @@ def _denied_response():
     return response
 
 
-def _build_request(*, user, method="GET", token="Bearer t", query_params=None, data=None):
+def _build_request(
+    *, user, method="GET", token="Bearer t", query_params=None, data=None
+):
     """Build a request-like object good enough for the permission classes."""
     request = MagicMock()
     request.user = user

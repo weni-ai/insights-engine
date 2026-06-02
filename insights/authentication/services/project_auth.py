@@ -49,26 +49,18 @@ def _check_project_authorization(
 
 
 def has_external_general_project_permission(request, project_uuid) -> bool:
-    project_uuid = str(project_uuid)
-    cache = getattr(request, "_external_project_auth_cache", None)
-    if cache is None:
-        cache = {}
-        request._external_project_auth_cache = cache
-
-    if project_uuid in cache:
-        return cache[project_uuid]
-
     token = request.headers.get("Authorization")
     if not token:
-        cache[project_uuid] = False
         return False
 
     try:
         authorized, user_email = _check_project_authorization(
-            token, project_uuid, request.method
+            token, str(project_uuid), request.method
         )
+        if user_email:
+            request.project_auth_user_email = user_email
+        return authorized
     except ProjectAuthorizationDenied:
-        cache[project_uuid] = False
         return False
     except (requests.RequestException, ProjectAuth.DoesNotExist) as exc:
         logger.warning(
@@ -76,23 +68,4 @@ def has_external_general_project_permission(request, project_uuid) -> bool:
             project_uuid,
             exc,
         )
-        cache[project_uuid] = False
         return False
-
-    request_user_email = getattr(request.user, "email", None)
-    if user_email and request_user_email and user_email != request_user_email:
-        logger.warning(
-            "External project auth user mismatch for project=%s "
-            "(token user=%s, request user=%s)",
-            project_uuid,
-            user_email,
-            request_user_email,
-        )
-        cache[project_uuid] = False
-        return False
-
-    if user_email:
-        request.project_auth_user_email = user_email
-
-    cache[project_uuid] = authorized
-    return authorized

@@ -16,11 +16,15 @@ from insights.metrics.skills.exceptions import (
     TemplateNotFound,
 )
 from insights.metrics.skills.services.base import BaseSkillMetricsService
-from insights.metrics.skills.services.dataclass import AbandonedCartWhatsAppTemplate
+from insights.metrics.skills.services.dataclass import (
+    AbandonedCartWabaTemplates,
+    AbandonedCartWhatsAppTemplate,
+)
 from insights.metrics.skills.validators import validate_date_str
 from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.settings import (
     ABANDONED_CART_MAX_TEMPLATE_IDS,
+    ABANDONED_CART_MAX_WABAS,
     ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST,
     ABANDONED_CART_METRICS_START_DATE_MAX_DAYS,
 )
@@ -84,39 +88,43 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return wabas
 
     @property
-    def _whatsapp_template_ids_and_waba(self):
+    def _whatsapp_templates_by_waba(self) -> list[AbandonedCartWabaTemplates]:
         name = "weni_abandoned_cart"
+        result: list[AbandonedCartWabaTemplates] = []
 
-        templates_by_name: dict[str, list[str | int]] = {}
-        waba_id = None
-
-        for waba in self._project_wabas:
+        for waba in self._project_wabas[:ABANDONED_CART_MAX_WABAS]:
             templates = self.meta_api_client.get_templates_list(
                 waba_id=waba["waba_id"], name=name
             )
 
-            if len(templates.get("data", [])) == 0:
+            data = templates.get("data", [])
+            if not data:
                 continue
 
-            for template in templates.get("data", []):
+            templates_by_name: dict[str, list[str | int]] = {}
+            for template in data:
                 templates_by_name.setdefault(template["name"], []).append(
                     template["id"]
                 )
-                waba_id = waba["waba_id"]
 
-        if not templates_by_name or not waba_id:
+            sorted_templates = sorted(
+                [
+                    AbandonedCartWhatsAppTemplate(name=tpl_name, ids=tpl_ids)
+                    for tpl_name, tpl_ids in templates_by_name.items()
+                ],
+                key=lambda t: t.name,
+                reverse=True,
+            )
+            result.append(
+                AbandonedCartWabaTemplates(
+                    waba_id=waba["waba_id"], templates=sorted_templates
+                )
+            )
+
+        if not result:
             raise TemplateNotFound("No abandoned cart template found for the project")
 
-        result = sorted(
-            [
-                AbandonedCartWhatsAppTemplate(name=tpl_name, ids=tpl_ids)
-                for tpl_name, tpl_ids in templates_by_name.items()
-            ],
-            key=lambda t: t.name,
-            reverse=True,
-        )
-
-        return result, waba_id
+        return result
 
     def _calculate_increase_percentage(self, current: int, past: int):
         if past == 0:
@@ -154,17 +162,23 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         return data_points
 
     def _get_message_templates_metrics(self, start_date, end_date) -> dict:
-        templates, waba_id = self._whatsapp_template_ids_and_waba
-        template_ids = self._get_capped_template_ids(templates)
+        data_points: list[dict] = []
 
-        cloud_api_data_points = self._fetch_analytics_for_template_ids(
-            waba_id, template_ids, start_date, end_date, ProductType.CLOUD_API.value
-        )
-        mm_lite_data_points = self._fetch_analytics_for_template_ids(
-            waba_id, template_ids, start_date, end_date, ProductType.MM_LITE.value
-        )
-
-        data_points = [*cloud_api_data_points, *mm_lite_data_points]
+        for group in self._whatsapp_templates_by_waba:
+            template_ids = self._get_capped_template_ids(group.templates)
+            for product_type in (
+                ProductType.CLOUD_API.value,
+                ProductType.MM_LITE.value,
+            ):
+                data_points.extend(
+                    self._fetch_analytics_for_template_ids(
+                        group.waba_id,
+                        template_ids,
+                        start_date,
+                        end_date,
+                        product_type,
+                    )
+                )
 
         period_data = {
             "sent": 0,

@@ -17,6 +17,15 @@ from insights.dashboards.models import Dashboard
 from insights.projects.models import Project
 
 
+def _is_local_admin(user, *, project=None, project_uuid=None) -> bool:
+    qs = ProjectAuth.objects.filter(user=user, role=1)
+    if project is not None:
+        qs = qs.filter(project=project)
+    else:
+        qs = qs.filter(project__uuid=project_uuid)
+    return qs.exists()
+
+
 class ProjectAuthPermission(permissions.BasePermission):
     """
     Permission that verifies if the user has access to the project.
@@ -32,7 +41,7 @@ class ProjectAuthPermission(permissions.BasePermission):
             assert hasattr(obj, "project"), "Object must have a project attribute"
             project = obj.project
 
-        if is_local_admin(request.user, project=project):
+        if _is_local_admin(request.user, project=project):
             return True
 
         return has_external_general_project_permission(request, project.uuid)
@@ -49,7 +58,7 @@ class ProjectAuthQueryParamPermission(permissions.BasePermission):
                 {project_uuid_field: ["This field is required"]}, code="required"
             )
 
-        if is_local_admin(request.user, project_uuid=project_uuid):
+        if _is_local_admin(request.user, project_uuid=project_uuid):
             return True
 
         return has_external_general_project_permission(request, project_uuid)
@@ -64,7 +73,7 @@ class ProjectAuthBodyPermission(permissions.BasePermission):
                 {"project_uuid": ["This field is required"]}, code="required"
             )
 
-        if is_local_admin(request.user, project_uuid=project_uuid):
+        if _is_local_admin(request.user, project_uuid=project_uuid):
             return True
 
         return has_external_general_project_permission(request, project_uuid)

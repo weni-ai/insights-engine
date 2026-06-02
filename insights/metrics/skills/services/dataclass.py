@@ -6,3 +6,9 @@ from typing import List
 class AbandonedCartWhatsAppTemplate:
     name: str
     ids: List[str | int]
+
+
+@dataclass
+class AbandonedCartWabaTemplates:
+    waba_id: str
+    templates: List[AbandonedCartWhatsAppTemplate]
