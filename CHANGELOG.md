@@ -1,3 +1,29 @@
+# 1.27.2
+# Fix
+  - Abandoned cart skill support for projects with multiple WhatsApp Business Accounts
+
+# 1.27.1
+# Add
+  - Internal authentication for conversations by category endpoint
+
+# 1.27.0
+# Add
+  - Editable conversational dashboard with tool result and agent invocation config
+
+# 1.26.5
+# Add
+  - Project permissions retrieval via Connect endpoint
+
+# 1.26.4
+# Add
+  - Pending response column in human support rooms endpoint
+
+# 1.26.3
+# Add
+  - Unit tests for project consumers, tasks, and custom status client
+# Fix
+  - Crosstab serializers handling of events with missing reference fields and incorrect data aggregation
+
 # 1.26.2
 # Add
   - DateTime query parameter normalization to ISO 8601 format in DataLakeEventsClient
