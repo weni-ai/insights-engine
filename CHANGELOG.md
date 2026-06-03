@@ -1,3 +1,64 @@
+# 1.27.2
+# Fix
+  - Abandoned cart skill support for projects with multiple WhatsApp Business Accounts
+
+# 1.27.1
+# Add
+  - Internal authentication for conversations by category endpoint
+
+# 1.27.0
+# Add
+  - Editable conversational dashboard with tool result and agent invocation config
+
+# 1.26.5
+# Add
+  - Project permissions retrieval via Connect endpoint
+
+# 1.26.4
+# Add
+  - Pending response column in human support rooms endpoint
+
+# 1.26.3
+# Add
+  - Unit tests for project consumers, tasks, and custom status client
+# Fix
+  - Crosstab serializers handling of events with missing reference fields and incorrect data aggregation
+
+# 1.26.2
+# Add
+  - DateTime query parameter normalization to ISO 8601 format in DataLakeEventsClient
+# Fix
+  - Empty unique and returning contacts data handling in reports
+
+# 1.26.1
+# Add
+  - Unique and returning contacts full list on export
+  - Contacts worksheet feature flag
+
+# 1.26.0
+# Add
+  - Abandoned cart for insights widget
+
+# 1.25.2
+# Add
+  - Report status caching mechanism for export endpoint
+  - WABA retrieval from Dashboard model in abandoned cart skill
+# Remove
+  - Parallel processing feature flags for crosstab and conversations totals
+
+# 1.25.1
+# Fix
+  - Project UUID conversion in sales funnel task
+
+# 1.25.0
+# Add
+  - Auto-creation of sales funnel widget on project setup
+  - Parallel processing for conversations totals retrieval
+  - Parallel processing for crosstab data fetching
+# Fix
+  - Only show expected ratings on conversation CSAT
+  - Parameter format in WhatsApp message templates API schema
+
 # 1.24.2
 # Add
   - Parallel processing for datalake events retrieval in conversations report export

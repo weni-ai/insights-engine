@@ -15,6 +15,11 @@ class CreateConversationsDashboard:
             is_default=False,
             grid=[0, 0],
             is_deletable=False,
-            is_editable=False,
+            is_editable=True,
+            config={
+                "type": "conversational",
+                "show_tool_result": True,
+                "show_agent_invocation": True,
+            },
         )
         return dashboard

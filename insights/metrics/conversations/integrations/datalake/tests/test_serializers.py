@@ -305,6 +305,108 @@ class TestCrosstabLabelsSerializer(TestCase):
             {"ref-aaa": "value1", "ref-bbb": "value2"},
         )
 
+    def test_serialize_with_reference_field_skips_events_without_reference(self):
+        """
+        When reference_field is set, events whose metadata does not carry that
+        field must be skipped: they should not pollute join_keys with a None
+        entry nor leak their label into the labels set.
+        """
+        events = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_a_key",
+                "value": "with_ref",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-aaa",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_a_key",
+                "value": "legacy_without_ref",
+                "date": 1716883200,
+                "contact_urn": "1234567891",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-2",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_a_key",
+                "value": "another_legacy",
+                "date": 1716883200,
+                "contact_urn": "1234567892",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-3",
+                    }
+                ),
+            },
+        ]
+
+        serializer = self.serializer_class(
+            events, "value", reference_field="interaction_id"
+        )
+        data = serializer.serialize()
+
+        self.assertEqual(data["labels"], {"with_ref"})
+        self.assertEqual(data["join_keys"], {"ref-aaa": "with_ref"})
+        self.assertNotIn(None, data["join_keys"])
+
+    def test_serialize_without_reference_field_still_uses_conversation_uuid(self):
+        """
+        Regression check: when reference_field is not set, the serializer must
+        keep using conversation_uuid as the join key. Events without the
+        reference_field metadata should NOT be filtered out on this path.
+        """
+        events = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_a_key",
+                "value": "value1",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_a_key",
+                "value": "value2",
+                "date": 1716883200,
+                "contact_urn": "1234567891",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-2",
+                    }
+                ),
+            },
+        ]
+
+        serializer = self.serializer_class(events, "value")
+        data = serializer.serialize()
+
+        self.assertEqual(data["labels"], {"value1", "value2"})
+        self.assertEqual(
+            data["join_keys"],
+            {"conv-1": "value1", "conv-2": "value2"},
+        )
+
 
 class TestCrosstabDataSerializer(TestCase):
     def setUp(self) -> None:
@@ -454,6 +556,135 @@ class TestCrosstabDataSerializer(TestCase):
             {
                 "Delivery": {"Satisfied": 1},
                 "Shopping": {"Unsatisfied": 1},
+            },
+        )
+
+    def test_serialize_with_reference_field_skips_events_without_reference(self):
+        """
+        When reference_field is set, source B events whose metadata does not
+        carry that field must be skipped instead of falling back to
+        join_keys[None]. This prevents legacy events (emitted before the
+        metadata roll-out) from collapsing into a single source A label.
+        """
+        labels = {"Delivery", "Shopping"}
+        join_keys = {
+            "ref-aaa": "Delivery",
+            "ref-bbb": "Shopping",
+        }
+        events = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-aaa",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567891",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-legacy-1",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Unsatisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567892",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-legacy-2",
+                    }
+                ),
+            },
+        ]
+
+        serializer = self.serializer_class(
+            labels,
+            join_keys,
+            events,
+            "value",
+            reference_field="interaction_id",
+        )
+        data = serializer.serialize()
+
+        self.assertEqual(
+            data,
+            {
+                "Delivery": {"Satisfied": 1},
+                "Shopping": {},
+            },
+        )
+
+    def test_serialize_with_reference_field_ignores_none_bucket_in_join_keys(self):
+        """
+        Even if join_keys contains a None entry (defensive case), source B
+        events without the reference_field must not be attributed to it.
+        """
+        labels = {"Delivery", "Ghost"}
+        join_keys = {
+            "ref-aaa": "Delivery",
+            None: "Ghost",
+        }
+        events = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567890",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-1",
+                        "interaction_id": "ref-aaa",
+                    }
+                ),
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "source_b_key",
+                "value": "Satisfied",
+                "date": 1716883200,
+                "contact_urn": "1234567891",
+                "value_type": "string",
+                "metadata": json.dumps(
+                    {
+                        "conversation_uuid": "conv-legacy",
+                    }
+                ),
+            },
+        ]
+
+        serializer = self.serializer_class(
+            labels,
+            join_keys,
+            events,
+            "value",
+            reference_field="interaction_id",
+        )
+        data = serializer.serialize()
+
+        self.assertEqual(
+            data,
+            {
+                "Delivery": {"Satisfied": 1},
+                "Ghost": {},
             },
         )
 

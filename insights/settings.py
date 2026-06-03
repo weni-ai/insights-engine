@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "insights.reports",
     "insights.core",
     "insights.feedback",
+    "insights.commerce",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -331,6 +332,8 @@ GROQ_CHATGPT_TOKEN = env.str("GROQ_CHATGPT_TOKEN", default="")
 GROQ_OPEN_AI_GPT_VERSION = env.str("GROQ_OPEN_AI_GPT_VERSION", default="")
 
 INTEGRATIONS_URL = env("INTEGRATIONS_URL", default="")
+RETAIL_URL = env("RETAIL_URL", default="")
+BILLING_URL = env("BILLING_URL", default="")
 
 REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
 STATIC_API_TOKEN = env.str("STATIC_API_TOKEN", default="")
@@ -561,6 +564,7 @@ ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST = env.int(
     "ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST", default=10
 )
 ABANDONED_CART_MAX_TEMPLATE_IDS = env.int("ABANDONED_CART_MAX_TEMPLATE_IDS", default=30)
+ABANDONED_CART_MAX_WABAS = env.int("ABANDONED_CART_MAX_WABAS", default=20)
 
 # VTEX Orders API Cache TTL
 VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60)
@@ -569,3 +573,13 @@ VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60
 DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
     "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
 )
+
+# Contacts worksheet detailed list
+CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY = env.str(
+    "CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY",
+    default="insightsContactsWorksheetDetailedList",
+)
+
+# External project authorization service
+PROJECT_AUTH_API_BASE_URL = env.str("PROJECT_AUTH_API_BASE_URL", default="")
+PROJECT_AUTH_API_TIMEOUT = env.int("PROJECT_AUTH_API_TIMEOUT", default=3)

@@ -288,6 +288,13 @@ class CrosstabLabelsSerializer(BaseSerializer):
 
             join_key = self._get_join_key(metadata)
 
+            # When a reference_field is explicitly provided, events that don't
+            # carry that field must be ignored. Otherwise every event missing
+            # the field would collapse into a single None bucket and pollute
+            # the join, attributing unrelated source B events to a single label.
+            if self.reference_field and not join_key:
+                continue
+
             label = (
                 event.get("value")
                 if self.field == "value"
@@ -346,6 +353,13 @@ class CrosstabDataSerializer(BaseSerializer):
                 continue
 
             join_key = self._get_join_key(metadata)
+
+            # Mirrors the guard on CrosstabLabelsSerializer: when reference_field
+            # is set, source B events without that field cannot be reliably
+            # joined and must be dropped instead of falling back to a None key.
+            if self.reference_field and not join_key:
+                continue
+
             source_a_label = self.join_keys.get(join_key)
 
             if not source_a_label:

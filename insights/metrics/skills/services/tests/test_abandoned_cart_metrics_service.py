@@ -16,7 +16,10 @@ from insights.metrics.skills.services.abandoned_cart import (
     ABANDONED_CART_METRICS_START_DATE_MAX_DAYS,
     AbandonedCartSkillService,
 )
-from insights.metrics.skills.services.dataclass import AbandonedCartWhatsAppTemplate
+from insights.metrics.skills.services.dataclass import (
+    AbandonedCartWabaTemplates,
+    AbandonedCartWhatsAppTemplate,
+)
 from insights.dashboards.models import Dashboard
 from insights.projects.models import Project
 from insights.sources.cache import CacheClient
@@ -81,7 +84,7 @@ class TestAbandonedCartSkillService(TestCase):
             service.validate_filters(filters)
 
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
-    def test_cannot_whatsapp_template_id_and_waba_when_template_is_not_found(
+    def test_cannot_whatsapp_templates_by_waba_when_template_is_not_found(
         self, mock_templates_list
     ):
         Dashboard.objects.create(
@@ -93,7 +96,7 @@ class TestAbandonedCartSkillService(TestCase):
         mock_templates_list.return_value = {"data": []}
 
         with self.assertRaises(TemplateNotFound):
-            self.service_class(self.project, {})._whatsapp_template_ids_and_waba
+            self.service_class(self.project, {})._whatsapp_templates_by_waba
 
     @patch("insights.sources.orders.clients.VtexOrdersRestClient.list")
     @patch("insights.sources.vtexcredentials.clients.AuthRestClient.get_vtex_auth")
@@ -209,7 +212,7 @@ class TestAbandonedCartSkillService(TestCase):
         self.assertEqual(json.loads(self.cache_client.get(cache_key)), expected_metrics)
 
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
-    def test_whatsapp_template_ids_returns_all_templates_sorted_desc(
+    def test_whatsapp_templates_by_waba_returns_all_templates_sorted_desc(
         self, mock_templates_list
     ):
         Dashboard.objects.create(
@@ -227,21 +230,21 @@ class TestAbandonedCartSkillService(TestCase):
         }
 
         service = self.service_class(self.project, {})
-        templates, waba_id = service._whatsapp_template_ids_and_waba
+        groups = service._whatsapp_templates_by_waba
 
-        self.assertEqual(waba_id, "waba_123")
-        self.assertEqual(len(templates), 3)
-        self.assertEqual(templates[0].name, "weni_abandoned_cart_1700000100")
-        self.assertEqual(templates[0].ids, ["t2"])
-        self.assertEqual(templates[1].name, "weni_abandoned_cart_1700000050")
-        self.assertEqual(templates[1].ids, ["t3"])
-        self.assertEqual(templates[2].name, "weni_abandoned_cart_1700000000")
-        self.assertEqual(templates[2].ids, ["t1"])
+        self.assertEqual(len(groups), 1)
+        group = groups[0]
+        self.assertEqual(group.waba_id, "waba_123")
+        self.assertEqual(len(group.templates), 3)
+        self.assertEqual(group.templates[0].name, "weni_abandoned_cart_1700000100")
+        self.assertEqual(group.templates[0].ids, ["t2"])
+        self.assertEqual(group.templates[1].name, "weni_abandoned_cart_1700000050")
+        self.assertEqual(group.templates[1].ids, ["t3"])
+        self.assertEqual(group.templates[2].name, "weni_abandoned_cart_1700000000")
+        self.assertEqual(group.templates[2].ids, ["t1"])
 
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
-    def test_whatsapp_template_ids_groups_ids_by_name(
-        self, mock_templates_list
-    ):
+    def test_whatsapp_templates_by_waba_groups_ids_by_name(self, mock_templates_list):
         Dashboard.objects.create(
             project=self.project,
             name="dash",
@@ -257,7 +260,10 @@ class TestAbandonedCartSkillService(TestCase):
         }
 
         service = self.service_class(self.project, {})
-        templates, waba_id = service._whatsapp_template_ids_and_waba
+        groups = service._whatsapp_templates_by_waba
+
+        self.assertEqual(len(groups), 1)
+        templates = groups[0].templates
 
         self.assertEqual(len(templates), 2)
         self.assertEqual(templates[0].name, "weni_abandoned_cart_1700000100")
@@ -295,9 +301,7 @@ class TestAbandonedCartSkillService(TestCase):
     def test_fetch_analytics_chunks_requests(self, mock_analytics):
         mock_analytics.return_value = {
             "data": {
-                "data_points": [
-                    {"sent": 1, "delivered": 1, "read": 1, "clicked": 1}
-                ]
+                "data_points": [{"sent": 1, "delivered": 1, "read": 1, "clicked": 1}]
             }
         }
 
@@ -342,9 +346,7 @@ class TestAbandonedCartSkillService(TestCase):
 
         mock_analytics.return_value = {
             "data": {
-                "data_points": [
-                    {"sent": 10, "delivered": 8, "read": 5, "clicked": 2}
-                ]
+                "data_points": [{"sent": 10, "delivered": 8, "read": 5, "clicked": 2}]
             }
         }
 
@@ -353,6 +355,158 @@ class TestAbandonedCartSkillService(TestCase):
 
         # 15 IDs -> 2 chunks per product type -> 4 calls total
         self.assertEqual(mock_analytics.call_count, 4)
+        self.assertEqual(result["sent-messages"]["value"], 40)
+        self.assertEqual(result["delivered-messages"]["value"], 32)
+        self.assertEqual(result["read-messages"]["value"], 20)
+        self.assertEqual(result["interactions"]["value"], 8)
+
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
+    def test_whatsapp_templates_grouped_by_waba_when_project_has_multiple_wabas(
+        self, mock_templates_list
+    ):
+        Dashboard.objects.create(
+            project=self.project,
+            name="dash_a",
+            description="",
+            config={"is_whatsapp_integration": True, "waba_id": "waba_a"},
+        )
+        Dashboard.objects.create(
+            project=self.project,
+            name="dash_b",
+            description="",
+            config={"is_whatsapp_integration": True, "waba_id": "waba_b"},
+        )
+
+        templates_by_waba = {
+            "waba_a": {
+                "data": [
+                    {"name": "weni_abandoned_cart_1700000000", "id": "a1"},
+                    {"name": "weni_abandoned_cart_1700000100", "id": "a2"},
+                ]
+            },
+            "waba_b": {
+                "data": [
+                    {"name": "weni_abandoned_cart_1700000050", "id": "b1"},
+                ]
+            },
+        }
+        mock_templates_list.side_effect = lambda waba_id, name: templates_by_waba[
+            waba_id
+        ]
+
+        service = self.service_class(self.project, {})
+        groups = service._whatsapp_templates_by_waba
+
+        self.assertEqual(len(groups), 2)
+        self.assertIsInstance(groups[0], AbandonedCartWabaTemplates)
+
+        groups_by_id = {group.waba_id: group for group in groups}
+
+        group_a = groups_by_id["waba_a"]
+        self.assertEqual(len(group_a.templates), 2)
+        self.assertEqual(group_a.templates[0].name, "weni_abandoned_cart_1700000100")
+        self.assertEqual(group_a.templates[0].ids, ["a2"])
+        self.assertEqual(group_a.templates[1].name, "weni_abandoned_cart_1700000000")
+        self.assertEqual(group_a.templates[1].ids, ["a1"])
+
+        group_b = groups_by_id["waba_b"]
+        self.assertEqual(len(group_b.templates), 1)
+        self.assertEqual(group_b.templates[0].name, "weni_abandoned_cart_1700000050")
+        self.assertEqual(group_b.templates[0].ids, ["b1"])
+
+    @patch(
+        "insights.metrics.skills.services.abandoned_cart.ABANDONED_CART_MAX_WABAS",
+        2,
+    )
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
+    def test_whatsapp_templates_caps_at_max_wabas(self, mock_templates_list):
+        for i in range(5):
+            Dashboard.objects.create(
+                project=self.project,
+                name=f"dash_{i}",
+                description="",
+                config={"is_whatsapp_integration": True, "waba_id": f"waba_{i}"},
+            )
+
+        mock_templates_list.return_value = {
+            "data": [{"name": "weni_abandoned_cart", "id": "t1"}]
+        }
+
+        service = self.service_class(self.project, {})
+        groups = service._whatsapp_templates_by_waba
+
+        self.assertEqual(mock_templates_list.call_count, 2)
+        self.assertEqual(len(groups), 2)
+
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
+    def test_get_message_templates_metrics_calls_analytics_per_waba_and_product_type(
+        self, mock_templates_list, mock_analytics
+    ):
+        Dashboard.objects.create(
+            project=self.project,
+            name="dash_a",
+            description="",
+            config={"is_whatsapp_integration": True, "waba_id": "waba_a"},
+        )
+        Dashboard.objects.create(
+            project=self.project,
+            name="dash_b",
+            description="",
+            config={"is_whatsapp_integration": True, "waba_id": "waba_b"},
+        )
+
+        templates_by_waba = {
+            "waba_a": {
+                "data": [
+                    {"name": "weni_abandoned_cart_a", "id": "a1"},
+                    {"name": "weni_abandoned_cart_a", "id": "a2"},
+                ]
+            },
+            "waba_b": {
+                "data": [
+                    {"name": "weni_abandoned_cart_b", "id": "b1"},
+                ]
+            },
+        }
+        mock_templates_list.side_effect = lambda waba_id, name: templates_by_waba[
+            waba_id
+        ]
+
+        mock_analytics.return_value = {
+            "data": {
+                "data_points": [{"sent": 10, "delivered": 8, "read": 5, "clicked": 2}]
+            }
+        }
+
+        service = self.service_class(self.project, {})
+        result = service._get_message_templates_metrics("2024-01-01", "2024-01-31")
+
+        # 2 WABAs x 2 product types = 4 calls (each WABA fits in a single chunk).
+        self.assertEqual(mock_analytics.call_count, 4)
+
+        calls_by_waba = {"waba_a": [], "waba_b": []}
+        for call in mock_analytics.call_args_list:
+            kwargs = call.kwargs
+            calls_by_waba[kwargs["waba_id"]].append(kwargs)
+
+        self.assertEqual(len(calls_by_waba["waba_a"]), 2)
+        self.assertEqual(len(calls_by_waba["waba_b"]), 2)
+
+        for kwargs in calls_by_waba["waba_a"]:
+            self.assertCountEqual(kwargs["template_id"], ["a1", "a2"])
+        for kwargs in calls_by_waba["waba_b"]:
+            self.assertEqual(kwargs["template_id"], ["b1"])
+
+        product_types_a = {kwargs["product_type"] for kwargs in calls_by_waba["waba_a"]}
+        product_types_b = {kwargs["product_type"] for kwargs in calls_by_waba["waba_b"]}
+        expected_product_types = {
+            ProductType.CLOUD_API.value,
+            ProductType.MM_LITE.value,
+        }
+        self.assertEqual(product_types_a, expected_product_types)
+        self.assertEqual(product_types_b, expected_product_types)
+
         self.assertEqual(result["sent-messages"]["value"], 40)
         self.assertEqual(result["delivered-messages"]["value"], 32)
         self.assertEqual(result["read-messages"]["value"], 20)

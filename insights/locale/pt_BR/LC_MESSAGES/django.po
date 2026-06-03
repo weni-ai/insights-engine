@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-19 14:19+0000\n"
+"POT-Creation-Date: 2026-05-18 18:46+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Kallil Souza dos Santos <kallilsouza@hotmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -204,13 +204,13 @@ msgstr ""
 "A configuração do widget não é válida, deve ter key para source_a e source_b"
 
 #: insights/metrics/conversations/integrations/datalake/services.py:480
-#: insights/metrics/conversations/reports/services.py:1258
-#: insights/metrics/conversations/reports/services.py:1435
+#: insights/metrics/conversations/reports/services.py:1287
+#: insights/metrics/conversations/reports/services.py:1464
 msgid "Unclassified"
 msgstr "Não classificada"
 
 #: insights/metrics/conversations/reports/file_processors.py:87
-#: insights/metrics/conversations/reports/services.py:460
+#: insights/metrics/conversations/reports/services.py:456
 msgid "Conversations dashboard report"
 msgstr "Relatório de dashboard de conversas"
 
@@ -265,153 +265,138 @@ msgstr "Widget NPS Humano não encontrado ou não está configurado corretamente
 msgid "Conversations dashboard not found"
 msgstr "Dashboard de conversas não encontrado"
 
-#: insights/metrics/conversations/reports/services.py:1249
+#: insights/metrics/conversations/reports/services.py:1278
 msgid "Resolutions"
 msgstr "Resolução"
 
-#: insights/metrics/conversations/reports/services.py:1251
+#: insights/metrics/conversations/reports/services.py:1280
 msgid "Resolution"
 msgstr "Resoluções"
 
-#: insights/metrics/conversations/reports/services.py:1252
-#: insights/metrics/conversations/reports/services.py:1432
-#: insights/metrics/conversations/reports/services.py:1500
-#: insights/metrics/conversations/reports/services.py:1559
-#: insights/metrics/conversations/reports/services.py:1633
-#: insights/metrics/conversations/reports/services.py:1702
-#: insights/metrics/conversations/reports/services.py:1764
-#: insights/metrics/conversations/reports/services.py:1914
-#: insights/metrics/conversations/reports/services.py:2020
+#: insights/metrics/conversations/reports/services.py:1281
+#: insights/metrics/conversations/reports/services.py:1461
+#: insights/metrics/conversations/reports/services.py:1529
+#: insights/metrics/conversations/reports/services.py:1588
+#: insights/metrics/conversations/reports/services.py:1662
+#: insights/metrics/conversations/reports/services.py:1731
+#: insights/metrics/conversations/reports/services.py:1793
 msgid "Date"
 msgstr "Data"
 
-#: insights/metrics/conversations/reports/services.py:1254
+#: insights/metrics/conversations/reports/services.py:1283
 msgid "AI-Assisted"
 msgstr "Atendido por IA"
 
-#: insights/metrics/conversations/reports/services.py:1255
+#: insights/metrics/conversations/reports/services.py:1284
 msgid "Not assisted"
 msgstr "Não atendido por IA"
 
-#: insights/metrics/conversations/reports/services.py:1256
+#: insights/metrics/conversations/reports/services.py:1285
 msgid "Transferred to human support"
 msgstr "Transferida para atendimento humano"
 
-#: insights/metrics/conversations/reports/services.py:1259
+#: insights/metrics/conversations/reports/services.py:1288
 msgid "Unknown"
 msgstr "Desconhecido"
 
-#: insights/metrics/conversations/reports/services.py:1428
+#: insights/metrics/conversations/reports/services.py:1457
 msgid "Topics Distribution AI"
 msgstr "Distribuição de Tópicos AI"
 
-#: insights/metrics/conversations/reports/services.py:1430
+#: insights/metrics/conversations/reports/services.py:1459
 msgid "Topics Distribution Human"
 msgstr "Distribuição de Tópicos Humano"
 
-#: insights/metrics/conversations/reports/services.py:1433
+#: insights/metrics/conversations/reports/services.py:1462
 msgid "Topic"
 msgstr "Tópico"
 
-#: insights/metrics/conversations/reports/services.py:1434
+#: insights/metrics/conversations/reports/services.py:1463
 msgid "Subtopic"
 msgstr "Subtópico"
 
-#: insights/metrics/conversations/reports/services.py:1499
+#: insights/metrics/conversations/reports/services.py:1528
 msgid "CSAT AI"
 msgstr "CSAT AI"
 
-#: insights/metrics/conversations/reports/services.py:1501
-#: insights/metrics/conversations/reports/services.py:1560
-#: insights/metrics/conversations/reports/services.py:1634
-#: insights/metrics/conversations/reports/services.py:1703
+#: insights/metrics/conversations/reports/services.py:1530
+#: insights/metrics/conversations/reports/services.py:1589
+#: insights/metrics/conversations/reports/services.py:1663
+#: insights/metrics/conversations/reports/services.py:1732
 msgid "Rating"
 msgstr "Avaliação"
 
-#: insights/metrics/conversations/reports/services.py:1558
+#: insights/metrics/conversations/reports/services.py:1587
 msgid "NPS AI"
 msgstr "NPS AI"
 
-#: insights/metrics/conversations/reports/services.py:1632
+#: insights/metrics/conversations/reports/services.py:1661
 msgid "CSAT Human"
 msgstr "CSAT Humano"
 
-#: insights/metrics/conversations/reports/services.py:1701
+#: insights/metrics/conversations/reports/services.py:1730
 msgid "NPS Human"
 msgstr "NPS Humano"
 
-#: insights/metrics/conversations/reports/services.py:1765
-#: insights/metrics/conversations/reports/services.py:2071
+#: insights/metrics/conversations/reports/services.py:1794
+#: insights/metrics/conversations/reports/services.py:1980
 msgid "Value"
 msgstr "Valor"
 
-#: insights/metrics/conversations/reports/services.py:1812
+#: insights/metrics/conversations/reports/services.py:1841
 msgid "Label"
 msgstr "Título"
 
-#: insights/metrics/conversations/reports/services.py:1813
+#: insights/metrics/conversations/reports/services.py:1842
 msgid "Total"
 msgstr "Total"
 
-#: insights/metrics/conversations/reports/services.py:1865
-#: insights/metrics/conversations/reports/services.py:1911
+#: insights/metrics/conversations/reports/services.py:1889
 msgid "Tool results"
 msgstr "Resultados de ferramentas"
 
-#: insights/metrics/conversations/reports/services.py:1866
-#: insights/metrics/conversations/reports/services.py:1972
+#: insights/metrics/conversations/reports/services.py:1890
+#: insights/metrics/conversations/reports/services.py:1936
 msgid "Agent"
 msgstr "Agente"
 
-#: insights/metrics/conversations/reports/services.py:1867
+#: insights/metrics/conversations/reports/services.py:1891
 msgid "Results"
 msgstr "Resultados"
 
-#: insights/metrics/conversations/reports/services.py:1868
-#: insights/metrics/conversations/reports/services.py:1974
-#: insights/metrics/conversations/reports/services.py:2072
+#: insights/metrics/conversations/reports/services.py:1892
+#: insights/metrics/conversations/reports/services.py:1938
+#: insights/metrics/conversations/reports/services.py:1981
 msgid "Percentage"
 msgstr "Porcentagem"
 
-#: insights/metrics/conversations/reports/services.py:1912
-#: insights/metrics/conversations/reports/services.py:2018
-msgid "URN"
-msgstr "URN"
-
-#: insights/metrics/conversations/reports/services.py:1913
-msgid "Tool name"
-msgstr "Nome da ferramenta"
-
-#: insights/metrics/conversations/reports/services.py:1971
-#: insights/metrics/conversations/reports/services.py:2017
+#: insights/metrics/conversations/reports/services.py:1935
 msgid "Agent invocations"
 msgstr "Invocações de agentes"
 
-#: insights/metrics/conversations/reports/services.py:1973
+#: insights/metrics/conversations/reports/services.py:1937
 msgid "Invocations"
 msgstr "Invocações"
 
-#: insights/metrics/conversations/reports/services.py:2019
-msgid "Agent name"
-msgstr "Nome do agente"
-
-#: insights/metrics/conversations/reports/services.py:2069
+#: insights/metrics/conversations/reports/services.py:1978
 msgid "Contacts"
 msgstr "Contatos"
 
-#: insights/metrics/conversations/reports/services.py:2070
+#: insights/metrics/conversations/reports/services.py:1979
 msgid "Metric"
 msgstr "Métrica"
 
-#: insights/metrics/conversations/reports/services.py:2074
+#: insights/metrics/conversations/reports/services.py:1983
+#: insights/metrics/conversations/reports/services.py:2064
 msgid "Unique contacts"
 msgstr "Contatos únicos"
 
-#: insights/metrics/conversations/reports/services.py:2075
+#: insights/metrics/conversations/reports/services.py:1984
+#: insights/metrics/conversations/reports/services.py:2065
 msgid "Returning contacts"
 msgstr "Contatos recorrentes"
 
-#: insights/metrics/conversations/reports/services.py:2077
+#: insights/metrics/conversations/reports/services.py:1986
 msgid "Avg conversations per contact"
 msgstr "Média de conversas por contato"
 
@@ -431,7 +416,7 @@ msgstr "Não foi possível gerar o export dos dados do projeto %(project_name)s.
 #: insights/metrics/conversations/templates/metrics/conversations/emails/report_failed.html:34
 #, python-format
 msgid "Use the following ID to report to support: %(event_id)s."
-msgstr "Use o seguinte ID para reportar ao suporte: %(event_id)s."
+msgstr "Utilize o seguinte ID para reportar ao suporte: %(event_id)s."
 
 #: insights/metrics/conversations/templates/metrics/conversations/emails/report_is_ready.html:16
 msgid "Hi, here is your data export"
