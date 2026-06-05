@@ -74,7 +74,6 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_spectacular",
     "weni.feature_flags",
-    "weni.eda.django.eda_app",
 ]
 
 if ADMIN_ENABLED is True:
