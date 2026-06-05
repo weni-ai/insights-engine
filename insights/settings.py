@@ -308,7 +308,9 @@ USE_EDA = env.bool("USE_EDA", default=False)
 
 if USE_EDA:
     EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"
-    EDA_CONSUMERS_HANDLE = "insights.event_driven.handle.handle_consumers"
+    EDA_CONSUMERS_HANDLE = env.str(
+        "EDA_CONSUMERS_HANDLE", default="insights.event_driven.handle.handle_consumers"
+    )
 
     EDA_BROKER_HOST = env("EDA_BROKER_HOST", default="localhost")
     EDA_VIRTUAL_HOST = env("EDA_VIRTUAL_HOST", default="/")
