@@ -27,6 +27,10 @@ from insights.sources.dl_events.tests.mock_client import (
     MockDataLakeEventsClient,
 )
 from insights.sources.integrations.clients import NexusConversationsAPIClient
+from insights.sources.integrations.tests.mock_clients import (
+    MockNexusClient,
+    MockResponse,
+)
 from insights.users.models import User
 from insights.reports.models import Report
 from insights.reports.choices import ReportFormat, ReportStatus
@@ -59,6 +63,7 @@ class TestConversationsReportService(TestCase):
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
             ),
             cache_client=MockCacheClient(),
+            nexus_client=MockNexusClient(),
         )
         self.project = Project.objects.create(name="Test")
         self.dashboard = Dashboard.objects.create(name="Test", project=self.project)
@@ -1025,6 +1030,7 @@ class TestConversationsReportServiceAdditional(TestCase):
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
             ),
             cache_client=MockCacheClient(),
+            nexus_client=MockNexusClient(),
         )
         self.project = Project.objects.create(name="Test")
         self.dashboard = Dashboard.objects.create(name="Test", project=self.project)
@@ -4107,6 +4113,32 @@ class TestConversationsReportServiceAdditional(TestCase):
             },
         ]
 
+        agents_team = {
+            "manager": {"external_id": ""},
+            "agents": [
+                {
+                    "uuid": "agent-uuid-1",
+                    "slug": "orders_agent",
+                    "name": "Orders Agent",
+                    "about": {"en": "", "pt": None, "es": None},
+                    "group": None,
+                    "is_official": True,
+                    "mcps": None,
+                    "active": True,
+                },
+                {
+                    "uuid": "agent-uuid-2",
+                    "slug": "support_agent",
+                    "name": "Support Agent",
+                    "about": {"en": "", "pt": None, "es": None},
+                    "group": None,
+                    "is_official": True,
+                    "mcps": None,
+                    "active": True,
+                },
+            ],
+        }
+
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
@@ -4117,22 +4149,29 @@ class TestConversationsReportServiceAdditional(TestCase):
             status=ReportStatus.IN_PROGRESS,
         )
 
-        worksheet = self.service.get_agent_invocation_worksheet(
-            report=report,
-            start_date=datetime.fromisoformat("2025-01-01"),
-            end_date=datetime.fromisoformat("2025-01-02"),
-        )
+        with patch.object(
+            self.service.nexus_client,
+            "get_project_agents_team",
+            return_value=MockResponse(
+                status_code=200, content=json.dumps(agents_team)
+            ),
+        ) as mock_get_agents_team:
+            worksheet = self.service.get_agent_invocation_worksheet(
+                report=report,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
 
         self.assertEqual(worksheet.name, "Agent invocations")
         self.assertEqual(len(worksheet.data), 2)
 
         self.assertEqual(worksheet.data[0]["URN"], "tel:+5511999999999")
-        self.assertEqual(worksheet.data[0]["Agent name"], "orders_agent")
+        self.assertEqual(worksheet.data[0]["Agent name"], "Orders Agent")
         self.assertEqual(worksheet.data[0]["Agent UUID"], "agent-uuid-1")
         self.assertIn("Date", worksheet.data[0])
 
         self.assertEqual(worksheet.data[1]["URN"], "tel:+5511888888888")
-        self.assertEqual(worksheet.data[1]["Agent name"], "support_agent")
+        self.assertEqual(worksheet.data[1]["Agent name"], "Support Agent")
         self.assertEqual(worksheet.data[1]["Agent UUID"], "agent-uuid-2")
         self.assertIn("Date", worksheet.data[1])
 
@@ -4144,6 +4183,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             event_name="weni_nexus_data",
             key="agent_invocation",
         )
+        mock_get_agents_team.assert_called_once_with(self.project.uuid)
 
     @patch(
         "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
@@ -4344,6 +4384,22 @@ class TestConversationsReportServiceAdditional(TestCase):
             },
         ]
 
+        agents_team = {
+            "manager": {"external_id": ""},
+            "agents": [
+                {
+                    "uuid": "agent-uuid-1",
+                    "slug": "nested_agent",
+                    "name": "Nested Agent",
+                    "about": {"en": "", "pt": None, "es": None},
+                    "group": None,
+                    "is_official": True,
+                    "mcps": None,
+                    "active": True,
+                },
+            ],
+        }
+
         report = Report.objects.create(
             project=self.project,
             source=self.service.source,
@@ -4354,16 +4410,234 @@ class TestConversationsReportServiceAdditional(TestCase):
             status=ReportStatus.IN_PROGRESS,
         )
 
-        worksheet = self.service.get_agent_invocation_worksheet(
-            report=report,
-            start_date=datetime.fromisoformat("2025-01-01"),
-            end_date=datetime.fromisoformat("2025-01-02"),
-        )
+        with patch.object(
+            self.service.nexus_client,
+            "get_project_agents_team",
+            return_value=MockResponse(
+                status_code=200, content=json.dumps(agents_team)
+            ),
+        ):
+            worksheet = self.service.get_agent_invocation_worksheet(
+                report=report,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
 
         self.assertEqual(worksheet.name, "Agent invocations")
         self.assertEqual(len(worksheet.data), 1)
         self.assertEqual(worksheet.data[0]["URN"], "tel:+5511999999999")
-        self.assertEqual(worksheet.data[0]["Agent name"], "nested_agent")
+        self.assertEqual(worksheet.data[0]["Agent name"], "Nested Agent")
+        self.assertEqual(worksheet.data[0]["Agent UUID"], "agent-uuid-1")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.capture_exception"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_agent_invocation_worksheet_detailed_falls_back_when_nexus_fails(
+        self, mock_get_datalake_events, mock_feature_flag, mock_capture_exception
+    ):
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "tel:+5511999999999",
+                "date": "2025-01-01T10:30:00.000000Z",
+                "value": "orders_agent",
+                "metadata": json.dumps({"agent_uuid": "agent-uuid-1"}),
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with patch.object(
+            self.service.nexus_client,
+            "get_project_agents_team",
+            side_effect=Exception("Nexus unreachable"),
+        ):
+            worksheet = self.service.get_agent_invocation_worksheet(
+                report=report,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
+
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "tel:+5511999999999")
+        self.assertEqual(worksheet.data[0]["Agent name"], "orders_agent")
+        self.assertEqual(worksheet.data[0]["Agent UUID"], "agent-uuid-1")
+        mock_capture_exception.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.capture_exception"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_agent_invocation_worksheet_detailed_falls_back_when_nexus_returns_error_status(
+        self, mock_get_datalake_events, mock_feature_flag, mock_capture_exception
+    ):
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "tel:+5511999999999",
+                "date": "2025-01-01T10:30:00.000000Z",
+                "value": "orders_agent",
+                "metadata": json.dumps({"agent_uuid": "agent-uuid-1"}),
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with patch.object(
+            self.service.nexus_client,
+            "get_project_agents_team",
+            return_value=MockResponse(
+                status_code=500, content="Internal Server Error"
+            ),
+        ):
+            worksheet = self.service.get_agent_invocation_worksheet(
+                report=report,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
+
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(worksheet.data[0]["Agent name"], "orders_agent")
+        mock_capture_exception.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.capture_exception"
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_agent_invocation_worksheet_detailed_falls_back_when_nexus_returns_malformed_payload(
+        self, mock_get_datalake_events, mock_feature_flag, mock_capture_exception
+    ):
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "tel:+5511999999999",
+                "date": "2025-01-01T10:30:00.000000Z",
+                "value": "orders_agent",
+                "metadata": json.dumps({"agent_uuid": "agent-uuid-1"}),
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with patch.object(
+            self.service.nexus_client,
+            "get_project_agents_team",
+            return_value=MockResponse(
+                status_code=200,
+                content=json.dumps({"unexpected": "shape"}),
+            ),
+        ):
+            worksheet = self.service.get_agent_invocation_worksheet(
+                report=report,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
+
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(worksheet.data[0]["Agent name"], "orders_agent")
+        mock_capture_exception.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_agent_invocation_worksheet_detailed_falls_back_when_slug_missing(
+        self, mock_get_datalake_events, mock_feature_flag
+    ):
+        mock_get_datalake_events.return_value = [
+            {
+                "contact_urn": "tel:+5511999999999",
+                "date": "2025-01-01T10:30:00.000000Z",
+                "value": "unknown_slug",
+                "metadata": json.dumps({"agent_uuid": "agent-uuid-1"}),
+            },
+        ]
+
+        agents_team = {
+            "manager": {"external_id": ""},
+            "agents": [
+                {
+                    "uuid": "agent-uuid-2",
+                    "slug": "other_agent",
+                    "name": "Other Agent",
+                    "about": {"en": "", "pt": None, "es": None},
+                    "group": None,
+                    "is_official": True,
+                    "mcps": None,
+                    "active": True,
+                },
+            ],
+        }
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["AGENT_INVOCATION"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        with patch.object(
+            self.service.nexus_client,
+            "get_project_agents_team",
+            return_value=MockResponse(
+                status_code=200, content=json.dumps(agents_team)
+            ),
+        ):
+            worksheet = self.service.get_agent_invocation_worksheet(
+                report=report,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
+
+        self.assertEqual(worksheet.name, "Agent invocations")
+        self.assertEqual(worksheet.data[0]["Agent name"], "unknown_slug")
         self.assertEqual(worksheet.data[0]["Agent UUID"], "agent-uuid-1")
 
 
@@ -4383,6 +4657,7 @@ class TestGetEventsCount(TestCase):
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
             ),
             cache_client=MockCacheClient(),
+            nexus_client=MockNexusClient(),
         )
 
     @patch(
@@ -4449,6 +4724,7 @@ class TestGetDatalakeEventsDispatch(TestCase):
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
             ),
             cache_client=MockCacheClient(),
+            nexus_client=MockNexusClient(),
         )
         self.project = Project.objects.create(name="Test")
         self.user = User.objects.create(email="test@test.com", language="en")
@@ -4489,6 +4765,7 @@ class TestGetDatalakeEventsInParallel(TestCase):
                 flowruns_query_executor=MockFlowRunsQueryExecutor(),
             ),
             cache_client=MockCacheClient(),
+            nexus_client=MockNexusClient(),
         )
         self.project = Project.objects.create(name="Test")
         self.user = User.objects.create(email="test@test.com", language="en")

@@ -42,11 +42,14 @@ from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
 from insights.projects.models import Project
 from insights.sources.dl_events.clients import BaseDataLakeEventsClient
+from insights.sources.integrations.clients import BaseNexusClient
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
 )
 from insights.widgets.models import Widget
 from insights.sources.cache import CacheClient
+
+from rest_framework import status as rest_status
 
 
 logger = logging.getLogger(__name__)
@@ -331,6 +334,7 @@ class ConversationsReportService(BaseConversationsReportService):
         metrics_service: ConversationsMetricsService,
         elasticsearch_service: ConversationsElasticsearchService,
         cache_client: CacheClient,
+        nexus_client: BaseNexusClient,
         events_limit_per_page: int = 5000,
         page_limit: int = 100,
         elastic_page_size: int = 1000,
@@ -343,6 +347,7 @@ class ConversationsReportService(BaseConversationsReportService):
         self.page_limit = page_limit
         self.elasticsearch_service = elasticsearch_service
         self.cache_client = cache_client
+        self.nexus_client = nexus_client
         self.elastic_page_size = elastic_page_size
         self.elastic_page_limit = elastic_page_limit
 
@@ -376,6 +381,38 @@ class ConversationsReportService(BaseConversationsReportService):
             )
             capture_exception(e)
             return False
+
+    def _get_project_agents_by_slug(self, project_uuid: UUID) -> dict[str, dict]:
+        """
+        Fetch the project agents team from Nexus and return them keyed by slug.
+
+        Never raises: any failure (transport, non-2xx, malformed JSON or shape)
+        is logged and reported to Sentry, returning an empty dict so report
+        generation can continue.
+        """
+        try:
+            response = self.nexus_client.get_project_agents_team(project_uuid)
+            if not rest_status.is_success(response.status_code):
+                raise ValueError(
+                    f"Nexus agents team returned {response.status_code}: {response.text}"
+                )
+            payload = response.json()
+            agents = payload.get("agents") if isinstance(payload, dict) else None
+            if not isinstance(agents, list):
+                raise ValueError("Nexus agents team response missing 'agents' list")
+            return {
+                agent["slug"]: agent
+                for agent in agents
+                if isinstance(agent, dict) and agent.get("slug")
+            }
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Failed to fetch project agents from Nexus for %s: %s",
+                project_uuid,
+                e,
+            )
+            capture_exception(e)
+            return {}
 
     def _clear_cache_keys(self, report_uuid: UUID) -> None:
         """
@@ -2052,6 +2089,8 @@ class ConversationsReportService(BaseConversationsReportService):
             key="agent_invocation",
         )
 
+        agents_by_slug = self._get_project_agents_by_slug(report.project.uuid)
+
         with override(report.requested_by.language or "en"):
             worksheet_name = gettext("Agent invocations")
             urn_label = gettext("URN")
@@ -2070,7 +2109,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 except Exception:
                     continue
 
-            agent_name = event.get("value", "")
+            agent_slug = event.get("value", "")
+            agent_data = agents_by_slug.get(agent_slug) or {}
+            agent_name = agent_data.get("name") or agent_slug
             agent_uuid = ""
 
             if metadata:
