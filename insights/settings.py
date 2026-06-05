@@ -305,8 +305,6 @@ if USE_SENTRY:
 
 USE_EDA = env.bool("USE_EDA", default=False)
 
-# TODO: Remove this once we permanently migrate to Weni EDA
-USE_WENI_EDA_FOR_PROJECTS = env.bool("USE_WENI_EDA_FOR_PROJECTS", default=False)
 
 if USE_EDA:
     EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"

@@ -1,7 +1,5 @@
 from amqp.channel import Channel
 
-from insights.settings import USE_WENI_EDA_FOR_PROJECTS
-
 from .consumers import (
     ProjectAuthConsumer,
     OldProjectConsumer,
