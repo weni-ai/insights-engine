@@ -42,6 +42,7 @@ from insights.metrics.conversations.enums import (
 )
 from insights.metrics.conversations.exceptions import (
     SearchTermsAgentUUIDNotConfiguredError,
+    AddedToCartAgentUUIDNotConfiguredError,
 )
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     ToolResultMetric,
@@ -979,6 +980,66 @@ class TestConversationsMetricsService(TestCase):
     def test_cannot_get_search_terms_metrics_without_agent_uuid(self):
         with self.assertRaises(SearchTermsAgentUUIDNotConfiguredError):
             self.service.get_search_terms_metrics(
+                project_uuid=self.project.uuid,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+        self.mock_datalake_service.get_generic_metrics_by_key.assert_not_called()
+
+    @override_settings(
+        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
+        CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
+    )
+    def test_get_added_to_cart_metrics(self):
+        self.mock_datalake_service.get_generic_metrics_by_key.return_value = {
+            "azeite": 17,
+            "arroz": 3,
+        }
+
+        metrics = self.service.get_added_to_cart_metrics(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(
+            metrics,
+            {
+                "results": [
+                    {"label": "azeite", "value": 85.0, "full_value": 17},
+                    {"label": "arroz", "value": 15.0, "full_value": 3},
+                ]
+            },
+        )
+
+        self.mock_datalake_service.get_generic_metrics_by_key.assert_called_once_with(
+            self.project.uuid,
+            "11111111-1111-1111-1111-111111111111",
+            self.start_date,
+            self.end_date,
+            "product_added_to_cart",
+        )
+
+    @override_settings(
+        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
+        CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
+    )
+    def test_get_added_to_cart_metrics_zero_total(self):
+        self.mock_datalake_service.get_generic_metrics_by_key.return_value = {}
+
+        metrics = self.service.get_added_to_cart_metrics(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(metrics, {"results": []})
+
+    @override_settings(CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="")
+    def test_cannot_get_added_to_cart_metrics_without_agent_uuid(self):
+        with self.assertRaises(AddedToCartAgentUUIDNotConfiguredError):
+            self.service.get_added_to_cart_metrics(
                 project_uuid=self.project.uuid,
                 start_date=self.start_date,
                 end_date=self.end_date,
