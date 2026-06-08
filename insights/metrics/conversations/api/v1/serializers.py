@@ -732,6 +732,12 @@ class ContactsMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer
     """
 
 
+class SearchTermsMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for search terms metrics query params
+    """
+
+
 class UniqueContactsMetricsSerializer(serializers.Serializer):
     value = serializers.IntegerField()
 
