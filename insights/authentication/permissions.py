@@ -81,6 +81,9 @@ class ProjectAuthBodyPermission(permissions.BasePermission):
 
 class InternalAuthenticationPermission(permissions.BasePermission):
     def has_permission(self, request: Request, view: APIView) -> bool:
+        print(
+            f"[InternalAuthenticationPermission] {request.user} has perm: {request.user.has_perm('users.can_communicate_internally')}"
+        )
         return request.user.has_perm("users.can_communicate_internally")
 
 
