@@ -19,7 +19,18 @@ from .serializers import (
 
 
 class UpdateProjectVTEXAccountView(views.APIView):
-    permission_classes = [IsAuthenticated, InternalAuthenticationPermission]
+    permission_classes = [
+        HasInternalAuthenticationPermission
+        | (IsAuthenticated & InternalAuthenticationPermission)
+    ]
+
+    @property
+    def authentication_classes(self):
+        # Try JWT first so Bearer JWT tokens are accepted before OIDC (which would raise on invalid OIDC token)
+        classes = list(super().authentication_classes)
+        if JWTAuthentication not in classes:
+            classes.insert(0, JWTAuthentication)
+        return classes
 
     def patch(self, request: Request, project_uuid: str) -> Response:
         serializer = UpdateProjectVTEXAccountRequestSerializer(data=request.data)
