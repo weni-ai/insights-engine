@@ -13,6 +13,7 @@ from insights.reports.models import Report
 from insights.reports.choices import ReportStatus
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import DataLakeEventsClient
+from insights.sources.integrations.clients import NexusClient
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.integrations.elasticsearch.services import (
@@ -111,6 +112,7 @@ def generate_conversations_report():
                 client=ElasticsearchClient(),
             ),
             cache_client=CacheClient(),
+            nexus_client=NexusClient(),
             events_limit_per_page=settings.CONVERSATIONS_REPORT_EVENTS_LIMIT_PER_PAGE,
             page_limit=settings.CONVERSATIONS_REPORT_PAGE_LIMIT,
             elastic_page_size=settings.CONVERSATIONS_REPORT_ELASTIC_PAGE_SIZE,
