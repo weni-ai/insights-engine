@@ -12,6 +12,7 @@ from insights.authentication.services.tests.test_jwt_service import (
     generate_private_key_pem,
     generate_public_key_pem,
 )
+from insights.authentication.tests.decorators import with_internal_auth
 from insights.projects.models import Project
 
 
@@ -51,6 +52,15 @@ class TestUpdateProjectVTEXAccountViewAsAuthenticatedUser(
         response = self.update_vtex_account(self.project.uuid, {"vtex_account": "xyz"})
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_internal_auth
+    def test_can_update_vtex_account_when_user_is_authenticated(self):
+        response = self.update_vtex_account(self.project.uuid, {"vtex_account": "xyz"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["vtex_account"], "xyz")
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.vtex_account, "xyz")
 
 
 @override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
