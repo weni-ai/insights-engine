@@ -86,3 +86,21 @@ class MockNexusClient(BaseNexusClient):
         return MockResponse(
             status_code=200, content=json.dumps({"multi_agents": False})
         )
+
+    def get_project_agents_team(self, project_uuid: UUID) -> MockResponse:
+        agents_team = {
+            "manager": {"external_id": ""},
+            "agents": [
+                {
+                    "uuid": "00000000-0000-0000-0000-000000000000",
+                    "slug": "mock-agent",
+                    "name": "Mock Agent",
+                    "about": {"en": "", "pt": None, "es": None},
+                    "group": None,
+                    "is_official": True,
+                    "mcps": None,
+                    "active": True,
+                }
+            ],
+        }
+        return MockResponse(status_code=200, content=json.dumps(agents_team))
