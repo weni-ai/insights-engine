@@ -12,3 +12,4 @@ class ConversationsReportSections(TextChoices):
     AGENT_INVOCATION = "AGENT_INVOCATION"
     TOOL_RESULT = "TOOL_RESULT"
     CONTACTS = "CONTACTS"
+    SEARCH_TERMS = "SEARCH_TERMS"

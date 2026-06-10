@@ -23,6 +23,9 @@ from sentry_sdk import capture_exception
 from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.exceptions import (
+    SearchTermsAgentUUIDNotConfiguredError,
+)
 from insights.metrics.conversations.reports.available_widgets import (
     get_crosstab_widgets,
     get_csat_ai_widget,
@@ -328,6 +331,18 @@ class BaseConversationsReportService(ABC):
     ) -> list[ConversationsReportWorksheet]:
         """
         Get contacts worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_search_terms_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get search terms worksheet.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -739,6 +754,10 @@ class ConversationsReportService(BaseConversationsReportService):
                     "end_date": end_date,
                     "conversation_classification_events": conversation_classification_events,
                 },
+            ),
+            "SEARCH_TERMS": (
+                self.get_search_terms_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
             ),
         }
 
@@ -2165,6 +2184,67 @@ class ConversationsReportService(BaseConversationsReportService):
             ),
         ]
 
+    def get_search_terms_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get search terms worksheet.
+        """
+        agent_uuid = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID
+
+        if not agent_uuid:
+            raise SearchTermsAgentUUIDNotConfiguredError(
+                "CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID is not configured"
+            )
+
+        key = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_KEY
+
+        events = self.get_datalake_events(
+            report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key=key,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Search terms")
+            date_label = gettext("Date")
+            terms_label = gettext("Terms")
+
+        data = [
+            {
+                "URN": event.get("contact_urn", ""),
+                date_label: (
+                    self._format_date(event.get("date"), report)
+                    if event.get("date")
+                    else ""
+                ),
+                terms_label: event.get("value", ""),
+            }
+            for event in events
+        ]
+
+        if not data:
+            data = [
+                {
+                    "URN": "",
+                    date_label: "",
+                    terms_label: "",
+                }
+            ]
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+        )
+
     def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
         """
         Get available widgets.
@@ -2177,6 +2257,7 @@ class ConversationsReportService(BaseConversationsReportService):
             "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CONTACTS",
+            "SEARCH_TERMS",
         ]
 
         special_widgets_get_functions = [
