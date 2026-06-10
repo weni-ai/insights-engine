@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-09 14:46+0000\n"
+"POT-Creation-Date: 2026-06-09 15:01+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: Kallil Souza dos Santos <kallilsouza@hotmail.com>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -412,6 +412,13 @@ msgstr "Términos de búsqueda"
 #: insights/metrics/conversations/reports/services.py:2143
 msgid "Terms"
 msgstr "Términos"
+
+msgid "Added to cart"
+msgstr ""
+
+#: insights/metrics/conversations/reports/services.py:2143
+msgid "Product"
+msgstr ""
 
 #: insights/metrics/conversations/reports/views.py:107
 msgid "There is another report being processed for this project"
