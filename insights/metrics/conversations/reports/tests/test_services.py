@@ -606,9 +606,7 @@ class TestConversationsReportService(TestCase):
     @patch(
         "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
-    def test_get_datalake_events_when_report_is_failed(
-        self, mock_get_datalake_events
-    ):
+    def test_get_datalake_events_when_report_is_failed(self, mock_get_datalake_events):
         mock_events = [{"id": "1"}, {"id": "2"}]
 
         def get_datalake_events(**kwargs):
@@ -2598,9 +2596,7 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch(
         "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
     )
-    def test_get_datalake_events_with_datetime_objects(
-        self, mock_get_events
-    ):
+    def test_get_datalake_events_with_datetime_objects(self, mock_get_events):
         """Test get_datalake_events with datetime objects in kwargs."""
         mock_get_events.return_value = []
 
@@ -3966,9 +3962,7 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
     )
-    def test_get_search_terms_worksheet_with_empty_data(
-        self, mock_get_datalake_events
-    ):
+    def test_get_search_terms_worksheet_with_empty_data(self, mock_get_datalake_events):
         mock_get_datalake_events.return_value = []
 
         report = Report.objects.create(
@@ -4031,7 +4025,9 @@ class TestConversationsReportServiceAdditional(TestCase):
     ):
         mock_get_search_terms_worksheet.return_value = ConversationsReportWorksheet(
             name="Search terms",
-            data=[{"URN": "ext:1@example.com", "Date": "10/04/2026", "Terms": "azeite"}],
+            data=[
+                {"URN": "ext:1@example.com", "Date": "10/04/2026", "Terms": "azeite"}
+            ],
         )
 
         report = Report.objects.create(
@@ -4761,9 +4757,7 @@ class TestGetDatalakeEventsInParallel(TestCase):
         "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
         return_value=True,
     )
-    def test_get_contacts_worksheet_flag_enabled_empty_events(
-        self, mock_feature_flag
-    ):
+    def test_get_contacts_worksheet_flag_enabled_empty_events(self, mock_feature_flag):
         """Test get_contacts_worksheet returns placeholder rows when no events exist."""
         report = Report.objects.create(
             project=self.project,
