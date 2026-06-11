@@ -2440,6 +2440,7 @@ class ConversationsReportService(BaseConversationsReportService):
         ]
 
         special_widgets_get_functions = [
+            (get_added_to_cart_widget, "ADDED_TO_CART"),
             (get_search_term_widget, "SEARCH_TERMS"),
             (get_csat_ai_widget, "CSAT_AI"),
             (get_csat_human_widget, "CSAT_HUMAN"),
