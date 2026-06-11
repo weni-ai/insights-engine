@@ -2035,8 +2035,10 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_search_term_widget")
     def test_get_available_widgets_basic_only(
         self,
+        mock_get_search_term_widget,
         mock_get_csat_ai_widget,
         mock_get_nps_ai_widget,
         mock_get_csat_human_widget,
@@ -2045,6 +2047,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with only basic widgets (no special widgets)."""
+        mock_get_search_term_widget.return_value = False
         mock_get_csat_ai_widget.return_value = None
         mock_get_nps_ai_widget.return_value = None
         mock_get_csat_human_widget.return_value = None
@@ -2062,12 +2065,12 @@ class TestConversationsReportServiceAdditional(TestCase):
             "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CONTACTS",
-            "SEARCH_TERMS",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
         self.assertEqual(result.crosstab_widgets, [])
 
+        mock_get_search_term_widget.assert_called_once_with(self.project)
         mock_get_csat_ai_widget.assert_called_once_with(self.project)
         mock_get_nps_ai_widget.assert_called_once_with(self.project)
         mock_get_csat_human_widget.assert_called_once_with(self.project)
@@ -2081,8 +2084,10 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_search_term_widget")
     def test_get_available_widgets_with_special_widgets(
         self,
+        mock_get_search_term_widget,
         mock_get_csat_ai_widget,
         mock_get_nps_ai_widget,
         mock_get_csat_human_widget,
@@ -2132,6 +2137,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             dashboard=self.dashboard,
         )
 
+        mock_get_search_term_widget.return_value = True
         mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
         mock_get_nps_ai_widget.return_value = mock_nps_ai_widget
         mock_get_csat_human_widget.return_value = mock_csat_human_widget
@@ -2165,8 +2171,10 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_search_term_widget")
     def test_get_available_widgets_with_custom_widgets(
         self,
+        mock_get_search_term_widget,
         mock_get_csat_ai_widget,
         mock_get_nps_ai_widget,
         mock_get_csat_human_widget,
@@ -2175,6 +2183,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with custom widgets available."""
+        mock_get_search_term_widget.return_value = True
         mock_get_csat_ai_widget.return_value = None
         mock_get_nps_ai_widget.return_value = None
         mock_get_csat_human_widget.return_value = None
@@ -2227,8 +2236,10 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_search_term_widget")
     def test_get_available_widgets_combined(
         self,
+        mock_get_search_term_widget,
         mock_get_csat_ai_widget,
         mock_get_nps_ai_widget,
         mock_get_csat_human_widget,
@@ -2237,6 +2248,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with all types of widgets available."""
+        mock_get_search_term_widget.return_value = True
         mock_csat_ai_widget = Widget.objects.create(
             name="CSAT AI Widget",
             config={"datalake_config": {"agent_uuid": "test-uuid"}},
@@ -2295,8 +2307,10 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_search_term_widget")
     def test_get_available_widgets_partial_special_widgets(
         self,
+        mock_get_search_term_widget,
         mock_get_csat_ai_widget,
         mock_get_nps_ai_widget,
         mock_get_csat_human_widget,
@@ -2305,6 +2319,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with only some special widgets available."""
+        mock_get_search_term_widget.return_value = True
         mock_csat_ai_widget = Widget.objects.create(
             name="CSAT AI Widget",
             config={"datalake_config": {"agent_uuid": "test-uuid"}},
@@ -2344,8 +2359,10 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_search_term_widget")
     def test_get_available_widgets_with_crosstab_widgets(
         self,
+        mock_get_search_term_widget,
         mock_get_csat_ai_widget,
         mock_get_nps_ai_widget,
         mock_get_csat_human_widget,
@@ -2354,6 +2371,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with crosstab widgets available."""
+        mock_get_search_term_widget.return_value = True
         mock_get_csat_ai_widget.return_value = None
         mock_get_nps_ai_widget.return_value = None
         mock_get_csat_human_widget.return_value = None

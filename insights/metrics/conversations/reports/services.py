@@ -32,6 +32,7 @@ from insights.metrics.conversations.reports.available_widgets import (
     get_custom_widgets,
     get_nps_ai_widget,
     get_nps_human_widget,
+    get_search_term_widget,
 )
 from insights.metrics.conversations.reports.dataclass import (
     AvailableReportWidgets,
@@ -2181,8 +2182,10 @@ class ConversationsReportService(BaseConversationsReportService):
             "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CONTACTS",
-            "SEARCH_TERMS",
         ]
+
+        if get_search_term_widget(project):
+            available_widgets.append("SEARCH_TERMS")
 
         special_widgets_get_functions = [
             (get_csat_ai_widget, "CSAT_AI"),
