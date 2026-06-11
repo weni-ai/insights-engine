@@ -2184,10 +2184,8 @@ class ConversationsReportService(BaseConversationsReportService):
             "CONTACTS",
         ]
 
-        if get_search_term_widget(project):
-            available_widgets.append("SEARCH_TERMS")
-
         special_widgets_get_functions = [
+            (get_search_term_widget, "SEARCH_TERMS"),
             (get_csat_ai_widget, "CSAT_AI"),
             (get_csat_human_widget, "CSAT_HUMAN"),
             (get_nps_ai_widget, "NPS_AI"),
