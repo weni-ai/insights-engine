@@ -45,6 +45,7 @@ from insights.metrics.conversations.api.v1.serializers import (
     NpsMetricsQueryParamsSerializer,
     SalesFunnelMetricsQueryParamsSerializer,
     SalesFunnelMetricsSerializer,
+    SearchTermsMetricsQueryParamsSerializer,
     ToolResultMetricsSerializer,
     ToolResultQueryParamsSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
@@ -559,6 +560,29 @@ class ConversationsMetricsViewSet(
             ContactsMetricsSerializer(metrics).data,
             status=status.HTTP_200_OK,
         )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="search-terms",
+        url_name="search-terms",
+    )
+    def search_terms(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Get search terms metrics
+        """
+        query_params = SearchTermsMetricsQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+
+        metrics = self.service.get_search_terms_metrics(
+            project_uuid=query_params.validated_data["project_uuid"],
+            start_date=query_params.validated_data["start_date"],
+            end_date=query_params.validated_data["end_date"],
+        )
+
+        return Response(metrics, status=status.HTTP_200_OK)
 
 
 class InternalConversationsMetricsViewSet(GenericViewSet):
