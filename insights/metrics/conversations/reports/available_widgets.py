@@ -72,6 +72,13 @@ def get_custom_widgets(project: Project) -> list[UUID]:
     ).values_list("uuid", flat=True)
 
 
+def get_search_term_widget(project: Project) -> bool:
+    return Widget.objects.filter(
+        dashboard__project=project,
+        source="conversations.search_term",
+    ).exists()
+
+
 def get_crosstab_widgets(project: Project) -> list[UUID]:
     return Widget.objects.filter(
         dashboard__project=project,
