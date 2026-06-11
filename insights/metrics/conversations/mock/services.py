@@ -313,6 +313,47 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
     ) -> dict:
         return {}
 
+    def get_search_terms_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        counts = [
+            ("azeite", 120),
+            ("arroz", 95),
+            ("feijão", 80),
+            ("café", 72),
+            ("leite", 65),
+            ("açúcar", 58),
+            ("farinha", 50),
+            ("macarrão", 45),
+            ("óleo", 40),
+            ("sal", 36),
+            ("manteiga", 32),
+            ("biscoito", 28),
+            ("chocolate", 24),
+            ("iogurte", 20),
+            ("queijo", 18),
+            ("presunto", 15),
+            ("refrigerante", 12),
+            ("suco", 10),
+            ("água", 8),
+            ("cerveja", 5),
+        ]
+        total = sum(count for _, count in counts)
+
+        return {
+            "results": [
+                {
+                    "label": label,
+                    "value": round((count / total) * 100, 2),
+                    "full_value": count,
+                }
+                for label, count in counts
+            ]
+        }
+
     def get_added_to_cart_metrics(
         self,
         project_uuid: UUID,
