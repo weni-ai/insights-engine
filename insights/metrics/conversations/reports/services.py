@@ -46,11 +46,14 @@ from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
 from insights.projects.models import Project
 from insights.sources.dl_events.clients import BaseDataLakeEventsClient
+from insights.sources.integrations.clients import BaseNexusClient
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
 )
 from insights.widgets.models import Widget
 from insights.sources.cache import CacheClient
+
+from rest_framework import status as rest_status
 
 
 logger = logging.getLogger(__name__)
@@ -347,6 +350,7 @@ class ConversationsReportService(BaseConversationsReportService):
         metrics_service: ConversationsMetricsService,
         elasticsearch_service: ConversationsElasticsearchService,
         cache_client: CacheClient,
+        nexus_client: BaseNexusClient,
         events_limit_per_page: int = 5000,
         page_limit: int = 100,
         elastic_page_size: int = 1000,
@@ -359,6 +363,7 @@ class ConversationsReportService(BaseConversationsReportService):
         self.page_limit = page_limit
         self.elasticsearch_service = elasticsearch_service
         self.cache_client = cache_client
+        self.nexus_client = nexus_client
         self.elastic_page_size = elastic_page_size
         self.elastic_page_limit = elastic_page_limit
 
@@ -374,6 +379,56 @@ class ConversationsReportService(BaseConversationsReportService):
             self.cache_keys[report_uuid] = set()
 
         self.cache_keys[report_uuid].add(cache_key)
+
+    def _is_agents_tools_urn_list_enabled(self, report: Report) -> bool:
+        attributes = {
+            "projectUUID": str(report.project.uuid),
+        }
+        if report.requested_by:
+            attributes["userEmail"] = report.requested_by.email
+        try:
+            return is_feature_active_for_attributes(
+                settings.CONVERSATIONS_REPORT_AGENTS_TOOLS_URN_LIST_FEATURE_FLAG_KEY,
+                attributes=attributes,
+            )
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Feature flag check failed: %s", e
+            )
+            capture_exception(e)
+            return False
+
+    def _get_project_agents_by_slug(self, project_uuid: UUID) -> dict[str, dict]:
+        """
+        Fetch the project agents team from Nexus and return them keyed by slug.
+
+        Never raises: any failure (transport, non-2xx, malformed JSON or shape)
+        is logged and reported to Sentry, returning an empty dict so report
+        generation can continue.
+        """
+        try:
+            response = self.nexus_client.get_project_agents_team(project_uuid)
+            if not rest_status.is_success(response.status_code):
+                raise ValueError(
+                    f"Nexus agents team returned {response.status_code}: {response.text}"
+                )
+            payload = response.json()
+            agents = payload.get("agents") if isinstance(payload, dict) else None
+            if not isinstance(agents, list):
+                raise ValueError("Nexus agents team response missing 'agents' list")
+            return {
+                agent["slug"]: agent
+                for agent in agents
+                if isinstance(agent, dict) and agent.get("slug")
+            }
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Failed to fetch project agents from Nexus for %s: %s",
+                project_uuid,
+                e,
+            )
+            capture_exception(e)
+            return {}
 
     def _clear_cache_keys(self, report_uuid: UUID) -> None:
         """
@@ -1899,6 +1954,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get tool result worksheet.
         """
+        if self._is_agents_tools_urn_list_enabled(report):
+            return self._get_tool_result_detailed_worksheet(
+                report, start_date, end_date
+            )
+
         tool_results = self.metrics_service.get_tool_results(
             project_uuid=report.project.uuid,
             start_date=start_date,
@@ -1936,6 +1996,53 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def _get_tool_result_detailed_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="tool_result",
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Tool results")
+            urn_label = gettext("URN")
+            tool_name_label = gettext("Tool name")
+            date_label = gettext("Date")
+
+        data = []
+
+        for event in events:
+            metadata = event.get("metadata")
+
+            if metadata and not isinstance(metadata, dict):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    continue
+
+            tool_name = event.get("value", "")
+
+            data.append(
+                {
+                    urn_label: event.get("contact_urn", ""),
+                    tool_name_label: tool_name,
+                    date_label: self._format_date(event.get("date", ""), report),
+                }
+            )
+
+        if len(data) == 0:
+            data = [{urn_label: "", tool_name_label: "", date_label: ""}]
+
+        return ConversationsReportWorksheet(name=worksheet_name, data=data)
+
     def get_agent_invocation_worksheet(
         self,
         report: Report,
@@ -1945,6 +2052,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get agent invocation worksheet.
         """
+        if self._is_agents_tools_urn_list_enabled(report):
+            return self._get_agent_invocation_detailed_worksheet(
+                report, start_date, end_date
+            )
+
         agent_invocations = self.metrics_service.get_agent_invocations(
             project_uuid=report.project.uuid,
             start_date=start_date,
@@ -1981,6 +2093,70 @@ class ConversationsReportService(BaseConversationsReportService):
             name=worksheet_name,
             data=data,
         )
+
+    def _get_agent_invocation_detailed_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="agent_invocation",
+        )
+
+        agents_by_slug = self._get_project_agents_by_slug(report.project.uuid)
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Agent invocations")
+            urn_label = gettext("URN")
+            agent_name_label = gettext("Agent name")
+            agent_uuid_label = gettext("Agent UUID")
+            date_label = gettext("Date")
+
+        data = []
+
+        for event in events:
+            metadata = event.get("metadata")
+
+            if metadata and not isinstance(metadata, dict):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    continue
+
+            agent_slug = event.get("value", "")
+            agent_data = agents_by_slug.get(agent_slug) or {}
+            agent_name = agent_data.get("name") or agent_slug
+            agent_uuid = ""
+
+            if metadata:
+                agent_uuid = metadata.get("agent_uuid", None)
+
+            data.append(
+                {
+                    urn_label: event.get("contact_urn", ""),
+                    agent_name_label: agent_name,
+                    agent_uuid_label: agent_uuid,
+                    date_label: self._format_date(event.get("date", ""), report),
+                }
+            )
+
+        if len(data) == 0:
+            data = [
+                {
+                    urn_label: "",
+                    agent_name_label: "",
+                    agent_uuid_label: "",
+                    date_label: "",
+                }
+            ]
+
+        return ConversationsReportWorksheet(name=worksheet_name, data=data)
 
     def get_contacts_summary_worksheet(
         self,
