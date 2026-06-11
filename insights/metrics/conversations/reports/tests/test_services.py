@@ -2373,8 +2373,10 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_added_to_cart_widget")
     def test_get_available_widgets_with_crosstab_widgets(
         self,
+        mock_get_added_to_cart_widget,
         mock_get_csat_ai_widget,
         mock_get_nps_ai_widget,
         mock_get_csat_human_widget,
@@ -2383,6 +2385,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with crosstab widgets available."""
+        mock_get_added_to_cart_widget.return_value = None
         mock_get_csat_ai_widget.return_value = None
         mock_get_nps_ai_widget.return_value = None
         mock_get_csat_human_widget.return_value = None
@@ -2427,7 +2430,6 @@ class TestConversationsReportServiceAdditional(TestCase):
             "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CONTACTS",
-            "ADDED_TO_CART",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
