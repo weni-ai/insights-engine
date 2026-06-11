@@ -13,3 +13,4 @@ class ConversationsReportSections(TextChoices):
     TOOL_RESULT = "TOOL_RESULT"
     CONTACTS = "CONTACTS"
     ADDED_TO_CART = "ADDED_TO_CART"
+    SEARCH_TERMS = "SEARCH_TERMS"

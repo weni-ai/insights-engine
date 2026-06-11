@@ -26,6 +26,7 @@ from insights.reports.choices import ReportStatus
 from insights.reports.usecases.report_status_cache import ReportStatusCacheUseCase
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import DataLakeEventsClient
+from insights.sources.integrations.clients import NexusClient
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.integrations.elasticsearch.tests.mock import (
     MockElasticsearchClient,
@@ -40,6 +41,7 @@ class ConversationsReportsViewSet(APIView):
         datalake_events_client=DataLakeEventsClient(),
         metrics_service=ConversationsMetricsService(),
         cache_client=CacheClient(),
+        nexus_client=NexusClient(),
     )
 
     @property
@@ -157,6 +159,7 @@ class AvailableWidgetsViewSet(APIView):
         datalake_events_client=DataLakeEventsClient(),
         metrics_service=ConversationsMetricsService(),
         cache_client=CacheClient(),
+        nexus_client=NexusClient(),
     )
 
     permission_classes = [IsAuthenticated, CanCheckReportGenerationStatusPermission]

@@ -384,6 +384,7 @@ class TestHumanSupportDashboardService(TestCase):
                     "ended_at": "2025-02-06T12:00:00",
                     "csat_rating": 5,
                     "link": {"url": "chats:closed-chats/uuid", "type": "internal"},
+                    "automatic_closed": True,
                 },
             ],
         }
@@ -400,6 +401,7 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertFalse(row["agent"]["is_deleted"])
         self.assertEqual(row["sector"]["name"], "S1")
         self.assertEqual(row["awaiting_time"], 10)
+        self.assertTrue(row["automatic_closed"])
         mock_chats.get_internal_rooms_v2.assert_called_once()
         call_params = mock_chats.get_internal_rooms_v2.call_args[0][0]
         self.assertEqual(call_params["project"], str(self.project.uuid))
