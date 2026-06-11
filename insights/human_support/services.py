@@ -915,6 +915,7 @@ class HumanSupportDashboardService:
             "ended_at": room.get("ended_at"),
             "csat_rating": room.get("csat_rating"),
             "link": room.get("link"),
+            "automatic_closed": room.get("automatic_closed"),
         }
 
     def get_finished_rooms(self, filters: dict | None = None) -> dict:
