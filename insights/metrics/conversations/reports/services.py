@@ -803,7 +803,8 @@ class ConversationsReportService(BaseConversationsReportService):
             ),
             "ADDED_TO_CART": (
                 self.get_added_to_cart_worksheet,
-            )
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
             "SEARCH_TERMS": (
                 self.get_search_terms_worksheet,
                 {"report": report, "start_date": start_date, "end_date": end_date},
