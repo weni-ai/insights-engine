@@ -65,6 +65,13 @@ def get_nps_human_widget(project: Project) -> Widget | None:
     return widget
 
 
+def get_added_to_cart_widget(project: Project) -> Widget | None:
+    return Widget.objects.filter(
+        dashboard__project=project,
+        type="conversations.product_added_to_cart",
+    ).first()
+
+
 def get_custom_widgets(project: Project) -> list[UUID]:
     return Widget.objects.filter(
         dashboard__project=project,

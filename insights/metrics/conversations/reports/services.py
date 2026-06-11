@@ -26,6 +26,7 @@ from insights.metrics.conversations.exceptions import (
     AddedToCartAgentUUIDNotConfiguredError,
 )
 from insights.metrics.conversations.reports.available_widgets import (
+    get_added_to_cart_widget,
     get_crosstab_widgets,
     get_csat_ai_widget,
     get_csat_human_widget,
@@ -2181,10 +2182,10 @@ class ConversationsReportService(BaseConversationsReportService):
             "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CONTACTS",
-            "ADDED_TO_CART",
         ]
 
         special_widgets_get_functions = [
+            (get_added_to_cart_widget, "ADDED_TO_CART"),
             (get_csat_ai_widget, "CSAT_AI"),
             (get_csat_human_widget, "CSAT_HUMAN"),
             (get_nps_ai_widget, "NPS_AI"),

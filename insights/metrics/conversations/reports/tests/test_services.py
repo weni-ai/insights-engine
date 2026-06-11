@@ -2035,8 +2035,10 @@ class TestConversationsReportServiceAdditional(TestCase):
     @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
     @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
     @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
+    @patch("insights.metrics.conversations.reports.services.get_added_to_cart_widget")
     def test_get_available_widgets_basic_only(
         self,
+        mock_get_added_to_cart_widget,
         mock_get_csat_ai_widget,
         mock_get_nps_ai_widget,
         mock_get_csat_human_widget,
@@ -2045,6 +2047,7 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_crosstab_widgets,
     ):
         """Test get_available_widgets with only basic widgets (no special widgets)."""
+        mock_get_added_to_cart_widget.return_value = None
         mock_get_csat_ai_widget.return_value = None
         mock_get_nps_ai_widget.return_value = None
         mock_get_csat_human_widget.return_value = None
@@ -2062,12 +2065,12 @@ class TestConversationsReportServiceAdditional(TestCase):
             "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CONTACTS",
-            "ADDED_TO_CART",
         ]
         self.assertEqual(result.sections, expected_sections)
         self.assertEqual(result.custom_widgets, [])
         self.assertEqual(result.crosstab_widgets, [])
 
+        mock_get_added_to_cart_widget.assert_called_once_with(self.project)
         mock_get_csat_ai_widget.assert_called_once_with(self.project)
         mock_get_nps_ai_widget.assert_called_once_with(self.project)
         mock_get_csat_human_widget.assert_called_once_with(self.project)
