@@ -2331,6 +2331,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CONTACTS",
+            "ADDED_TO_CART",
             "SEARCH_TERMS",
             "CSAT_AI",
             "CSAT_HUMAN",
@@ -2481,6 +2482,7 @@ class TestConversationsReportServiceAdditional(TestCase):
             "AGENT_INVOCATION",
             "TOOL_RESULT",
             "CONTACTS",
+            "ADDED_TO_CART",
             "SEARCH_TERMS",
             "CSAT_AI",
             "NPS_AI",
@@ -2617,6 +2619,170 @@ class TestConversationsReportServiceAdditional(TestCase):
             [crosstab_widget1.uuid, crosstab_widget2.uuid],
         )
         mock_get_crosstab_widgets.assert_called_once_with(self.project)
+
+    @override_settings(
+        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
+        CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_added_to_cart_worksheet(self, mock_get_datalake_events):
+        mock_get_datalake_events.return_value = [
+            {
+                "event_name": "weni_nexus_data",
+                "key": "product_added_to_cart",
+                "date": "2026-04-10T18:26:53.599101Z",
+                "contact_urn": "ext:1273970515768@grocery.bravtexstores.com.br",
+                "value": "café em grãos",
+            },
+            {
+                "event_name": "weni_nexus_data",
+                "key": "product_added_to_cart",
+                "date": "2026-04-11T10:00:00.000000Z",
+                "contact_urn": "ext:9999999999@grocery.bravtexstores.com.br",
+                "value": "azeite",
+            },
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["ADDED_TO_CART"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        start_date = datetime.fromisoformat("2025-01-01")
+        end_date = datetime.fromisoformat("2025-01-02")
+
+        worksheet = self.service.get_added_to_cart_worksheet(
+            report=report,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        self.assertEqual(worksheet.name, "Added to cart")
+        self.assertEqual(len(worksheet.data), 2)
+        self.assertEqual(list(worksheet.data[0].keys()), ["URN", "Date", "Product"])
+
+        self.assertEqual(
+            worksheet.data[0]["URN"],
+            "ext:1273970515768@grocery.bravtexstores.com.br",
+        )
+        self.assertIn("10/04/2026", worksheet.data[0]["Date"])
+        self.assertEqual(worksheet.data[0]["Product"], "café em grãos")
+
+        self.assertEqual(
+            worksheet.data[1]["URN"],
+            "ext:9999999999@grocery.bravtexstores.com.br",
+        )
+        self.assertIn("11/04/2026", worksheet.data[1]["Date"])
+        self.assertEqual(worksheet.data[1]["Product"], "azeite")
+
+        mock_get_datalake_events.assert_called_once_with(
+            report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="product_added_to_cart",
+            metadata_key="agent_uuid",
+            metadata_value="11111111-1111-1111-1111-111111111111",
+        )
+
+    @override_settings(
+        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
+        CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
+    )
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_get_added_to_cart_worksheet_with_empty_data(
+        self, mock_get_datalake_events
+    ):
+        mock_get_datalake_events.return_value = []
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["ADDED_TO_CART"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        worksheet = self.service.get_added_to_cart_worksheet(
+            report=report,
+            start_date=datetime.fromisoformat("2025-01-01"),
+            end_date=datetime.fromisoformat("2025-01-02"),
+        )
+        self.assertEqual(worksheet.name, "Added to cart")
+        self.assertEqual(len(worksheet.data), 1)
+        self.assertEqual(worksheet.data[0]["URN"], "")
+        self.assertEqual(worksheet.data[0]["Date"], "")
+        self.assertEqual(worksheet.data[0]["Product"], "")
+
+    @override_settings(CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="")
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
+    )
+    def test_cannot_get_added_to_cart_worksheet_without_agent_uuid(
+        self, mock_get_datalake_events
+    ):
+        from insights.metrics.conversations.exceptions import (
+            AddedToCartAgentUUIDNotConfiguredError,
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["ADDED_TO_CART"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+        with self.assertRaises(AddedToCartAgentUUIDNotConfiguredError):
+            self.service.get_added_to_cart_worksheet(
+                report=report,
+                start_date=datetime.fromisoformat("2025-01-01"),
+                end_date=datetime.fromisoformat("2025-01-02"),
+            )
+
+        mock_get_datalake_events.assert_not_called()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.get_added_to_cart_worksheet"
+    )
+    def test_get_worksheets_with_added_to_cart_section(
+        self, mock_get_added_to_cart_worksheet
+    ):
+        mock_get_added_to_cart_worksheet.return_value = ConversationsReportWorksheet(
+            name="Added to cart",
+            data=[
+                {"URN": "ext:1@example.com", "Date": "10/04/2026", "Product": "azeite"}
+            ],
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["ADDED_TO_CART"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        worksheets = self.service._get_worksheets(
+            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
+        )
+
+        self.assertEqual(len(worksheets), 1)
+        mock_get_added_to_cart_worksheet.assert_called_once()
 
     def test_zip_files_with_single_file(self):
         """Test zip_files with a single file."""
@@ -4898,586 +5064,6 @@ class TestGetEventsCount(TestCase):
         call_kwargs = mock_get_events_count.call_args[1]
         self.assertIsInstance(call_kwargs["date_start"], str)
         self.assertIsInstance(call_kwargs["date_end"], str)
-
-    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_added_to_cart_widget")
-    def test_get_available_widgets_basic_only(
-        self,
-        mock_get_added_to_cart_widget,
-        mock_get_csat_ai_widget,
-        mock_get_nps_ai_widget,
-        mock_get_csat_human_widget,
-        mock_get_nps_human_widget,
-        mock_get_custom_widgets,
-        mock_get_crosstab_widgets,
-    ):
-        """Test get_available_widgets with only basic widgets (no special widgets)."""
-        mock_get_added_to_cart_widget.return_value = None
-        mock_get_csat_ai_widget.return_value = None
-        mock_get_nps_ai_widget.return_value = None
-        mock_get_csat_human_widget.return_value = None
-        mock_get_nps_human_widget.return_value = None
-        mock_get_custom_widgets.return_value = []
-        mock_get_crosstab_widgets.return_value = []
-
-        result = self.service.get_available_widgets(self.project)
-
-        expected_sections = [
-            "RESOLUTIONS",
-            "TRANSFERRED",
-            "TOPICS_AI",
-            "TOPICS_HUMAN",
-            "AGENT_INVOCATION",
-            "TOOL_RESULT",
-            "CONTACTS",
-        ]
-        self.assertEqual(result.sections, expected_sections)
-        self.assertEqual(result.custom_widgets, [])
-        self.assertEqual(result.crosstab_widgets, [])
-        mock_get_added_to_cart_widget.assert_called_once_with(self.project)
-        mock_get_csat_ai_widget.assert_called_once_with(self.project)
-        mock_get_nps_ai_widget.assert_called_once_with(self.project)
-        mock_get_csat_human_widget.assert_called_once_with(self.project)
-        mock_get_nps_human_widget.assert_called_once_with(self.project)
-        mock_get_custom_widgets.assert_called_once_with(self.project)
-        mock_get_crosstab_widgets.assert_called_once_with(self.project)
-
-    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_added_to_cart_widget")
-    def test_get_available_widgets_with_special_widgets(
-        self,
-        mock_get_added_to_cart_widget,
-        mock_get_csat_ai_widget,
-        mock_get_nps_ai_widget,
-        mock_get_csat_human_widget,
-        mock_get_nps_human_widget,
-        mock_get_custom_widgets,
-        mock_get_crosstab_widgets,
-    ):
-        """Test get_available_widgets with special widgets available."""
-        mock_added_to_cart_widget = Widget.objects.create(
-            name="Added to Cart Widget",
-            config={},
-            source="conversations.product_added_to_cart",
-            type="conversations.product_added_to_cart",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-        mock_csat_ai_widget = Widget.objects.create(
-            name="CSAT AI Widget",
-            config={"datalake_config": {"agent_uuid": "test-uuid"}},
-            source="conversations.csat",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-        mock_nps_ai_widget = Widget.objects.create(
-            name="NPS AI Widget",
-            config={"datalake_config": {"agent_uuid": "test-uuid"}},
-            source="conversations.nps",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-        mock_csat_human_widget = Widget.objects.create(
-            name="CSAT Human Widget",
-            config={
-                "type": "flow_result",
-                "filter": {"flow": "test-flow"},
-                "op_field": "test_field",
-            },
-            source="conversations.csat",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-        mock_nps_human_widget = Widget.objects.create(
-            name="NPS Human Widget",
-            config={
-                "type": "flow_result",
-                "filter": {"flow": "test-flow"},
-                "op_field": "test_field",
-            },
-            source="conversations.nps",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-
-        mock_get_added_to_cart_widget.return_value = mock_added_to_cart_widget
-        mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
-        mock_get_nps_ai_widget.return_value = mock_nps_ai_widget
-        mock_get_csat_human_widget.return_value = mock_csat_human_widget
-        mock_get_nps_human_widget.return_value = mock_nps_human_widget
-        mock_get_custom_widgets.return_value = []
-        mock_get_crosstab_widgets.return_value = []
-
-        result = self.service.get_available_widgets(self.project)
-
-        expected_sections = [
-            "RESOLUTIONS",
-            "TRANSFERRED",
-            "TOPICS_AI",
-            "TOPICS_HUMAN",
-            "AGENT_INVOCATION",
-            "TOOL_RESULT",
-            "CONTACTS",
-            "ADDED_TO_CART",
-            "CSAT_AI",
-            "CSAT_HUMAN",
-            "NPS_AI",
-            "NPS_HUMAN",
-        ]
-        self.assertEqual(result.sections, expected_sections)
-        self.assertEqual(result.custom_widgets, [])
-        self.assertEqual(result.crosstab_widgets, [])
-
-    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_added_to_cart_widget")
-    def test_get_available_widgets_with_custom_widgets(
-        self,
-        mock_get_added_to_cart_widget,
-        mock_get_csat_ai_widget,
-        mock_get_nps_ai_widget,
-        mock_get_csat_human_widget,
-        mock_get_nps_human_widget,
-        mock_get_custom_widgets,
-        mock_get_crosstab_widgets,
-    ):
-        """Test get_available_widgets with custom widgets available."""
-        mock_get_added_to_cart_widget.return_value = None
-        mock_get_csat_ai_widget.return_value = None
-        mock_get_nps_ai_widget.return_value = None
-        mock_get_csat_human_widget.return_value = None
-        mock_get_nps_human_widget.return_value = None
-        mock_get_crosstab_widgets.return_value = []
-
-        custom_widget1 = Widget.objects.create(
-            name="Custom Widget 1",
-            config={"datalake_config": {"key": "test1", "agent_uuid": "test-uuid"}},
-            source="conversations.custom",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-        custom_widget2 = Widget.objects.create(
-            name="Custom Widget 2",
-            config={"datalake_config": {"key": "test2", "agent_uuid": "test-uuid"}},
-            source="conversations.custom",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-
-        mock_get_custom_widgets.return_value = [
-            custom_widget1.uuid,
-            custom_widget2.uuid,
-        ]
-
-        result = self.service.get_available_widgets(self.project)
-
-        expected_sections = [
-            "RESOLUTIONS",
-            "TRANSFERRED",
-            "TOPICS_AI",
-            "TOPICS_HUMAN",
-            "AGENT_INVOCATION",
-            "TOOL_RESULT",
-            "CONTACTS",
-            "SEARCH_TERMS",
-        ]
-        self.assertEqual(result.sections, expected_sections)
-        self.assertEqual(
-            result.custom_widgets, [custom_widget1.uuid, custom_widget2.uuid]
-        )
-        self.assertEqual(result.crosstab_widgets, [])
-
-    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_added_to_cart_widget")
-    def test_get_available_widgets_combined(
-        self,
-        mock_get_added_to_cart_widget,
-        mock_get_csat_ai_widget,
-        mock_get_nps_ai_widget,
-        mock_get_csat_human_widget,
-        mock_get_nps_human_widget,
-        mock_get_custom_widgets,
-        mock_get_crosstab_widgets,
-    ):
-        """Test get_available_widgets with all types of widgets available."""
-        mock_added_to_cart_widget = Widget.objects.create(
-            name="Added to Cart Widget",
-            config={},
-            source="conversations.product_added_to_cart",
-            type="conversations.product_added_to_cart",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-        mock_csat_ai_widget = Widget.objects.create(
-            name="CSAT AI Widget",
-            config={"datalake_config": {"agent_uuid": "test-uuid"}},
-            source="conversations.csat",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-        mock_nps_ai_widget = Widget.objects.create(
-            name="NPS AI Widget",
-            config={"datalake_config": {"agent_uuid": "test-uuid"}},
-            source="conversations.nps",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-
-        mock_get_added_to_cart_widget.return_value = mock_added_to_cart_widget
-        mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
-        mock_get_nps_ai_widget.return_value = mock_nps_ai_widget
-        mock_get_csat_human_widget.return_value = None
-        mock_get_nps_human_widget.return_value = None
-
-        custom_widget = Widget.objects.create(
-            name="Custom Widget",
-            config={"datalake_config": {"key": "test", "agent_uuid": "test-uuid"}},
-            source="conversations.custom",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-
-        mock_get_custom_widgets.return_value = [custom_widget.uuid]
-        mock_get_crosstab_widgets.return_value = []
-
-        result = self.service.get_available_widgets(self.project)
-
-        expected_sections = [
-            "RESOLUTIONS",
-            "TRANSFERRED",
-            "TOPICS_AI",
-            "TOPICS_HUMAN",
-            "AGENT_INVOCATION",
-            "TOOL_RESULT",
-            "CONTACTS",
-            "ADDED_TO_CART",
-            "CSAT_AI",
-            "NPS_AI",
-        ]
-        self.assertEqual(result.sections, expected_sections)
-        self.assertEqual(result.custom_widgets, [custom_widget.uuid])
-        self.assertEqual(result.crosstab_widgets, [])
-
-    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_added_to_cart_widget")
-    @patch("insights.metrics.conversations.reports.services.get_search_term_widget")
-    def test_get_available_widgets_partial_special_widgets(
-        self,
-        mock_get_search_term_widget,
-        mock_get_added_to_cart_widget,
-        mock_get_csat_ai_widget,
-        mock_get_nps_ai_widget,
-        mock_get_csat_human_widget,
-        mock_get_nps_human_widget,
-        mock_get_custom_widgets,
-        mock_get_crosstab_widgets,
-    ):
-        """Test get_available_widgets with only some special widgets available."""
-        mock_get_search_term_widget.return_value = True
-        mock_get_added_to_cart_widget.return_value = None
-        mock_csat_ai_widget = Widget.objects.create(
-            name="CSAT AI Widget",
-            config={"datalake_config": {"agent_uuid": "test-uuid"}},
-            source="conversations.csat",
-            type="custom",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-
-        mock_get_added_to_cart_widget.return_value = None
-        mock_get_csat_ai_widget.return_value = mock_csat_ai_widget
-        mock_get_nps_ai_widget.return_value = None
-        mock_get_csat_human_widget.return_value = None
-        mock_get_nps_human_widget.return_value = None
-        mock_get_custom_widgets.return_value = []
-        mock_get_crosstab_widgets.return_value = []
-
-        result = self.service.get_available_widgets(self.project)
-
-        expected_sections = [
-            "RESOLUTIONS",
-            "TRANSFERRED",
-            "TOPICS_AI",
-            "TOPICS_HUMAN",
-            "AGENT_INVOCATION",
-            "TOOL_RESULT",
-            "CONTACTS",
-            "SEARCH_TERMS",
-            "CSAT_AI",
-        ]
-        self.assertEqual(result.sections, expected_sections)
-        self.assertEqual(result.custom_widgets, [])
-        self.assertEqual(result.crosstab_widgets, [])
-
-    @patch("insights.metrics.conversations.reports.services.get_crosstab_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_custom_widgets")
-    @patch("insights.metrics.conversations.reports.services.get_nps_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_human_widget")
-    @patch("insights.metrics.conversations.reports.services.get_nps_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_csat_ai_widget")
-    @patch("insights.metrics.conversations.reports.services.get_added_to_cart_widget")
-    def test_get_available_widgets_with_crosstab_widgets(
-        self,
-        mock_get_added_to_cart_widget,
-        mock_get_csat_ai_widget,
-        mock_get_nps_ai_widget,
-        mock_get_csat_human_widget,
-        mock_get_nps_human_widget,
-        mock_get_custom_widgets,
-        mock_get_crosstab_widgets,
-    ):
-        """Test get_available_widgets with crosstab widgets available."""
-        mock_get_added_to_cart_widget.return_value = None
-        mock_get_csat_ai_widget.return_value = None
-        mock_get_nps_ai_widget.return_value = None
-        mock_get_csat_human_widget.return_value = None
-        mock_get_nps_human_widget.return_value = None
-        mock_get_custom_widgets.return_value = []
-
-        crosstab_widget1 = Widget.objects.create(
-            name="Crosstab Widget 1",
-            config={
-                "source_a": {"key": "key_a", "field": "value"},
-                "source_b": {"key": "key_b", "field": "value"},
-            },
-            source="conversations.crosstab",
-            type="conversations.crosstab",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-        crosstab_widget2 = Widget.objects.create(
-            name="Crosstab Widget 2",
-            config={
-                "source_a": {"key": "key_c", "field": "value"},
-                "source_b": {"key": "key_d", "field": "value"},
-            },
-            source="conversations.crosstab",
-            type="conversations.crosstab",
-            position=[1, 2],
-            dashboard=self.dashboard,
-        )
-
-        mock_get_crosstab_widgets.return_value = [
-            crosstab_widget1.uuid,
-            crosstab_widget2.uuid,
-        ]
-
-        result = self.service.get_available_widgets(self.project)
-
-        expected_sections = [
-            "RESOLUTIONS",
-            "TRANSFERRED",
-            "TOPICS_AI",
-            "TOPICS_HUMAN",
-            "AGENT_INVOCATION",
-            "TOOL_RESULT",
-            "CONTACTS",
-            "SEARCH_TERMS",
-        ]
-        self.assertEqual(result.sections, expected_sections)
-        self.assertEqual(result.custom_widgets, [])
-        self.assertEqual(
-            result.crosstab_widgets,
-            [crosstab_widget1.uuid, crosstab_widget2.uuid],
-        )
-        mock_get_crosstab_widgets.assert_called_once_with(self.project)
-
-    @override_settings(
-        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
-        CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
-    )
-    @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
-    )
-    def test_get_added_to_cart_worksheet(self, mock_get_datalake_events):
-        mock_get_datalake_events.return_value = [
-            {
-                "event_name": "weni_nexus_data",
-                "key": "product_added_to_cart",
-                "date": "2026-04-10T18:26:53.599101Z",
-                "contact_urn": "ext:1273970515768@grocery.bravtexstores.com.br",
-                "value": "café em grãos",
-            },
-            {
-                "event_name": "weni_nexus_data",
-                "key": "product_added_to_cart",
-                "date": "2026-04-11T10:00:00.000000Z",
-                "contact_urn": "ext:9999999999@grocery.bravtexstores.com.br",
-                "value": "azeite",
-            },
-        ]
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={"sections": ["ADDED_TO_CART"]},
-            filters={"start": "2025-01-01", "end": "2025-01-02"},
-            format=ReportFormat.CSV,
-            requested_by=self.user,
-            status=ReportStatus.IN_PROGRESS,
-        )
-
-        start_date = datetime.fromisoformat("2025-01-01")
-        end_date = datetime.fromisoformat("2025-01-02")
-
-        worksheet = self.service.get_added_to_cart_worksheet(
-            report=report,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        self.assertEqual(worksheet.name, "Added to cart")
-        self.assertEqual(len(worksheet.data), 2)
-        self.assertEqual(list(worksheet.data[0].keys()), ["URN", "Date", "Product"])
-
-        self.assertEqual(
-            worksheet.data[0]["URN"],
-            "ext:1273970515768@grocery.bravtexstores.com.br",
-        )
-        self.assertIn("10/04/2026", worksheet.data[0]["Date"])
-        self.assertEqual(worksheet.data[0]["Product"], "café em grãos")
-
-        self.assertEqual(
-            worksheet.data[1]["URN"],
-            "ext:9999999999@grocery.bravtexstores.com.br",
-        )
-        self.assertIn("11/04/2026", worksheet.data[1]["Date"])
-        self.assertEqual(worksheet.data[1]["Product"], "azeite")
-
-        mock_get_datalake_events.assert_called_once_with(
-            report,
-            project=report.project.uuid,
-            date_start=start_date,
-            date_end=end_date,
-            event_name="weni_nexus_data",
-            key="product_added_to_cart",
-            metadata_key="agent_uuid",
-            metadata_value="11111111-1111-1111-1111-111111111111",
-        )
-
-    @override_settings(
-        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
-        CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
-    )
-    @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
-    )
-    def test_get_added_to_cart_worksheet_with_empty_data(
-        self, mock_get_datalake_events
-    ):
-        mock_get_datalake_events.return_value = []
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={"sections": ["ADDED_TO_CART"]},
-            filters={"start": "2025-01-01", "end": "2025-01-02"},
-            format=ReportFormat.CSV,
-            requested_by=self.user,
-            status=ReportStatus.IN_PROGRESS,
-        )
-
-        worksheet = self.service.get_added_to_cart_worksheet(
-            report=report,
-            start_date=datetime.fromisoformat("2025-01-01"),
-            end_date=datetime.fromisoformat("2025-01-02"),
-        )
-        self.assertEqual(worksheet.name, "Added to cart")
-        self.assertEqual(len(worksheet.data), 1)
-        self.assertEqual(worksheet.data[0]["URN"], "")
-        self.assertEqual(worksheet.data[0]["Date"], "")
-        self.assertEqual(worksheet.data[0]["Product"], "")
-
-    @override_settings(CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="")
-    @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
-    )
-    def test_cannot_get_added_to_cart_worksheet_without_agent_uuid(
-        self, mock_get_datalake_events
-    ):
-        from insights.metrics.conversations.exceptions import (
-            AddedToCartAgentUUIDNotConfiguredError,
-        )
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={"sections": ["ADDED_TO_CART"]},
-            filters={"start": "2025-01-01", "end": "2025-01-02"},
-            format=ReportFormat.CSV,
-            requested_by=self.user,
-            status=ReportStatus.IN_PROGRESS,
-        )
-        with self.assertRaises(AddedToCartAgentUUIDNotConfiguredError):
-            self.service.get_added_to_cart_worksheet(
-                report=report,
-                start_date=datetime.fromisoformat("2025-01-01"),
-                end_date=datetime.fromisoformat("2025-01-02"),
-            )
-
-        mock_get_datalake_events.assert_not_called()
-
-    @patch(
-        "insights.metrics.conversations.reports.services.ConversationsReportService.get_added_to_cart_worksheet"
-    )
-    def test_get_worksheets_with_added_to_cart_section(
-        self, mock_get_added_to_cart_worksheet
-    ):
-        mock_get_added_to_cart_worksheet.return_value = ConversationsReportWorksheet(
-            name="Added to cart",
-            data=[
-                {"URN": "ext:1@example.com", "Date": "10/04/2026", "Product": "azeite"}
-            ],
-        )
-
-        report = Report.objects.create(
-            project=self.project,
-            source=self.service.source,
-            source_config={"sections": ["ADDED_TO_CART"]},
-            filters={"start": "2025-01-01", "end": "2025-01-02"},
-            format=ReportFormat.CSV,
-            requested_by=self.user,
-        )
-
-        worksheets = self.service._get_worksheets(
-            report, datetime(2025, 1, 1), datetime(2025, 1, 2)
-        )
-
-        self.assertEqual(len(worksheets), 1)
-        mock_get_added_to_cart_worksheet.assert_called_once()
 
 
 class TestGetDatalakeEventsDispatch(TestCase):
