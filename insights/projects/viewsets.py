@@ -18,6 +18,7 @@ from insights.core.urls.proxy_pagination import (
 from insights.human_support.clients.chats import ChatsClient
 from insights.projects.dataclass import TicketID
 from insights.projects.models import Project
+from insights.projects.services.indexer_activation import is_project_indexer_active
 from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import (
     ListContactsQueryParamsSerializer,
@@ -90,10 +91,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
         project = Project.objects.get(pk=self.kwargs["pk"])
 
-        if str(project.pk) in settings.PROJECT_ALLOW_LIST or project.is_allowed:
-            return Response(True)
-
-        return Response(False)
+        return Response(is_project_indexer_active(project))
 
     @action(detail=False, methods=["post"], url_path="release_flows_dashboard")
     def release_flows_dashboard(self, request, *args, **kwargs):
