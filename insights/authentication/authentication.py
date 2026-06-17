@@ -72,6 +72,7 @@ class FlowsInternalAuthentication:
                 "client_secret": settings.OIDC_RP_CLIENT_SECRET,
                 "grant_type": "client_credentials",
             },
+            timeout=settings.OIDC_TIMEOUT,
         )
         token = request.json().get("access_token")
         return f"Bearer {token}"
