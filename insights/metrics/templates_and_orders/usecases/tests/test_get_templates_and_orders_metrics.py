@@ -8,7 +8,6 @@ from insights.metrics.meta.usecases.get_templates_from_prefix import (
 )
 from insights.metrics.meta.usecases.get_templates_metrics_from_multiple_wabas import (
     GetTemplatesMetricsFromMultipleWabasUseCase,
-    WabaTemplateIDs,
 )
 from insights.metrics.templates_and_orders.exceptions import (
     ErrorGettingOrdersMetrics,
@@ -86,7 +85,10 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
     def test_forwards_utm_source_to_orders_service(self, MockOrdersService):
         self.mock_get_wabas.execute.return_value = []
         self.mock_get_metrics.execute.return_value = {
-            "sent": 0, "delivered": 0, "read": 0, "clicked": 0,
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
         }
 
         mock_orders_instance = MockOrdersService.return_value
@@ -120,7 +122,10 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         self.mock_get_wabas.execute.return_value = ["waba_1"]
         self.mock_get_templates.execute.return_value = ["t1"]
         self.mock_get_metrics.execute.return_value = {
-            "sent": 0, "delivered": 0, "read": 0, "clicked": 0,
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
         }
 
         mock_orders_instance = MockOrdersService.return_value
@@ -149,12 +154,19 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
     def test_no_wabas_returns_zeroed_template_metrics(self, MockOrdersService):
         self.mock_get_wabas.execute.return_value = []
         self.mock_get_metrics.execute.return_value = {
-            "sent": 0, "delivered": 0, "read": 0, "clicked": 0,
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
         }
 
         mock_orders_instance = MockOrdersService.return_value
         mock_orders_instance.get_metrics_from_utm_source.return_value = {
-            "revenue": {"value": 1000, "currency_code": "BRL", "increase_percentage": 0},
+            "revenue": {
+                "value": 1000,
+                "currency_code": "BRL",
+                "increase_percentage": 0,
+            },
             "orders_placed": {"value": 5, "increase_percentage": 0},
         }
 
@@ -186,7 +198,10 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         self.mock_get_wabas.execute.return_value = ["waba_1", "waba_2"]
         self.mock_get_templates.execute.side_effect = [[], ["t1"]]
         self.mock_get_metrics.execute.return_value = {
-            "sent": 10, "delivered": 8, "read": 5, "clicked": 2,
+            "sent": 10,
+            "delivered": 8,
+            "read": 5,
+            "clicked": 2,
         }
 
         mock_orders_instance = MockOrdersService.return_value
@@ -217,7 +232,10 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         self.mock_get_wabas.execute.return_value = ["waba_1", "waba_2"]
         self.mock_get_templates.execute.return_value = []
         self.mock_get_metrics.execute.return_value = {
-            "sent": 0, "delivered": 0, "read": 0, "clicked": 0,
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
         }
 
         mock_orders_instance = MockOrdersService.return_value
@@ -253,7 +271,10 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
     ):
         self.mock_get_wabas.execute.return_value = []
         self.mock_get_metrics.execute.return_value = {
-            "sent": 0, "delivered": 0, "read": 0, "clicked": 0,
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
         }
 
         mock_orders_instance = MockOrdersService.return_value
@@ -286,7 +307,10 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
             ["t3"],
         ]
         self.mock_get_metrics.execute.return_value = {
-            "sent": 0, "delivered": 0, "read": 0, "clicked": 0,
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
         }
 
         mock_orders_instance = MockOrdersService.return_value
