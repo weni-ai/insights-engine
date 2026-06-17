@@ -3,7 +3,7 @@ from datetime import date
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.meta.enums import ProductType
-from insights.settings import ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST
+from django.conf import settings
 
 
 @dataclass
@@ -25,7 +25,7 @@ class GetTemplatesMetricsFromMultipleWabasUseCase:
         product_type: str,
     ) -> list[dict]:
         data_points = []
-        chunk_size = ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST
+        chunk_size = settings.WHATSAPP_TEMPLATE_IDS_PER_REQUEST
         for i in range(0, len(template_ids), chunk_size):
             chunk = template_ids[i : i + chunk_size]
             metrics = self.meta_client.get_messages_analytics(
