@@ -1,0 +1,2 @@
+class ErrorGettingOrdersMetrics(Exception):
+    pass

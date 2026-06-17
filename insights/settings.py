@@ -590,6 +590,11 @@ CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY = env.str(
     default="insightsContactsWorksheetDetailedList",
 )
 
+# WhatsApp Template IDs
+WHATSAPP_TEMPLATE_IDS_PER_REQUEST = env.int(
+    "WHATSAPP_TEMPLATE_IDS_PER_REQUEST", default=10
+)
+
 # External project authorization service
 PROJECT_AUTH_API_BASE_URL = env.str("PROJECT_AUTH_API_BASE_URL", default="")
 PROJECT_AUTH_API_TIMEOUT = env.int("PROJECT_AUTH_API_TIMEOUT", default=3)

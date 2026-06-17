@@ -8,4 +8,8 @@ urlpatterns = [
     path("skills/", include("insights.metrics.skills.urls")),
     path("conversations/", include("insights.metrics.conversations.api.v1.urls")),
     path("human-support/", include("insights.metrics.human_support.api.v1.urls")),
+    path(
+        "internal/templates-and-orders/",
+        include("insights.metrics.templates_and_orders.urls"),
+    ),
 ]
