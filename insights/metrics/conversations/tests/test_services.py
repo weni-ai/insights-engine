@@ -41,8 +41,8 @@ from insights.metrics.conversations.enums import (
     NpsMetricsType,
 )
 from insights.metrics.conversations.exceptions import (
-    SearchTermsAgentUUIDNotConfiguredError,
     AddedToCartAgentUUIDNotConfiguredError,
+    SearchTermsAgentUUIDNotConfiguredError,
 )
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     ToolResultMetric,

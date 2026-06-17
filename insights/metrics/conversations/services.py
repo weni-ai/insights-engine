@@ -1048,6 +1048,7 @@ class ConversationsMetricsService(
             )
 
         key = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_KEY
+
         metrics = self.datalake_service.get_generic_metrics_by_key(
             project_uuid, agent_uuid, start_date, end_date, key
         )

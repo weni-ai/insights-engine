@@ -732,15 +732,15 @@ class ContactsMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer
     """
 
 
-class SearchTermsMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
-    """
-    Serializer for search terms metrics query params
-    """
-
-
 class AddedToCartMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
     """
     Serializer for added to cart metrics query params
+    """
+
+
+class SearchTermsMetricsQueryParamsSerializer(ConversationBaseQueryParamsSerializer):
+    """
+    Serializer for search terms metrics query params
     """
 
 

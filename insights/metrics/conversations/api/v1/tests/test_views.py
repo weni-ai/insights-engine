@@ -212,13 +212,13 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
-    def get_search_terms_metrics(self, query_params: dict) -> Response:
-        url = reverse("conversations-search-terms")
-
-        return self.client.get(url, query_params, format="json")
-        
     def get_added_to_cart_metrics(self, query_params: dict) -> Response:
         url = reverse("conversations-added-to-cart")
+
+        return self.client.get(url, query_params, format="json")
+
+    def get_search_terms_metrics(self, query_params: dict) -> Response:
+        url = reverse("conversations-search-terms")
 
         return self.client.get(url, query_params, format="json")
 
@@ -341,13 +341,13 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_cannot_get_search_terms_metrics_when_unauthenticated(self):
-        response = self.get_search_terms_metrics({})
-
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        
     def test_cannot_get_added_to_cart_metrics_when_unauthenticated(self):
         response = self.get_added_to_cart_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_search_terms_metrics_when_unauthenticated(self):
+        response = self.get_search_terms_metrics({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
