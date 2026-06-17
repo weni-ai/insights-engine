@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
@@ -34,8 +35,8 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
             get_templates_metrics=self.mock_get_metrics,
         )
 
-        self.start_date = "2024-01-01"
-        self.end_date = "2024-01-31"
+        self.start_date = date(2024, 1, 1)
+        self.end_date = date(2024, 1, 31)
         self.utm_source = "weniabandonedcart"
         self.template_name_prefix = "weni_abandoned_cart"
 
