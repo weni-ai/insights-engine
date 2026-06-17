@@ -23,9 +23,7 @@ class TestAsAnonymousUser(BaseTestTemplatesAndOrdersView):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-class TestAsAuthenticatedUserWithoutInternalPermission(
-    BaseTestTemplatesAndOrdersView
-):
+class TestAsAuthenticatedUserWithoutInternalPermission(BaseTestTemplatesAndOrdersView):
     def setUp(self):
         self.user = User.objects.create_user(email="test@mail.com")
         self.project = Project.objects.create()
@@ -93,9 +91,7 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @with_internal_auth
-    @patch(
-        "insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics"
-    )
+    @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
     def test_returns_200_with_correct_response_format(self, MockUseCase):
         mock_instance = MockUseCase.return_value
         mock_instance.execute.return_value = {
@@ -128,18 +124,14 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
         )
         self.assertEqual(response.data["orders"]["revenue"]["value"], 25200.82)
         self.assertEqual(response.data["orders"]["revenue"]["currency_code"], "R$")
-        self.assertEqual(
-            response.data["orders"]["revenue"]["increase_percentage"], 100
-        )
+        self.assertEqual(response.data["orders"]["revenue"]["increase_percentage"], 100)
         self.assertEqual(response.data["orders"]["orders_placed"]["value"], 65)
         self.assertEqual(
             response.data["orders"]["orders_placed"]["increase_percentage"], 100
         )
 
     @with_internal_auth
-    @patch(
-        "insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics"
-    )
+    @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
     def test_returns_correct_currency_symbol_for_usd(self, MockUseCase):
         mock_instance = MockUseCase.return_value
         mock_instance.execute.return_value = {
@@ -165,14 +157,10 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
         response = self.get_metrics(self.valid_params)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data["orders"]["revenue"]["currency_code"], "US$"
-        )
+        self.assertEqual(response.data["orders"]["revenue"]["currency_code"], "$")
 
     @with_internal_auth
-    @patch(
-        "insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics"
-    )
+    @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
     def test_returns_empty_currency_code_when_not_provided(self, MockUseCase):
         mock_instance = MockUseCase.return_value
         mock_instance.execute.return_value = {
@@ -201,9 +189,7 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
         self.assertEqual(response.data["orders"]["revenue"]["currency_code"], "")
 
     @with_internal_auth
-    @patch(
-        "insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics"
-    )
+    @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
     def test_returns_502_when_orders_service_fails(self, MockUseCase):
         from insights.metrics.templates_and_orders.exceptions import (
             ErrorGettingOrdersMetrics,
@@ -220,24 +206,18 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
         self.assertIn("error", response.data)
 
     @with_internal_auth
-    @patch(
-        "insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics"
-    )
+    @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
     def test_returns_500_on_unexpected_error(self, MockUseCase):
         mock_instance = MockUseCase.return_value
         mock_instance.execute.side_effect = Exception("Unexpected failure")
 
         response = self.get_metrics(self.valid_params)
 
-        self.assertEqual(
-            response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertIn("error", response.data)
 
     @with_internal_auth
-    @patch(
-        "insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics"
-    )
+    @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
     def test_passes_correct_params_to_use_case(self, MockUseCase):
         mock_instance = MockUseCase.return_value
         mock_instance.execute.return_value = {

@@ -67,7 +67,7 @@ class TestFormatTemplatesAndOrdersResponse(TestCase):
 
         result = self.usecase.execute(raw_metrics)
 
-        self.assertEqual(result["orders"]["revenue"]["currency_code"], "US$")
+        self.assertEqual(result["orders"]["revenue"]["currency_code"], "$")
 
     def test_returns_empty_string_when_no_currency_code(self):
         raw_metrics = {
