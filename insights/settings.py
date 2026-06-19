@@ -75,12 +75,14 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "weni.feature_flags",
     "weni.eda.django.eda_app",
+    "django_prometheus",
 ]
 
 if ADMIN_ENABLED is True:
     INSTALLED_APPS.append("django.contrib.admin")
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -91,6 +93,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "insights.core.middleware.InternalErrorHandlerMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
@@ -424,6 +427,8 @@ if SEND_EMAILS:
     EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
 
 HOSTNAME = env.str("HOSTNAME", default="")
+
+PROMETHEUS_AUTH_TOKEN = env.str("PROMETHEUS_AUTH_TOKEN", default="")
 
 # Feature Flags (GrowthBook)
 FEATURE_FLAGS_ENABLED = env.bool("FEATURE_FLAGS_ENABLED", default=False)
