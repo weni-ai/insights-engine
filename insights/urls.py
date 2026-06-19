@@ -26,17 +26,14 @@ from drf_spectacular.views import (
 from rest_framework.routers import DefaultRouter
 from weni.feature_flags.views import FeatureFlagsWebhookView
 
-from insights.authentication.admin_sso import (
-    admin_oidc_login,
-    admin_oidc_logout,
-)
+from insights.authentication.admin_sso import admin_oidc_login, admin_oidc_logout
 from insights.core.prometheus.views import metrics_view
 from insights.dashboards.api.v1.viewsets import DashboardViewSet
 from insights.feature_flags.views import FeatureFlagsViewSet
-from insights.feedback.views import FeedbackViewSet
-from insights.projects.views import UserProjectsView
 from insights.projects.viewsets import ProjectViewSet
 from insights.widgets.viewsets import WidgetViewSet
+from insights.feedback.views import FeedbackViewSet
+from insights.projects.views import UserProjectsView
 
 urlpatterns = []
 
