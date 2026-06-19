@@ -17,7 +17,7 @@ env:
   INTEGRATIONS_URL: "https://integrations.weni.local"
   GROWTHBOOK_CLIENT_KEY: "test"
   GROWTHBOOK_HOST_BASE_URL: "https://test.local"
-  PROMETHEUS_AUTH_TOKEN: "test"
+  PROMETHEUS_AUTH_TOKEN: "test-ptoken"
 
 jobs:
   build:
