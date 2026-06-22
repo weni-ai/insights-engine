@@ -1,4 +1,4 @@
-import pytest
+from django.test import TestCase
 
 from insights.core.accessors import get_nested_attr
 
@@ -16,45 +16,45 @@ class Root:
     name = "root"
 
 
-class TestGetNestedAttr:
+class TestGetNestedAttr(TestCase):
     def test_single_level_attribute(self):
         obj = Root()
-        assert get_nested_attr(obj, "name") == "root"
+        self.assertEqual(get_nested_attr(obj, "name"), "root")
 
     def test_two_level_nested_attribute(self):
         obj = Root()
-        assert get_nested_attr(obj, "branch.leaf") is obj.branch.leaf
+        self.assertIs(get_nested_attr(obj, "branch.leaf"), obj.branch.leaf)
 
     def test_three_level_nested_attribute(self):
         obj = Root()
-        assert get_nested_attr(obj, "branch.leaf.value") == 42
+        self.assertEqual(get_nested_attr(obj, "branch.leaf.value"), 42)
 
     def test_missing_attribute_raises_attribute_error(self):
         obj = Root()
-        with pytest.raises(AttributeError):
+        with self.assertRaises(AttributeError):
             get_nested_attr(obj, "nonexistent")
 
     def test_missing_nested_attribute_raises_attribute_error(self):
         obj = Root()
-        with pytest.raises(AttributeError):
+        with self.assertRaises(AttributeError):
             get_nested_attr(obj, "branch.nonexistent")
 
     def test_missing_attribute_returns_default(self):
         obj = Root()
-        assert get_nested_attr(obj, "nonexistent", "fallback") == "fallback"
+        self.assertEqual(get_nested_attr(obj, "nonexistent", "fallback"), "fallback")
 
     def test_missing_nested_attribute_returns_default(self):
         obj = Root()
-        assert get_nested_attr(obj, "branch.nonexistent", None) is None
+        self.assertIsNone(get_nested_attr(obj, "branch.nonexistent", None))
 
     def test_default_none_is_returned(self):
         obj = Root()
-        assert get_nested_attr(obj, "missing", None) is None
+        self.assertIsNone(get_nested_attr(obj, "missing", None))
 
     def test_default_false_is_returned(self):
         obj = Root()
-        assert get_nested_attr(obj, "missing", False) is False
+        self.assertIs(get_nested_attr(obj, "missing", False), False)
 
     def test_deeply_missing_intermediate_returns_default(self):
         obj = Root()
-        assert get_nested_attr(obj, "x.y.z", "default") == "default"
+        self.assertEqual(get_nested_attr(obj, "x.y.z", "default"), "default")
