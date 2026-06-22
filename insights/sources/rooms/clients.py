@@ -1,7 +1,7 @@
 import requests
 from django.conf import settings
 
-from insights.internals.base import InternalAuthentication
+from insights.internals.base import InternalJWTAuthentication
 from insights.sources.clients import GenericSQLQueryGenerator
 
 
@@ -9,7 +9,7 @@ class RoomSQLQueryGenerator(GenericSQLQueryGenerator):
     default_query_type = "count"
 
 
-class RoomRESTClient(InternalAuthentication):
+class RoomRESTClient(InternalJWTAuthentication):
     def __init__(self, project) -> None:
         self.project = project
         self.url = f"{settings.CHATS_URL}/v1/internal/rooms/"
