@@ -1,6 +1,5 @@
 import logging
 from insights.celery import app
-from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.dashboards.usecases.conversations_dashboard_creation import (
     CreateConversationsDashboard,
 )
@@ -21,15 +20,6 @@ def create_conversation_dashboard(project_uuid: str):
         "[ create_conversation_dashboard task ] Creating conversation dashboard for project %s",
         project.uuid,
     )
-
-    if Dashboard.objects.filter(
-        project=project, name=CONVERSATIONS_DASHBOARD_NAME
-    ).exists():
-        logger.info(
-            "[ create_conversation_dashboard task ] Conversation dashboard already exists for project %s",
-            project.uuid,
-        )
-        return
 
     CreateConversationsDashboard().create_dashboard(project)
 
