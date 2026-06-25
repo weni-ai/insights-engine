@@ -1,3 +1,5 @@
+from django.db import transaction
+
 from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.widgets.models import Widget
 
@@ -9,6 +11,7 @@ CONVERSATIONS_DASHBOARD_WIDGETS = [
 
 
 class CreateConversationsDashboard:
+    @transaction.atomic
     def create_dashboard(self, project):
         dashboard, created = Dashboard.objects.get_or_create(
             project=project,
