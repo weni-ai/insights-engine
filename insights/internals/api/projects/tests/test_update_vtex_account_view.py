@@ -59,6 +59,7 @@ class TestUpdateProjectVTEXAccountViewAsAuthenticatedUser(
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["vtex_account"], "xyz")
+        self.assertEqual(response.data["projects_unlinked"], [])
         self.project.refresh_from_db()
         self.assertEqual(self.project.vtex_account, "xyz")
 
@@ -73,6 +74,9 @@ class TestUpdateProjectVTEXAccountViewAsAuthenticatedUser(
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["vtex_account"], "xyz")
+        self.assertEqual(response.data["projects_unlinked"], [
+            {"uuid": str(other_project.uuid), "name": "Other"},
+        ])
 
         self.project.refresh_from_db()
         self.assertEqual(self.project.vtex_account, "xyz")
@@ -106,6 +110,7 @@ class TestUpdateProjectVTEXAccountViewWithJWTAuthentication(
                 "name": self.project.name,
                 "uuid": str(self.project.uuid),
                 "vtex_account": "xyz",
+                "projects_unlinked": [],
             },
         )
 
