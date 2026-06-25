@@ -1,5 +1,3 @@
-from django.db import transaction
-
 from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
 from insights.widgets.models import Widget
 
