@@ -41,12 +41,15 @@ class UpdateProjectVTEXAccountView(views.APIView):
         user = getattr(request, "user", None)
         user_email = user.email if user is not None and user.is_authenticated else None
 
-        UpdateProjectVTEXAccount().execute(
+        project, projects_unlinked = UpdateProjectVTEXAccount().execute(
             project=project,
             vtex_account=serializer.validated_data["vtex_account"],
             user_email=user_email,
         )
 
-        response_data = ProjectVTEXAccountSerializer(project).data
+        response_data = ProjectVTEXAccountSerializer(
+            project,
+            context={"projects_unlinked": projects_unlinked},
+        ).data
 
         return Response(response_data, status=status.HTTP_200_OK)
