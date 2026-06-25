@@ -62,6 +62,24 @@ class TestUpdateProjectVTEXAccountViewAsAuthenticatedUser(
         self.project.refresh_from_db()
         self.assertEqual(self.project.vtex_account, "xyz")
 
+    @with_internal_auth
+    def test_removes_vtex_account_from_other_projects_on_update(self):
+        other_project = Project.objects.create(
+            name="Other",
+            vtex_account="xyz",
+        )
+
+        response = self.update_vtex_account(self.project.uuid, {"vtex_account": "xyz"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["vtex_account"], "xyz")
+
+        self.project.refresh_from_db()
+        self.assertEqual(self.project.vtex_account, "xyz")
+
+        other_project.refresh_from_db()
+        self.assertIsNone(other_project.vtex_account)
+
 
 @override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
 @override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)

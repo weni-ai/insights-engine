@@ -78,3 +78,83 @@ class TestUpdateProjectVTEXAccount(TestCase):
         )
 
         self.assertIn(expected_message, logs.output[0])
+
+    def test_removes_vtex_account_from_other_projects(self):
+        other_project = Project.objects.create(
+            name="Other",
+            vtex_account="xyz",
+        )
+
+        self.use_case.execute(project=self.project, vtex_account="xyz")
+
+        other_project.refresh_from_db()
+        self.assertIsNone(other_project.vtex_account)
+
+    def test_removes_vtex_account_from_multiple_conflicting_projects(self):
+        other_a = Project.objects.create(name="Other A", vtex_account="xyz")
+        other_b = Project.objects.create(name="Other B", vtex_account="xyz")
+
+        self.use_case.execute(project=self.project, vtex_account="xyz")
+
+        other_a.refresh_from_db()
+        other_b.refresh_from_db()
+        self.assertIsNone(other_a.vtex_account)
+        self.assertIsNone(other_b.vtex_account)
+
+    def test_logs_removed_projects(self):
+        other_project = Project.objects.create(
+            name="Other",
+            vtex_account="xyz",
+        )
+
+        with self.assertLogs(
+            "insights.projects.usecases.update_vtex_account", level="INFO"
+        ) as logs:
+            self.use_case.execute(
+                project=self.project,
+                vtex_account="xyz",
+                user_email="example@vtex.com",
+            )
+
+        removal_message = (
+            f"[UpdateProjectVTEXAccount] Removed VTEX Account 'xyz' "
+            f"from project {other_project.name} ({other_project.uuid}) "
+            f"by example@vtex.com"
+        )
+
+        self.assertTrue(
+            any(removal_message in line for line in logs.output),
+        )
+
+    def test_does_not_remove_when_vtex_account_is_empty(self):
+        other_project = Project.objects.create(
+            name="Other",
+            vtex_account="",
+        )
+
+        self.use_case.execute(project=self.project, vtex_account="")
+
+        other_project.refresh_from_db()
+        self.assertEqual(other_project.vtex_account, "")
+
+    def test_does_not_remove_when_vtex_account_is_none(self):
+        other_project = Project.objects.create(
+            name="Other",
+            vtex_account=None,
+        )
+
+        self.use_case.execute(project=self.project, vtex_account=None)
+
+        other_project.refresh_from_db()
+        self.assertIsNone(other_project.vtex_account)
+
+    def test_no_removal_when_no_conflicts(self):
+        other_project = Project.objects.create(
+            name="Other",
+            vtex_account="xyz",
+        )
+
+        self.use_case.execute(project=self.project, vtex_account="def")
+
+        other_project.refresh_from_db()
+        self.assertEqual(other_project.vtex_account, "xyz")
