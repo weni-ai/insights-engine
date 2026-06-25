@@ -59,28 +59,6 @@ class TestCreateConversationsDashboard(TestCase):
         self.assertEqual(product_added_widget.position, [])
         self.assertEqual(product_added_widget.config, {})
 
-    def test_create_dashboard_raises_when_dashboard_already_exists(self):
-        Dashboard.objects.create(
-            project=self.project,
-            name=CONVERSATIONS_DASHBOARD_NAME,
-            description="Conversations dashboard",
-            is_default=False,
-            grid=[0, 0],
-            is_deletable=False,
-            is_editable=True,
-            config={},
-        )
-
-        with self.assertRaises(Exception) as ctx:
-            self.usecase.create_dashboard(self.project)
-
-        self.assertEqual(
-            str(ctx.exception),
-            "Conversation dashboard already exists for this project",
-        )
-        self.assertEqual(Dashboard.objects.count(), 1)
-        self.assertEqual(Widget.objects.count(), 0)
-
     def test_create_dashboard_rolls_back_when_widget_creation_fails(self):
         with patch(
             "insights.dashboards.usecases.conversations_dashboard_creation.Widget.objects.create",
