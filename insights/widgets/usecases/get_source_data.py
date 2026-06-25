@@ -59,7 +59,7 @@ def convert_to_iso(default_filters):
 
 
 class Calculator:
-    def __init__(self, operand_1, operand_2, operator) -> None:
+    def __init__(self, operand_1=0, operand_2=0, operator=None) -> None:
         self.operand_1 = operand_1
         self.operand_2 = operand_2
         self.operator = operator
@@ -80,6 +80,9 @@ class Calculator:
         return 100 * (self.operand_1 / self.operand_2)
 
     def evaluate(self):
+        if self.operator is None or not hasattr(self, self.operator):
+            raise ValueError(f"Invalid operator: {self.operator}")
+
         return getattr(self, self.operator)()
 
 
@@ -147,7 +150,7 @@ def simple_source_data_operation(
     return serialized_source
 
 
-def get_subwidget_data(data):
+def get_subwidget_data(data={}) -> dict:
     if "results" in data:
         if len(data["results"]) == 0:
             return {}

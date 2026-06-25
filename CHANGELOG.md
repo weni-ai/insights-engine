@@ -1,3 +1,22 @@
+# 1.30.0
+# Add
+  - Templates and orders metrics endpoint with multiple WABAs support
+
+# 1.29.0
+# Add
+  - Search terms metrics service, endpoint, and report worksheet
+  - Added to cart metrics service, endpoint, and report worksheet
+
+# 1.28.1
+# Add
+  - Automatic close field in human support rooms
+
+# 1.28.0
+# Add
+  - Agents and tools URN list for detailed events reporting
+  - Project VTEX account update endpoint
+  - NexusClient integration for project agents retrieval
+
 # 1.27.2
 # Fix
   - Abandoned cart skill support for projects with multiple WhatsApp Business Accounts
