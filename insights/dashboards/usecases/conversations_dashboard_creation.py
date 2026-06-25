@@ -28,7 +28,9 @@ class CreateConversationsDashboard:
                 },
             },
         )
-        self._create_widgets(dashboard)
+        if created:
+            self._create_widgets(dashboard)
+
         return dashboard
 
     def _create_widgets(self, dashboard):
