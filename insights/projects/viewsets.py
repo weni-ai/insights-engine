@@ -67,6 +67,20 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         op_field = filters.pop("op_field", [None])[0]
         if op_field:
             query_kwargs["op_field"] = op_field
+        if source_slug == "agents":
+            include_removed_raw = filters.pop("include_removed", None)
+            if isinstance(include_removed_raw, list):
+                include_removed_raw = (
+                    include_removed_raw[0] if include_removed_raw else None
+                )
+            if include_removed_raw is not None:
+                if isinstance(include_removed_raw, str):
+                    query_kwargs["include_removed"] = include_removed_raw.lower() in (
+                        "true",
+                        "1",
+                    )
+                else:
+                    query_kwargs["include_removed"] = bool(include_removed_raw)
         filters["project"] = str(self.get_object().uuid)
         try:
             serialized_source = SourceQuery.execute(
