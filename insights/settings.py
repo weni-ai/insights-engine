@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import json
 import os
 from pathlib import Path
+import sys
 
 import environ
 import sentry_sdk
@@ -74,7 +75,6 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_spectacular",
     "weni.feature_flags",
-    "weni.eda.django.eda_app",
 ]
 
 if ADMIN_ENABLED is True:
@@ -307,12 +307,18 @@ if USE_SENTRY:
 
 USE_EDA = env.bool("USE_EDA", default=False)
 
-# TODO: Remove this once we permanently migrate to Weni EDA
-USE_WENI_EDA_FOR_PROJECTS = env.bool("USE_WENI_EDA_FOR_PROJECTS", default=False)
+EDA_CONSUMERS_HANDLES = {
+    "edaconsume": "insights.event_driven.handle.handle_consumers",
+    "edaconsume_amq": "insights.event_driven.handle_amq.handle_amq_consumers",
+}
+
 
 if USE_EDA:
     EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"
-    EDA_CONSUMERS_HANDLE = "insights.event_driven.handle.handle_consumers"
+    _command = sys.argv[1] if len(sys.argv) > 1 else None
+    EDA_CONSUMERS_HANDLE = EDA_CONSUMERS_HANDLES.get(
+        _command, EDA_CONSUMERS_HANDLES["edaconsume"]
+    )
 
     EDA_BROKER_HOST = env("EDA_BROKER_HOST", default="localhost")
     EDA_VIRTUAL_HOST = env("EDA_VIRTUAL_HOST", default="/")
@@ -324,6 +330,15 @@ if USE_EDA:
     FLOWS_TICKETER_EXCHANGE = env("FLOWS_TICKETER_EXCHANGE", default="sectors.topic")
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
 
+# Amazon MQ
+AMQ_BROKER_HOST = env.str("AMQ_BROKER_HOST", default="localhost:5672")
+AMQ_BROKER_USER = env.str("AMQ_BROKER_USER", default="guest")
+AMQ_BROKER_PASSWORD = env.str("AMQ_BROKER_PASSWORD", default="guest")
+AMQ_VIRTUAL_HOST = env.str("AMQ_VIRTUAL_HOST", default="/")
+
+PROJECT_AMQ_QUEUE_NAME = env.str(
+    "PROJECT_AMQ_QUEUE_NAME", default="insights.projects.queue"
+)
 
 CHATS_URL = env("CHATS_URL", default="")
 
