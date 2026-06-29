@@ -39,19 +39,21 @@ class PyAMQPConnectionBackend:
         while True:
             connection.drain_events()
 
-    def _get_connection_params(self):
-        if self.connection_params is not None:
+    def _get_connection_dict(self):
+        if self.connection_params is None:
+            return dict(
+                host=settings.EDA_BROKER_HOST,
+                port=settings.EDA_BROKER_PORT,
+                userid=settings.EDA_BROKER_USER,
+                password=settings.EDA_BROKER_PASSWORD,
+                virtual_host=settings.EDA_VIRTUAL_HOST,
+            )
+        if isinstance(self.connection_params, dict):
             return self.connection_params
-        return dict(
-            host=settings.EDA_BROKER_HOST,
-            port=settings.EDA_BROKER_PORT,
-            userid=settings.EDA_BROKER_USER,
-            password=settings.EDA_BROKER_PASSWORD,
-            virtual_host=settings.EDA_VIRTUAL_HOST,
-        )
+        return self.connection_params.value
 
     def _conection(self, **kwargs) -> amqp.Connection:
-        return amqp.Connection(**self._get_connection_params(), **kwargs)
+        return amqp.Connection(**self._get_connection_dict(), **kwargs)
 
     def start_consuming(self, connection_params=None):
         if connection_params is not None:
