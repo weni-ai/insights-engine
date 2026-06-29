@@ -31,9 +31,18 @@ class PyAMQPConnectionBackend:
         "[+] Connection established. Waiting for events. To exit press CTRL+C"
     )
 
-    def __init__(self, handle_consumers: callable, connection_params: dict):
+    def __init__(self, handle_consumers: callable, connection_params: dict = None):
         self._handle_consumers = handle_consumers
-        self.connection_params = connection_params
+        if connection_params is None:
+            self.connection_params = dict(
+                host=settings.EDA_BROKER_HOST,
+                port=settings.EDA_BROKER_PORT,
+                userid=settings.EDA_BROKER_USER,
+                password=settings.EDA_BROKER_PASSWORD,
+                virtual_host=settings.EDA_VIRTUAL_HOST,
+            )
+        else:
+            self.connection_params = connection_params
 
     def _drain_events(self, connection: amqp.connection.Connection):
         while True:
