@@ -286,6 +286,9 @@ OIDC_CACHE_TOKEN = env.bool(
 OIDC_CACHE_TTL = env.int(
     "OIDC_CACHE_TTL", default=600
 )  # Time-to-live for cached user tokens (default: 600 seconds).
+OIDC_TIMEOUT = env.int(
+    "OIDC_TIMEOUT", default=10
+)  # Timeout in seconds for HTTP requests to the OIDC provider (Keycloak).
 
 # CORS CONFIG
 CORS_ORIGIN_ALLOW_ALL = True
