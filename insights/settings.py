@@ -468,6 +468,10 @@ CONVERSATIONS_REPORT_STATUS_CACHE_KEY = env.str(
     "CONVERSATIONS_REPORT_STATUS_CACHE_KEY",
     default="conversations_report_status:{project_uuid}",
 )
+CONVERSATIONS_REPORT_STREAMING_MODE_FEATURE_FLAG_KEY = env.str(
+    "CONVERSATIONS_REPORT_STREAMING_MODE_FEATURE_FLAG_KEY",
+    default="insightsConversationsReportStreamingMode",
+)
 
 # Conversations dashboard
 

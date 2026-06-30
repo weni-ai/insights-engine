@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -9,7 +10,8 @@ class ConversationsReportWorksheet:
     """
 
     name: str
-    data: list[dict]
+    data: list[dict] | Iterable[dict]
+    headers: list[str] | None = None
 
 
 @dataclass(frozen=True)

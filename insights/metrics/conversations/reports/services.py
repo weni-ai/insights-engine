@@ -1,3 +1,4 @@
+from collections.abc import Iterable, Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 import io
@@ -10,6 +11,7 @@ import pytz
 import zipfile
 import boto3
 import uuid
+import os
 
 from django.utils.crypto import get_random_string
 from django.core.mail import EmailMessage
@@ -385,6 +387,32 @@ class ConversationsReportService(BaseConversationsReportService):
         self.elastic_page_limit = elastic_page_limit
 
         self.cache_keys = {}
+        self._use_streaming_events = False
+
+    def _rows_with_empty_fallback(
+        self, rows: Iterable[dict], empty_row: dict
+    ) -> Iterator[dict]:
+        """
+        Yield rows from an iterable and emit a placeholder row when empty.
+        """
+        has_rows = False
+        for row in rows:
+            has_rows = True
+            yield row
+        if not has_rows:
+            yield empty_row
+
+    def _finalize_worksheet_rows(
+        self, rows: Iterable[dict], empty_row: dict
+    ) -> list[dict] | Iterator[dict]:
+        """
+        Materialize worksheet rows for the standard path or keep them as a
+        generator when streaming events to disk.
+        """
+        rows_with_fallback = self._rows_with_empty_fallback(rows, empty_row)
+        if self._use_streaming_events:
+            return rows_with_fallback
+        return list(rows_with_fallback)
 
     def _add_cache_key(self, report_uuid: UUID, cache_key: str) -> None:
         """
@@ -749,7 +777,9 @@ class ConversationsReportService(BaseConversationsReportService):
 
         conversation_classification_events = None
 
-        if "RESOLUTIONS" in sections or "CONTACTS" in sections:
+        if not self._use_streaming_events and (
+            "RESOLUTIONS" in sections or "CONTACTS" in sections
+        ):
             # Fetching only once for resolutions and contacts worksheets
             # instead of fetching for each worksheet
             conversation_classification_events = self.get_datalake_events(
@@ -1242,10 +1272,14 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
+    def get_datalake_events(
+        self, report: Report, **kwargs
+    ) -> list[dict] | Iterable[dict]:
         """
         Get datalake events.
         """
+        if self._use_streaming_events:
+            return self._iter_datalake_events(report, **kwargs)
         return self.get_datalake_events_in_parallel(report, **kwargs)
 
     def _iter_datalake_events(self, report: Report, **kwargs):
@@ -1290,6 +1324,12 @@ class ConversationsReportService(BaseConversationsReportService):
 
             if current_page % 10 == 0:
                 self._update_heartbeat(report)
+
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Retrieving datalake events for page %s for report %s (streaming)",
+                current_page,
+                report.uuid,
+            )
 
             paginated_events = self.datalake_events_client.get_events(
                 **kwargs,
@@ -1436,50 +1476,18 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return data
 
-    def get_resolutions_worksheet(
+    def _iter_resolutions_rows(
         self,
+        events: Iterable[dict],
         report: Report,
-        start_date: datetime,
-        end_date: datetime,
-        conversation_classification_events: list[dict] | None = None,
-    ) -> ConversationsReportWorksheet:
-        """
-        Get the resolutions worksheet.
-        """
-        if conversation_classification_events is not None:
-            events = conversation_classification_events
-        else:
-            events = self.get_datalake_events(
-                report=report,
-                project=report.project.uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name="weni_nexus_data",
-                key="conversation_classification",
-                table="conversation_classification",
-            )
-
-        with override(report.requested_by.language):
-            worksheet_name = gettext("Resolutions")
-
-            resolutions_label = gettext("Resolution")
-            date_label = gettext("Date")
-
-            resolved_label = gettext("AI-Assisted")
-            unresolved_label = gettext("Not assisted")
-            transferred_to_human_label = gettext("Transferred to human support")
-
-            unclassified_label = gettext("Unclassified")
-            unknown_label = gettext("Unknown")
-
-        if len(events) == 0:
-            return ConversationsReportWorksheet(
-                name=worksheet_name,
-                data=[],
-            )
-
-        data = []
-
+        resolutions_label: str,
+        date_label: str,
+        resolved_label: str,
+        unresolved_label: str,
+        transferred_to_human_label: str,
+        unclassified_label: str,
+        unknown_label: str,
+    ) -> Iterator[dict]:
         for event in events:
             metadata = event.get("metadata")
 
@@ -1515,32 +1523,82 @@ class ConversationsReportService(BaseConversationsReportService):
             else:
                 resolution_label = unknown_label
 
-            data.append(
-                {
-                    "URN": event.get("contact_urn", ""),
-                    resolutions_label: resolution_label,
-                    date_label: (
-                        self._format_date(event.get("date", ""), report)
-                        if event.get("date")
-                        else ""
-                    ),
-                }
+            yield {
+                "URN": event.get("contact_urn", ""),
+                resolutions_label: resolution_label,
+                date_label: (
+                    self._format_date(event.get("date", ""), report)
+                    if event.get("date")
+                    else ""
+                ),
+            }
+
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_classification_events: list[dict] | Iterable[dict] | None = None,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        if conversation_classification_events is not None:
+            events = conversation_classification_events
+        else:
+            events = self.get_datalake_events(
+                report=report,
+                project=report.project.uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name="weni_nexus_data",
+                key="conversation_classification",
+                table="conversation_classification",
             )
 
-        setattr(self, "_conversation_classification_events_cache", events)
+        with override(report.requested_by.language):
+            worksheet_name = gettext("Resolutions")
 
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
-                    resolutions_label: "",
-                    date_label: "",
-                }
-            ]
+            resolutions_label = gettext("Resolution")
+            date_label = gettext("Date")
+
+            resolved_label = gettext("AI-Assisted")
+            unresolved_label = gettext("Not assisted")
+            transferred_to_human_label = gettext("Transferred to human support")
+
+            unclassified_label = gettext("Unclassified")
+            unknown_label = gettext("Unknown")
+
+        if isinstance(events, list) and len(events) == 0:
+            return ConversationsReportWorksheet(
+                name=worksheet_name,
+                data=[],
+            )
+
+        empty_row = {
+            "URN": "",
+            resolutions_label: "",
+            date_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_resolutions_rows(
+                events,
+                report,
+                resolutions_label,
+                date_label,
+                resolved_label,
+                unresolved_label,
+                transferred_to_human_label,
+                unclassified_label,
+                unknown_label,
+            ),
+            empty_row,
+        )
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
+            headers=list(empty_row.keys()),
         )
 
     def _get_topics_data(self, report: Report) -> dict:
@@ -1609,6 +1667,35 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return topic_name, subtopic_name
 
+    def _iter_topics_distribution_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        topics_data: dict,
+        topic_label: str,
+        subtopic_label: str,
+        date_label: str,
+        unclassified_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            topic_name, subtopic_name = self._process_topic_event_data(
+                event, topics_data, unclassified_label
+            )
+
+            if not topic_name or not subtopic_name:
+                continue
+
+            yield {
+                "URN": event.get("contact_urn"),
+                topic_label: topic_name,
+                subtopic_label: subtopic_name,
+                date_label: (
+                    self._format_date(event.get("date"), report)
+                    if event.get("date")
+                    else ""
+                ),
+            }
+
     def get_topics_distribution_worksheet(
         self,
         report: Report,
@@ -1648,43 +1735,45 @@ class ConversationsReportService(BaseConversationsReportService):
             subtopic_label = gettext("Subtopic")
             unclassified_label = gettext("Unclassified")
 
-        results_data = []
-
-        for event in events:
-            topic_name, subtopic_name = self._process_topic_event_data(
-                event, topics_data, unclassified_label
-            )
-
-            if not topic_name or not subtopic_name:
-                continue
-
-            results_data.append(
-                {
-                    "URN": event.get("contact_urn"),
-                    topic_label: topic_name,
-                    subtopic_label: subtopic_name,
-                    date_label: (
-                        self._format_date(event.get("date"), report)
-                        if event.get("date")
-                        else ""
-                    ),
-                }
-            )
-
-        if len(results_data) == 0:
-            results_data = [
-                {
-                    "URN": "",
-                    topic_label: "",
-                    subtopic_label: "",
-                    date_label: "",
-                }
-            ]
+        empty_row = {
+            "URN": "",
+            topic_label: "",
+            subtopic_label: "",
+            date_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_topics_distribution_rows(
+                events,
+                report,
+                topics_data,
+                topic_label,
+                subtopic_label,
+                date_label,
+                unclassified_label,
+            ),
+            empty_row,
+        )
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
-            data=results_data,
+            data=data,
+            headers=list(empty_row.keys()),
         )
+
+    def _iter_csat_ai_rows(
+        self, events: Iterable[dict], report: Report, date_label: str, rating_label: str
+    ) -> Iterator[dict]:
+        ratings = {"1", "2", "3", "4", "5"}
+
+        for event in events:
+            if event.get("value") not in ratings:
+                continue
+
+            yield {
+                "URN": event.get("contact_urn"),
+                date_label: self._format_date(event.get("date"), report),
+                rating_label: event.get("value"),
+            }
 
     def get_csat_ai_worksheet(
         self, report: Report, start_date: datetime, end_date: datetime
@@ -1714,35 +1803,40 @@ class ConversationsReportService(BaseConversationsReportService):
             date_label = gettext("Date")
             rating_label = gettext("Rating")
 
-        data = []
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            rating_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_csat_ai_rows(events, report, date_label, rating_label),
+            empty_row,
+        )
 
-        ratings = {"1", "2", "3", "4", "5"}
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+            headers=list(empty_row.keys()),
+        )
+
+    def _iter_nps_ai_rows(
+        self, events: Iterable[dict], report: Report, date_label: str, rating_label: str
+    ) -> Iterator[dict]:
+        ratings = {str(n): 0 for n in range(0, 11)}
 
         for event in events:
             if event.get("value") not in ratings:
                 continue
 
-            data.append(
-                {
-                    "URN": event.get("contact_urn"),
-                    date_label: self._format_date(event.get("date"), report),
-                    rating_label: event.get("value"),
-                }
-            )
-
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
-                    date_label: "",
-                    rating_label: "",
-                }
-            ]
-
-        return ConversationsReportWorksheet(
-            name=worksheet_name,
-            data=data,
-        )
+            yield {
+                "URN": event.get("contact_urn"),
+                date_label: (
+                    self._format_date(event.get("date"), report)
+                    if event.get("date")
+                    else ""
+                ),
+                rating_label: event.get("value"),
+            }
 
     def get_nps_ai_worksheet(
         self, report: Report, start_date: datetime, end_date: datetime
@@ -1773,35 +1867,17 @@ class ConversationsReportService(BaseConversationsReportService):
             date_label = gettext("Date")
             rating_label = gettext("Rating")
 
-        data = []
-        ratings = {str(n): 0 for n in range(0, 11)}
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            rating_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_nps_ai_rows(events, report, date_label, rating_label),
+            empty_row,
+        )
 
-        for event in events:
-            if event.get("value") not in ratings:
-                continue
-
-            data.append(
-                {
-                    "URN": event.get("contact_urn"),
-                    date_label: (
-                        self._format_date(event.get("date"), report)
-                        if event.get("date")
-                        else ""
-                    ),
-                    rating_label: event.get("value"),
-                }
-            )
-
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
-                    date_label: "",
-                    rating_label: "",
-                }
-            ]
-
-        return ConversationsReportWorksheet(name=worksheet_name, data=data)
+        return ConversationsReportWorksheet(name=worksheet_name, data=data, headers=list(empty_row.keys()))
 
     def get_csat_human_worksheet(
         self, report: Report, start_date: str, end_date: str
@@ -1944,6 +2020,20 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def _iter_custom_widget_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        date_label: str,
+        value_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            yield {
+                "URN": event.get("contact_urn"),
+                date_label: self._format_date(event.get("date"), report),
+                value_label: event.get("value"),
+            }
+
     def get_custom_widget_worksheet(
         self,
         report: Report,
@@ -1978,29 +2068,20 @@ class ConversationsReportService(BaseConversationsReportService):
             date_label = gettext("Date")
             value_label = gettext("Value")
 
-        data = []
-
-        for event in events:
-            data.append(
-                {
-                    "URN": event.get("contact_urn"),
-                    date_label: self._format_date(event.get("date"), report),
-                    value_label: event.get("value"),
-                }
-            )
-
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
-                    date_label: "",
-                    value_label: "",
-                }
-            ]
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            value_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_custom_widget_rows(events, report, date_label, value_label),
+            empty_row,
+        )
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
+            headers=list(empty_row.keys()),
         )
 
     def get_crosstab_widget_worksheet(
@@ -2106,6 +2187,31 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def _iter_tool_result_detailed_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        urn_label: str,
+        tool_name_label: str,
+        date_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            metadata = event.get("metadata")
+
+            if metadata and not isinstance(metadata, dict):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    continue
+
+            tool_name = event.get("value", "")
+
+            yield {
+                urn_label: event.get("contact_urn", ""),
+                tool_name_label: tool_name,
+                date_label: self._format_date(event.get("date", ""), report),
+            }
+
     def _get_tool_result_detailed_worksheet(
         self,
         report: Report,
@@ -2127,31 +2233,19 @@ class ConversationsReportService(BaseConversationsReportService):
             tool_name_label = gettext("Tool name")
             date_label = gettext("Date")
 
-        data = []
+        empty_row = {urn_label: "", tool_name_label: "", date_label: ""}
+        data = self._finalize_worksheet_rows(
+            self._iter_tool_result_detailed_rows(
+                events, report, urn_label, tool_name_label, date_label
+            ),
+            empty_row,
+        )
 
-        for event in events:
-            metadata = event.get("metadata")
-
-            if metadata and not isinstance(metadata, dict):
-                try:
-                    metadata = json.loads(metadata)
-                except Exception:
-                    continue
-
-            tool_name = event.get("value", "")
-
-            data.append(
-                {
-                    urn_label: event.get("contact_urn", ""),
-                    tool_name_label: tool_name,
-                    date_label: self._format_date(event.get("date", ""), report),
-                }
-            )
-
-        if len(data) == 0:
-            data = [{urn_label: "", tool_name_label: "", date_label: ""}]
-
-        return ConversationsReportWorksheet(name=worksheet_name, data=data)
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+            headers=list(empty_row.keys()),
+        )
 
     def get_agent_invocation_worksheet(
         self,
@@ -2204,6 +2298,40 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def _iter_agent_invocation_detailed_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        agents_by_slug: dict[str, dict],
+        urn_label: str,
+        agent_name_label: str,
+        agent_uuid_label: str,
+        date_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            metadata = event.get("metadata")
+
+            if metadata and not isinstance(metadata, dict):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    continue
+
+            agent_slug = event.get("value", "")
+            agent_data = agents_by_slug.get(agent_slug) or {}
+            agent_name = agent_data.get("name") or agent_slug
+            agent_uuid = ""
+
+            if metadata:
+                agent_uuid = metadata.get("agent_uuid", None)
+
+            yield {
+                urn_label: event.get("contact_urn", ""),
+                agent_name_label: agent_name,
+                agent_uuid_label: agent_uuid,
+                date_label: self._format_date(event.get("date", ""), report),
+            }
+
     def _get_agent_invocation_detailed_worksheet(
         self,
         report: Report,
@@ -2228,45 +2356,30 @@ class ConversationsReportService(BaseConversationsReportService):
             agent_uuid_label = gettext("Agent UUID")
             date_label = gettext("Date")
 
-        data = []
+        empty_row = {
+            urn_label: "",
+            agent_name_label: "",
+            agent_uuid_label: "",
+            date_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_agent_invocation_detailed_rows(
+                events,
+                report,
+                agents_by_slug,
+                urn_label,
+                agent_name_label,
+                agent_uuid_label,
+                date_label,
+            ),
+            empty_row,
+        )
 
-        for event in events:
-            metadata = event.get("metadata")
-
-            if metadata and not isinstance(metadata, dict):
-                try:
-                    metadata = json.loads(metadata)
-                except Exception:
-                    continue
-
-            agent_slug = event.get("value", "")
-            agent_data = agents_by_slug.get(agent_slug) or {}
-            agent_name = agent_data.get("name") or agent_slug
-            agent_uuid = ""
-
-            if metadata:
-                agent_uuid = metadata.get("agent_uuid", None)
-
-            data.append(
-                {
-                    urn_label: event.get("contact_urn", ""),
-                    agent_name_label: agent_name,
-                    agent_uuid_label: agent_uuid,
-                    date_label: self._format_date(event.get("date", ""), report),
-                }
-            )
-
-        if len(data) == 0:
-            data = [
-                {
-                    urn_label: "",
-                    agent_name_label: "",
-                    agent_uuid_label: "",
-                    date_label: "",
-                }
-            ]
-
-        return ConversationsReportWorksheet(name=worksheet_name, data=data)
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+            headers=list(empty_row.keys()),
+        )
 
     def get_contacts_summary_worksheet(
         self,
@@ -2320,7 +2433,7 @@ class ConversationsReportService(BaseConversationsReportService):
         report: Report,
         start_date: datetime,
         end_date: datetime,
-        conversation_classification_events: list[dict] | None = None,
+        conversation_classification_events: list[dict] | Iterable[dict] | None = None,
     ) -> list[ConversationsReportWorksheet]:
         try:
             attributes = {
@@ -2351,7 +2464,18 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
             ]
 
-        events = conversation_classification_events or []
+        if conversation_classification_events is not None:
+            events = conversation_classification_events
+        else:
+            events = self.get_datalake_events(
+                report=report,
+                project=report.project.uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name="weni_nexus_data",
+                key="conversation_classification",
+                table="conversation_classification",
+            )
 
         urn_counts: dict[str, int] = {}
         for event in events:
@@ -2395,6 +2519,24 @@ class ConversationsReportService(BaseConversationsReportService):
             ),
         ]
 
+    def _iter_search_terms_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        date_label: str,
+        terms_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            yield {
+                "URN": event.get("contact_urn", ""),
+                date_label: (
+                    self._format_date(event.get("date"), report)
+                    if event.get("date")
+                    else ""
+                ),
+                terms_label: event.get("value", ""),
+            }
+
     def get_search_terms_worksheet(
         self,
         report: Report,
@@ -2429,32 +2571,39 @@ class ConversationsReportService(BaseConversationsReportService):
             date_label = gettext("Date")
             terms_label = gettext("Terms")
 
-        data = [
-            {
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            terms_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_search_terms_rows(events, report, date_label, terms_label),
+            empty_row,
+        )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+            headers=list(empty_row.keys()),
+        )
+
+    def _iter_added_to_cart_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        date_label: str,
+        product_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            yield {
                 "URN": event.get("contact_urn", ""),
                 date_label: (
                     self._format_date(event.get("date"), report)
                     if event.get("date")
                     else ""
                 ),
-                terms_label: event.get("value", ""),
+                product_label: event.get("value", ""),
             }
-            for event in events
-        ]
-
-        if not data:
-            data = [
-                {
-                    "URN": "",
-                    date_label: "",
-                    terms_label: "",
-                }
-            ]
-
-        return ConversationsReportWorksheet(
-            name=worksheet_name,
-            data=data,
-        )
 
     def get_added_to_cart_worksheet(
         self,
@@ -2490,31 +2639,35 @@ class ConversationsReportService(BaseConversationsReportService):
             date_label = gettext("Date")
             product_label = gettext("Product")
 
-        data = [
-            {
-                "URN": event.get("contact_urn", ""),
-                date_label: (
-                    self._format_date(event.get("date"), report)
-                    if event.get("date")
-                    else ""
-                ),
-                product_label: event.get("value", ""),
-            }
-            for event in events
-        ]
-
-        if not data:
-            data = [
-                {
-                    "URN": "",
-                    date_label: "",
-                    product_label: "",
-                }
-            ]
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            product_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_added_to_cart_rows(events, report, date_label, product_label),
+            empty_row,
+        )
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
+            headers=list(empty_row.keys()),
+        )
+
+    def _should_skip_worksheet(self, worksheet: ConversationsReportWorksheet) -> bool:
+        return isinstance(worksheet.data, list) and len(worksheet.data) == 0
+
+    def _resolve_worksheet_headers(
+        self, worksheet: ConversationsReportWorksheet
+    ) -> list[str]:
+        if worksheet.headers:
+            return worksheet.headers
+        if isinstance(worksheet.data, list) and worksheet.data:
+            return list(worksheet.data[0].keys())
+        raise ValueError(
+            "Worksheet '%s' has no headers and no materialized rows"
+            % worksheet.name
         )
 
     def _generate_streaming(
@@ -2522,23 +2675,23 @@ class ConversationsReportService(BaseConversationsReportService):
         report: Report,
         start_date: datetime,
         end_date: datetime,
-    ) -> list:
+    ) -> list[ConversationsReportFile]:
         """
-        Generate an XLSX report by writing to a temp file on disk instead
-        of in-memory. Reuses the same ``_get_worksheets()`` pipeline so all
-        section logic stays in one place; only the file-writing strategy
-        changes.
+        Generate an XLSX report by streaming datalake events page by page
+        and writing worksheet rows directly to a temp file on disk.
         """
-        worksheets = self._get_worksheets(report, start_date, end_date)
-
+        self._use_streaming_events = True
         processor = StreamingXLSXFileProcessor()
         workbook, tmp_path = processor.create_workbook(report)
 
         try:
+            worksheets = self._get_worksheets(report, start_date, end_date)
+
             for ws in worksheets:
-                if not ws.data:
+                if self._should_skip_worksheet(ws):
                     continue
-                headers = list(ws.data[0].keys())
+
+                headers = self._resolve_worksheet_headers(ws)
                 row_count = processor.write_worksheet(
                     workbook, ws.name, headers, ws.data
                 )
@@ -2555,6 +2708,8 @@ class ConversationsReportService(BaseConversationsReportService):
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
             raise
+        finally:
+            self._use_streaming_events = False
 
         return files
 
