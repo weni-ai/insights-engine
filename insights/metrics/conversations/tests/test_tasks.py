@@ -1,5 +1,6 @@
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
+
 from uuid import uuid4
 
 from django.test import TestCase, override_settings
@@ -185,7 +186,9 @@ class TestTimeoutReports(TestCase):
     def test_timeout_reports_marks_reports_as_failed_and_sends_email(
         self, mock_create_service
     ):
-        Report.objects.create(
+        mock_service = Mock()
+        mock_create_service.return_value = mock_service
+        report = Report.objects.create(
             project=self.project,
             source=ReportSource.CONVERSATIONS_DASHBOARD,
             source_config={},
@@ -195,8 +198,12 @@ class TestTimeoutReports(TestCase):
             status=ReportStatus.IN_PROGRESS,
             started_at=timezone.now() - timedelta(hours=2),
         )
-
         timeout_reports()
+        report.refresh_from_db()
+        self.assertEqual(report.status, ReportStatus.FAILED)
+        self.assertIsNotNone(report.completed_at)
+        self.assertEqual(report.errors, {"timeout": "Report generation timed out"})
+        mock_service.send_email.assert_called_once_with(report, [], is_error=True)
 
     @override_settings(REPORT_GENERATION_TIMEOUT=3600)
     def test_returns_early_when_no_in_progress_reports(self):
