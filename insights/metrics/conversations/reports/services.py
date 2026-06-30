@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from datetime import datetime
 import io
 import json
@@ -8,6 +8,7 @@ import logging
 from abc import ABC, abstractmethod
 import pytz
 import zipfile
+import zlib
 import boto3
 import uuid
 
@@ -412,6 +413,25 @@ class ConversationsReportService(BaseConversationsReportService):
             capture_exception(e)
             return False
 
+    def _is_optimized_generation_enabled(self, report: Report) -> bool:
+        attributes = {
+            "projectUUID": str(report.project.uuid),
+        }
+        if report.requested_by:
+            attributes["userEmail"] = report.requested_by.email
+        try:
+            return is_feature_active_for_attributes(
+                settings.CONVERSATIONS_REPORT_OPTIMIZED_GENERATION_FEATURE_FLAG_KEY,
+                attributes=attributes,
+            )
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Optimized generation feature flag check failed: %s",
+                e,
+            )
+            capture_exception(e)
+            return False
+
     def _get_project_agents_by_slug(self, project_uuid: UUID) -> dict[str, dict]:
         """
         Fetch the project agents team from Nexus and return them keyed by slug.
@@ -455,6 +475,90 @@ class ConversationsReportService(BaseConversationsReportService):
                 self.cache_client.delete(cache_key)
 
             del self.cache_keys[report_uuid]
+
+    def _worksheet_cache_key(self, report_uuid: UUID, section_key: str) -> str:
+        return f"report_worksheet:{report_uuid}:{section_key}"
+
+    def _cache_worksheet(
+        self,
+        report_uuid: UUID,
+        section_key: str,
+        worksheet_data: "ConversationsReportWorksheet | list[ConversationsReportWorksheet]",
+    ) -> None:
+        try:
+            if isinstance(worksheet_data, list):
+                serializable = [
+                    {"name": ws.name, "data": ws.data} for ws in worksheet_data
+                ]
+            else:
+                serializable = {
+                    "name": worksheet_data.name,
+                    "data": worksheet_data.data,
+                }
+
+            compressed = zlib.compress(
+                json.dumps(serializable, default=str).encode()
+            )
+            cache_key = self._worksheet_cache_key(report_uuid, section_key)
+            ttl = settings.REPORT_GENERATION_TIMEOUT * 2
+            self.cache_client.set(cache_key, compressed, ex=ttl)
+            self._add_cache_key(report_uuid, cache_key)
+        except Exception as e:
+            logger.warning(
+                "[CONVERSATIONS REPORT SERVICE] Failed to cache worksheet %s for report %s: %s",
+                section_key,
+                report_uuid,
+                e,
+            )
+
+    def _get_cached_worksheet(
+        self, report_uuid: UUID, section_key: str
+    ) -> "ConversationsReportWorksheet | list[ConversationsReportWorksheet] | None":
+        try:
+            cache_key = self._worksheet_cache_key(report_uuid, section_key)
+            raw = self.cache_client.get(cache_key)
+            if raw is None:
+                return None
+
+            deserialized = json.loads(zlib.decompress(raw))
+
+            if isinstance(deserialized, list):
+                return [
+                    ConversationsReportWorksheet(name=ws["name"], data=ws["data"])
+                    for ws in deserialized
+                ]
+
+            return ConversationsReportWorksheet(
+                name=deserialized["name"], data=deserialized["data"]
+            )
+        except Exception as e:
+            logger.warning(
+                "[CONVERSATIONS REPORT SERVICE] Failed to load cached worksheet %s for report %s: %s",
+                section_key,
+                report_uuid,
+                e,
+            )
+            return None
+
+    def _generate_or_load_worksheet(
+        self,
+        report: Report,
+        section_key: str,
+        generator_fn,
+        **kwargs,
+    ) -> "ConversationsReportWorksheet | list[ConversationsReportWorksheet]":
+        cached = self._get_cached_worksheet(report.uuid, section_key)
+        if cached is not None:
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Loaded worksheet %s from cache for report %s",
+                section_key,
+                report.uuid,
+            )
+            return cached
+
+        result = generator_fn(**kwargs)
+        self._cache_worksheet(report.uuid, section_key, result)
+        return result
 
     def zip_files(
         self, files: list[ConversationsReportFile]
@@ -714,40 +818,21 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return start_date, end_date
 
-    def _get_worksheets(
-        self, report: Report, start_date: datetime, end_date: datetime
-    ) -> list[ConversationsReportWorksheet]:
-        """
-        Get the worksheets for a report.
-        """
-        source_config = report.source_config or {}
-        sections = source_config.get("sections", [])
-        custom_widgets = source_config.get("custom_widgets", [])
-        worksheets = []
-
-        conversation_classification_events = None
-
-        if "RESOLUTIONS" in sections or "CONTACTS" in sections:
-            # Fetching only once for resolutions and contacts worksheets
-            # instead of fetching for each worksheet
-            conversation_classification_events = self.get_datalake_events(
-                report=report,
-                project=report.project.uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name="weni_nexus_data",
-                key="conversation_classification",
-                table="conversation_classification",
-            )
-
-        worksheets_mapping = {
+    def _get_worksheets_mapping(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        classification_events: list[dict] | None,
+    ) -> dict[str, tuple[callable, dict]]:
+        return {
             "RESOLUTIONS": (
                 self.get_resolutions_worksheet,
                 {
                     "report": report,
                     "start_date": start_date,
                     "end_date": end_date,
-                    "conversation_classification_events": conversation_classification_events,
+                    "conversation_classification_events": classification_events,
                 },
             ),
             "TOPICS_AI": (
@@ -798,7 +883,7 @@ class ConversationsReportService(BaseConversationsReportService):
                     "report": report,
                     "start_date": start_date,
                     "end_date": end_date,
-                    "conversation_classification_events": conversation_classification_events,
+                    "conversation_classification_events": classification_events,
                 },
             ),
             "ADDED_TO_CART": (
@@ -810,6 +895,34 @@ class ConversationsReportService(BaseConversationsReportService):
                 {"report": report, "start_date": start_date, "end_date": end_date},
             ),
         }
+
+    def _get_worksheets(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> list[ConversationsReportWorksheet]:
+        """
+        Get the worksheets for a report.
+        """
+        source_config = report.source_config or {}
+        sections = source_config.get("sections", [])
+        custom_widgets = source_config.get("custom_widgets", [])
+        worksheets = []
+
+        conversation_classification_events = None
+
+        if "RESOLUTIONS" in sections or "CONTACTS" in sections:
+            conversation_classification_events = self.get_datalake_events(
+                report=report,
+                project=report.project.uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name="weni_nexus_data",
+                key="conversation_classification",
+                table="conversation_classification",
+            )
+
+        worksheets_mapping = self._get_worksheets_mapping(
+            report, start_date, end_date, conversation_classification_events
+        )
 
         for section, (worksheet_function, worksheet_args) in worksheets_mapping.items():
             if section in sections:
@@ -853,6 +966,176 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return worksheets
 
+    def _build_worksheet_specs(
+        self,
+        report: Report,
+        sections: list[str],
+        source_config: dict,
+        start_date: datetime,
+        end_date: datetime,
+        shared_classification_events: list[dict] | None,
+    ) -> list[tuple[str, callable, dict]]:
+        """
+        Build a list of (section_key, generator_fn, kwargs) tuples
+        for all worksheets that need to be generated.
+        """
+        worksheets_mapping = self._get_worksheets_mapping(
+            report, start_date, end_date, shared_classification_events
+        )
+
+        specs = []
+
+        for section in sections:
+            if section in worksheets_mapping:
+                fn, kwargs = worksheets_mapping[section]
+                specs.append((section, fn, kwargs))
+
+        custom_widget_uuids = source_config.get("custom_widgets", [])
+        if custom_widget_uuids:
+            widgets = Widget.objects.filter(
+                uuid__in=custom_widget_uuids, dashboard__project=report.project
+            )
+            for widget in widgets:
+                specs.append((
+                    f"custom_widget_{widget.uuid}",
+                    self.get_custom_widget_worksheet,
+                    {
+                        "report": report,
+                        "widget": widget,
+                        "start_date": start_date,
+                        "end_date": end_date,
+                    },
+                ))
+
+        crosstab_widget_uuids = source_config.get("crosstab_widgets", [])
+        if crosstab_widget_uuids:
+            widgets = Widget.objects.filter(
+                uuid__in=crosstab_widget_uuids, dashboard__project=report.project
+            )
+            for widget in widgets:
+                specs.append((
+                    f"crosstab_widget_{widget.uuid}",
+                    self.get_crosstab_widget_worksheet,
+                    {
+                        "report": report,
+                        "widget": widget,
+                        "start_date": start_date,
+                        "end_date": end_date,
+                    },
+                ))
+
+        return specs
+
+    def _get_worksheets_optimized(
+        self, report: Report, start_date: datetime, end_date: datetime
+    ) -> list[ConversationsReportWorksheet]:
+        """
+        Optimized worksheet generation: pre-fetches shared data,
+        then generates all worksheets in parallel with checkpointing.
+        """
+        source_config = report.source_config or {}
+        sections = source_config.get("sections", [])
+
+        shared_classification_events = None
+        if "RESOLUTIONS" in sections or "CONTACTS" in sections:
+            cached_shared = self._get_cached_worksheet(
+                report.uuid, "shared_conversation_classification"
+            )
+            if cached_shared is not None:
+                shared_classification_events = cached_shared
+            else:
+                shared_classification_events = self.get_datalake_events(
+                    report=report,
+                    project=report.project.uuid,
+                    date_start=start_date,
+                    date_end=end_date,
+                    event_name="weni_nexus_data",
+                    key="conversation_classification",
+                    table="conversation_classification",
+                )
+                try:
+                    compressed = zlib.compress(
+                        json.dumps(shared_classification_events, default=str).encode()
+                    )
+                    cache_key = self._worksheet_cache_key(
+                        report.uuid, "shared_conversation_classification"
+                    )
+                    self.cache_client.set(
+                        cache_key,
+                        compressed,
+                        ex=settings.REPORT_GENERATION_TIMEOUT * 2,
+                    )
+                    self._add_cache_key(report.uuid, cache_key)
+                except Exception as e:
+                    logger.warning(
+                        "[CONVERSATIONS REPORT SERVICE] Failed to cache shared classification events: %s",
+                        e,
+                    )
+
+        worksheet_specs = self._build_worksheet_specs(
+            report, sections, source_config,
+            start_date, end_date, shared_classification_events,
+        )
+
+        if not worksheet_specs:
+            return []
+
+        max_workers = min(
+            len(worksheet_specs),
+            settings.REPORT_WORKSHEET_PARALLEL_MAX_WORKERS,
+        )
+
+        logger.info(
+            "[CONVERSATIONS REPORT SERVICE] Generating %s worksheets in parallel "
+            "(max_workers=%s) for report %s",
+            len(worksheet_specs),
+            max_workers,
+            report.uuid,
+        )
+
+        worksheets = []
+        worksheet_timeout = settings.REPORT_DATALAKE_REQUEST_TIMEOUT * 3
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_section = {
+                executor.submit(
+                    self._generate_or_load_worksheet,
+                    report,
+                    section_key,
+                    fn,
+                    **kwargs,
+                ): section_key
+                for section_key, fn, kwargs in worksheet_specs
+            }
+
+            for future in as_completed(future_to_section):
+                section_key = future_to_section[future]
+                try:
+                    result = future.result(timeout=worksheet_timeout)
+                except TimeoutError:
+                    logger.error(
+                        "[CONVERSATIONS REPORT SERVICE] Worksheet %s timed out for report %s",
+                        section_key,
+                        report.uuid,
+                    )
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise
+                except Exception as e:
+                    logger.error(
+                        "[CONVERSATIONS REPORT SERVICE] Worksheet %s failed for report %s: %s",
+                        section_key,
+                        report.uuid,
+                        e,
+                    )
+                    raise
+
+                if isinstance(result, list):
+                    worksheets.extend(result)
+                else:
+                    worksheets.append(result)
+
+        return worksheets
+
     def generate(self, report: Report) -> None:
         """
         Start the generation of a conversations report.
@@ -880,7 +1163,12 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            worksheets = self._get_worksheets(report, start_date, end_date)
+            if self._is_optimized_generation_enabled(report):
+                worksheets = self._get_worksheets_optimized(
+                    report, start_date, end_date
+                )
+            else:
+                worksheets = self._get_worksheets(report, start_date, end_date)
             files = file_processor.process(report=report, worksheets=worksheets)
 
         except Exception as e:
@@ -1065,11 +1353,16 @@ class ConversationsReportService(BaseConversationsReportService):
                 report.uuid,
             )
 
-            paginated_events = self.datalake_events_client.get_events(
-                **kwargs,
-                limit=limit,
-                offset=offset,
-            )
+            with ThreadPoolExecutor(max_workers=1) as page_executor:
+                future = page_executor.submit(
+                    self.datalake_events_client.get_events,
+                    **kwargs,
+                    limit=limit,
+                    offset=offset,
+                )
+                paginated_events = future.result(
+                    timeout=settings.REPORT_DATALAKE_REQUEST_TIMEOUT
+                )
 
             if len(paginated_events) == 0 or paginated_events == [{}]:
                 break
@@ -1147,7 +1440,17 @@ class ConversationsReportService(BaseConversationsReportService):
             for future in as_completed(future_to_index):
                 page_index = future_to_index[future]
                 try:
-                    page_events = future.result()
+                    page_events = future.result(
+                        timeout=settings.REPORT_DATALAKE_REQUEST_TIMEOUT
+                    )
+                except TimeoutError:
+                    logger.error(
+                        "[CONVERSATIONS REPORT SERVICE] Page %s timed out for report %s",
+                        page_index,
+                        report.uuid,
+                    )
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise
                 except Exception as e:
                     logger.error(
                         "[CONVERSATIONS REPORT SERVICE] Failed to fetch page %s for report %s. Error: %s",
@@ -1212,6 +1515,56 @@ class ConversationsReportService(BaseConversationsReportService):
         Get datalake events.
         """
         return self.get_datalake_events_in_parallel(report, **kwargs)
+
+    def get_datalake_events_streamed(self, report: Report, **kwargs):
+        """
+        Yield events one page at a time instead of accumulating all in memory.
+        Each yield produces a list[dict] representing one page of results.
+        """
+        limit = self.events_limit_per_page
+        offset = 0
+        current_page = 1
+        page_limit = self.page_limit
+
+        date_start = kwargs.get("date_start")
+        date_end = kwargs.get("date_end")
+
+        if date_start and isinstance(date_start, datetime):
+            kwargs["date_start"] = date_start.isoformat()
+
+        if date_end and isinstance(date_end, datetime):
+            kwargs["date_end"] = date_end.isoformat()
+
+        while True:
+            if current_page >= page_limit:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s has more than %s pages in streamed fetch",
+                    report.uuid,
+                    page_limit,
+                )
+                raise ValueError("Report has more than %s pages" % page_limit)
+
+            report.refresh_from_db(fields=["status"])
+            if report.status != ReportStatus.IN_PROGRESS:
+                raise ValueError("Report %s is not in progress" % report.uuid)
+
+            with ThreadPoolExecutor(max_workers=1) as page_executor:
+                future = page_executor.submit(
+                    self.datalake_events_client.get_events,
+                    **kwargs,
+                    limit=limit,
+                    offset=offset,
+                )
+                paginated_events = future.result(
+                    timeout=settings.REPORT_DATALAKE_REQUEST_TIMEOUT
+                )
+
+            if len(paginated_events) == 0 or paginated_events == [{}]:
+                break
+
+            yield paginated_events
+            offset += limit
+            current_page += 1
 
     def _format_date(self, original_date: str | int, report: Report) -> str:
         """
@@ -1314,8 +1667,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 report.uuid,
             )
 
-            paginated_results = (
-                self.elasticsearch_service.get_flowsrun_results_by_contacts(
+            with ThreadPoolExecutor(max_workers=1) as page_executor:
+                future = page_executor.submit(
+                    self.elasticsearch_service.get_flowsrun_results_by_contacts,
                     project_uuid=report.project.uuid,
                     flow_uuid=flow_uuid,
                     start_date=start_date,
@@ -1325,7 +1679,9 @@ class ConversationsReportService(BaseConversationsReportService):
                     search_after=search_after,
                     include_values=include_values,
                 )
-            )
+                paginated_results = future.result(
+                    timeout=settings.REPORT_DATALAKE_REQUEST_TIMEOUT
+                )
 
             contacts = paginated_results.get("contacts", [])
             pagination = paginated_results.get("pagination", {})

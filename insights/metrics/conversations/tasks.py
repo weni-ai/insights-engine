@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 from uuid import UUID
 
+from celery.exceptions import SoftTimeLimitExceeded
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.conf import settings
@@ -33,7 +34,10 @@ from insights.metrics.conversations.usecases.datalake_check_project_sales_funnel
 logger = logging.getLogger(__name__)
 
 
-@app.task
+@app.task(
+    soft_time_limit=settings.REPORT_GENERATION_SOFT_TIME_LIMIT,
+    time_limit=settings.REPORT_GENERATION_HARD_TIME_LIMIT,
+)
 def generate_conversations_report():
     host = settings.HOSTNAME
 
@@ -118,6 +122,17 @@ def generate_conversations_report():
             elastic_page_size=settings.CONVERSATIONS_REPORT_ELASTIC_PAGE_SIZE,
             elastic_page_limit=settings.CONVERSATIONS_REPORT_ELASTIC_PAGE_LIMIT,
         ).generate(oldest_report)
+    except SoftTimeLimitExceeded:
+        logger.warning(
+            "[ generate_conversations_report task ] Report %s hit soft time limit, marking as interrupted",
+            oldest_report.uuid,
+        )
+        config = oldest_report.config or {}
+        config["interrupted"] = True
+        config["interrupted_at"] = str(timezone.now())
+        config["interrupted_on_host"] = host
+        oldest_report.config = config
+        oldest_report.save(update_fields=["config"])
     except Exception as e:
         logger.error(
             "[ generate_conversations_report task ] Error generating report %s: %s",

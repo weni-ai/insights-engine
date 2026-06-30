@@ -409,6 +409,18 @@ REPORT_GENERATION_TIMEOUT = env.int(
 REPORT_PARALLEL_FETCH_MAX_WORKERS = env.int(
     "REPORT_PARALLEL_FETCH_MAX_WORKERS", default=5
 )
+REPORT_DATALAKE_REQUEST_TIMEOUT = env.int(
+    "REPORT_DATALAKE_REQUEST_TIMEOUT", default=120
+)
+REPORT_WORKSHEET_PARALLEL_MAX_WORKERS = env.int(
+    "REPORT_WORKSHEET_PARALLEL_MAX_WORKERS", default=4
+)
+REPORT_GENERATION_SOFT_TIME_LIMIT = env.int(
+    "REPORT_GENERATION_SOFT_TIME_LIMIT", default=2700  # 45 minutes
+)
+REPORT_GENERATION_HARD_TIME_LIMIT = env.int(
+    "REPORT_GENERATION_HARD_TIME_LIMIT", default=3600  # 60 minutes
+)
 
 SEND_EMAILS = env.bool("SEND_EMAILS", default=False)
 
@@ -588,6 +600,12 @@ DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
 CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY = env.str(
     "CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY",
     default="insightsContactsWorksheetDetailedList",
+)
+
+# Optimized report generation (checkpointing, parallel worksheets, streaming, timeouts)
+CONVERSATIONS_REPORT_OPTIMIZED_GENERATION_FEATURE_FLAG_KEY = env.str(
+    "CONVERSATIONS_REPORT_OPTIMIZED_GENERATION_FEATURE_FLAG_KEY",
+    default="insightsConversationsReportOptimizedGeneration",
 )
 
 # WhatsApp Template IDs
