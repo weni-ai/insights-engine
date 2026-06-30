@@ -172,13 +172,19 @@ def timeout_reports():
         report_count,
     )
 
+    timed_out_reports = list(in_progress_reports)
+    completed_at = timezone.now()
+    timeout_errors = {"timeout": "Report generation timed out"}
+
+    for report in timed_out_reports:
+        report.status = ReportStatus.FAILED
+        report.completed_at = completed_at
+        report.errors = timeout_errors
+        report.save(update_fields=["status", "completed_at", "errors"])
+
     service = _create_conversations_report_service()
 
-    for report in in_progress_reports:
-        report.status = ReportStatus.FAILED
-        report.completed_at = timezone.now()
-        report.errors = {"timeout": "Report generation timed out"}
-        report.save(update_fields=["status", "completed_at", "errors"])
+    for report in timed_out_reports:
         service.send_email(report, [], is_error=True)
 
     logger.info("[ timeout_reports task ] Timed out %s reports", report_count)
