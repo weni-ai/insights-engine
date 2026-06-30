@@ -1,5 +1,6 @@
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
+
 from uuid import uuid4
 
 from django.test import TestCase, override_settings
@@ -11,8 +12,9 @@ from insights.metrics.conversations.tasks import (
     timeout_reports,
 )
 from insights.projects.models import Project
-from insights.reports.choices import ReportStatus
+from insights.reports.choices import ReportFormat, ReportSource, ReportStatus
 from insights.reports.models import Report
+from insights.users.models.user import User
 
 
 class TestGenerateConversationsReport(TestCase):
@@ -178,25 +180,30 @@ class TestGenerateConversationsReport(TestCase):
 class TestTimeoutReports(TestCase):
     def setUp(self):
         self.project = Project.objects.create(name="Test Project")
+        self.user = User.objects.create(email="test@test.com")
 
-    @override_settings(REPORT_GENERATION_TIMEOUT=3600)
-    def test_marks_timed_out_reports_as_failed(self):
-        timed_out_report = Report.objects.create(
+    @patch("insights.metrics.conversations.tasks._create_conversations_report_service")
+    def test_timeout_reports_marks_reports_as_failed_and_sends_email(
+        self, mock_create_service
+    ):
+        mock_service = Mock()
+        mock_create_service.return_value = mock_service
+        report = Report.objects.create(
             project=self.project,
-            source="CONVERSATIONS_DASHBOARD",
-            format="CSV",
+            source=ReportSource.CONVERSATIONS_DASHBOARD,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
             status=ReportStatus.IN_PROGRESS,
-            started_at=timezone.now() - timedelta(seconds=7200),
+            started_at=timezone.now() - timedelta(hours=2),
         )
-
         timeout_reports()
-
-        timed_out_report.refresh_from_db()
-        self.assertEqual(timed_out_report.status, ReportStatus.FAILED)
-        self.assertIsNotNone(timed_out_report.completed_at)
-        self.assertEqual(
-            timed_out_report.errors, {"timeout": "Report generation timed out"}
-        )
+        report.refresh_from_db()
+        self.assertEqual(report.status, ReportStatus.FAILED)
+        self.assertIsNotNone(report.completed_at)
+        self.assertEqual(report.errors, {"timeout": "Report generation timed out"})
+        mock_service.send_email.assert_called_once_with(report, [], is_error=True)
 
     @override_settings(REPORT_GENERATION_TIMEOUT=3600)
     def test_returns_early_when_no_in_progress_reports(self):
