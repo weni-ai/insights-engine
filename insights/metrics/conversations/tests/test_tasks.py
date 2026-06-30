@@ -185,9 +185,7 @@ class TestTimeoutReports(TestCase):
     def test_timeout_reports_marks_reports_as_failed_and_sends_email(
         self, mock_create_service
     ):
-        mock_service = mock_create_service.return_value
-
-        report = Report.objects.create(
+        Report.objects.create(
             project=self.project,
             source=ReportSource.CONVERSATIONS_DASHBOARD,
             source_config={},
