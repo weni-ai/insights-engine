@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from django.db.models import Q
@@ -139,7 +139,8 @@ def generate_conversations_report():
 @app.task
 def timeout_reports():
     """
-    Timeout reports that are in progress for more than REPORT_GENERATION_TIMEOUT seconds.
+    Timeout reports that are in progress for more than REPORT_GENERATION_TIMEOUT seconds,
+    or whose heartbeat has gone stale (likely OOMKill or unexpected worker termination).
 
     This is a safety mechanism to avoid reports being stuck in progress indefinitely,
     preventing other reports from being generated.
@@ -151,8 +152,6 @@ def timeout_reports():
 
     in_progress_reports: QuerySet[Report] = Report.objects.filter(
         status=ReportStatus.IN_PROGRESS,
-        started_at__lt=timezone.now()
-        - timedelta(seconds=settings.REPORT_GENERATION_TIMEOUT),
     )
 
     if not in_progress_reports.exists():
@@ -161,19 +160,60 @@ def timeout_reports():
         )
         return
 
-    logger.info(
-        "[ timeout_reports task ] Found %s in progress reports",
-        in_progress_reports.count(),
+    now = timezone.now()
+    generation_timeout_threshold = now - timedelta(
+        seconds=settings.REPORT_GENERATION_TIMEOUT
+    )
+    heartbeat_timeout_threshold = now - timedelta(
+        seconds=settings.REPORT_HEARTBEAT_TIMEOUT
     )
 
+    timed_out_count = 0
+    heartbeat_stale_count = 0
+
     for report in in_progress_reports:
-        report.status = ReportStatus.FAILED
-        report.completed_at = timezone.now()
-        report.errors = {"timeout": "Report generation timed out"}
-        report.save(update_fields=["status", "completed_at", "errors"])
+        last_heartbeat_str = (report.config or {}).get("last_heartbeat")
+
+        if last_heartbeat_str:
+            try:
+                last_heartbeat = datetime.fromisoformat(last_heartbeat_str)
+                if timezone.is_naive(last_heartbeat):
+                    last_heartbeat = timezone.make_aware(last_heartbeat)
+
+                if last_heartbeat < heartbeat_timeout_threshold:
+                    report.status = ReportStatus.FAILED
+                    report.completed_at = now
+                    report.errors = {
+                        "heartbeat_timeout": (
+                            "Worker process likely terminated unexpectedly "
+                            "(possible OOMKill). Last heartbeat: %s"
+                            % last_heartbeat_str
+                        )
+                    }
+                    report.save(
+                        update_fields=["status", "completed_at", "errors"]
+                    )
+                    heartbeat_stale_count += 1
+                    logger.warning(
+                        "[ timeout_reports task ] Report %s failed due to stale heartbeat (last: %s)",
+                        report.uuid,
+                        last_heartbeat_str,
+                    )
+                    continue
+            except (ValueError, TypeError):
+                pass
+
+        if report.started_at and report.started_at < generation_timeout_threshold:
+            report.status = ReportStatus.FAILED
+            report.completed_at = now
+            report.errors = {"timeout": "Report generation timed out"}
+            report.save(update_fields=["status", "completed_at", "errors"])
+            timed_out_count += 1
 
     logger.info(
-        "[ timeout_reports task ] Timed out %s reports", in_progress_reports.count()
+        "[ timeout_reports task ] Timed out %s reports, detected %s stale heartbeats",
+        timed_out_count,
+        heartbeat_stale_count,
     )
 
 
