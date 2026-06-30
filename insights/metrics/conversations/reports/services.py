@@ -41,7 +41,10 @@ from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportFile,
     ConversationsReportWorksheet,
 )
-from insights.metrics.conversations.reports.file_processors import get_file_processor
+from insights.metrics.conversations.reports.file_processors import (
+    get_file_processor,
+    StreamingXLSXFileProcessor,
+)
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
@@ -408,6 +411,25 @@ class ConversationsReportService(BaseConversationsReportService):
         except Exception as e:
             logger.error(
                 "[CONVERSATIONS REPORT SERVICE] Feature flag check failed: %s", e
+            )
+            capture_exception(e)
+            return False
+
+    def _is_streaming_mode_enabled(self, report: Report) -> bool:
+        attributes = {
+            "projectUUID": str(report.project.uuid),
+        }
+        if report.requested_by:
+            attributes["userEmail"] = report.requested_by.email
+        try:
+            return is_feature_active_for_attributes(
+                settings.CONVERSATIONS_REPORT_STREAMING_MODE_FEATURE_FLAG_KEY,
+                attributes=attributes,
+            )
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Streaming mode feature flag check failed: %s",
+                e,
             )
             capture_exception(e)
             return False
@@ -863,7 +885,16 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         report = self._update_report_status(report)
-        file_processor = get_file_processor(report.format)
+        use_streaming = (
+            report.format == ReportFormat.XLSX
+            and self._is_streaming_mode_enabled(report)
+        )
+
+        if use_streaming:
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Using streaming mode for report %s",
+                report.uuid,
+            )
 
         try:
             start_date, end_date = self._validate_dates(report)
@@ -880,8 +911,12 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            worksheets = self._get_worksheets(report, start_date, end_date)
-            files = file_processor.process(report=report, worksheets=worksheets)
+            if use_streaming:
+                files = self._generate_streaming(report, start_date, end_date)
+            else:
+                file_processor = get_file_processor(report.format)
+                worksheets = self._get_worksheets(report, start_date, end_date)
+                files = file_processor.process(report=report, worksheets=worksheets)
 
         except Exception as e:
             logger.error(
@@ -1212,6 +1247,63 @@ class ConversationsReportService(BaseConversationsReportService):
         Get datalake events.
         """
         return self.get_datalake_events_in_parallel(report, **kwargs)
+
+    def _iter_datalake_events(self, report: Report, **kwargs):
+        """
+        Generator that yields datalake events page by page without
+        accumulating all results in memory. Used by the streaming
+        report generation path.
+        """
+        limit = self.events_limit_per_page
+        offset = 0
+        current_page = 1
+        page_limit = self.page_limit
+
+        date_start = kwargs.get("date_start")
+        date_end = kwargs.get("date_end")
+
+        if date_start and isinstance(date_start, datetime):
+            kwargs["date_start"] = date_start.isoformat()
+
+        if date_end and isinstance(date_end, datetime):
+            kwargs["date_end"] = date_end.isoformat()
+
+        while True:
+            if current_page >= page_limit:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s has more than %s pages (streaming). "
+                    "Finishing datalake events retrieval",
+                    report.uuid,
+                    page_limit,
+                )
+                raise ValueError("Report has more than %s pages" % page_limit)
+
+            report.refresh_from_db(fields=["status"])
+
+            if report.status != ReportStatus.IN_PROGRESS:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress (streaming). "
+                    "Finishing datalake events retrieval",
+                    report.uuid,
+                )
+                raise ValueError("Report %s is not in progress" % report.uuid)
+
+            if current_page % 10 == 0:
+                self._update_heartbeat(report)
+
+            paginated_events = self.datalake_events_client.get_events(
+                **kwargs,
+                limit=limit,
+                offset=offset,
+            )
+
+            if len(paginated_events) == 0 or paginated_events == [{}]:
+                break
+
+            yield from paginated_events
+
+            offset += limit
+            current_page += 1
 
     def _format_date(self, original_date: str | int, report: Report) -> str:
         """
@@ -2424,6 +2516,47 @@ class ConversationsReportService(BaseConversationsReportService):
             name=worksheet_name,
             data=data,
         )
+
+    def _generate_streaming(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list:
+        """
+        Generate an XLSX report by writing to a temp file on disk instead
+        of in-memory. Reuses the same ``_get_worksheets()`` pipeline so all
+        section logic stays in one place; only the file-writing strategy
+        changes.
+        """
+        worksheets = self._get_worksheets(report, start_date, end_date)
+
+        processor = StreamingXLSXFileProcessor()
+        workbook, tmp_path = processor.create_workbook(report)
+
+        try:
+            for ws in worksheets:
+                if not ws.data:
+                    continue
+                headers = list(ws.data[0].keys())
+                row_count = processor.write_worksheet(
+                    workbook, ws.name, headers, ws.data
+                )
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Streaming worksheet '%s' wrote %s rows for report %s",
+                    ws.name,
+                    row_count,
+                    report.uuid,
+                )
+
+            files = processor.finalize(workbook, tmp_path, report)
+        except Exception:
+            workbook.close()
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            raise
+
+        return files
 
     def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
         """
