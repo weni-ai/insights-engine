@@ -18,10 +18,14 @@ class ConversationsReportWorksheet:
 class ConversationsReportFile:
     """
     File for the conversations report.
+
+    Provide either in-memory ``content`` or an on-disk ``local_path`` for
+    streaming uploads. Only one should be set.
     """
 
     name: str
-    content: str
+    content: bytes | None = None
+    local_path: str | None = None
 
 
 @dataclass(frozen=True)

@@ -506,6 +506,26 @@ class ConversationsReportService(BaseConversationsReportService):
 
             del self.cache_keys[report_uuid]
 
+    def _read_report_file_bytes(self, file: ConversationsReportFile) -> bytes:
+        """
+        Read report file bytes from memory or disk.
+        """
+        if file.content is not None:
+            return file.content
+
+        if file.local_path:
+            with open(file.local_path, "rb") as report_file:
+                return report_file.read()
+
+        raise ValueError("Report file has no content or local_path")
+
+    def _cleanup_report_file(self, file: ConversationsReportFile) -> None:
+        """
+        Remove a temp file created during streaming report generation.
+        """
+        if file.local_path and os.path.exists(file.local_path):
+            os.unlink(file.local_path)
+
     def zip_files(
         self, files: list[ConversationsReportFile]
     ) -> ConversationsReportFile:
@@ -537,7 +557,8 @@ class ConversationsReportService(BaseConversationsReportService):
                             raise ValueError("Failed to generate a unique name")
 
                     names_used.add(name)
-                    zip_file.writestr(name, file.content)
+                    zip_file.writestr(name, self._read_report_file_bytes(file))
+                    self._cleanup_report_file(file)
 
             zip_content = zip_buffer.getvalue()
 
@@ -553,14 +574,25 @@ class ConversationsReportService(BaseConversationsReportService):
         extension = file.name.split(".")[-1]
         obj_key = f"reports/conversations/{str(uuid.uuid4())}.{extension}"
 
-        # Wrap content in BytesIO to make it file-like
-        file_obj = io.BytesIO(file.content)
-
-        s3.upload_fileobj(
-            file_obj,
-            settings.S3_BUCKET_NAME,
-            obj_key,
-        )
+        try:
+            if file.local_path:
+                with open(file.local_path, "rb") as report_file:
+                    s3.upload_fileobj(
+                        report_file,
+                        settings.S3_BUCKET_NAME,
+                        obj_key,
+                    )
+            elif file.content is not None:
+                file_obj = io.BytesIO(file.content)
+                s3.upload_fileobj(
+                    file_obj,
+                    settings.S3_BUCKET_NAME,
+                    obj_key,
+                )
+            else:
+                raise ValueError("Report file has no content or local_path")
+        finally:
+            self._cleanup_report_file(file)
 
         return obj_key
 
@@ -630,11 +662,14 @@ class ConversationsReportService(BaseConversationsReportService):
                 email.content_subtype = "html"
 
                 if reports_file and not settings.USE_S3:
-                    email.attach(
-                        reports_file.name,
-                        reports_file.content,
-                        "application/zip",
-                    )
+                    try:
+                        email.attach(
+                            reports_file.name,
+                            self._read_report_file_bytes(reports_file),
+                            "application/zip",
+                        )
+                    finally:
+                        self._cleanup_report_file(reports_file)
 
                 email.send(fail_silently=False)
         except Exception as e:

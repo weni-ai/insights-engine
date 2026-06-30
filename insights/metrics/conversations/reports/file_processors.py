@@ -216,18 +216,18 @@ class StreamingXLSXFileProcessor:
         self, workbook: xlsxwriter.Workbook, tmp_path: str, report: Report
     ) -> list[ConversationsReportFile]:
         """
-        Close the workbook, read the file content, clean up, and return
-        the report file.
+        Close the workbook and return a file reference backed by the temp
+        path on disk. The caller uploads or reads the file and is responsible
+        for deleting ``local_path``.
         """
         workbook.close()
 
         with override(report.requested_by.language):
             file_name = gettext("Conversations dashboard report")
 
-        try:
-            with open(tmp_path, "rb") as f:
-                content = f.read()
-        finally:
-            os.unlink(tmp_path)
-
-        return [ConversationsReportFile(name=f"{file_name}.xlsx", content=content)]
+        return [
+            ConversationsReportFile(
+                name=f"{file_name}.xlsx",
+                local_path=tmp_path,
+            )
+        ]
