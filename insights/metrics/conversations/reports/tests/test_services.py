@@ -5304,9 +5304,9 @@ class TestIterDatalakeEventsStreaming(TestCase):
 
         def refresh_side_effect(*args, **kwargs):
             refresh_count["value"] += 1
+            original_refresh(*args, **kwargs)
             if refresh_count["value"] > 2:
                 report.status = ReportStatus.FAILED
-            return original_refresh(*args, **kwargs)
 
         with patch.object(report, "refresh_from_db", side_effect=refresh_side_effect):
             with self.assertRaises(ValueError):
