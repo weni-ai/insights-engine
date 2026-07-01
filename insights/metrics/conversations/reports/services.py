@@ -12,6 +12,7 @@ import zipfile
 import boto3
 import uuid
 import os
+import tempfile
 
 from django.utils.crypto import get_random_string
 from django.core.mail import EmailMessage
@@ -102,6 +103,41 @@ def serialize_filters_for_json(filters: dict) -> dict:
             serialized_filters[key] = value
 
     return serialized_filters
+
+
+class _ReplayableDatalakeEventsSpool:
+    """
+    Disk-backed event spool that supports multiple iterations over the same
+    datalake fetch without keeping all events in memory.
+    """
+
+    def __init__(self, path: str):
+        self.path = path
+
+    @classmethod
+    def from_parallel_fetch(cls, service, report: Report, **kwargs):
+        fd, path = tempfile.mkstemp(suffix=".jsonl")
+        os.close(fd)
+        try:
+            with open(path, "w") as spool_file:
+                for event in service._iter_datalake_events(report, **kwargs):
+                    spool_file.write(json.dumps(event, default=str) + "\n")
+        except Exception:
+            if os.path.exists(path):
+                os.unlink(path)
+            raise
+        return cls(path)
+
+    def __iter__(self) -> Iterator[dict]:
+        with open(self.path) as spool_file:
+            for line in spool_file:
+                line = line.strip()
+                if line:
+                    yield json.loads(line)
+
+    def cleanup(self) -> None:
+        if os.path.exists(self.path):
+            os.unlink(self.path)
 
 
 class BaseConversationsReportService(ABC):
@@ -388,6 +424,82 @@ class ConversationsReportService(BaseConversationsReportService):
 
         self.cache_keys = {}
         self._use_streaming_events = False
+        self._streaming_spools: list[_ReplayableDatalakeEventsSpool] = []
+
+    def _normalize_datalake_kwargs(self, kwargs: dict) -> None:
+        """
+        Convert datetime filters to ISO strings for datalake API calls.
+        """
+        date_start = kwargs.get("date_start")
+        date_end = kwargs.get("date_end")
+
+        if date_start and isinstance(date_start, datetime):
+            kwargs["date_start"] = date_start.isoformat()
+
+        if date_end and isinstance(date_end, datetime):
+            kwargs["date_end"] = date_end.isoformat()
+
+    def _fetch_page_indices(
+        self,
+        report: Report,
+        page_indices: range,
+        **kwargs,
+    ) -> list[list[dict] | None]:
+        """
+        Fetch the given page indices in parallel, preserving order.
+        """
+        page_indices_list = list(page_indices)
+        if not page_indices_list:
+            return []
+
+        limit = self.events_limit_per_page
+        self._normalize_datalake_kwargs(kwargs)
+        max_workers = min(
+            len(page_indices_list), settings.REPORT_PARALLEL_FETCH_MAX_WORKERS
+        )
+
+        def fetch_page(page_index: int) -> list[dict]:
+            offset = page_index * limit
+            return self.datalake_events_client.get_events(
+                **kwargs,
+                limit=limit,
+                offset=offset,
+            )
+
+        results: list[list[dict] | None] = [None] * len(page_indices_list)
+        index_to_position = {
+            page_index: position
+            for position, page_index in enumerate(page_indices_list)
+        }
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_index = {
+                executor.submit(fetch_page, page_index): page_index
+                for page_index in page_indices_list
+            }
+
+            for future in as_completed(future_to_index):
+                page_index = future_to_index[future]
+                try:
+                    page_events = future.result()
+                except Exception as e:
+                    logger.error(
+                        "[CONVERSATIONS REPORT SERVICE] Failed to fetch page %s for report %s. Error: %s",
+                        page_index,
+                        report.uuid,
+                        e,
+                    )
+                    raise
+
+                if page_events and page_events != [{}]:
+                    results[index_to_position[page_index]] = page_events
+
+        return results
+
+    def _cleanup_streaming_spools(self) -> None:
+        for spool in self._streaming_spools:
+            spool.cleanup()
+        self._streaming_spools = []
 
     def _rows_with_empty_fallback(
         self, rows: Iterable[dict], empty_row: dict
@@ -812,20 +924,39 @@ class ConversationsReportService(BaseConversationsReportService):
 
         conversation_classification_events = None
 
-        if not self._use_streaming_events and (
+        needs_classification = (
             "RESOLUTIONS" in sections or "CONTACTS" in sections
-        ):
-            # Fetching only once for resolutions and contacts worksheets
-            # instead of fetching for each worksheet
-            conversation_classification_events = self.get_datalake_events(
-                report=report,
-                project=report.project.uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name="weni_nexus_data",
-                key="conversation_classification",
-                table="conversation_classification",
-            )
+        )
+
+        if needs_classification:
+            classification_fetch_kwargs = {
+                "project": report.project.uuid,
+                "date_start": start_date,
+                "date_end": end_date,
+                "event_name": "weni_nexus_data",
+                "key": "conversation_classification",
+                "table": "conversation_classification",
+            }
+
+            if self._use_streaming_events:
+                if "RESOLUTIONS" in sections and "CONTACTS" in sections:
+                    spool = _ReplayableDatalakeEventsSpool.from_parallel_fetch(
+                        self,
+                        report,
+                        **classification_fetch_kwargs,
+                    )
+                    self._streaming_spools.append(spool)
+                    conversation_classification_events = spool
+                else:
+                    conversation_classification_events = self.get_datalake_events(
+                        report=report,
+                        **classification_fetch_kwargs,
+                    )
+            else:
+                conversation_classification_events = self.get_datalake_events(
+                    report=report,
+                    **classification_fetch_kwargs,
+                )
 
         worksheets_mapping = {
             "RESOLUTIONS": (
@@ -1087,14 +1218,7 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get events count.
         """
-        date_start = kwargs.get("date_start")
-        date_end = kwargs.get("date_end")
-
-        if date_start and isinstance(date_start, datetime):
-            kwargs["date_start"] = date_start.isoformat()
-
-        if date_end and isinstance(date_end, datetime):
-            kwargs["date_end"] = date_end.isoformat()
+        self._normalize_datalake_kwargs(kwargs)
 
         result = self.datalake_events_client.get_events_count(**kwargs)
 
@@ -1130,14 +1254,7 @@ class ConversationsReportService(BaseConversationsReportService):
         current_page = 1
         page_limit = self.page_limit
 
-        date_start = kwargs.get("date_start")
-        date_end = kwargs.get("date_end")
-
-        if date_start and isinstance(date_start, datetime):
-            kwargs["date_start"] = date_start.isoformat()
-
-        if date_end and isinstance(date_end, datetime):
-            kwargs["date_end"] = date_end.isoformat()
+        self._normalize_datalake_kwargs(kwargs)
 
         while True:
             if current_page >= page_limit:
@@ -1211,15 +1328,6 @@ class ConversationsReportService(BaseConversationsReportService):
             )
             raise ValueError("Report %s is not in progress" % report.uuid)
 
-        date_start = kwargs.get("date_start")
-        date_end = kwargs.get("date_end")
-
-        if date_start and isinstance(date_start, datetime):
-            kwargs["date_start"] = date_start.isoformat()
-
-        if date_end and isinstance(date_end, datetime):
-            kwargs["date_end"] = date_end.isoformat()
-
         max_workers = min(total_pages, settings.REPORT_PARALLEL_FETCH_MAX_WORKERS)
 
         logger.info(
@@ -1229,40 +1337,9 @@ class ConversationsReportService(BaseConversationsReportService):
             report.uuid,
         )
 
-        def fetch_page(page_index: int) -> list[dict]:
-            offset = page_index * limit
-            return self.datalake_events_client.get_events(
-                **kwargs,
-                limit=limit,
-                offset=offset,
-            )
+        results = self._fetch_page_indices(report, range(total_pages), **kwargs)
 
-        results: list[list[dict] | None] = [None] * total_pages
-
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_index = {
-                executor.submit(fetch_page, i): i for i in range(total_pages)
-            }
-
-            for future in as_completed(future_to_index):
-                page_index = future_to_index[future]
-                try:
-                    page_events = future.result()
-                except Exception as e:
-                    logger.error(
-                        "[CONVERSATIONS REPORT SERVICE] Failed to fetch page %s for report %s. Error: %s",
-                        page_index,
-                        report.uuid,
-                        e,
-                    )
-                    raise
-
-                if page_events and page_events != [{}]:
-                    results[page_index] = page_events
-
-        events = [event for page in results if page is not None for event in page]
-
-        return events
+        return [event for page in results if page is not None for event in page]
 
     def get_datalake_events_in_parallel(self, report: Report, **kwargs) -> list[dict]:
         """
@@ -1317,25 +1394,17 @@ class ConversationsReportService(BaseConversationsReportService):
             return self._iter_datalake_events(report, **kwargs)
         return self.get_datalake_events_in_parallel(report, **kwargs)
 
-    def _iter_datalake_events(self, report: Report, **kwargs):
+    def _iter_datalake_events_sequential(self, report: Report, **kwargs):
         """
-        Generator that yields datalake events page by page without
-        accumulating all results in memory. Used by the streaming
-        report generation path.
+        Generator that yields datalake events one page at a time.
+        Used as a fallback when the count query fails.
         """
         limit = self.events_limit_per_page
         offset = 0
         current_page = 1
         page_limit = self.page_limit
 
-        date_start = kwargs.get("date_start")
-        date_end = kwargs.get("date_end")
-
-        if date_start and isinstance(date_start, datetime):
-            kwargs["date_start"] = date_start.isoformat()
-
-        if date_end and isinstance(date_end, datetime):
-            kwargs["date_end"] = date_end.isoformat()
+        self._normalize_datalake_kwargs(kwargs)
 
         while True:
             if current_page >= page_limit:
@@ -1376,6 +1445,79 @@ class ConversationsReportService(BaseConversationsReportService):
 
             offset += limit
             current_page += 1
+
+    def _iter_datalake_events(self, report: Report, **kwargs):
+        """
+        Generator that yields datalake events page by page without
+        accumulating all results in memory. Used by the streaming
+        report generation path.
+        """
+        try:
+            total_count = self.get_events_count(**kwargs)
+        except Exception as e:
+            logger.warning(
+                "[CONVERSATIONS REPORT SERVICE] Failed to get events count for report %s, falling back to sequential streaming. Error: %s",
+                report.uuid,
+                e,
+            )
+            yield from self._iter_datalake_events_sequential(report, **kwargs)
+            return
+
+        if total_count == 0:
+            return
+
+        limit = self.events_limit_per_page
+        page_limit = self.page_limit
+        total_pages = math.ceil(total_count / limit)
+
+        if total_pages >= page_limit:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Report %s has more than %s pages (streaming). "
+                "Finishing datalake events retrieval",
+                report.uuid,
+                page_limit,
+            )
+            raise ValueError("Report has more than %s pages" % page_limit)
+
+        report.refresh_from_db(fields=["status"])
+
+        if report.status != ReportStatus.IN_PROGRESS:
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress (streaming). "
+                "Finishing datalake events retrieval",
+                report.uuid,
+            )
+            raise ValueError("Report %s is not in progress" % report.uuid)
+
+        max_workers = settings.REPORT_PARALLEL_FETCH_MAX_WORKERS
+
+        for batch_start in range(0, total_pages, max_workers):
+            batch_end = min(batch_start + max_workers, total_pages)
+
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Fetching pages %s-%s in parallel (streaming) for report %s",
+                batch_start + 1,
+                batch_end,
+                report.uuid,
+            )
+
+            batch_results = self._fetch_page_indices(
+                report, range(batch_start, batch_end), **kwargs
+            )
+
+            report.refresh_from_db(fields=["status"])
+
+            if report.status != ReportStatus.IN_PROGRESS:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress (streaming). "
+                    "Finishing datalake events retrieval",
+                    report.uuid,
+                )
+                raise ValueError("Report %s is not in progress" % report.uuid)
+
+            for page_events in batch_results:
+                if page_events:
+                    yield from page_events
 
     def _format_date(self, original_date: str | int, report: Report) -> str:
         """
@@ -2714,6 +2856,7 @@ class ConversationsReportService(BaseConversationsReportService):
         and writing worksheet rows directly to a temp file on disk.
         """
         self._use_streaming_events = True
+        self._streaming_spools = []
         processor = StreamingXLSXFileProcessor()
         workbook, tmp_path = processor.create_workbook(report)
 
@@ -2743,6 +2886,7 @@ class ConversationsReportService(BaseConversationsReportService):
             raise
         finally:
             self._use_streaming_events = False
+            self._cleanup_streaming_spools()
 
         return files
 
