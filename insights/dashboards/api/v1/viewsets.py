@@ -37,6 +37,7 @@ from insights.metrics.meta.tasks import (
     check_dashboards_marketing_messages_status_for_project,
 )
 from insights.projects.models import Project
+from insights.projects.services.indexer_activation import is_project_indexer_active
 from insights.projects.tasks import (
     check_nexus_multi_agents_status,
     handle_project_created_with_inline_agent_switch,
@@ -106,12 +107,12 @@ class DashboardViewSet(
             check_dashboards_marketing_messages_status_for_project.delay(project_uuid)
 
     def list(self, request, *args, **kwargs):
+        project = None
+
         if project_uuid := request.query_params.get("project"):
             project = get_object_or_404(Project, uuid=project_uuid)
+            is_indexer_active = is_project_indexer_active(project)
             is_nexus_multi_agents_active = project.is_nexus_multi_agents_active
-            is_allowed = (
-                project.is_allowed or str(project_uuid) in settings.PROJECT_ALLOW_LIST
-            )
 
             if not is_nexus_multi_agents_active:
                 check_nexus_multi_agents_status.delay(project_uuid)
@@ -119,13 +120,24 @@ class DashboardViewSet(
             if (
                 settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION
                 and is_nexus_multi_agents_active
-                and not is_allowed
+                and not is_indexer_active
             ):
                 handle_project_created_with_inline_agent_switch.delay(project_uuid)
 
             self._check_marketing_messages_status(project_uuid)
 
-        return super().list(request, *args, **kwargs)
+        response = super().list(request, *args, **kwargs)
+
+        if project is not None and isinstance(response.data, dict) and "results" in response.data:
+            response.data = {
+                "count": response.data["count"],
+                "next": response.data["next"],
+                "previous": response.data["previous"],
+                "is_indexer_active": is_indexer_active,
+                "results": response.data["results"],
+            }
+
+        return response
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)

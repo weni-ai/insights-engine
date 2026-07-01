@@ -326,6 +326,58 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertNotIn(str(dashboard_3.uuid), response_dashboards)
 
     @with_project_auth
+    def test_list_dashboards_includes_is_indexer_active_false(self):
+        self.project.is_allowed = False
+        self.project.save(update_fields=["is_allowed"])
+
+        with patch(
+            "insights.projects.services.indexer_activation.settings"
+        ) as mock_settings:
+            mock_settings.PROJECT_ALLOW_LIST = []
+
+            response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["is_indexer_active"])
+
+    @with_project_auth
+    def test_list_dashboards_includes_is_indexer_active_true_when_allowed(self):
+        self.project.is_allowed = True
+        self.project.save(update_fields=["is_allowed"])
+
+        with patch(
+            "insights.projects.services.indexer_activation.settings"
+        ) as mock_settings:
+            mock_settings.PROJECT_ALLOW_LIST = []
+
+            response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["is_indexer_active"])
+
+    @with_project_auth
+    def test_list_dashboards_includes_is_indexer_active_true_when_in_allow_list(self):
+        self.project.is_allowed = False
+        self.project.save(update_fields=["is_allowed"])
+
+        with patch(
+            "insights.projects.services.indexer_activation.settings"
+        ) as mock_settings:
+            mock_settings.PROJECT_ALLOW_LIST = [str(self.project.uuid)]
+
+            response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["is_indexer_active"])
+
+    @with_project_auth
+    def test_list_dashboards_without_project_does_not_include_is_indexer_active(self):
+        response = self.list()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("is_indexer_active", response.data)
+
+    @with_project_auth
     def test_update_dashboard(self):
         dashboard = Dashboard.objects.create(
             name="Test Dashboard",

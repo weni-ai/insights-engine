@@ -195,7 +195,9 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             "project-verify-project-indexer", kwargs={"pk": self.project.uuid}
         )
 
-        with patch("insights.projects.viewsets.settings") as mock_settings:
+        with patch(
+            "insights.projects.services.indexer_activation.settings"
+        ) as mock_settings:
             mock_settings.PROJECT_ALLOW_LIST = [str(self.project.uuid)]
 
             response = self.client.get(url)
@@ -213,7 +215,9 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.project.is_allowed = True
         self.project.save()
 
-        with patch("insights.projects.viewsets.settings") as mock_settings:
+        with patch(
+            "insights.projects.services.indexer_activation.settings"
+        ) as mock_settings:
             mock_settings.PROJECT_ALLOW_LIST = []
 
             response = self.client.get(url)
@@ -231,7 +235,9 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.project.is_allowed = False
         self.project.save()
 
-        with patch("insights.projects.viewsets.settings") as mock_settings:
+        with patch(
+            "insights.projects.services.indexer_activation.settings"
+        ) as mock_settings:
             mock_settings.PROJECT_ALLOW_LIST = []
 
             response = self.client.get(url)
