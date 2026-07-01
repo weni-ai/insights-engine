@@ -5448,6 +5448,8 @@ class TestStreamingPrefetch(TestCase):
         self.assertFalse(os.path.exists(spool_paths[0]))
         self.assertEqual(self.service._streaming_spools, [])
 
+
+class TestGetDatalakeEventsInParallel(TestCase):
     def setUp(self):
         self.service = ConversationsReportService(
             elasticsearch_service=ConversationsElasticsearchService(
