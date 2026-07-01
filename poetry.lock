@@ -3253,13 +3253,13 @@ pytest = ">=8.4.0,<9.0.0"
 
 [[package]]
 name = "weni-eda"
-version = "0.1.1"
+version = "0.2.0a6"
 description = ""
 optional = false
-python-versions = "<4.0,>=3.10"
+python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_eda-0.1.1-py3-none-any.whl", hash = "sha256:24953f43b01976cd90345931c1552307d27d1f709ebd1792fa840126c7699cb8"},
-    {file = "weni_eda-0.1.1.tar.gz", hash = "sha256:f95934fcf27f3dd2aaadb96e16826a73fb5d0ef0e7cca24a4b0ccce026449f82"},
+    {file = "weni_eda-0.2.0a6-py3-none-any.whl", hash = "sha256:753ad4e3a57941b09093b50e404701a2aeac3e4a127be19da91491157a7fda6b"},
+    {file = "weni_eda-0.2.0a6.tar.gz", hash = "sha256:ec33a954578db252900ee51f1faa5e02357912bb137e90fe9041da7a6321d773"},
 ]
 
 [package.dependencies]
@@ -3619,4 +3619,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "fcbd53fd5aa8bd2a7a5fc28fe830a913190d04bdeb247731cd65264f8a123812"
+content-hash = "1ad6102c16d10227fc53f5dcb5f26bb9c454c055eb02812745fd6fe227d4e58a"
