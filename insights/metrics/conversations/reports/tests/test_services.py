@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import os
 from unittest.mock import MagicMock, patch
 import uuid
 
@@ -2826,6 +2827,26 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertIn("reports/conversations/", obj_key)
         self.assertIn(".csv", obj_key)
         mock_s3_client.upload_fileobj.assert_called_once()
+
+    @patch("boto3.client")
+    def test_upload_file_to_s3_from_local_path(self, mock_boto3_client):
+        """Test upload_file_to_s3 streams from disk without loading into memory."""
+        import tempfile
+
+        mock_s3_client = MagicMock()
+        mock_boto3_client.return_value = mock_s3_client
+
+        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp_file:
+            tmp_file.write(b"xlsx content")
+            tmp_path = tmp_file.name
+
+        file = ConversationsReportFile(name="report.xlsx", local_path=tmp_path)
+        obj_key = self.service.upload_file_to_s3(file)
+
+        self.assertIn("reports/conversations/", obj_key)
+        self.assertIn(".xlsx", obj_key)
+        mock_s3_client.upload_fileobj.assert_called_once()
+        self.assertFalse(os.path.exists(tmp_path))
 
     @patch("boto3.client")
     def test_get_presigned_url(self, mock_boto3_client):
