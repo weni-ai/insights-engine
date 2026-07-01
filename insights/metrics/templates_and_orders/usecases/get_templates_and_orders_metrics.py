@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from datetime import date
 
 from sentry_sdk import capture_exception
@@ -13,11 +14,18 @@ from insights.metrics.meta.usecases.get_templates_metrics_from_multiple_wabas im
 )
 from insights.metrics.templates_and_orders.exceptions import (
     ErrorGettingOrdersMetrics,
+    TemplatesNotFoundError,
 )
 from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.projects.models import Project
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MetricsLimits:
+    max_wabas: int | None = None
+    max_template_ids: int | None = None
 
 
 class GetTemplatesAndOrdersMetrics:
@@ -41,18 +49,34 @@ class GetTemplatesAndOrdersMetrics:
         template_name_prefix: str,
         start_date: date,
         end_date: date,
+        limits: MetricsLimits | None = None,
+        require_templates: bool = False,
     ) -> dict:
         waba_ids = self.get_project_wabas.execute(project)
 
+        if limits and limits.max_wabas is not None:
+            waba_ids = waba_ids[: limits.max_wabas]
+
         waba_templates: list[WabaTemplateIDs] = []
+        any_templates = False
         for waba_id in waba_ids:
             template_ids = self.get_templates_from_prefix.execute(
-                waba_id=waba_id, prefix=template_name_prefix
+                waba_id=waba_id,
+                prefix=template_name_prefix,
+                max_template_ids=(
+                    limits.max_template_ids if limits else None
+                ),
             )
             if template_ids:
+                any_templates = True
                 waba_templates.append(
                     WabaTemplateIDs(waba_id=waba_id, template_ids=template_ids)
                 )
+
+        if require_templates and not any_templates:
+            raise TemplatesNotFoundError(
+                "No templates found for the project"
+            )
 
         return self.get_templates_metrics.execute(
             waba_templates=waba_templates,
@@ -90,12 +114,16 @@ class GetTemplatesAndOrdersMetrics:
         end_date: date,
         utm_source: str,
         template_name_prefix: str,
+        limits: MetricsLimits | None = None,
+        require_templates: bool = False,
     ) -> dict:
         template_metrics = self._get_template_metrics(
             project=project,
             template_name_prefix=template_name_prefix,
             start_date=start_date,
             end_date=end_date,
+            limits=limits,
+            require_templates=require_templates,
         )
 
         orders_metrics = self._get_orders_metrics(

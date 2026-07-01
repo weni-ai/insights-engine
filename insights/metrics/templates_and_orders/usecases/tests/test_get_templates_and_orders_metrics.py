@@ -12,9 +12,11 @@ from insights.metrics.meta.usecases.get_templates_metrics_from_multiple_wabas im
 )
 from insights.metrics.templates_and_orders.exceptions import (
     ErrorGettingOrdersMetrics,
+    TemplatesNotFoundError,
 )
 from insights.metrics.templates_and_orders.usecases.get_templates_and_orders_metrics import (
     GetTemplatesAndOrdersMetrics,
+    MetricsLimits,
 )
 from insights.projects.models import Project
 
@@ -145,7 +147,7 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         )
 
         self.mock_get_templates.execute.assert_called_once_with(
-            waba_id="waba_1", prefix=custom_prefix
+            waba_id="waba_1", prefix=custom_prefix, max_template_ids=None
         )
 
     @patch(
@@ -347,4 +349,144 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         self.assertIsInstance(
             usecase.get_templates_metrics,
             GetTemplatesMetricsFromMultipleWabasUseCase,
+        )
+
+    @patch(
+        "insights.metrics.templates_and_orders.usecases"
+        ".get_templates_and_orders_metrics.OrdersService"
+    )
+    def test_limits_max_wabas_only_queries_first_n_wabas(self, MockOrdersService):
+        self.mock_get_wabas.execute.return_value = [
+            "waba_0",
+            "waba_1",
+            "waba_2",
+            "waba_3",
+            "waba_4",
+        ]
+        self.mock_get_templates.execute.return_value = ["t1"]
+        self.mock_get_metrics.execute.return_value = {
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
+        }
+
+        mock_orders_instance = MockOrdersService.return_value
+        mock_orders_instance.get_metrics_from_utm_source.return_value = {
+            "revenue": {"value": 0, "currency_code": "", "increase_percentage": 0},
+            "orders_placed": {"value": 0, "increase_percentage": 0},
+        }
+
+        self.usecase.execute(
+            project=self.project,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            utm_source=self.utm_source,
+            template_name_prefix=self.template_name_prefix,
+            limits=MetricsLimits(max_wabas=2),
+        )
+
+        self.assertEqual(self.mock_get_templates.execute.call_count, 2)
+        self.mock_get_templates.execute.assert_any_call(
+            waba_id="waba_0",
+            prefix=self.template_name_prefix,
+            max_template_ids=None,
+        )
+        self.mock_get_templates.execute.assert_any_call(
+            waba_id="waba_1",
+            prefix=self.template_name_prefix,
+            max_template_ids=None,
+        )
+
+    @patch(
+        "insights.metrics.templates_and_orders.usecases"
+        ".get_templates_and_orders_metrics.OrdersService"
+    )
+    def test_limits_max_template_ids_forwards_per_waba_cap(self, MockOrdersService):
+        self.mock_get_wabas.execute.return_value = ["waba_1"]
+        self.mock_get_templates.execute.return_value = ["t1", "t2", "t3"]
+        self.mock_get_metrics.execute.return_value = {
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
+        }
+
+        mock_orders_instance = MockOrdersService.return_value
+        mock_orders_instance.get_metrics_from_utm_source.return_value = {
+            "revenue": {"value": 0, "currency_code": "", "increase_percentage": 0},
+            "orders_placed": {"value": 0, "increase_percentage": 0},
+        }
+
+        self.usecase.execute(
+            project=self.project,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            utm_source=self.utm_source,
+            template_name_prefix=self.template_name_prefix,
+            limits=MetricsLimits(max_template_ids=5),
+        )
+
+        self.mock_get_templates.execute.assert_called_once_with(
+            waba_id="waba_1",
+            prefix=self.template_name_prefix,
+            max_template_ids=5,
+        )
+
+    @patch(
+        "insights.metrics.templates_and_orders.usecases"
+        ".get_templates_and_orders_metrics.OrdersService"
+    )
+    def test_require_templates_raises_when_no_templates_found(
+        self, MockOrdersService
+    ):
+        self.mock_get_wabas.execute.return_value = ["waba_1", "waba_2"]
+        self.mock_get_templates.execute.return_value = []
+
+        with self.assertRaises(TemplatesNotFoundError):
+            self.usecase.execute(
+                project=self.project,
+                start_date=self.start_date,
+                end_date=self.end_date,
+                utm_source=self.utm_source,
+                template_name_prefix=self.template_name_prefix,
+                require_templates=True,
+            )
+
+        MockOrdersService.assert_not_called()
+
+    @patch(
+        "insights.metrics.templates_and_orders.usecases"
+        ".get_templates_and_orders_metrics.OrdersService"
+    )
+    def test_require_templates_false_keeps_zeroed_metrics_behavior(
+        self, MockOrdersService
+    ):
+        self.mock_get_wabas.execute.return_value = ["waba_1"]
+        self.mock_get_templates.execute.return_value = []
+        self.mock_get_metrics.execute.return_value = {
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
+        }
+
+        mock_orders_instance = MockOrdersService.return_value
+        mock_orders_instance.get_metrics_from_utm_source.return_value = {
+            "revenue": {"value": 0, "currency_code": "", "increase_percentage": 0},
+            "orders_placed": {"value": 0, "increase_percentage": 0},
+        }
+
+        result = self.usecase.execute(
+            project=self.project,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            utm_source=self.utm_source,
+            template_name_prefix=self.template_name_prefix,
+            require_templates=False,
+        )
+
+        self.assertEqual(
+            result["template_metrics"],
+            {"sent": 0, "delivered": 0, "read": 0, "clicked": 0},
         )
