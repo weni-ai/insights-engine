@@ -1,3 +1,18 @@
+# 1.31.1
+# Add
+  - Search terms and added to cart widgets in conversations dashboard
+  - Transaction management for dashboard creation process
+# Fix
+  - Widget creation conditioned on successful dashboard creation
+
+# 1.31.0
+# Add
+  - VTEX account unlinking from conflicting projects
+  - Default values and error handling in Calculator and subwidget data functions
+# Fix
+  - Unsupported operations with None types in widget calculations
+  - Conversations dashboard creation logic
+
 # 1.30.0
 # Add
   - Templates and orders metrics endpoint with multiple WABAs support
