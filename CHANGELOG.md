@@ -1,3 +1,11 @@
+# 1.32.0
+# Add
+  - WhatsApp integration use cases for saving and removing dashboards
+  - Error email notification on conversations report generation timeout
+  - Unit tests for pagination, permissions, authentication, human support, and metrics modules
+# Fix
+  - Internal authentication permission check for internal communication
+
 # 1.31.1
 # Add
   - Search terms and added to cart widgets in conversations dashboard
