@@ -1,14 +1,9 @@
 import json
 import logging
 
-from babel import numbers
-from django.conf import settings
 from django.utils import timezone
 from django.utils.timezone import timedelta
-from sentry_sdk import capture_exception
 
-from insights.metrics.meta.clients import MetaGraphAPIClient
-from insights.metrics.meta.enums import ProductType
 from insights.metrics.skills.exceptions import (
     ErrorGettingOrdersMetrics,
     InvalidDateRangeError,
@@ -16,28 +11,44 @@ from insights.metrics.skills.exceptions import (
     TemplateNotFound,
 )
 from insights.metrics.skills.services.base import BaseSkillMetricsService
-from insights.metrics.skills.services.dataclass import (
-    AbandonedCartWabaTemplates,
-    AbandonedCartWhatsAppTemplate,
+from insights.metrics.skills.usecases.format_abandoned_cart_skill_response import (
+    FormatAbandonedCartSkillResponse,
 )
 from insights.metrics.skills.validators import validate_date_str
-from insights.metrics.vtex.services.orders_service import OrdersService
+from insights.metrics.templates_and_orders.exceptions import (
+    ErrorGettingOrdersMetrics as TemplatesOrdersErrorGettingOrdersMetrics,
+    TemplatesNotFoundError,
+)
+from insights.metrics.templates_and_orders.usecases.get_templates_and_orders_metrics import (
+    GetTemplatesAndOrdersMetrics,
+    MetricsLimits,
+)
 from insights.settings import (
     ABANDONED_CART_MAX_TEMPLATE_IDS,
     ABANDONED_CART_MAX_WABAS,
-    ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST,
     ABANDONED_CART_METRICS_START_DATE_MAX_DAYS,
 )
-from insights.dashboards.models import Dashboard
 from insights.sources.cache import CacheClient
 
 logger = logging.getLogger(__name__)
 
 
 class AbandonedCartSkillService(BaseSkillMetricsService):
-    def __init__(self, project, filters):
+    UTM_SOURCE = "weniabandonedcart"
+    TEMPLATE_PREFIX = "weni_abandoned_cart"
+
+    def __init__(
+        self,
+        project,
+        filters,
+        get_templates_and_orders_metrics: GetTemplatesAndOrdersMetrics | None = None,
+        format_response: FormatAbandonedCartSkillResponse | None = None,
+    ):
         super().__init__(project, filters)
-        self.meta_api_client = MetaGraphAPIClient()
+        self.get_templates_and_orders_metrics = (
+            get_templates_and_orders_metrics or GetTemplatesAndOrdersMetrics()
+        )
+        self.format_response = format_response or FormatAbandonedCartSkillResponse()
         self.cache_client = CacheClient()
         self.cache_ttl = 3600  # 1h
 
@@ -70,167 +81,6 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
 
         return valid_fields
 
-    @property
-    def _project_wabas(self) -> list[dict]:
-        configs = Dashboard.objects.filter(
-            project=self.project,
-            config__is_whatsapp_integration=True,
-        ).values_list("config", flat=True)
-
-        seen = set()
-        wabas = []
-        for config in configs:
-            waba_id = config.get("waba_id")
-            if waba_id and waba_id not in seen:
-                seen.add(waba_id)
-                wabas.append({"waba_id": waba_id})
-
-        return wabas
-
-    @property
-    def _whatsapp_templates_by_waba(self) -> list[AbandonedCartWabaTemplates]:
-        name = "weni_abandoned_cart"
-        result: list[AbandonedCartWabaTemplates] = []
-
-        for waba in self._project_wabas[:ABANDONED_CART_MAX_WABAS]:
-            templates = self.meta_api_client.get_templates_list(
-                waba_id=waba["waba_id"], name=name
-            )
-
-            data = templates.get("data", [])
-            if not data:
-                continue
-
-            templates_by_name: dict[str, list[str | int]] = {}
-            for template in data:
-                templates_by_name.setdefault(template["name"], []).append(
-                    template["id"]
-                )
-
-            sorted_templates = sorted(
-                [
-                    AbandonedCartWhatsAppTemplate(name=tpl_name, ids=tpl_ids)
-                    for tpl_name, tpl_ids in templates_by_name.items()
-                ],
-                key=lambda t: t.name,
-                reverse=True,
-            )
-            result.append(
-                AbandonedCartWabaTemplates(
-                    waba_id=waba["waba_id"], templates=sorted_templates
-                )
-            )
-
-        if not result:
-            raise TemplateNotFound("No abandoned cart template found for the project")
-
-        return result
-
-    def _calculate_increase_percentage(self, current: int, past: int):
-        if past == 0:
-            return 100 if current > 0 else 0
-
-        return round(((current - past) / past) * 100, 2)
-
-    def _get_capped_template_ids(
-        self, templates: list[AbandonedCartWhatsAppTemplate]
-    ) -> list[str | int]:
-        all_ids = []
-        for template in templates:
-            for tid in template.ids:
-                all_ids.append(tid)
-                if len(all_ids) >= ABANDONED_CART_MAX_TEMPLATE_IDS:
-                    return all_ids
-        return all_ids
-
-    def _fetch_analytics_for_template_ids(
-        self, waba_id, template_ids, start_date, end_date, product_type
-    ) -> list[dict]:
-        data_points = []
-        for i in range(
-            0, len(template_ids), ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST
-        ):
-            chunk = template_ids[i : i + ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST]
-            metrics = self.meta_api_client.get_messages_analytics(
-                waba_id=waba_id,
-                template_id=chunk,
-                start_date=start_date,
-                end_date=end_date,
-                product_type=product_type,
-            )
-            data_points.extend(metrics.get("data", {}).get("data_points", []))
-        return data_points
-
-    def _get_message_templates_metrics(self, start_date, end_date) -> dict:
-        data_points: list[dict] = []
-
-        for group in self._whatsapp_templates_by_waba:
-            template_ids = self._get_capped_template_ids(group.templates)
-            for product_type in (
-                ProductType.CLOUD_API.value,
-                ProductType.MM_LITE.value,
-            ):
-                data_points.extend(
-                    self._fetch_analytics_for_template_ids(
-                        group.waba_id,
-                        template_ids,
-                        start_date,
-                        end_date,
-                        product_type,
-                    )
-                )
-
-        period_data = {
-            "sent": 0,
-            "delivered": 0,
-            "read": 0,
-            "clicked": 0,
-        }
-
-        for day_data in data_points:
-            period_data["sent"] += day_data["sent"]
-            period_data["delivered"] += day_data["delivered"]
-            period_data["read"] += day_data["read"]
-            period_data["clicked"] += day_data["clicked"]
-
-        data = {
-            "sent-messages": {"value": period_data["sent"]},
-            "delivered-messages": {"value": period_data["delivered"]},
-            "read-messages": {"value": period_data["read"]},
-            "interactions": {"value": period_data["clicked"]},
-        }
-
-        return data
-
-    def _get_orders_metrics(self, start_date, end_date) -> dict:
-        if (
-            not (
-                utm_source := getattr(
-                    settings, "WHATSAPP_ABANDONED_CART_UTM_SOURCE", None
-                )
-            )
-            or self.project.vtex_account is not None
-        ):
-            # TEMPORARY, this should be used only in the development and staging environments
-            utm_source = "weniabandonedcart"
-
-        service = OrdersService(self.project)
-
-        filters = {
-            "start_date": start_date,
-            "end_date": end_date,
-        }
-
-        try:
-            return service.get_metrics_from_utm_source(
-                utm_source=utm_source, filters=filters
-            )
-        except Exception as e:
-            capture_exception(e)
-            logger.error("Error getting orders from VTEX: %s", e, exc_info=True)
-
-            raise ErrorGettingOrdersMetrics("Error getting orders from VTEX") from e
-
     def get_metrics(self):
         filters = self.validate_filters(self.filters)
 
@@ -239,51 +89,27 @@ class AbandonedCartSkillService(BaseSkillMetricsService):
         if cached_data := self.cache_client.get(cache_key):
             return json.loads(cached_data)
 
-        messages_metrics = self._get_message_templates_metrics(
-            start_date=filters.get("start_date"), end_date=filters.get("end_date")
-        )
-        orders_metrics = self._get_orders_metrics(
-            start_date=filters.get("start_date"), end_date=filters.get("end_date")
-        )
-
-        currency_symbol = ""
-
-        if currency_code := orders_metrics.get("revenue", {}).get("currency_code"):
-            currency_symbol = numbers.get_currency_symbol(currency_code)
-
-        data = [
-            {
-                "id": "sent-messages",
-                "value": messages_metrics["sent-messages"]["value"],
-            },
-            {
-                "id": "delivered-messages",
-                "value": messages_metrics["delivered-messages"]["value"],
-            },
-            {
-                "id": "read-messages",
-                "value": messages_metrics["read-messages"]["value"],
-            },
-            {
-                "id": "interactions",
-                "value": messages_metrics["interactions"]["value"],
-            },
-            {
-                "id": "utm-revenue",
-                "value": orders_metrics.get("revenue", {}).get("value", 0),
-                "percentage": orders_metrics.get("revenue", {}).get(
-                    "increase_percentage", 0.0
+        try:
+            raw_metrics = self.get_templates_and_orders_metrics.execute(
+                project=self.project,
+                start_date=filters["start_date"],
+                end_date=filters["end_date"],
+                utm_source=self.UTM_SOURCE,
+                template_name_prefix=self.TEMPLATE_PREFIX,
+                limits=MetricsLimits(
+                    max_wabas=ABANDONED_CART_MAX_WABAS,
+                    max_template_ids=ABANDONED_CART_MAX_TEMPLATE_IDS,
                 ),
-                "prefix": currency_symbol,
-            },
-            {
-                "id": "orders-placed",
-                "value": orders_metrics.get("orders_placed", {}).get("value", 0),
-                "percentage": orders_metrics.get("orders_placed", {}).get(
-                    "increase_percentage", 0.0
-                ),
-            },
-        ]
+                require_templates=True,
+            )
+        except TemplatesNotFoundError as error:
+            raise TemplateNotFound(
+                "No abandoned cart template found for the project"
+            ) from error
+        except TemplatesOrdersErrorGettingOrdersMetrics as error:
+            raise ErrorGettingOrdersMetrics(str(error)) from error
+
+        data = self.format_response.execute(raw_metrics)
 
         self.cache_client.set(cache_key, json.dumps(data, default=str), self.cache_ttl)
 

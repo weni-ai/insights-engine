@@ -17,7 +17,6 @@ from insights.authentication.permissions import (
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
-from insights.dashboards.models import Dashboard
 from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesCategories,
     WhatsAppMessageTemplatesLanguages,
@@ -46,6 +45,12 @@ from insights.metrics.meta.serializers import (
     WhatsappIntegrationWebhookSerializer,
 )
 from insights.metrics.meta.services import MetaMessageTemplatesService
+from insights.metrics.meta.usecases.remove_whatsapp_integration import (
+    RemoveWhatsappIntegrationUseCase,
+)
+from insights.metrics.meta.usecases.save_whatsapp_integration import (
+    SaveWhatsappIntegrationUseCase,
+)
 from insights.metrics.meta.utils import (
     get_edit_template_url_from_template_data,
 )
@@ -365,50 +370,12 @@ class WhatsappIntegrationWebhookView(APIView):
                 uuid=serializer.validated_data["project_uuid"]
             )
 
-            config = {
-                "is_whatsapp_integration": True,
-                "app_uuid": str(serializer.validated_data["app_uuid"]),
-                "waba_id": serializer.validated_data["waba_id"],
-                "phone_number": serializer.validated_data["phone_number"],
-            }
-
-            existing_dashboard = Dashboard.objects.filter(
+            SaveWhatsappIntegrationUseCase().execute(
                 project=project,
-                config__phone_number__id=serializer.validated_data["phone_number"][
-                    "id"
-                ],
-                config__is_whatsapp_integration=True,
-            ).first()
-
-            if existing_dashboard:
-                existing_dashboard.config = config
-                existing_dashboard.save(update_fields=["config"])
-
-            else:
-                name = f"Meta {serializer.validated_data['phone_number']['display_phone_number']}"
-
-                existing_dashboard = Dashboard.objects.create(
-                    project=project,
-                    config=config,
-                    name=name,
-                )
-
-            current_project = existing_dashboard.project
-
-            main_project = Project.objects.filter(
-                org_uuid=current_project.org_uuid,
-                config__is_main_project=True,
-            ).first()
-
-            if main_project:
-                # Create a copy of this dashboard in the main project
-                name = f"{current_project.name} {serializer.validated_data['phone_number']['display_phone_number']}"
-                Dashboard.objects.create(
-                    project=main_project,
-                    config=config,
-                    name=name,
-                )
-
+                app_uuid=serializer.validated_data["app_uuid"],
+                waba_id=serializer.validated_data["waba_id"],
+                phone_number=serializer.validated_data["phone_number"],
+            )
         except Exception as e:
             logger.exception(f"Database error in WhatsApp integration: {e}")
             return Response(
@@ -426,25 +393,15 @@ class WhatsappIntegrationWebhookView(APIView):
         serializer = WhatsappIntegrationWebhookRemoveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        current_project = Project.objects.filter(
+        project = Project.objects.filter(
             uuid=serializer.validated_data["project_uuid"],
         ).first()
 
-        projects = [current_project]
-
-        main_project = Project.objects.filter(
-            org_uuid=current_project.org_uuid,
-            config__is_main_project=True,
-        ).first()
-
-        if main_project:
-            projects.append(main_project)
-
         try:
-            Dashboard.objects.filter(
-                project__in=projects,
-                config__waba_id=serializer.validated_data["waba_id"],
-            ).delete()
+            RemoveWhatsappIntegrationUseCase().execute(
+                project=project,
+                waba_id=serializer.validated_data["waba_id"],
+            )
         except Exception as e:
             logger.exception(f"Database error removing WhatsApp integration: {e}")
             return Response(
