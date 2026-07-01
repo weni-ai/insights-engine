@@ -167,6 +167,45 @@ class TestGetTemplatesFromPrefixUseCase(TestCase):
 
         self.assertEqual(result, [])
 
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
+    def test_max_template_ids_caps_after_sorting_by_name_desc(
+        self, mock_templates_list
+    ):
+        mock_templates_list.return_value = {
+            "data": [
+                {"name": "weni_abandoned_cart_1700000000", "id": "t1"},
+                {"name": "weni_abandoned_cart_1700000100", "id": "t2"},
+                {"name": "weni_abandoned_cart_1700000050", "id": "t3"},
+            ]
+        }
+
+        usecase = GetTemplatesFromPrefixUseCase()
+        result = usecase.execute(
+            waba_id="waba_123",
+            prefix="weni_abandoned_cart",
+            max_template_ids=2,
+        )
+
+        self.assertEqual(result, ["t2", "t3"])
+
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list")
+    def test_max_template_ids_returns_all_when_under_limit(self, mock_templates_list):
+        mock_templates_list.return_value = {
+            "data": [
+                {"name": "weni_abandoned_cart_1700000000", "id": "t1"},
+                {"name": "weni_abandoned_cart_1700000100", "id": "t2"},
+            ]
+        }
+
+        usecase = GetTemplatesFromPrefixUseCase()
+        result = usecase.execute(
+            waba_id="waba_123",
+            prefix="weni_abandoned_cart",
+            max_template_ids=5,
+        )
+
+        self.assertEqual(result, ["t2", "t1"])
+
 
 class TestGetTemplatesMetricsFromMultipleWabasUseCase(TestCase):
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
