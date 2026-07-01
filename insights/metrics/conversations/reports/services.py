@@ -1357,9 +1357,6 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
                 raise ValueError("Report %s is not in progress" % report.uuid)
 
-            if current_page % 10 == 0:
-                self._update_heartbeat(report)
-
             logger.info(
                 "[CONVERSATIONS REPORT SERVICE] Retrieving datalake events for page %s for report %s (streaming)",
                 current_page,
@@ -1912,7 +1909,9 @@ class ConversationsReportService(BaseConversationsReportService):
             empty_row,
         )
 
-        return ConversationsReportWorksheet(name=worksheet_name, data=data, headers=list(empty_row.keys()))
+        return ConversationsReportWorksheet(
+            name=worksheet_name, data=data, headers=list(empty_row.keys())
+        )
 
     def get_csat_human_worksheet(
         self, report: Report, start_date: str, end_date: str
@@ -2701,8 +2700,7 @@ class ConversationsReportService(BaseConversationsReportService):
         if isinstance(worksheet.data, list) and worksheet.data:
             return list(worksheet.data[0].keys())
         raise ValueError(
-            "Worksheet '%s' has no headers and no materialized rows"
-            % worksheet.name
+            "Worksheet '%s' has no headers and no materialized rows" % worksheet.name
         )
 
     def _generate_streaming(
