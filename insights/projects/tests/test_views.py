@@ -92,51 +92,6 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @with_project_auth
-    def test_get_project_includes_is_indexer_active_false(self):
-        self.project.is_allowed = False
-        self.project.save(update_fields=["is_allowed"])
-
-        with patch(
-            "insights.projects.services.indexer_activation.settings"
-        ) as mock_settings:
-            mock_settings.PROJECT_ALLOW_LIST = []
-
-            response = self.get_project(self.project.uuid)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(response.data["is_indexer_active"])
-
-    @with_project_auth
-    def test_get_project_is_indexer_active_true_when_allowed(self):
-        self.project.is_allowed = True
-        self.project.save(update_fields=["is_allowed"])
-
-        with patch(
-            "insights.projects.services.indexer_activation.settings"
-        ) as mock_settings:
-            mock_settings.PROJECT_ALLOW_LIST = []
-
-            response = self.get_project(self.project.uuid)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["is_indexer_active"])
-
-    @with_project_auth
-    def test_get_project_is_indexer_active_true_when_in_allow_list(self):
-        self.project.is_allowed = False
-        self.project.save(update_fields=["is_allowed"])
-
-        with patch(
-            "insights.projects.services.indexer_activation.settings"
-        ) as mock_settings:
-            mock_settings.PROJECT_ALLOW_LIST = [str(self.project.uuid)]
-
-            response = self.get_project(self.project.uuid)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["is_indexer_active"])
-
-    @with_project_auth
     def test_retrieve_source_data_success(self):
         url = reverse(
             "project-retrieve-source-data",
@@ -498,21 +453,6 @@ class TestUserProjectsView(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["uuid"], str(admin_project.uuid))
-        self.assertIn("is_indexer_active", response.data["results"][0])
-
-    def test_includes_is_indexer_active_in_user_projects_list(self):
-        project = Project.objects.create(name="Admin Project", is_allowed=True)
-        ProjectAuth.objects.create(project=project, user=self.user, role=1)
-
-        with patch(
-            "insights.projects.services.indexer_activation.settings"
-        ) as mock_settings:
-            mock_settings.PROJECT_ALLOW_LIST = []
-
-            response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data["results"][0]["is_indexer_active"])
 
     def test_does_not_return_projects_from_other_users(self):
         other_user = User.objects.create_user(email="other@test.com")
