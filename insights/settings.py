@@ -335,6 +335,7 @@ if USE_EDA:
 
 # Amazon MQ
 AMQ_BROKER_HOST = env.str("AMQ_BROKER_HOST", default="localhost:5672")
+AMQ_BROKER_PORT = env.int("AMQ_BROKER_PORT", default=5671)
 AMQ_BROKER_USER = env.str("AMQ_BROKER_USER", default="guest")
 AMQ_BROKER_PASSWORD = env.str("AMQ_BROKER_PASSWORD", default="guest")
 AMQ_VIRTUAL_HOST = env.str("AMQ_VIRTUAL_HOST", default="/")
