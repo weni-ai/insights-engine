@@ -69,6 +69,7 @@ create_environment_vars_file:
 	@echo "SECRET_KEY=SK" > "${ENVIRONMENT_VARS_FILE}"
 	@echo "DEBUG=true" >> "${ENVIRONMENT_VARS_FILE}"
 	@echo "DATABASE_URL=postgres://insights:insights@localhost:5432/insights" >> "${ENVIRONMENT_VARS_FILE}"
+	@echo "PROMETHEUS_AUTH_TOKEN=test-ptoken" >> "${ENVIRONMENT_VARS_FILE}"
 	@echo "OIDC_RP_SERVER_URL=''" >> "${ENVIRONMENT_VARS_FILE}"
 	@echo "OIDC_RP_REALM_NAME=''" >> "${ENVIRONMENT_VARS_FILE}"
 	@echo "OIDC_OP_JWKS_ENDPOINT=''" >> "${ENVIRONMENT_VARS_FILE}"

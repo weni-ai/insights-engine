@@ -27,6 +27,7 @@ from rest_framework.routers import DefaultRouter
 from weni.feature_flags.views import FeatureFlagsWebhookView
 
 from insights.authentication.admin_sso import admin_oidc_login, admin_oidc_logout
+from insights.core.prometheus.views import metrics_view
 from insights.dashboards.api.v1.viewsets import DashboardViewSet
 from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
@@ -47,6 +48,7 @@ router.register(r"feedback", FeedbackViewSet, basename="feedback")
 
 urlpatterns += [
     path("", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    path("api/prometheus/metrics", metrics_view, name="metrics_view"),
 ]
 
 if getattr(settings, "OIDC_ENABLED", False):
