@@ -1,3 +1,16 @@
+# 1.33.2
+# Add
+  - Parallel streaming fetch with disk-backed event spool for classification events in conversations report
+
+# 1.33.1
+# Fix
+  - Periodic heartbeat update in conversations report service
+
+# 1.33.0
+# Add
+  - Streaming XLSX report generation for conversations reports
+  - Streaming mode feature flag for conversations report export
+
 # 1.32.0
 # Add
   - WhatsApp integration use cases for saving and removing dashboards
