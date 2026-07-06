@@ -231,3 +231,35 @@ class StreamingXLSXFileProcessor:
                 local_path=tmp_path,
             )
         ]
+
+
+class StreamingCSVFileProcessor:
+    """
+    CSV processor that writes each worksheet to a temp file on disk instead
+    of keeping everything in memory. Accepts generators/iterables for worksheet
+    data so rows can be written incrementally.
+    """
+
+    def write_worksheet(
+        self,
+        name: str,
+        headers: list[str],
+        rows: Iterable[dict],
+    ) -> tuple[ConversationsReportFile, int]:
+        """
+        Write a worksheet from an iterable of row dicts to a temp CSV file.
+        Returns the file reference and the number of data rows written.
+        """
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".csv")
+        os.close(tmp_fd)
+
+        row_count = 0
+        with open(tmp_path, "w", encoding="utf-8", newline="") as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=headers)
+            writer.writeheader()
+            for row_data in rows:
+                writer.writerow({header: row_data.get(header, "") for header in headers})
+                row_count += 1
+
+        file_name = name[: CSV_FILE_NAME_MAX_LENGTH - 4] + ".csv"
+        return ConversationsReportFile(name=file_name, local_path=tmp_path), row_count
