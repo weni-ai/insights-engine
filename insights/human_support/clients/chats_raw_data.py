@@ -1,10 +1,10 @@
 import requests
 from django.conf import settings
 
-from insights.internals.base import InternalAuthentication
+from insights.internals.base import InternalJWTAuthentication
 
 
-class ChatsRawDataClient(InternalAuthentication):
+class ChatsRawDataClient(InternalJWTAuthentication):
     def __init__(self, project) -> None:
         self.project = project
         self.url = f"{settings.CHATS_URL}/v1/dashboard/{self.project.uuid}/raw_data/"

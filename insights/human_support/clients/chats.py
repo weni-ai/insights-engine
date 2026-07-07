@@ -1,12 +1,13 @@
 from insights.core.requests import request_with_retry
-from insights.internals.base import InternalAuthentication
+from insights.internals.base import InternalJWTAuthentication
 from django.conf import settings
 
 import requests
 
 
-class ChatsClient(InternalAuthentication):
-    def __init__(self):
+class ChatsClient(InternalJWTAuthentication):
+    def __init__(self, project):
+        self.project = project
         self.url = settings.CHATS_URL
 
     def get_contacts(self, query_params: dict):
@@ -27,10 +28,8 @@ class ChatsClient(InternalAuthentication):
 
         return response.json()
 
-    def csat_score_by_agents(
-        self, project_uuid: str, params: dict | None = None
-    ) -> dict:
-        url = f"{self.url}/v1/internal/dashboard/{project_uuid}/csat-score-by-agents/"
+    def csat_score_by_agents(self, params: dict | None = None) -> dict:
+        url = f"{self.url}/v1/internal/dashboard/{self.project.uuid}/csat-score-by-agents/"
 
         response = requests.get(
             url=url,
@@ -41,8 +40,8 @@ class ChatsClient(InternalAuthentication):
 
         return response.json()
 
-    def csat_ratings(self, project_uuid: str, params: dict | None = None) -> dict:
-        url = f"{self.url}/v1/internal/dashboard/{project_uuid}/csat_ratings/"
+    def csat_ratings(self, params: dict | None = None) -> dict:
+        url = f"{self.url}/v1/internal/dashboard/{self.project.uuid}/csat_ratings/"
 
         response = requests.get(
             url=url,

@@ -1,30 +1,29 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, PropertyMock
 import uuid
 
 from django.test import TestCase
 
-from unittest.mock import MagicMock
-from insights.internals.base import InternalAuthentication
 from insights.sources.chats.clients import ChatsRESTClient
 
 
-@patch.object(
-    InternalAuthentication,
-    "headers",
-    new_callable=lambda: {
-        "Content-Type": "application/json; charset: utf-8",
-        "Authorization": "Bearer mock-token",
-    },
-)
 class ChatsRESTClientTestCase(TestCase):
     def setUp(self):
-        self.client = ChatsRESTClient()
+        self.project = MagicMock()
+        self.project.uuid = uuid.uuid4()
 
     @patch("insights.sources.chats.clients.request_with_retry")
-    def test_get_project(self, mock_request_with_retry, mock_headers):
-        project_uuid = str(uuid.uuid4())
+    @patch.object(
+        ChatsRESTClient,
+        "headers",
+        new_callable=PropertyMock,
+        return_value={
+            "Content-Type": "application/json; charset: utf-8",
+            "Authorization": "Bearer mock-token",
+        },
+    )
+    def test_get_project(self, mock_headers, mock_request_with_retry):
         expected_response = {
-            "uuid": project_uuid,
+            "uuid": str(self.project.uuid),
             "name": "Test Project",
             "date_format": "D",
             "timezone": "America/Fortaleza",
@@ -36,12 +35,13 @@ class ChatsRESTClientTestCase(TestCase):
         mock_response.json.return_value = expected_response
         mock_request_with_retry.return_value = mock_response
 
-        project = self.client.get_project(project_uuid=project_uuid)
+        client = ChatsRESTClient(self.project)
+        project = client.get_project()
 
         self.assertEqual(project, expected_response)
 
         mock_request_with_retry.assert_called_once_with(
-            url=f"/v1/internal/project/{project_uuid}/",
+            url=f"/v1/internal/project/{self.project.uuid}/",
             headers={
                 "Content-Type": "application/json; charset: utf-8",
                 "Authorization": "Bearer mock-token",
