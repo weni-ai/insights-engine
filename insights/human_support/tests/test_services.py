@@ -98,10 +98,53 @@ class TestHumanSupportDashboardService(TestCase):
         }
         mock_client_class.return_value = mock_client
         result = self.service.get_time_metrics()
+        self.assertNotIn("waiting_time_goal", result["average_time_is_waiting"])
+        self.assertNotIn(
+            "first_response_time_goal", result["average_time_first_response"]
+        )
+        self.assertNotIn("conversation_duration_goal", result["average_time_chat"])
         self.assertEqual(result["average_time_is_waiting"]["average"], 10.0)
         self.assertEqual(result["average_time_is_waiting"]["max"], 30.0)
         self.assertEqual(result["average_time_first_response"]["average"], 20.0)
         self.assertEqual(result["average_time_chat"]["average"], 300.0)
+
+    @patch("insights.human_support.services.ChatsTimeMetricsClient")
+    def test_get_time_metrics_with_goals(self, mock_client_class):
+        mock_client = MagicMock()
+        waiting_goal = {
+            "threshold_seconds": 300,
+            "threshold_value": 5,
+            "unit": "m",
+            "is_breached": True,
+            "breached_rooms_count": 7,
+        }
+        first_response_goal = {
+            "threshold_seconds": 600,
+            "threshold_value": 10,
+            "unit": "m",
+            "is_breached": True,
+            "breached_rooms_count": 3,
+        }
+        mock_client.retrieve_time_metrics.return_value = {
+            "avg_waiting_time": 10.0,
+            "max_waiting_time": 30.0,
+            "avg_first_response_time": 20.0,
+            "max_first_response_time": 60.0,
+            "avg_conversation_duration": 300.0,
+            "max_conversation_duration": 600.0,
+            "waiting_time_goal": waiting_goal,
+            "first_response_time_goal": first_response_goal,
+        }
+        mock_client_class.return_value = mock_client
+        result = self.service.get_time_metrics()
+        self.assertEqual(
+            result["average_time_is_waiting"]["waiting_time_goal"], waiting_goal
+        )
+        self.assertEqual(
+            result["average_time_first_response"]["first_response_time_goal"],
+            first_response_goal,
+        )
+        self.assertNotIn("conversation_duration_goal", result["average_time_chat"])
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_peaks_in_human_service(self, mock_rooms):
@@ -129,6 +172,10 @@ class TestHumanSupportDashboardService(TestCase):
                     "contact": "C1",
                     "link": "https://link/1",
                     "pending_response": True,
+                    "goals_metrics": {
+                        "first_response_time": {"exceeded": True},
+                        "duration": {"exceeded": True},
+                    },
                 },
             ],
             "next": None,
@@ -142,6 +189,36 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["results"][0]["duration"], 120)
         self.assertEqual(result["results"][0]["link"], "https://link/1")
         self.assertTrue(result["results"][0]["pending_response"])
+        self.assertEqual(
+            result["results"][0]["goals_metrics"],
+            {
+                "first_response_time": {"exceeded": True},
+                "duration": {"exceeded": True},
+            },
+        )
+
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_detailed_monitoring_on_going_without_goals_metrics(self, mock_rooms):
+        mock_rooms.execute.return_value = {
+            "results": [
+                {
+                    "agent": "Agent 1",
+                    "duration": 120,
+                    "waiting_time": 10,
+                    "first_response_time": 5,
+                    "sector": "S1",
+                    "queue": "Q1",
+                    "contact": "C1",
+                    "link": "https://link/1",
+                    "pending_response": True,
+                },
+            ],
+            "next": None,
+            "previous": None,
+            "count": 1,
+        }
+        result = self.service.get_detailed_monitoring_on_going(filters={})
+        self.assertEqual(result["results"][0]["goals_metrics"], {})
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_detailed_monitoring_on_going_with_filters_and_ordering(
@@ -188,6 +265,7 @@ class TestHumanSupportDashboardService(TestCase):
                     "sector": "S1",
                     "queue": "Q1",
                     "link": "https://link/a",
+                    "goals_metrics": {"waiting_time": {"exceeded": False}},
                 },
             ],
             "next": None,
@@ -198,6 +276,29 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["results"][0]["awaiting_time"], 30)
         self.assertEqual(result["results"][0]["contact"], "Contact A")
+        self.assertEqual(
+            result["results"][0]["goals_metrics"],
+            {"waiting_time": {"exceeded": False}},
+        )
+
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_detailed_monitoring_awaiting_without_goals_metrics(self, mock_rooms):
+        mock_rooms.execute.return_value = {
+            "results": [
+                {
+                    "queue_time": 30,
+                    "contact": "Contact A",
+                    "sector": "S1",
+                    "queue": "Q1",
+                    "link": "https://link/a",
+                },
+            ],
+            "next": None,
+            "previous": None,
+            "count": 1,
+        }
+        result = self.service.get_detailed_monitoring_awaiting()
+        self.assertEqual(result["results"][0]["goals_metrics"], {})
 
     @patch("insights.human_support.services.AgentsRESTClient")
     def test_get_detailed_monitoring_agents(self, mock_client_class):
