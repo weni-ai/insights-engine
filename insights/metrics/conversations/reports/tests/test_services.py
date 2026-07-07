@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+import os
 from unittest.mock import MagicMock, patch
 import uuid
 
@@ -2828,6 +2829,26 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_s3_client.upload_fileobj.assert_called_once()
 
     @patch("boto3.client")
+    def test_upload_file_to_s3_from_local_path(self, mock_boto3_client):
+        """Test upload_file_to_s3 streams from disk without loading into memory."""
+        import tempfile
+
+        mock_s3_client = MagicMock()
+        mock_boto3_client.return_value = mock_s3_client
+
+        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp_file:
+            tmp_file.write(b"xlsx content")
+            tmp_path = tmp_file.name
+
+        file = ConversationsReportFile(name="report.xlsx", local_path=tmp_path)
+        obj_key = self.service.upload_file_to_s3(file)
+
+        self.assertIn("reports/conversations/", obj_key)
+        self.assertIn(".xlsx", obj_key)
+        mock_s3_client.upload_fileobj.assert_called_once()
+        self.assertFalse(os.path.exists(tmp_path))
+
+    @patch("boto3.client")
     def test_get_presigned_url(self, mock_boto3_client):
         """Test get_presigned_url method."""
         mock_s3_client = MagicMock()
@@ -5105,6 +5126,327 @@ class TestGetDatalakeEventsDispatch(TestCase):
 
         mock_parallel_method.assert_called_once_with(report, key="example")
         self.assertEqual(result, [{"id": "1"}])
+
+    @patch.object(ConversationsReportService, "_iter_datalake_events")
+    def test_dispatches_to_streaming_iterator(self, mock_iter_method):
+        mock_iter_method.return_value = iter([{"id": "1"}])
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.XLSX,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        self.service._use_streaming_events = True
+        result = self.service.get_datalake_events(report, key="example")
+
+        mock_iter_method.assert_called_once_with(report, key="example")
+        self.assertEqual(list(result), [{"id": "1"}])
+
+
+class TestIterDatalakeEventsStreaming(TestCase):
+    def setUp(self):
+        self.service = ConversationsReportService(
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=MockElasticsearchClient(),
+            ),
+            events_limit_per_page=5,
+            page_limit=20,
+            datalake_events_client=MockDataLakeEventsClient(),
+            metrics_service=ConversationsMetricsService(
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
+                nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
+                cache_client=MockCacheClient(),
+                flowruns_query_executor=MockFlowRunsQueryExecutor(),
+            ),
+            cache_client=MockCacheClient(),
+            nexus_client=MockNexusClient(),
+        )
+        self.project = Project.objects.create(name="Test")
+        self.user = User.objects.create(email="test@test.com", language="en")
+
+    def _create_report(self):
+        return Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.XLSX,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events"
+    )
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
+    )
+    @override_settings(REPORT_PARALLEL_FETCH_MAX_WORKERS=5)
+    def test_streaming_parallel_preserves_page_order(
+        self, mock_get_count, mock_get_events
+    ):
+        mock_get_count.return_value = [{"count": 15}]
+
+        page_1 = [{"id": "1"}, {"id": "2"}, {"id": "3"}, {"id": "4"}, {"id": "5"}]
+        page_2 = [{"id": "6"}, {"id": "7"}, {"id": "8"}, {"id": "9"}, {"id": "10"}]
+        page_3 = [{"id": "11"}, {"id": "12"}, {"id": "13"}, {"id": "14"}, {"id": "15"}]
+
+        def get_events_side_effect(**kwargs):
+            offset = kwargs.get("offset", 0)
+            if offset == 0:
+                return page_1
+            if offset == 5:
+                return page_2
+            if offset == 10:
+                return page_3
+            return []
+
+        mock_get_events.side_effect = get_events_side_effect
+
+        report = self._create_report()
+        events = list(self.service._iter_datalake_events(report, key="example"))
+
+        self.assertEqual(events, page_1 + page_2 + page_3)
+        self.assertEqual(mock_get_events.call_count, 3)
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
+    )
+    @override_settings(REPORT_PARALLEL_FETCH_MAX_WORKERS=5)
+    def test_streaming_parallel_fetches_in_batches(self, mock_get_count):
+        mock_get_count.return_value = [{"count": 60}]
+
+        batch_calls = []
+
+        def fetch_side_effect(report, page_indices, **kwargs):
+            batch_calls.append(list(page_indices))
+            return [
+                [{"id": f"page-{page_index}-event"}]
+                for page_index in page_indices
+            ]
+
+        report = self._create_report()
+
+        with patch.object(
+            self.service, "_fetch_page_indices", side_effect=fetch_side_effect
+        ):
+            list(self.service._iter_datalake_events(report, key="example"))
+
+        self.assertEqual(
+            batch_calls,
+            [
+                [0, 1, 2, 3, 4],
+                [5, 6, 7, 8, 9],
+                [10, 11],
+            ],
+        )
+
+    @patch.object(ConversationsReportService, "_iter_datalake_events_sequential")
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
+    )
+    def test_streaming_falls_back_to_sequential_on_count_error(
+        self, mock_get_count, mock_sequential
+    ):
+        mock_get_count.side_effect = Exception("count failed")
+        mock_sequential.return_value = iter([{"id": "1"}])
+
+        report = self._create_report()
+        events = list(self.service._iter_datalake_events(report, key="example"))
+
+        mock_sequential.assert_called_once_with(report, key="example")
+        self.assertEqual(events, [{"id": "1"}])
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
+    )
+    def test_streaming_parallel_returns_empty_when_count_is_zero(
+        self, mock_get_count
+    ):
+        mock_get_count.return_value = [{"count": 0}]
+
+        report = self._create_report()
+        events = list(self.service._iter_datalake_events(report, key="example"))
+
+        self.assertEqual(events, [])
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
+    )
+    def test_streaming_parallel_raises_when_page_limit_exceeded(
+        self, mock_get_count
+    ):
+        self.service.page_limit = 5
+        mock_get_count.return_value = [{"count": 30}]
+
+        report = self._create_report()
+
+        with self.assertRaises(ValueError):
+            list(self.service._iter_datalake_events(report, key="example"))
+
+    @patch(
+        "insights.sources.dl_events.tests.mock_client.MockDataLakeEventsClient.get_events_count"
+    )
+    @override_settings(REPORT_PARALLEL_FETCH_MAX_WORKERS=5)
+    def test_streaming_parallel_raises_when_report_cancelled_between_batches(
+        self, mock_get_count
+    ):
+        mock_get_count.return_value = [{"count": 60}]
+
+        report = self._create_report()
+        original_refresh = report.refresh_from_db
+        refresh_count = {"value": 0}
+
+        def refresh_side_effect(*args, **kwargs):
+            refresh_count["value"] += 1
+            original_refresh(*args, **kwargs)
+            if refresh_count["value"] > 2:
+                report.status = ReportStatus.FAILED
+
+        with patch.object(report, "refresh_from_db", side_effect=refresh_side_effect):
+            with self.assertRaises(ValueError):
+                list(self.service._iter_datalake_events(report, key="example"))
+
+
+class TestStreamingPrefetch(TestCase):
+    def setUp(self):
+        self.service = ConversationsReportService(
+            elasticsearch_service=ConversationsElasticsearchService(
+                client=MockElasticsearchClient(),
+            ),
+            events_limit_per_page=5,
+            page_limit=5,
+            datalake_events_client=MockDataLakeEventsClient(),
+            metrics_service=ConversationsMetricsService(
+                datalake_service=MagicMock(spec=BaseConversationsMetricsService),
+                nexus_conversations_client=MagicMock(spec=NexusConversationsAPIClient),
+                cache_client=MockCacheClient(),
+                flowruns_query_executor=MockFlowRunsQueryExecutor(),
+            ),
+            cache_client=MockCacheClient(),
+            nexus_client=MockNexusClient(),
+        )
+        self.project = Project.objects.create(name="Test")
+        self.user = User.objects.create(email="test@test.com", language="en")
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch.object(ConversationsReportService, "_iter_datalake_events")
+    def test_get_worksheets_streaming_prefetches_once_for_resolutions_and_contacts(
+        self, mock_iter_events, mock_feature_flag
+    ):
+        mock_events = [
+            {
+                "contact_urn": "urn:tel:+5511111111111",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "value": "resolved",
+                "metadata": "{}",
+            },
+            {
+                "contact_urn": "urn:tel:+5522222222222",
+                "date": "2025-01-01T12:00:00.000000Z",
+                "value": "unresolved",
+                "metadata": "{}",
+            },
+        ]
+        mock_iter_events.return_value = iter(mock_events)
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS", "CONTACTS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.XLSX,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        self.service._use_streaming_events = True
+        start_date = datetime(2025, 1, 1)
+        end_date = datetime(2025, 1, 2)
+
+        worksheets = self.service._get_worksheets(report, start_date, end_date)
+
+        mock_iter_events.assert_called_once()
+        self.assertTrue(len(worksheets) >= 3)
+        self.assertEqual(len(self.service._streaming_spools), 1)
+
+        resolutions_ws = next(ws for ws in worksheets if ws.name == "Resolutions")
+        self.assertEqual(len(list(resolutions_ws.data)), 2)
+
+        unique_ws = next(ws for ws in worksheets if ws.name == "Unique contacts")
+        unique_urns = [row["URN"] for row in unique_ws.data]
+        self.assertEqual(len(unique_urns), 2)
+
+        spool_path = self.service._streaming_spools[0].path
+        self.service._cleanup_streaming_spools()
+        self.assertEqual(self.service._streaming_spools, [])
+        self.assertFalse(os.path.exists(spool_path))
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch.object(ConversationsReportService, "_iter_datalake_events")
+    def test_generate_streaming_cleans_up_spool_files(
+        self, mock_iter_events, mock_feature_flag
+    ):
+        mock_iter_events.return_value = iter(
+            [
+                {
+                    "contact_urn": "urn:tel:+5511111111111",
+                    "date": "2025-01-01T12:00:00.000000Z",
+                    "value": "resolved",
+                    "metadata": "{}",
+                },
+            ]
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS", "CONTACTS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.XLSX,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        spool_paths = []
+
+        from insights.metrics.conversations.reports import services as services_module
+
+        original_spool_factory = (
+            services_module._ReplayableDatalakeEventsSpool.from_parallel_fetch
+        )
+
+        def spool_factory(service, report, **kwargs):
+            spool = original_spool_factory(service, report, **kwargs)
+            spool_paths.append(spool.path)
+            return spool
+
+        with patch.object(
+            services_module._ReplayableDatalakeEventsSpool,
+            "from_parallel_fetch",
+            side_effect=spool_factory,
+        ):
+            files = self.service._generate_streaming(
+                report,
+                datetime(2025, 1, 1),
+                datetime(2025, 1, 2),
+            )
+
+        self.assertEqual(len(files), 1)
+        self.assertEqual(len(spool_paths), 1)
+        self.assertFalse(os.path.exists(spool_paths[0]))
+        self.assertEqual(self.service._streaming_spools, [])
 
 
 class TestGetDatalakeEventsInParallel(TestCase):

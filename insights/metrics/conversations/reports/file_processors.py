@@ -3,6 +3,9 @@ import io
 import csv
 import logging
 import xlsxwriter
+import tempfile
+import os
+from typing import Iterable
 
 from django.utils.translation import gettext, override
 from insights.metrics.conversations.reports.dataclass import (
@@ -163,3 +166,68 @@ def get_file_processor(format: ReportFormat) -> FileProcessor:
         raise ValueError(f"Invalid format: {format}")
 
     return FILE_PROCESSORS[format]()
+
+
+class StreamingXLSXFileProcessor:
+    """
+    XLSX processor that writes to a temp file on disk instead of keeping
+    everything in memory. Accepts generators/iterables for worksheet data
+    so rows can be written incrementally.
+    """
+
+    def __init__(self):
+        self._used_worksheet_names: set[str] = set()
+
+    def create_workbook(self, report: Report) -> tuple[xlsxwriter.Workbook, str]:
+        """
+        Create a workbook backed by a temp file. Returns (workbook, tmp_path).
+        The caller must call finalize() when done.
+        """
+        tmp_fd, tmp_path = tempfile.mkstemp(suffix=".xlsx")
+        os.close(tmp_fd)
+        workbook = xlsxwriter.Workbook(tmp_path)
+        return workbook, tmp_path
+
+    def write_worksheet(
+        self,
+        workbook: xlsxwriter.Workbook,
+        name: str,
+        headers: list[str],
+        rows: Iterable[dict],
+    ) -> int:
+        """
+        Write a worksheet from an iterable of row dicts.
+        Returns the number of data rows written.
+        """
+        worksheet_name = XLSXFileProcessor()._ensure_unique_worksheet_name(
+            name, self._used_worksheet_names
+        )
+        xlsx_worksheet = workbook.add_worksheet(worksheet_name)
+        xlsx_worksheet.write_row(0, 0, headers)
+
+        row_count = 0
+        for row_num, row_data in enumerate(rows, start=1):
+            xlsx_worksheet.write_row(row_num, 0, [row_data.get(h, "") for h in headers])
+            row_count += 1
+
+        return row_count
+
+    def finalize(
+        self, workbook: xlsxwriter.Workbook, tmp_path: str, report: Report
+    ) -> list[ConversationsReportFile]:
+        """
+        Close the workbook and return a file reference backed by the temp
+        path on disk. The caller uploads or reads the file and is responsible
+        for deleting ``local_path``.
+        """
+        workbook.close()
+
+        with override(report.requested_by.language):
+            file_name = gettext("Conversations dashboard report")
+
+        return [
+            ConversationsReportFile(
+                name=f"{file_name}.xlsx",
+                local_path=tmp_path,
+            )
+        ]
