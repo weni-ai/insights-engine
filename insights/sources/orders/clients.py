@@ -132,11 +132,6 @@ class VtexOrdersRestClient(VtexAuthentication):
             response = requests.get(endpoint, headers=self.headers, timeout=timeout)
 
         if not response.ok:
-            capture_message(
-                f"Error fetching orders. URL: {endpoint}. Status code: {response.status_code}. Response: {response.text}",
-                level="error",
-            )
-
             response_details = {
                 "status_code": response.status_code,
                 "text": response.text,
