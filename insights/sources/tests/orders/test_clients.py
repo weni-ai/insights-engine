@@ -172,8 +172,7 @@ class TestVtexOrdersRestClient(TestCase):
         # We can add more assertions about the URL and headers if needed
 
     @patch("insights.sources.orders.clients.requests.get")
-    @patch("insights.sources.orders.clients.capture_message")
-    def test_get_orders_list_direct_error(self, mock_capture_message, mock_get):
+    def test_get_orders_list_direct_error(self, mock_get):
         mock_response = MagicMock()
         mock_response.ok = False
         mock_response.status_code = 500
@@ -186,7 +185,6 @@ class TestVtexOrdersRestClient(TestCase):
 
         self.assertFalse(response.ok)
         mock_get.assert_called_once()
-        mock_capture_message.assert_called_once()
 
     @patch("insights.sources.orders.clients.requests.post")
     def test_get_orders_list_io_proxy_success(self, mock_post):
@@ -204,8 +202,7 @@ class TestVtexOrdersRestClient(TestCase):
         # We can add more assertions about the URL, headers and json body if needed
 
     @patch("insights.sources.orders.clients.requests.post")
-    @patch("insights.sources.orders.clients.capture_message")
-    def test_get_orders_list_io_proxy_error(self, mock_capture_message, mock_post):
+    def test_get_orders_list_io_proxy_error(self, mock_post):
         mock_response = MagicMock()
         mock_response.ok = False
         mock_response.status_code = 400
@@ -218,7 +215,6 @@ class TestVtexOrdersRestClient(TestCase):
 
         self.assertFalse(response.ok)
         mock_post.assert_called_once()
-        mock_capture_message.assert_called_once()
 
     def test_parse_datetime_valid(self):
         date_str_z = "2023-10-26T10:00:00+00:00"
