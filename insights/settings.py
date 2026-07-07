@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "insights.reports",
     "insights.core",
     "insights.feedback",
+    "insights.commerce",
     # 3rd party apps
     "django_filters",
     "corsheaders",
@@ -331,6 +332,8 @@ GROQ_CHATGPT_TOKEN = env.str("GROQ_CHATGPT_TOKEN", default="")
 GROQ_OPEN_AI_GPT_VERSION = env.str("GROQ_OPEN_AI_GPT_VERSION", default="")
 
 INTEGRATIONS_URL = env("INTEGRATIONS_URL", default="")
+RETAIL_URL = env("RETAIL_URL", default="")
+BILLING_URL = env("BILLING_URL", default="")
 
 REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
 STATIC_API_TOKEN = env.str("STATIC_API_TOKEN", default="")
@@ -468,6 +471,10 @@ CONVERSATIONS_REPORT_STATUS_CACHE_KEY = env.str(
     "CONVERSATIONS_REPORT_STATUS_CACHE_KEY",
     default="conversations_report_status:{project_uuid}",
 )
+CONVERSATIONS_REPORT_STREAMING_MODE_FEATURE_FLAG_KEY = env.str(
+    "CONVERSATIONS_REPORT_STREAMING_MODE_FEATURE_FLAG_KEY",
+    default="insightsConversationsReportStreamingMode",
+)
 
 # Conversations dashboard
 
@@ -487,12 +494,28 @@ CONVERSATIONS_DASHBOARD_USE_SILVER_TABLES = env.bool(
 CONVERSATIONS_DASHBOARD_NATIVE_CSAT_AGENT_UUID = env.str(
     "CONVERSATIONS_DASHBOARD_NATIVE_CSAT_AGENT_UUID", default=""
 )
+CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID = env.str(
+    "CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID", default=""
+)
+CONVERSATIONS_METRICS_ADDED_TO_CART_KEY = env.str(
+    "CONVERSATIONS_METRICS_ADDED_TO_CART_KEY", default="product_added_to_cart"
+)
+CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID = env.str(
+    "CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID", default=""
+)
+CONVERSATIONS_METRICS_SEARCH_TERMS_KEY = env.str(
+    "CONVERSATIONS_METRICS_SEARCH_TERMS_KEY", default="search_term"
+)
 CONVERSATIONS_DASHBOARD_MOCK_SERVICE_FEATURE_FLAG_KEY = env.str(
     "CONVERSATIONS_DASHBOARD_MOCK_SERVICE_FEATURE_FLAG_KEY",
     default="insightsConversationsDashboardMockService",
 )
 CONVERSATIONS_DASHBOARD_FORCE_USE_MOCK_SERVICE = env.bool(
     "CONVERSATIONS_DASHBOARD_FORCE_USE_MOCK_SERVICE", default=False
+)
+CONVERSATIONS_REPORT_AGENTS_TOOLS_URN_LIST_FEATURE_FLAG_KEY = env.str(
+    "CONVERSATIONS_REPORT_AGENTS_TOOLS_URN_LIST_FEATURE_FLAG_KEY",
+    default="insightsConversationsReportAgentsToolsUrnList",
 )
 
 # Sales Funnel
@@ -554,10 +577,8 @@ VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED = env.int(
 ABANDONED_CART_METRICS_START_DATE_MAX_DAYS = env.int(
     "ABANDONED_CART_METRICS_START_DATE_MAX_DAYS", default=90
 )
-ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST = env.int(
-    "ABANDONED_CART_META_TEMPLATE_IDS_PER_REQUEST", default=10
-)
 ABANDONED_CART_MAX_TEMPLATE_IDS = env.int("ABANDONED_CART_MAX_TEMPLATE_IDS", default=30)
+ABANDONED_CART_MAX_WABAS = env.int("ABANDONED_CART_MAX_WABAS", default=20)
 
 # VTEX Orders API Cache TTL
 VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60)
@@ -566,3 +587,18 @@ VTEX_ORDERS_API_CACHE_TTL = env.int("VTEX_ORDERS_API_CACHE_TTL", default=60 * 60
 DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
     "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
 )
+
+# Contacts worksheet detailed list
+CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY = env.str(
+    "CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY",
+    default="insightsContactsWorksheetDetailedList",
+)
+
+# WhatsApp Template IDs
+WHATSAPP_TEMPLATE_IDS_PER_REQUEST = env.int(
+    "WHATSAPP_TEMPLATE_IDS_PER_REQUEST", default=10
+)
+
+# External project authorization service
+PROJECT_AUTH_API_BASE_URL = env.str("PROJECT_AUTH_API_BASE_URL", default="")
+PROJECT_AUTH_API_TIMEOUT = env.int("PROJECT_AUTH_API_TIMEOUT", default=3)

@@ -32,8 +32,14 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
     UniqueContactsMetricsData,
 )
+from insights.metrics.conversations.exceptions import (
+    AddedToCartAgentUUIDNotConfiguredError,
+)
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     CrosstabSource,
+)
+from insights.metrics.conversations.exceptions import (
+    SearchTermsAgentUUIDNotConfiguredError,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseDatalakeConversationsMetricsService,
@@ -179,6 +185,30 @@ class BaseConversationsMetricsService(ABC):
     ) -> dict:
         """
         Get generic metrics by key
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_search_terms_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get search terms metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_added_to_cart_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get added to cart metrics
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -857,6 +887,80 @@ class ConversationsMetricsService(
         }
 
         return results
+
+    def get_search_terms_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get search terms metrics
+        """
+        agent_uuid = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID
+
+        if not agent_uuid:
+            raise SearchTermsAgentUUIDNotConfiguredError(
+                "CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID is not configured"
+            )
+
+        key = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_KEY
+
+        metrics = self.datalake_service.get_generic_metrics_by_key(
+            project_uuid, agent_uuid, start_date, end_date, key
+        )
+
+        total_count = sum(metrics.values())
+
+        return {
+            "results": [
+                {
+                    "label": label,
+                    "value": (
+                        round((count / total_count) * 100, 2) if total_count else 0
+                    ),
+                    "full_value": count,
+                }
+                for label, count in metrics.items()
+            ]
+        }
+
+    def get_added_to_cart_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get added to cart metrics
+        """
+        agent_uuid = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID
+
+        if not agent_uuid:
+            raise AddedToCartAgentUUIDNotConfiguredError(
+                "CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID is not configured"
+            )
+
+        key = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_KEY
+
+        metrics = self.datalake_service.get_generic_metrics_by_key(
+            project_uuid, agent_uuid, start_date, end_date, key
+        )
+
+        total_count = sum(metrics.values())
+
+        return {
+            "results": [
+                {
+                    "label": label,
+                    "value": (
+                        round((count / total_count) * 100, 2) if total_count else 0
+                    ),
+                    "full_value": count,
+                }
+                for label, count in metrics.items()
+            ]
+        }
 
     def get_sales_funnel_data(
         self,

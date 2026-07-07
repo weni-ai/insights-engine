@@ -357,6 +357,8 @@ class HumanSupportDashboardService:
                     "queue": "queue__name",
                     "Contact": "contact__name",
                     "contact": "contact__name",
+                    "Pending response": "pending_response",
+                    "pending_response": "pending_response",
                 }
                 mapped_field = field_mapping.get(field, field)
                 params["ordering"] = f"{prefix}{mapped_field}"
@@ -376,6 +378,7 @@ class HumanSupportDashboardService:
                     "queue": room.get("queue"),
                     "contact": room.get("contact"),
                     "link": room.get("link"),
+                    "pending_response": room.get("pending_response"),
                 }
             )
 
@@ -912,6 +915,7 @@ class HumanSupportDashboardService:
             "ended_at": room.get("ended_at"),
             "csat_rating": room.get("csat_rating"),
             "link": room.get("link"),
+            "automatic_closed": room.get("automatic_closed"),
         }
 
     def get_finished_rooms(self, filters: dict | None = None) -> dict:

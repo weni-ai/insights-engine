@@ -7,3 +7,9 @@ class TicketID:
 
     def __init__(self, ticket_id: str):
         self.ticket_id = ticket_id
+
+
+@dataclass
+class UnlinkedProject:
+    uuid: str
+    name: str

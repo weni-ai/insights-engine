@@ -140,8 +140,24 @@ class TestCalculator(TestCase):
         calc_percentage = Calculator(50, 100, "percentage")
         self.assertEqual(calc_percentage.evaluate(), 50.0)
 
-        with self.assertRaises(AttributeError):  # Test invalid operator
+    def test_calculator_default_values(self):
+        calc = Calculator()
+        self.assertEqual(calc.operand_1, 0)
+        self.assertEqual(calc.operand_2, 0)
+        self.assertIsNone(calc.operator)
+
+    def test_percentage_with_zero_divisor_returns_zero(self):
+        self.assertEqual(Calculator(50, 0, "percentage").evaluate(), 0)
+
+    def test_evaluate_with_none_operator_raises_value_error(self):
+        with self.assertRaises(ValueError) as ctx:
+            Calculator(1, 1).evaluate()
+        self.assertIn("Invalid operator", str(ctx.exception))
+
+    def test_evaluate_with_invalid_operator_raises_value_error(self):
+        with self.assertRaises(ValueError) as ctx:
             Calculator(1, 1, "invalid").evaluate()
+        self.assertIn("Invalid operator", str(ctx.exception))
 
 
 class TestDataSourceOperations(TestCase):
