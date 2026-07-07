@@ -443,6 +443,9 @@ GROWTHBOOK_LONG_CACHE_TTL = env.int(
     "GROWTHBOOK_LONG_CACHE_TTL", default=60 * 60 * 24 * 30
 )
 GROWTHBOOK_WEBHOOK_SECRET = env.str("GROWTHBOOK_WEBHOOK_SECRET", default="")
+FEATURE_FLAGS_USE_SCHEDULED_UPDATES = env.bool(
+    "FEATURE_FLAGS_USE_SCHEDULED_UPDATES", default=False
+)
 
 # Conversations Report
 # In seconds
