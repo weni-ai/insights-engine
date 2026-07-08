@@ -6,6 +6,7 @@ from insights.metrics.conversations.reports.dataclass import (
 )
 from insights.metrics.conversations.reports.file_processors import (
     CSVFileProcessor,
+    StreamingCSVFileProcessor,
     StreamingXLSXFileProcessor,
     XLSXFileProcessor,
     get_file_processor,
@@ -204,3 +205,30 @@ class TestStreamingXLSXFileProcessor(TestCase):
         self.assertTrue(os.path.exists(tmp_path))
 
         os.unlink(tmp_path)
+
+
+class TestStreamingCSVFileProcessor(TestCase):
+    def setUp(self):
+        self.processor = StreamingCSVFileProcessor()
+
+    def test_write_worksheet_returns_local_path_without_content(self):
+        def row_generator():
+            yield {"col1": "val1", "col2": "val2"}
+
+        report_file, row_count = self.processor.write_worksheet(
+            "Valid",
+            ["col1", "col2"],
+            row_generator(),
+        )
+
+        self.assertEqual(row_count, 1)
+        self.assertEqual(report_file.name, "Valid.csv")
+        self.assertIsNone(report_file.content)
+        self.assertTrue(os.path.exists(report_file.local_path))
+
+        with open(report_file.local_path, encoding="utf-8") as csv_file:
+            content = csv_file.read()
+
+        self.assertEqual(content.splitlines(), ["col1,col2", "val1,val2"])
+
+        os.unlink(report_file.local_path)
