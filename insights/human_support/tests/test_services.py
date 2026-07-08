@@ -873,12 +873,14 @@ class TestHumanSupportDashboardService(TestCase):
 
     @patch("insights.human_support.services.ChatsRESTClient")
     def test_get_detailed_monitoring_status_v2_with_filters(self, mock_client_class):
-        mock_client_class.return_value.get_status_by_agent.return_value = {
+        mock_client = MagicMock()
+        mock_client.get_status_by_agent.return_value = {
             "results": [],
             "next": None,
             "previous": None,
             "count": 0,
         }
+        mock_client_class.return_value = mock_client
         from datetime import datetime as dt
         import pytz
 
@@ -892,8 +894,8 @@ class TestHumanSupportDashboardService(TestCase):
                 "offset": 10,
             }
         )
-        call_args = mock_client_class.return_value.get_status_by_agent.call_args
-        params = call_args[0][1]
+        mock_client.get_status_by_agent.assert_called_once()
+        params = mock_client.get_status_by_agent.call_args.args[1]
         self.assertEqual(params["user_request"], "search")
         self.assertEqual(params["limit"], 5)
         self.assertEqual(params["offset"], 10)
