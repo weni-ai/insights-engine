@@ -886,15 +886,25 @@ class TestConversationsMetricsService(TestCase):
 
     def test_get_available_widgets(self):
         self.mock_check_sales_funnel_use_case.execute.return_value = True
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+        self.mock_get_payment_agent_use_case.execute.return_value = None
         available_widgets = self.service.get_available_widgets(self.project.uuid)
 
         self.assertIsInstance(available_widgets, AvailableWidgetsList)
         self.assertEqual(
             available_widgets.available_widgets, [AvailableWidgets.SALES_FUNNEL]
         )
+        self.mock_get_concierge_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
+        self.mock_get_payment_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
 
     def test_get_available_widgets_with_native_type(self):
         self.mock_check_sales_funnel_use_case.execute.return_value = True
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+        self.mock_get_payment_agent_use_case.execute.return_value = None
         available_widgets = self.service.get_available_widgets(
             self.project.uuid, AvailableWidgetsListType.NATIVE
         )
@@ -910,6 +920,78 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertIsInstance(available_widgets, AvailableWidgetsList)
+        self.assertEqual(available_widgets.available_widgets, [])
+        self.mock_get_concierge_agent_use_case.execute.assert_not_called()
+        self.mock_get_payment_agent_use_case.execute.assert_not_called()
+
+    def test_get_available_widgets_with_search_terms_and_added_to_cart(self):
+        self.mock_check_sales_funnel_use_case.execute.return_value = True
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "22222222-2222-2222-2222-222222222222"
+        )
+
+        available_widgets = self.service.get_available_widgets(self.project.uuid)
+
+        self.assertEqual(
+            available_widgets.available_widgets,
+            [
+                AvailableWidgets.SALES_FUNNEL,
+                AvailableWidgets.SEARCH_TERMS,
+                AvailableWidgets.ADDED_TO_CART,
+            ],
+        )
+        self.mock_get_concierge_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
+        self.mock_get_payment_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
+
+    def test_get_available_widgets_with_only_search_terms(self):
+        self.mock_check_sales_funnel_use_case.execute.return_value = False
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
+        self.mock_get_payment_agent_use_case.execute.return_value = None
+
+        with patch(
+            "insights.metrics.conversations.tasks.check_project_sales_funnel_on_datalake"
+        ):
+            available_widgets = self.service.get_available_widgets(self.project.uuid)
+
+        self.assertEqual(
+            available_widgets.available_widgets, [AvailableWidgets.SEARCH_TERMS]
+        )
+
+    def test_get_available_widgets_with_only_added_to_cart(self):
+        self.mock_check_sales_funnel_use_case.execute.return_value = False
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "22222222-2222-2222-2222-222222222222"
+        )
+
+        with patch(
+            "insights.metrics.conversations.tasks.check_project_sales_funnel_on_datalake"
+        ):
+            available_widgets = self.service.get_available_widgets(self.project.uuid)
+
+        self.assertEqual(
+            available_widgets.available_widgets, [AvailableWidgets.ADDED_TO_CART]
+        )
+
+    def test_get_available_widgets_without_agent_widgets(self):
+        self.mock_check_sales_funnel_use_case.execute.return_value = False
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+        self.mock_get_payment_agent_use_case.execute.return_value = None
+
+        with patch(
+            "insights.metrics.conversations.tasks.check_project_sales_funnel_on_datalake"
+        ):
+            available_widgets = self.service.get_available_widgets(self.project.uuid)
+
         self.assertEqual(available_widgets.available_widgets, [])
 
     def test_get_crosstab_data_when_widget_type_is_invalid(self):

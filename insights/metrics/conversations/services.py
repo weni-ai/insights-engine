@@ -1022,6 +1022,12 @@ class ConversationsMetricsService(
         if self.check_if_sales_funnel_data_exists(project_uuid):
             available_widgets.append(AvailableWidgets.SALES_FUNNEL)
 
+        if self.get_concierge_agent_use_case.execute(project_uuid):
+            available_widgets.append(AvailableWidgets.SEARCH_TERMS)
+
+        if self.get_payment_agent_use_case.execute(project_uuid):
+            available_widgets.append(AvailableWidgets.ADDED_TO_CART)
+
         return available_widgets
 
     def get_available_widgets(
