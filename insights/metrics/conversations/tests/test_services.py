@@ -204,6 +204,8 @@ class TestConversationsMetricsService(TestCase):
         self.mock_cache_client.delete.return_value = True
 
         self.mock_check_sales_funnel_use_case = Mock()
+        self.mock_get_concierge_agent_use_case = Mock()
+        self.mock_get_payment_agent_use_case = Mock()
 
         self.service = ConversationsMetricsService(
             datalake_service=self.mock_datalake_service,
@@ -211,6 +213,8 @@ class TestConversationsMetricsService(TestCase):
             cache_client=self.mock_cache_client,
             flowruns_query_executor=self.mock_flowruns_query_executor,
             check_sales_funnel_use_case=self.mock_check_sales_funnel_use_case,
+            get_concierge_agent_use_case=self.mock_get_concierge_agent_use_case,
+            get_payment_agent_use_case=self.mock_get_payment_agent_use_case,
         )
         self.start_date = datetime.now() - timedelta(days=30)
         self.end_date = datetime.now()
@@ -707,11 +711,11 @@ class TestConversationsMetricsService(TestCase):
                 end_date=self.end_date,
             )
 
-    @override_settings(
-        CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID="11111111-1111-1111-1111-111111111111",
-        CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term",
-    )
+    @override_settings(CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term")
     def test_get_search_terms_metrics(self):
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
         self.mock_datalake_service.get_generic_metrics_by_key.return_value = {
             "azeite": 17,
             "arroz": 3,
@@ -733,6 +737,9 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
+        self.mock_get_concierge_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
         self.mock_datalake_service.get_generic_metrics_by_key.assert_called_once_with(
             self.project.uuid,
             "11111111-1111-1111-1111-111111111111",
@@ -741,11 +748,11 @@ class TestConversationsMetricsService(TestCase):
             "search_term",
         )
 
-    @override_settings(
-        CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID="11111111-1111-1111-1111-111111111111",
-        CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term",
-    )
+    @override_settings(CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term")
     def test_get_search_terms_metrics_zero_total(self):
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
         self.mock_datalake_service.get_generic_metrics_by_key.return_value = {}
 
         metrics = self.service.get_search_terms_metrics(
@@ -756,8 +763,9 @@ class TestConversationsMetricsService(TestCase):
 
         self.assertEqual(metrics, {"results": []})
 
-    @override_settings(CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID="")
     def test_cannot_get_search_terms_metrics_without_agent_uuid(self):
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+
         with self.assertRaises(SearchTermsAgentUUIDNotConfiguredError):
             self.service.get_search_terms_metrics(
                 project_uuid=self.project.uuid,
@@ -768,10 +776,12 @@ class TestConversationsMetricsService(TestCase):
         self.mock_datalake_service.get_generic_metrics_by_key.assert_not_called()
 
     @override_settings(
-        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
         CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
     )
     def test_get_added_to_cart_metrics(self):
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
         self.mock_datalake_service.get_generic_metrics_by_key.return_value = {
             "azeite": 17,
             "arroz": 3,
@@ -792,6 +802,9 @@ class TestConversationsMetricsService(TestCase):
             },
         )
 
+        self.mock_get_payment_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
         self.mock_datalake_service.get_generic_metrics_by_key.assert_called_once_with(
             self.project.uuid,
             "11111111-1111-1111-1111-111111111111",
@@ -801,10 +814,12 @@ class TestConversationsMetricsService(TestCase):
         )
 
     @override_settings(
-        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
         CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
     )
     def test_get_added_to_cart_metrics_zero_total(self):
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
         self.mock_datalake_service.get_generic_metrics_by_key.return_value = {}
 
         metrics = self.service.get_added_to_cart_metrics(
@@ -815,8 +830,9 @@ class TestConversationsMetricsService(TestCase):
 
         self.assertEqual(metrics, {"results": []})
 
-    @override_settings(CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="")
     def test_cannot_get_added_to_cart_metrics_without_agent_uuid(self):
+        self.mock_get_payment_agent_use_case.execute.return_value = None
+
         with self.assertRaises(AddedToCartAgentUUIDNotConfiguredError):
             self.service.get_added_to_cart_metrics(
                 project_uuid=self.project.uuid,
