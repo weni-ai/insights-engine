@@ -16,7 +16,7 @@ class GetProjectPaymentAgentUseCase:
     def __init__(self, nexus_client: BaseNexusClient | None = None):
         self.nexus_client = nexus_client or NexusClient()
 
-    def execute(self, project_uuid: UUID) -> UUID | None:
+    def execute(self, project_uuid: UUID) -> str | None:
         return resolve_project_agent_by_slugs(
             project_uuid=project_uuid,
             agent_slugs=settings.CONVERSATIONS_METRICS_PAYMENT_AGENT_SLUGS,
