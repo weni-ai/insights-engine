@@ -75,7 +75,7 @@ class TestResolveProjectAgentBySlugs(TestCase):
                 nexus_client=self.nexus_client,
             )
 
-        self.assertEqual(result, CONCIERGE_UUID)
+        self.assertEqual(result, str(CONCIERGE_UUID))
 
     def test_returns_first_matching_agent_in_nexus_order(self):
         with patch.object(
@@ -96,7 +96,7 @@ class TestResolveProjectAgentBySlugs(TestCase):
                 nexus_client=self.nexus_client,
             )
 
-        self.assertEqual(result, CONCIERGE_UUID)
+        self.assertEqual(result, str(CONCIERGE_UUID))
 
     @patch(
         "insights.metrics.conversations.usecases._resolve_project_agent_by_slugs.logger"
@@ -121,7 +121,7 @@ class TestResolveProjectAgentBySlugs(TestCase):
                 nexus_client=self.nexus_client,
             )
 
-        self.assertEqual(result, CONCIERGE_UUID)
+        self.assertEqual(result, str(CONCIERGE_UUID))
         mock_logger.warning.assert_called_once()
         warning_args = mock_logger.warning.call_args[0]
         self.assertIn("concierge", warning_args[1])
@@ -241,7 +241,7 @@ class TestGetProjectConciergeAgentUseCase(TestCase):
         ) as mock_get_agents_team:
             result = self.use_case.execute(project_uuid=self.project.uuid)
 
-        self.assertEqual(result, CONCIERGE_UUID)
+        self.assertEqual(result, str(CONCIERGE_UUID))
         mock_get_agents_team.assert_called_once_with(self.project.uuid)
 
     @override_settings(CONVERSATIONS_METRICS_CONCIERGE_AGENT_SLUGS=[])
@@ -274,7 +274,7 @@ class TestGetProjectPaymentAgentUseCase(TestCase):
         ) as mock_get_agents_team:
             result = self.use_case.execute(project_uuid=self.project.uuid)
 
-        self.assertEqual(result, PAYMENT_UUID)
+        self.assertEqual(result, str(PAYMENT_UUID))
         mock_get_agents_team.assert_called_once_with(self.project.uuid)
 
     @override_settings(CONVERSATIONS_METRICS_PAYMENT_AGENT_SLUGS=[])
