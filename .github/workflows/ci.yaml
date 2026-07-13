@@ -60,6 +60,9 @@ jobs:
           poetry config virtualenvs.create false --local
           poetry install --no-root
 
+      - name: Check Django migrations
+        run: python manage.py makemigrations --check --dry-run
+
       - name: Run migrations
         run: python manage.py migrate
 

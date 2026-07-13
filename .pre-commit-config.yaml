@@ -30,6 +30,14 @@ repos:
         entry: 'datetime\.now\(\)'
         types: [python]
 
+      - id: check-django-migrations
+        name: Check Django migrations
+        description: Fail if model changes are missing migrations or if the migration graph has conflicting leaf nodes that need a merge
+        entry: python manage.py makemigrations --check --dry-run
+        language: system
+        types: [python]
+        pass_filenames: false
+
   - repo: https://github.com/pycqa/flake8
     rev: 7.0.0
     hooks:
