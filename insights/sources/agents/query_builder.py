@@ -41,7 +41,7 @@ class ProjectAdminsAndManagersSQLQueryBuilder(AgentSQLQueryBuilder):
             "FROM public.projects_projectpermission AS pp "
             "INNER JOIN public.accounts_user AS u ON u.email=pp.user_id "
             "LEFT JOIN public.sectors_sectorauthorization AS sa "
-            f"ON sa.permission_id=pp.id AND sa.role={self.ROLE_MANAGER} "
+            f"ON sa.permission_id=pp.uuid AND sa.role={self.ROLE_MANAGER} "
             f"WHERE {self.where_clause} AND (pp.role={self.ROLE_ADMIN} OR sa.role={self.ROLE_MANAGER});"
         )
 
