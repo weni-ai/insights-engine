@@ -37,7 +37,7 @@ class TestProjectAdminsAndManagersSQLQueryBuilder(TestCase):
         self.assertIn(
             "LEFT JOIN public.sectors_sectorauthorization AS sa", query
         )
-        self.assertIn("sa.permission_id=pp.id AND sa.role=1", query)
+        self.assertIn("sa.permission_id=pp.uuid AND sa.role=1", query)
         self.assertEqual(params, ["project-uuid"])
 
     def test_list_query_filters_by_admin_or_manager_role(self):
