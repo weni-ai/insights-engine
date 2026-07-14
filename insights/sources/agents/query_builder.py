@@ -22,7 +22,7 @@ class AgentSQLQueryBuilder:
         if not include_removed:
             extra_clause = " AND pp.is_deleted = %s"
             extra_params = [False]
-        query = f"SELECT pp.uuid, u.email, CONCAT(u.first_name, ' ', u.last_name) AS name FROM public.projects_projectpermission AS pp INNER JOIN public.accounts_user AS u ON u.email=pp.user_id WHERE {self.where_clause}{extra_clause};"
+        query = f"SELECT u.email, CONCAT(u.first_name, ' ', u.last_name) AS name FROM public.projects_projectpermission AS pp INNER JOIN public.accounts_user AS u ON u.email=pp.user_id WHERE {self.where_clause}{extra_clause};"
 
         return query, self.params + extra_params
 
