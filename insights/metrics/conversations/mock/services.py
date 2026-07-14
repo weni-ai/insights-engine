@@ -24,6 +24,7 @@ from insights.metrics.conversations.dataclass import (
     UniqueContactsMetricsData,
 )
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
     AvailableWidgetsListType,
     ConversationType,
     CsatMetricsType,
@@ -289,7 +290,13 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
     def get_available_widgets(
         self, project_uuid: UUID, widget_type: AvailableWidgetsListType | None = None
     ) -> AvailableWidgetsList:
-        return []
+        return AvailableWidgetsList(
+            available_widgets=[
+                AvailableWidgets.SALES_FUNNEL,
+                AvailableWidgets.SEARCH_TERMS,
+                AvailableWidgets.ADDED_TO_CART,
+            ]
+        )
 
     def get_contacts_metrics(
         self,
