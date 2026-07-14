@@ -1,8 +1,6 @@
 class AddedToCartAgentUUIDNotConfiguredError(Exception):
-    """Raised when CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID is not configured."""
+    """Raised when the added to cart agent could not be resolved for a project."""
 
 
 class SearchTermsAgentUUIDNotConfiguredError(Exception):
-    """Raised when CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID is not configured."""
-
-    pass
+    """Raised when the search terms agent could not be resolved for a project."""

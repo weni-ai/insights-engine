@@ -859,7 +859,7 @@ class TestHumanSupportDashboardService(TestCase):
             }
         )
         call_args = mock_client_class.return_value.get_status_by_agent.call_args
-        params = call_args[0][1]
+        params = call_args[0][0]
         self.assertEqual(params["user_request"], "search")
         self.assertEqual(params["limit"], 5)
         self.assertEqual(params["offset"], 10)

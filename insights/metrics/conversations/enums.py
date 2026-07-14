@@ -86,6 +86,8 @@ class AvailableWidgets(TextChoices):
     """
 
     SALES_FUNNEL = "SALES_FUNNEL"
+    SEARCH_TERMS = "SEARCH_TERMS"
+    ADDED_TO_CART = "ADDED_TO_CART"
 
 
 class AbsoluteNumbersMetricsType(TextChoices):
