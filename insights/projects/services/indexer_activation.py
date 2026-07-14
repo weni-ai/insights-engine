@@ -14,6 +14,10 @@ from insights.projects.models import Project, ProjectIndexerActivation
 logger = logging.getLogger(__name__)
 
 
+def is_project_indexer_active(project: Project) -> bool:
+    return project.is_allowed or str(project.uuid) in settings.PROJECT_ALLOW_LIST
+
+
 class BaseProjectIndexerActivationService(ABC):
     """
     This service is used to activate the indexer for a project.
@@ -65,7 +69,7 @@ class ProjectIndexerActivationService(BaseProjectIndexerActivationService):
         """
         This method is used to check if the project is active on the indexer.
         """
-        return project.is_allowed or str(project.uuid) in settings.PROJECT_ALLOW_LIST
+        return is_project_indexer_active(project)
 
     def is_project_queued(self, project: Project):
         """
