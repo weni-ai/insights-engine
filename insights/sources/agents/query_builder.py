@@ -25,3 +25,29 @@ class AgentSQLQueryBuilder:
         query = f"SELECT pp.uuid, u.email, CONCAT(u.first_name, ' ', u.last_name) AS name FROM public.projects_projectpermission AS pp INNER JOIN public.accounts_user AS u ON u.email=pp.user_id WHERE {self.where_clause}{extra_clause};"
 
         return query, self.params + extra_params
+
+
+class ProjectAdminsAndManagersSQLQueryBuilder(AgentSQLQueryBuilder):
+    """
+    Same as AgentSQLQueryBuilder, but restricted to users who are either
+    project admins (ProjectPermission.role == ROLE_ADMIN) or sector managers
+    (SectorAuthorization.role == ROLE_MANAGER) for at least one sector.
+    """
+
+    ROLE_ADMIN = 1
+    ROLE_MANAGER = 1
+
+    def list(self):
+        if not self.is_valid:
+            self.build_query()
+        query = (
+            "SELECT DISTINCT u.email, "
+            "CONCAT(u.first_name, ' ', u.last_name) AS name "
+            "FROM public.projects_projectpermission AS pp "
+            "INNER JOIN public.accounts_user AS u ON u.email=pp.user_id "
+            "LEFT JOIN public.sectors_sectorauthorization AS sa "
+            f"ON sa.permission_id=pp.id AND sa.role={self.ROLE_MANAGER} "
+            f"WHERE {self.where_clause} AND (pp.role={self.ROLE_ADMIN} OR sa.role={self.ROLE_MANAGER});"
+        )
+
+        return query, self.params

@@ -4,12 +4,17 @@ from insights.sources.agents.clients import (
     AgentsRESTClient,
 )
 from insights.sources.agents.filtersets import AgentFilterSet
-from insights.sources.agents.query_builder import AgentSQLQueryBuilder
+from insights.sources.agents.query_builder import (
+    AgentSQLQueryBuilder,
+    ProjectAdminsAndManagersSQLQueryBuilder,
+)
 from insights.sources.base import BaseQueryExecutor
 from insights.sources.filter_strategies import PostgreSQLFilterStrategy
 
 
 class QueryExecutor(BaseQueryExecutor):
+    query_builder = AgentSQLQueryBuilder
+
     @classmethod
     def execute(
         cls,
@@ -26,7 +31,7 @@ class QueryExecutor(BaseQueryExecutor):
         if return_format == "select_input" or operation != "list":
             query_generator = AgentSQLQueryGenerator(
                 filter_strategy=PostgreSQLFilterStrategy,
-                query_builder=AgentSQLQueryBuilder,
+                query_builder=cls.query_builder,
                 filterset=AgentFilterSet,
                 filters=filters,
                 query_type=operation,
@@ -57,3 +62,13 @@ class QueryExecutor(BaseQueryExecutor):
             "results": query_results.get("results"),
         }
         return paginated_results  # parser(paginated_results)
+
+
+class ProjectAdminsAndManagersQueryExecutor(QueryExecutor):
+    """
+    Same behavior as QueryExecutor, but restricted to project admins and
+    sector managers. Used by the dedicated endpoint that lists only the
+    users allowed to receive operational alerts/notifications.
+    """
+
+    query_builder = ProjectAdminsAndManagersSQLQueryBuilder
