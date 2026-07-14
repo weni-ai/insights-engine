@@ -9,6 +9,7 @@ from insights.authentication.services.project_auth import (
     EXISTING_ROLES,
     _check_project_authorization,
     has_external_general_project_permission,
+    is_project_viewer,
 )
 from insights.projects.models import ProjectAuth
 
@@ -303,3 +304,54 @@ class HasExternalGeneralProjectPermissionTests(TestCase):
         has_external_general_project_permission(request, self.project_uuid)
 
         mock_get.assert_called_once()
+
+
+@override_settings(
+    PROJECT_AUTH_API_BASE_URL="http://fake-auth",
+    PROJECT_AUTH_API_TIMEOUT=3,
+)
+class IsProjectViewerTests(TestCase):
+    def setUp(self):
+        self.token = "Bearer fake-token"
+        self.project_uuid = "11111111-1111-1111-1111-111111111111"
+
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_returns_true_for_viewer_role(self, mock_get):
+        mock_get.return_value = _make_response(
+            status_code=200,
+            payload={
+                "user": "viewer@x.com",
+                "project_authorization": EXISTING_ROLES["viewer"],
+            },
+        )
+
+        self.assertTrue(is_project_viewer(self.token, self.project_uuid))
+        mock_get.assert_called_once_with(
+            f"http://fake-auth/v2/projects/{self.project_uuid}/authorization",
+            headers={"Authorization": self.token},
+            timeout=3,
+        )
+
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_returns_false_for_moderator_role(self, mock_get):
+        mock_get.return_value = _make_response(
+            status_code=200,
+            payload={
+                "user": "mod@x.com",
+                "project_authorization": EXISTING_ROLES["moderator"],
+            },
+        )
+
+        self.assertFalse(is_project_viewer(self.token, self.project_uuid))
+
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_returns_false_for_non_200_response(self, mock_get):
+        mock_get.return_value = _make_response(status_code=404)
+
+        self.assertFalse(is_project_viewer(self.token, self.project_uuid))
+
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_returns_false_when_external_service_unavailable(self, mock_get):
+        mock_get.side_effect = requests.ConnectionError("boom")
+
+        self.assertFalse(is_project_viewer(self.token, self.project_uuid))

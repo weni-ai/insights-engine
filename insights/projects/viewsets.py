@@ -13,15 +13,13 @@ from insights.authentication.permissions import (
     ProjectAuthPermission,
     InternalAuthenticationPermission,
 )
-from insights.core.urls.proxy_pagination import (
-    get_cursor_based_pagination_urls,
-)
+from insights.authentication.services.project_auth import is_project_viewer
 from insights.core.urls.proxy_pagination import (
     get_cursor_based_pagination_urls,
 )
 from insights.human_support.clients.chats import ChatsClient
 from insights.projects.dataclass import TicketID
-from insights.projects.models import Project
+from insights.projects.models import Project, ProjectAuth
 from insights.projects.services.indexer_activation import is_project_indexer_active
 from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import (
@@ -199,20 +197,6 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="verify_csat",
-    )
-    def verify_csat(self, request, *args, **kwargs):
-        project = self.get_object()
-        chats_client = ChatsRESTClient()
-
-        project_data = chats_client.get_project(str(project.uuid))
-        is_csat_enabled = project_data.get("is_csat_enabled", False)
-
-        return Response(is_csat_enabled, status=status.HTTP_200_OK)
-
-    @action(
-        detail=True,
-        methods=["get"],
         url_path="filters/contacts",
     )
     def search_contacts(self, request, *args, **kwargs):
@@ -324,3 +308,29 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         is_csat_enabled = project_data.get("is_csat_enabled", False)
 
         return Response(is_csat_enabled, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="verify_viewer",
+        permission_classes=[IsAuthenticated],
+    )
+    def verify_viewer(self, request, *args, **kwargs):
+        try:
+            project = Project.objects.get(pk=self.kwargs["pk"])
+        except Project.DoesNotExist:
+            return Response(False, status=status.HTTP_200_OK)
+
+        if ProjectAuth.objects.filter(
+            user=request.user, project=project, role=1
+        ).exists():
+            return Response(False, status=status.HTTP_200_OK)
+
+        token = request.headers.get("Authorization")
+        if not token:
+            return Response(False, status=status.HTTP_200_OK)
+
+        return Response(
+            is_project_viewer(token, str(project.uuid)),
+            status=status.HTTP_200_OK,
+        )

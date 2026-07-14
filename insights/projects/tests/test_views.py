@@ -1,3 +1,4 @@
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.response import Response
@@ -95,6 +96,14 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_search_project_managers_as_anonymous_user(self):
         url = reverse(
             "project-search-project-managers",
+            kwargs={"pk": "123e4567-e89b-12d3-a456-426614174000"},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_verify_viewer_as_anonymous_user(self):
+        url = reverse(
+            "project-verify-viewer",
             kwargs={"pk": "123e4567-e89b-12d3-a456-426614174000"},
         )
         response = self.client.get(url)
@@ -530,16 +539,53 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             self.assertEqual(response.data["detail"], "Failed to retrieve source data")
 
     @with_project_auth
-    def test_verify_csat(self):
-        url = reverse("project-verify-csat", kwargs={"pk": self.project.uuid})
+    def test_verify_viewer_returns_false_for_local_admin(self):
+        url = reverse("project-verify-viewer", kwargs={"pk": self.project.uuid})
 
-        with patch("insights.projects.viewsets.ChatsRESTClient") as mock_chats_client:
-            mock_chats_client.return_value.get_project.return_value = {
-                "is_csat_enabled": True,
-            }
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.data, True)
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, False)
+
+    @override_settings(
+        PROJECT_AUTH_API_BASE_URL="http://fake-auth",
+        PROJECT_AUTH_API_TIMEOUT=3,
+    )
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_verify_viewer_returns_true_for_external_viewer(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "user": "viewer@x.com",
+            "project_authorization": 1,
+        }
+        mock_get.return_value = mock_response
+
+        url = reverse("project-verify-viewer", kwargs={"pk": self.project.uuid})
+        response = self.client.get(url, HTTP_AUTHORIZATION="Bearer fake-token")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, True)
+
+    @override_settings(
+        PROJECT_AUTH_API_BASE_URL="http://fake-auth",
+        PROJECT_AUTH_API_TIMEOUT=3,
+    )
+    @patch("insights.authentication.services.project_auth.requests.get")
+    def test_verify_viewer_returns_false_for_non_viewer_role(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "user": "mod@x.com",
+            "project_authorization": 3,
+        }
+        mock_get.return_value = mock_response
+
+        url = reverse("project-verify-viewer", kwargs={"pk": self.project.uuid})
+        response = self.client.get(url, HTTP_AUTHORIZATION="Bearer fake-token")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, False)
 
 
 class TestUserProjectsViewAsAnonymousUser(APITestCase):
