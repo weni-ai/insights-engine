@@ -1,6 +1,8 @@
 import requests
 from django.conf import settings
 
+from insights.core.accessors import get_nested_attr
+
 
 class InternalAuthentication:
     def get_module_token(self):
@@ -21,6 +23,23 @@ class InternalAuthentication:
         return {
             "Content-Type": "application/json; charset: utf-8",
             "Authorization": self.get_module_token(),
+        }
+
+
+class InternalJWTAuthentication:
+    project_uuid_field = "project.uuid"
+
+    def _get_project_uuid(self):
+        return get_nested_attr(self, self.project_uuid_field)
+
+    @property
+    def headers(self):
+        from insights.authentication.services.jwt_service import JWTService
+
+        token = JWTService().generate_jwt_token(project_uuid=self._get_project_uuid())
+        return {
+            "Content-Type": "application/json; charset: utf-8",
+            "Authorization": f"Bearer {token}",
         }
 
 

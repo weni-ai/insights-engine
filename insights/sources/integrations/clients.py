@@ -72,18 +72,35 @@ class BaseNexusClient(ABC):
         Get the status of the multi agents for a project.
         """
 
+    @abstractmethod
+    def get_project_agents_team(self, project_uuid: UUID) -> Response:
+        """
+        Get the agents team for a project.
+        """
+
 
 class NexusClient(BaseNexusClient):
     """
     Client for Nexus API.
     """
 
+    class AuthTypes:
+        API_TOKEN = "api_token"
+        KEYCLOAK_INTERNAL = "keycloak_internal"
+
     def __init__(self):
         self.base_url = settings.NEXUS_BASE_URL
-        self.headers = {
-            "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
-        }
         self.timeout = 60
+
+    def get_headers(self, auth_type: AuthTypes) -> dict:
+        if auth_type == self.AuthTypes.API_TOKEN:
+            return {
+                "Authorization": f"Bearer {settings.NEXUS_API_TOKEN}",
+            }
+        elif auth_type == self.AuthTypes.KEYCLOAK_INTERNAL:
+            return InternalAuthentication().headers
+        else:
+            raise ValueError(f"Invalid auth type: {auth_type}")
 
     def get_project_multi_agents_status(self, project_uuid: UUID) -> Response:
         """
@@ -92,7 +109,24 @@ class NexusClient(BaseNexusClient):
 
         url = f"{self.base_url}/project/{project_uuid}/multi-agents"
 
-        return requests.get(url=url, headers=self.headers, timeout=self.timeout)
+        return requests.get(
+            url=url,
+            headers=self.get_headers(self.AuthTypes.API_TOKEN),
+            timeout=self.timeout,
+        )
+
+    def get_project_agents_team(self, project_uuid: UUID) -> Response:
+        """
+        Get the agents team for a project.
+        """
+
+        url = f"{self.base_url}/agents/teams/{project_uuid}"
+
+        return requests.get(
+            url=url,
+            headers=self.get_headers(self.AuthTypes.KEYCLOAK_INTERNAL),
+            timeout=self.timeout,
+        )
 
 
 class BaseNexusConversationsAPIClient(ABC):

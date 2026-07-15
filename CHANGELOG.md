@@ -1,3 +1,58 @@
+# 1.33.2
+# Add
+  - Parallel streaming fetch with disk-backed event spool for classification events in conversations report
+
+# 1.33.1
+# Fix
+  - Periodic heartbeat update in conversations report service
+
+# 1.33.0
+# Add
+  - Streaming XLSX report generation for conversations reports
+  - Streaming mode feature flag for conversations report export
+
+# 1.32.0
+# Add
+  - WhatsApp integration use cases for saving and removing dashboards
+  - Error email notification on conversations report generation timeout
+  - Unit tests for pagination, permissions, authentication, human support, and metrics modules
+# Fix
+  - Internal authentication permission check for internal communication
+
+# 1.31.1
+# Add
+  - Search terms and added to cart widgets in conversations dashboard
+  - Transaction management for dashboard creation process
+# Fix
+  - Widget creation conditioned on successful dashboard creation
+
+# 1.31.0
+# Add
+  - VTEX account unlinking from conflicting projects
+  - Default values and error handling in Calculator and subwidget data functions
+# Fix
+  - Unsupported operations with None types in widget calculations
+  - Conversations dashboard creation logic
+
+# 1.30.0
+# Add
+  - Templates and orders metrics endpoint with multiple WABAs support
+
+# 1.29.0
+# Add
+  - Search terms metrics service, endpoint, and report worksheet
+  - Added to cart metrics service, endpoint, and report worksheet
+
+# 1.28.1
+# Add
+  - Automatic close field in human support rooms
+
+# 1.28.0
+# Add
+  - Agents and tools URN list for detailed events reporting
+  - Project VTEX account update endpoint
+  - NexusClient integration for project agents retrieval
+
 # 1.27.2
 # Fix
   - Abandoned cart skill support for projects with multiple WhatsApp Business Accounts

@@ -13,6 +13,7 @@ from insights.reports.models import Report
 from insights.reports.choices import ReportStatus
 from insights.sources.cache import CacheClient
 from insights.sources.dl_events.clients import DataLakeEventsClient
+from insights.sources.integrations.clients import NexusClient
 from insights.metrics.conversations.reports.services import ConversationsReportService
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.integrations.elasticsearch.services import (
@@ -30,6 +31,22 @@ from insights.metrics.conversations.usecases.datalake_check_project_sales_funnel
 
 
 logger = logging.getLogger(__name__)
+
+
+def _create_conversations_report_service() -> ConversationsReportService:
+    return ConversationsReportService(
+        datalake_events_client=DataLakeEventsClient(),
+        metrics_service=ConversationsMetricsService(),
+        elasticsearch_service=ConversationsElasticsearchService(
+            client=ElasticsearchClient(),
+        ),
+        cache_client=CacheClient(),
+        nexus_client=NexusClient(),
+        events_limit_per_page=settings.CONVERSATIONS_REPORT_EVENTS_LIMIT_PER_PAGE,
+        page_limit=settings.CONVERSATIONS_REPORT_PAGE_LIMIT,
+        elastic_page_size=settings.CONVERSATIONS_REPORT_ELASTIC_PAGE_SIZE,
+        elastic_page_limit=settings.CONVERSATIONS_REPORT_ELASTIC_PAGE_LIMIT,
+    )
 
 
 @app.task
@@ -104,18 +121,7 @@ def generate_conversations_report():
         oldest_report.config = config
 
         oldest_report.save(update_fields=["config"])
-        ConversationsReportService(
-            datalake_events_client=DataLakeEventsClient(),
-            metrics_service=ConversationsMetricsService(),
-            elasticsearch_service=ConversationsElasticsearchService(
-                client=ElasticsearchClient(),
-            ),
-            cache_client=CacheClient(),
-            events_limit_per_page=settings.CONVERSATIONS_REPORT_EVENTS_LIMIT_PER_PAGE,
-            page_limit=settings.CONVERSATIONS_REPORT_PAGE_LIMIT,
-            elastic_page_size=settings.CONVERSATIONS_REPORT_ELASTIC_PAGE_SIZE,
-            elastic_page_limit=settings.CONVERSATIONS_REPORT_ELASTIC_PAGE_LIMIT,
-        ).generate(oldest_report)
+        _create_conversations_report_service().generate(oldest_report)
     except Exception as e:
         logger.error(
             "[ generate_conversations_report task ] Error generating report %s: %s",
@@ -151,7 +157,7 @@ def timeout_reports():
         status=ReportStatus.IN_PROGRESS,
         started_at__lt=timezone.now()
         - timedelta(seconds=settings.REPORT_GENERATION_TIMEOUT),
-    )
+    ).select_related("project", "requested_by")
 
     if not in_progress_reports.exists():
         logger.info(
@@ -159,20 +165,29 @@ def timeout_reports():
         )
         return
 
+    report_count = in_progress_reports.count()
+
     logger.info(
         "[ timeout_reports task ] Found %s in progress reports",
-        in_progress_reports.count(),
+        report_count,
     )
 
-    for report in in_progress_reports:
+    timed_out_reports = list(in_progress_reports)
+    completed_at = timezone.now()
+    timeout_errors = {"timeout": "Report generation timed out"}
+
+    for report in timed_out_reports:
         report.status = ReportStatus.FAILED
-        report.completed_at = timezone.now()
-        report.errors = {"timeout": "Report generation timed out"}
+        report.completed_at = completed_at
+        report.errors = timeout_errors
         report.save(update_fields=["status", "completed_at", "errors"])
 
-    logger.info(
-        "[ timeout_reports task ] Timed out %s reports", in_progress_reports.count()
-    )
+    service = _create_conversations_report_service()
+
+    for report in timed_out_reports:
+        service.send_email(report, [], is_error=True)
+
+    logger.info("[ timeout_reports task ] Timed out %s reports", report_count)
 
 
 @app.task

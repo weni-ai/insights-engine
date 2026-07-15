@@ -4,7 +4,7 @@ import json
 from uuid import UUID
 from unittest.mock import Mock, MagicMock, patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.core.cache import cache
 
 
@@ -37,6 +37,10 @@ from insights.metrics.conversations.enums import (
     ConversationType,
     CsatMetricsType,
     NpsMetricsType,
+)
+from insights.metrics.conversations.exceptions import (
+    AddedToCartAgentUUIDNotConfiguredError,
+    SearchTermsAgentUUIDNotConfiguredError,
 )
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     ToolResultMetric,
@@ -200,6 +204,8 @@ class TestConversationsMetricsService(TestCase):
         self.mock_cache_client.delete.return_value = True
 
         self.mock_check_sales_funnel_use_case = Mock()
+        self.mock_get_concierge_agent_use_case = Mock()
+        self.mock_get_payment_agent_use_case = Mock()
 
         self.service = ConversationsMetricsService(
             datalake_service=self.mock_datalake_service,
@@ -207,6 +213,8 @@ class TestConversationsMetricsService(TestCase):
             cache_client=self.mock_cache_client,
             flowruns_query_executor=self.mock_flowruns_query_executor,
             check_sales_funnel_use_case=self.mock_check_sales_funnel_use_case,
+            get_concierge_agent_use_case=self.mock_get_concierge_agent_use_case,
+            get_payment_agent_use_case=self.mock_get_payment_agent_use_case,
         )
         self.start_date = datetime.now() - timedelta(days=30)
         self.end_date = datetime.now()
@@ -703,6 +711,137 @@ class TestConversationsMetricsService(TestCase):
                 end_date=self.end_date,
             )
 
+    @override_settings(CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term")
+    def test_get_search_terms_metrics(self):
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
+        self.mock_datalake_service.get_generic_metrics_by_key.return_value = {
+            "azeite": 17,
+            "arroz": 3,
+        }
+
+        metrics = self.service.get_search_terms_metrics(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(
+            metrics,
+            {
+                "results": [
+                    {"label": "azeite", "value": 85.0, "full_value": 17},
+                    {"label": "arroz", "value": 15.0, "full_value": 3},
+                ]
+            },
+        )
+
+        self.mock_get_concierge_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
+        self.mock_datalake_service.get_generic_metrics_by_key.assert_called_once_with(
+            self.project.uuid,
+            "11111111-1111-1111-1111-111111111111",
+            self.start_date,
+            self.end_date,
+            "search_term",
+        )
+
+    @override_settings(CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term")
+    def test_get_search_terms_metrics_zero_total(self):
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
+        self.mock_datalake_service.get_generic_metrics_by_key.return_value = {}
+
+        metrics = self.service.get_search_terms_metrics(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(metrics, {"results": []})
+
+    def test_cannot_get_search_terms_metrics_without_agent_uuid(self):
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+
+        with self.assertRaises(SearchTermsAgentUUIDNotConfiguredError):
+            self.service.get_search_terms_metrics(
+                project_uuid=self.project.uuid,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+        self.mock_datalake_service.get_generic_metrics_by_key.assert_not_called()
+
+    @override_settings(
+        CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
+    )
+    def test_get_added_to_cart_metrics(self):
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
+        self.mock_datalake_service.get_generic_metrics_by_key.return_value = {
+            "azeite": 17,
+            "arroz": 3,
+        }
+        metrics = self.service.get_added_to_cart_metrics(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(
+            metrics,
+            {
+                "results": [
+                    {"label": "azeite", "value": 85.0, "full_value": 17},
+                    {"label": "arroz", "value": 15.0, "full_value": 3},
+                ]
+            },
+        )
+
+        self.mock_get_payment_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
+        self.mock_datalake_service.get_generic_metrics_by_key.assert_called_once_with(
+            self.project.uuid,
+            "11111111-1111-1111-1111-111111111111",
+            self.start_date,
+            self.end_date,
+            "product_added_to_cart",
+        )
+
+    @override_settings(
+        CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
+    )
+    def test_get_added_to_cart_metrics_zero_total(self):
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
+        self.mock_datalake_service.get_generic_metrics_by_key.return_value = {}
+
+        metrics = self.service.get_added_to_cart_metrics(
+            project_uuid=self.project.uuid,
+            start_date=self.start_date,
+            end_date=self.end_date,
+        )
+
+        self.assertEqual(metrics, {"results": []})
+
+    def test_cannot_get_added_to_cart_metrics_without_agent_uuid(self):
+        self.mock_get_payment_agent_use_case.execute.return_value = None
+
+        with self.assertRaises(AddedToCartAgentUUIDNotConfiguredError):
+            self.service.get_added_to_cart_metrics(
+                project_uuid=self.project.uuid,
+                start_date=self.start_date,
+                end_date=self.end_date,
+            )
+
+        self.mock_datalake_service.get_generic_metrics_by_key.assert_not_called()
+
     def test_get_sales_funnel_data(self):
         self.mock_datalake_service.get_sales_funnel_data.return_value = SalesFunnelData(
             leads_count=100,
@@ -747,15 +886,25 @@ class TestConversationsMetricsService(TestCase):
 
     def test_get_available_widgets(self):
         self.mock_check_sales_funnel_use_case.execute.return_value = True
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+        self.mock_get_payment_agent_use_case.execute.return_value = None
         available_widgets = self.service.get_available_widgets(self.project.uuid)
 
         self.assertIsInstance(available_widgets, AvailableWidgetsList)
         self.assertEqual(
             available_widgets.available_widgets, [AvailableWidgets.SALES_FUNNEL]
         )
+        self.mock_get_concierge_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
+        self.mock_get_payment_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
 
     def test_get_available_widgets_with_native_type(self):
         self.mock_check_sales_funnel_use_case.execute.return_value = True
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+        self.mock_get_payment_agent_use_case.execute.return_value = None
         available_widgets = self.service.get_available_widgets(
             self.project.uuid, AvailableWidgetsListType.NATIVE
         )
@@ -771,6 +920,78 @@ class TestConversationsMetricsService(TestCase):
         )
 
         self.assertIsInstance(available_widgets, AvailableWidgetsList)
+        self.assertEqual(available_widgets.available_widgets, [])
+        self.mock_get_concierge_agent_use_case.execute.assert_not_called()
+        self.mock_get_payment_agent_use_case.execute.assert_not_called()
+
+    def test_get_available_widgets_with_search_terms_and_added_to_cart(self):
+        self.mock_check_sales_funnel_use_case.execute.return_value = True
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "22222222-2222-2222-2222-222222222222"
+        )
+
+        available_widgets = self.service.get_available_widgets(self.project.uuid)
+
+        self.assertEqual(
+            available_widgets.available_widgets,
+            [
+                AvailableWidgets.SALES_FUNNEL,
+                AvailableWidgets.SEARCH_TERMS,
+                AvailableWidgets.ADDED_TO_CART,
+            ],
+        )
+        self.mock_get_concierge_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
+        self.mock_get_payment_agent_use_case.execute.assert_called_once_with(
+            self.project.uuid
+        )
+
+    def test_get_available_widgets_with_only_search_terms(self):
+        self.mock_check_sales_funnel_use_case.execute.return_value = False
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
+        self.mock_get_payment_agent_use_case.execute.return_value = None
+
+        with patch(
+            "insights.metrics.conversations.tasks.check_project_sales_funnel_on_datalake"
+        ):
+            available_widgets = self.service.get_available_widgets(self.project.uuid)
+
+        self.assertEqual(
+            available_widgets.available_widgets, [AvailableWidgets.SEARCH_TERMS]
+        )
+
+    def test_get_available_widgets_with_only_added_to_cart(self):
+        self.mock_check_sales_funnel_use_case.execute.return_value = False
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "22222222-2222-2222-2222-222222222222"
+        )
+
+        with patch(
+            "insights.metrics.conversations.tasks.check_project_sales_funnel_on_datalake"
+        ):
+            available_widgets = self.service.get_available_widgets(self.project.uuid)
+
+        self.assertEqual(
+            available_widgets.available_widgets, [AvailableWidgets.ADDED_TO_CART]
+        )
+
+    def test_get_available_widgets_without_agent_widgets(self):
+        self.mock_check_sales_funnel_use_case.execute.return_value = False
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
+        self.mock_get_payment_agent_use_case.execute.return_value = None
+
+        with patch(
+            "insights.metrics.conversations.tasks.check_project_sales_funnel_on_datalake"
+        ):
+            available_widgets = self.service.get_available_widgets(self.project.uuid)
+
         self.assertEqual(available_widgets.available_widgets, [])
 
     def test_get_crosstab_data_when_widget_type_is_invalid(self):

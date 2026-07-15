@@ -735,6 +735,42 @@ class TestRequestConversationsReportGenerationSerializer(TestCase):
             [ConversationsReportSections.CONTACTS],
         )
 
+    def test_serializer_with_search_terms_section(self):
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.SEARCH_TERMS],
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["project"], self.project)
+        self.assertEqual(
+            serializer.validated_data["sections"],
+            [ConversationsReportSections.SEARCH_TERMS],
+        )
+        self.assertEqual(serializer.validated_data["source_config"], {})
+
+    def test_serializer_with_added_to_cart_section(self):
+        serializer = RequestConversationsReportGenerationSerializer(
+            data={
+                "project_uuid": self.project.uuid,
+                "type": ReportFormat.CSV,
+                "start_date": "2025-01-24",
+                "end_date": "2025-01-25",
+                "sections": [ConversationsReportSections.ADDED_TO_CART],
+            }
+        )
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["project"], self.project)
+        self.assertEqual(
+            serializer.validated_data["sections"],
+            [ConversationsReportSections.ADDED_TO_CART],
+        )
+        self.assertEqual(serializer.validated_data["source_config"], {})
+
     def test_serializer_without_sections_custom_widgets_and_crosstab_widgets(self):
         serializer = RequestConversationsReportGenerationSerializer(
             data={

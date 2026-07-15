@@ -10,11 +10,7 @@ class TestCustomStatusRESTClient(TestCase):
     def setUp(self):
         self.project = MagicMock()
         self.project.uuid = uuid.uuid4()
-
-        with patch.object(
-            CustomStatusRESTClient, "get_module_token", return_value="Bearer fake"
-        ):
-            self.client = CustomStatusRESTClient(project=self.project)
+        self.client = CustomStatusRESTClient(project=self.project)
 
     @patch("insights.sources.custom_status.client.requests.get")
     @patch.object(

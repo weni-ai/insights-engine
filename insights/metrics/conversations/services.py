@@ -32,8 +32,14 @@ from insights.metrics.conversations.dataclass import (
     TopicsDistributionMetrics,
     UniqueContactsMetricsData,
 )
+from insights.metrics.conversations.exceptions import (
+    AddedToCartAgentUUIDNotConfiguredError,
+)
 from insights.metrics.conversations.integrations.datalake.dataclass import (
     CrosstabSource,
+)
+from insights.metrics.conversations.exceptions import (
+    SearchTermsAgentUUIDNotConfiguredError,
 )
 from insights.metrics.conversations.integrations.datalake.services import (
     BaseDatalakeConversationsMetricsService,
@@ -61,6 +67,12 @@ from insights.sources.integrations.clients import (
 from insights.widgets.models import Widget
 from insights.metrics.conversations.usecases.dashboard_check_project_sales_funnel import (
     CheckProjectSalesFunnelOnDashboardUseCase,
+)
+from insights.metrics.conversations.usecases.get_project_concierge_agent import (
+    GetProjectConciergeAgentUseCase,
+)
+from insights.metrics.conversations.usecases.get_project_payment_agent import (
+    GetProjectPaymentAgentUseCase,
 )
 
 
@@ -183,6 +195,30 @@ class BaseConversationsMetricsService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_search_terms_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get search terms metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_added_to_cart_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get added to cart metrics
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_sales_funnel_data(
         self, project_uuid: UUID, start_date: datetime, end_date: datetime
     ) -> SalesFunnelMetrics:
@@ -272,6 +308,8 @@ class ConversationsMetricsService(
         nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
         check_sales_funnel_use_case: CheckProjectSalesFunnelOnDashboardUseCase = CheckProjectSalesFunnelOnDashboardUseCase(),
+        get_concierge_agent_use_case: GetProjectConciergeAgentUseCase = GetProjectConciergeAgentUseCase(),
+        get_payment_agent_use_case: GetProjectPaymentAgentUseCase = GetProjectPaymentAgentUseCase(),
     ):
         self.datalake_service: BaseDatalakeConversationsMetricsService = (
             datalake_service
@@ -284,6 +322,12 @@ class ConversationsMetricsService(
         self.flowruns_query_executor: FlowRunsQueryExecutor = flowruns_query_executor
         self.check_sales_funnel_use_case: CheckProjectSalesFunnelOnDashboardUseCase = (
             check_sales_funnel_use_case
+        )
+        self.get_concierge_agent_use_case: GetProjectConciergeAgentUseCase = (
+            get_concierge_agent_use_case
+        )
+        self.get_payment_agent_use_case: GetProjectPaymentAgentUseCase = (
+            get_payment_agent_use_case
         )
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
@@ -858,6 +902,80 @@ class ConversationsMetricsService(
 
         return results
 
+    def get_search_terms_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get search terms metrics
+        """
+        agent_uuid = self.get_concierge_agent_use_case.execute(project_uuid)
+
+        if not agent_uuid:
+            raise SearchTermsAgentUUIDNotConfiguredError(
+                "Search terms agent could not be resolved for this project"
+            )
+
+        key = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_KEY
+
+        metrics = self.datalake_service.get_generic_metrics_by_key(
+            project_uuid, agent_uuid, start_date, end_date, key
+        )
+
+        total_count = sum(metrics.values())
+
+        return {
+            "results": [
+                {
+                    "label": label,
+                    "value": (
+                        round((count / total_count) * 100, 2) if total_count else 0
+                    ),
+                    "full_value": count,
+                }
+                for label, count in metrics.items()
+            ]
+        }
+
+    def get_added_to_cart_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        """
+        Get added to cart metrics
+        """
+        agent_uuid = self.get_payment_agent_use_case.execute(project_uuid)
+
+        if not agent_uuid:
+            raise AddedToCartAgentUUIDNotConfiguredError(
+                "Added to cart agent could not be resolved for this project"
+            )
+
+        key = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_KEY
+
+        metrics = self.datalake_service.get_generic_metrics_by_key(
+            project_uuid, agent_uuid, start_date, end_date, key
+        )
+
+        total_count = sum(metrics.values())
+
+        return {
+            "results": [
+                {
+                    "label": label,
+                    "value": (
+                        round((count / total_count) * 100, 2) if total_count else 0
+                    ),
+                    "full_value": count,
+                }
+                for label, count in metrics.items()
+            ]
+        }
+
     def get_sales_funnel_data(
         self,
         project_uuid: UUID,
@@ -903,6 +1021,12 @@ class ConversationsMetricsService(
 
         if self.check_if_sales_funnel_data_exists(project_uuid):
             available_widgets.append(AvailableWidgets.SALES_FUNNEL)
+
+        if self.get_concierge_agent_use_case.execute(project_uuid):
+            available_widgets.append(AvailableWidgets.SEARCH_TERMS)
+
+        if self.get_payment_agent_use_case.execute(project_uuid):
+            available_widgets.append(AvailableWidgets.ADDED_TO_CART)
 
         return available_widgets
 

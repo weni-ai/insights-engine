@@ -1,3 +1,4 @@
+from collections.abc import Iterable, Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 import io
@@ -10,6 +11,8 @@ import pytz
 import zipfile
 import boto3
 import uuid
+import os
+import tempfile
 
 from django.utils.crypto import get_random_string
 from django.core.mail import EmailMessage
@@ -22,31 +25,50 @@ from sentry_sdk import capture_exception
 from weni.feature_flags.shortcuts import is_feature_active_for_attributes
 
 from insights.metrics.conversations.enums import ConversationType
+from insights.metrics.conversations.exceptions import (
+    AddedToCartAgentUUIDNotConfiguredError,
+    SearchTermsAgentUUIDNotConfiguredError,
+)
 from insights.metrics.conversations.reports.available_widgets import (
+    get_added_to_cart_widget,
     get_crosstab_widgets,
     get_csat_ai_widget,
     get_csat_human_widget,
     get_custom_widgets,
     get_nps_ai_widget,
     get_nps_human_widget,
+    get_search_term_widget,
 )
 from insights.metrics.conversations.reports.dataclass import (
     AvailableReportWidgets,
     ConversationsReportFile,
     ConversationsReportWorksheet,
 )
-from insights.metrics.conversations.reports.file_processors import get_file_processor
+from insights.metrics.conversations.reports.file_processors import (
+    get_file_processor,
+    StreamingCSVFileProcessor,
+    StreamingXLSXFileProcessor,
+)
 from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.usecases.get_project_concierge_agent import (
+    GetProjectConciergeAgentUseCase,
+)
+from insights.metrics.conversations.usecases.get_project_payment_agent import (
+    GetProjectPaymentAgentUseCase,
+)
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
 from insights.projects.models import Project
 from insights.sources.dl_events.clients import BaseDataLakeEventsClient
+from insights.sources.integrations.clients import BaseNexusClient
 from insights.metrics.conversations.integrations.elasticsearch.services import (
     ConversationsElasticsearchService,
 )
 from insights.widgets.models import Widget
 from insights.sources.cache import CacheClient
+
+from rest_framework import status as rest_status
 
 
 logger = logging.getLogger(__name__)
@@ -88,6 +110,41 @@ def serialize_filters_for_json(filters: dict) -> dict:
             serialized_filters[key] = value
 
     return serialized_filters
+
+
+class _ReplayableDatalakeEventsSpool:
+    """
+    Disk-backed event spool that supports multiple iterations over the same
+    datalake fetch without keeping all events in memory.
+    """
+
+    def __init__(self, path: str):
+        self.path = path
+
+    @classmethod
+    def from_parallel_fetch(cls, service, report: Report, **kwargs):
+        fd, path = tempfile.mkstemp(suffix=".jsonl")
+        os.close(fd)
+        try:
+            with open(path, "w") as spool_file:
+                for event in service._iter_datalake_events(report, **kwargs):
+                    spool_file.write(json.dumps(event, default=str) + "\n")
+        except Exception:
+            if os.path.exists(path):
+                os.unlink(path)
+            raise
+        return cls(path)
+
+    def __iter__(self) -> Iterator[dict]:
+        with open(self.path) as spool_file:
+            for line in spool_file:
+                line = line.strip()
+                if line:
+                    yield json.loads(line)
+
+    def cleanup(self) -> None:
+        if os.path.exists(self.path):
+            os.unlink(self.path)
 
 
 class BaseConversationsReportService(ABC):
@@ -308,6 +365,18 @@ class BaseConversationsReportService(ABC):
         raise NotImplementedError("Subclasses must implement this method")
 
     @abstractmethod
+    def get_search_terms_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get search terms worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
     def get_contacts_summary_worksheet(
         self,
         report: Report,
@@ -316,6 +385,18 @@ class BaseConversationsReportService(ABC):
     ) -> ConversationsReportWorksheet:
         """
         Get contacts absolute numbers worksheet.
+        """
+        raise NotImplementedError("Subclasses must implement this method")
+
+    @abstractmethod
+    def get_added_to_cart_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get added to cart worksheet.
         """
         raise NotImplementedError("Subclasses must implement this method")
 
@@ -331,10 +412,13 @@ class ConversationsReportService(BaseConversationsReportService):
         metrics_service: ConversationsMetricsService,
         elasticsearch_service: ConversationsElasticsearchService,
         cache_client: CacheClient,
+        nexus_client: BaseNexusClient,
         events_limit_per_page: int = 5000,
         page_limit: int = 100,
         elastic_page_size: int = 1000,
         elastic_page_limit: int = 100,
+        get_concierge_agent_use_case: GetProjectConciergeAgentUseCase | None = None,
+        get_payment_agent_use_case: GetProjectPaymentAgentUseCase | None = None,
     ):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.datalake_events_client = datalake_events_client
@@ -343,10 +427,121 @@ class ConversationsReportService(BaseConversationsReportService):
         self.page_limit = page_limit
         self.elasticsearch_service = elasticsearch_service
         self.cache_client = cache_client
+        self.nexus_client = nexus_client
         self.elastic_page_size = elastic_page_size
         self.elastic_page_limit = elastic_page_limit
+        self.get_concierge_agent_use_case = (
+            get_concierge_agent_use_case
+            or GetProjectConciergeAgentUseCase(nexus_client=nexus_client)
+        )
+        self.get_payment_agent_use_case = (
+            get_payment_agent_use_case
+            or GetProjectPaymentAgentUseCase(nexus_client=nexus_client)
+        )
 
         self.cache_keys = {}
+        self._use_streaming_events = False
+        self._streaming_spools: list[_ReplayableDatalakeEventsSpool] = []
+
+    def _normalize_datalake_kwargs(self, kwargs: dict) -> None:
+        """
+        Convert datetime filters to ISO strings for datalake API calls.
+        """
+        date_start = kwargs.get("date_start")
+        date_end = kwargs.get("date_end")
+
+        if date_start and isinstance(date_start, datetime):
+            kwargs["date_start"] = date_start.isoformat()
+
+        if date_end and isinstance(date_end, datetime):
+            kwargs["date_end"] = date_end.isoformat()
+
+    def _fetch_page_indices(
+        self,
+        report: Report,
+        page_indices: range,
+        **kwargs,
+    ) -> list[list[dict] | None]:
+        """
+        Fetch the given page indices in parallel, preserving order.
+        """
+        page_indices_list = list(page_indices)
+        if not page_indices_list:
+            return []
+
+        limit = self.events_limit_per_page
+        self._normalize_datalake_kwargs(kwargs)
+        max_workers = min(
+            len(page_indices_list), settings.REPORT_PARALLEL_FETCH_MAX_WORKERS
+        )
+
+        def fetch_page(page_index: int) -> list[dict]:
+            offset = page_index * limit
+            return self.datalake_events_client.get_events(
+                **kwargs,
+                limit=limit,
+                offset=offset,
+            )
+
+        results: list[list[dict] | None] = [None] * len(page_indices_list)
+        index_to_position = {
+            page_index: position
+            for position, page_index in enumerate(page_indices_list)
+        }
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_index = {
+                executor.submit(fetch_page, page_index): page_index
+                for page_index in page_indices_list
+            }
+
+            for future in as_completed(future_to_index):
+                page_index = future_to_index[future]
+                try:
+                    page_events = future.result()
+                except Exception as e:
+                    logger.error(
+                        "[CONVERSATIONS REPORT SERVICE] Failed to fetch page %s for report %s. Error: %s",
+                        page_index,
+                        report.uuid,
+                        e,
+                    )
+                    raise
+
+                if page_events and page_events != [{}]:
+                    results[index_to_position[page_index]] = page_events
+
+        return results
+
+    def _cleanup_streaming_spools(self) -> None:
+        for spool in self._streaming_spools:
+            spool.cleanup()
+        self._streaming_spools = []
+
+    def _rows_with_empty_fallback(
+        self, rows: Iterable[dict], empty_row: dict
+    ) -> Iterator[dict]:
+        """
+        Yield rows from an iterable and emit a placeholder row when empty.
+        """
+        has_rows = False
+        for row in rows:
+            has_rows = True
+            yield row
+        if not has_rows:
+            yield empty_row
+
+    def _finalize_worksheet_rows(
+        self, rows: Iterable[dict], empty_row: dict
+    ) -> list[dict] | Iterator[dict]:
+        """
+        Materialize worksheet rows for the standard path or keep them as a
+        generator when streaming events to disk.
+        """
+        rows_with_fallback = self._rows_with_empty_fallback(rows, empty_row)
+        if self._use_streaming_events:
+            return rows_with_fallback
+        return list(rows_with_fallback)
 
     def _add_cache_key(self, report_uuid: UUID, cache_key: str) -> None:
         """
@@ -359,6 +554,75 @@ class ConversationsReportService(BaseConversationsReportService):
 
         self.cache_keys[report_uuid].add(cache_key)
 
+    def _is_agents_tools_urn_list_enabled(self, report: Report) -> bool:
+        attributes = {
+            "projectUUID": str(report.project.uuid),
+        }
+        if report.requested_by:
+            attributes["userEmail"] = report.requested_by.email
+        try:
+            return is_feature_active_for_attributes(
+                settings.CONVERSATIONS_REPORT_AGENTS_TOOLS_URN_LIST_FEATURE_FLAG_KEY,
+                attributes=attributes,
+            )
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Feature flag check failed: %s", e
+            )
+            capture_exception(e)
+            return False
+
+    def _is_streaming_mode_enabled(self, report: Report) -> bool:
+        attributes = {
+            "projectUUID": str(report.project.uuid),
+        }
+        if report.requested_by:
+            attributes["userEmail"] = report.requested_by.email
+        try:
+            return is_feature_active_for_attributes(
+                settings.CONVERSATIONS_REPORT_STREAMING_MODE_FEATURE_FLAG_KEY,
+                attributes=attributes,
+            )
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Streaming mode feature flag check failed: %s",
+                e,
+            )
+            capture_exception(e)
+            return False
+
+    def _get_project_agents_by_slug(self, project_uuid: UUID) -> dict[str, dict]:
+        """
+        Fetch the project agents team from Nexus and return them keyed by slug.
+
+        Never raises: any failure (transport, non-2xx, malformed JSON or shape)
+        is logged and reported to Sentry, returning an empty dict so report
+        generation can continue.
+        """
+        try:
+            response = self.nexus_client.get_project_agents_team(project_uuid)
+            if not rest_status.is_success(response.status_code):
+                raise ValueError(
+                    f"Nexus agents team returned {response.status_code}: {response.text}"
+                )
+            payload = response.json()
+            agents = payload.get("agents") if isinstance(payload, dict) else None
+            if not isinstance(agents, list):
+                raise ValueError("Nexus agents team response missing 'agents' list")
+            return {
+                agent["slug"]: agent
+                for agent in agents
+                if isinstance(agent, dict) and agent.get("slug")
+            }
+        except Exception as e:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Failed to fetch project agents from Nexus for %s: %s",
+                project_uuid,
+                e,
+            )
+            capture_exception(e)
+            return {}
+
     def _clear_cache_keys(self, report_uuid: UUID) -> None:
         """
         Clear cache keys for report.
@@ -370,6 +634,26 @@ class ConversationsReportService(BaseConversationsReportService):
                 self.cache_client.delete(cache_key)
 
             del self.cache_keys[report_uuid]
+
+    def _read_report_file_bytes(self, file: ConversationsReportFile) -> bytes:
+        """
+        Read report file bytes from memory or disk.
+        """
+        if file.content is not None:
+            return file.content
+
+        if file.local_path:
+            with open(file.local_path, "rb") as report_file:
+                return report_file.read()
+
+        raise ValueError("Report file has no content or local_path")
+
+    def _cleanup_report_file(self, file: ConversationsReportFile) -> None:
+        """
+        Remove a temp file created during streaming report generation.
+        """
+        if file.local_path and os.path.exists(file.local_path):
+            os.unlink(file.local_path)
 
     def zip_files(
         self, files: list[ConversationsReportFile]
@@ -402,7 +686,8 @@ class ConversationsReportService(BaseConversationsReportService):
                             raise ValueError("Failed to generate a unique name")
 
                     names_used.add(name)
-                    zip_file.writestr(name, file.content)
+                    zip_file.writestr(name, self._read_report_file_bytes(file))
+                    self._cleanup_report_file(file)
 
             zip_content = zip_buffer.getvalue()
 
@@ -418,14 +703,25 @@ class ConversationsReportService(BaseConversationsReportService):
         extension = file.name.split(".")[-1]
         obj_key = f"reports/conversations/{str(uuid.uuid4())}.{extension}"
 
-        # Wrap content in BytesIO to make it file-like
-        file_obj = io.BytesIO(file.content)
-
-        s3.upload_fileobj(
-            file_obj,
-            settings.S3_BUCKET_NAME,
-            obj_key,
-        )
+        try:
+            if file.local_path:
+                with open(file.local_path, "rb") as report_file:
+                    s3.upload_fileobj(
+                        report_file,
+                        settings.S3_BUCKET_NAME,
+                        obj_key,
+                    )
+            elif file.content is not None:
+                file_obj = io.BytesIO(file.content)
+                s3.upload_fileobj(
+                    file_obj,
+                    settings.S3_BUCKET_NAME,
+                    obj_key,
+                )
+            else:
+                raise ValueError("Report file has no content or local_path")
+        finally:
+            self._cleanup_report_file(file)
 
         return obj_key
 
@@ -495,11 +791,14 @@ class ConversationsReportService(BaseConversationsReportService):
                 email.content_subtype = "html"
 
                 if reports_file and not settings.USE_S3:
-                    email.attach(
-                        reports_file.name,
-                        reports_file.content,
-                        "application/zip",
-                    )
+                    try:
+                        email.attach(
+                            reports_file.name,
+                            self._read_report_file_bytes(reports_file),
+                            "application/zip",
+                        )
+                    finally:
+                        self._cleanup_report_file(reports_file)
 
                 email.send(fail_silently=False)
         except Exception as e:
@@ -642,18 +941,39 @@ class ConversationsReportService(BaseConversationsReportService):
 
         conversation_classification_events = None
 
-        if "RESOLUTIONS" in sections or "CONTACTS" in sections:
-            # Fetching only once for resolutions and contacts worksheets
-            # instead of fetching for each worksheet
-            conversation_classification_events = self.get_datalake_events(
-                report=report,
-                project=report.project.uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name="weni_nexus_data",
-                key="conversation_classification",
-                table="conversation_classification",
-            )
+        needs_classification = (
+            "RESOLUTIONS" in sections or "CONTACTS" in sections
+        )
+
+        if needs_classification:
+            classification_fetch_kwargs = {
+                "project": report.project.uuid,
+                "date_start": start_date,
+                "date_end": end_date,
+                "event_name": "weni_nexus_data",
+                "key": "conversation_classification",
+                "table": "conversation_classification",
+            }
+
+            if self._use_streaming_events:
+                if "RESOLUTIONS" in sections and "CONTACTS" in sections:
+                    spool = _ReplayableDatalakeEventsSpool.from_parallel_fetch(
+                        self,
+                        report,
+                        **classification_fetch_kwargs,
+                    )
+                    self._streaming_spools.append(spool)
+                    conversation_classification_events = spool
+                else:
+                    conversation_classification_events = self.get_datalake_events(
+                        report=report,
+                        **classification_fetch_kwargs,
+                    )
+            else:
+                conversation_classification_events = self.get_datalake_events(
+                    report=report,
+                    **classification_fetch_kwargs,
+                )
 
         worksheets_mapping = {
             "RESOLUTIONS": (
@@ -716,6 +1036,14 @@ class ConversationsReportService(BaseConversationsReportService):
                     "conversation_classification_events": conversation_classification_events,
                 },
             ),
+            "ADDED_TO_CART": (
+                self.get_added_to_cart_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
+            "SEARCH_TERMS": (
+                self.get_search_terms_worksheet,
+                {"report": report, "start_date": start_date, "end_date": end_date},
+            ),
         }
 
         for section, (worksheet_function, worksheet_args) in worksheets_mapping.items():
@@ -770,7 +1098,16 @@ class ConversationsReportService(BaseConversationsReportService):
         )
 
         report = self._update_report_status(report)
-        file_processor = get_file_processor(report.format)
+        use_streaming = (
+            report.format in (ReportFormat.XLSX, ReportFormat.CSV)
+            and self._is_streaming_mode_enabled(report)
+        )
+
+        if use_streaming:
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Using streaming mode for report %s",
+                report.uuid,
+            )
 
         try:
             start_date, end_date = self._validate_dates(report)
@@ -787,8 +1124,12 @@ class ConversationsReportService(BaseConversationsReportService):
                 end_date,
             )
 
-            worksheets = self._get_worksheets(report, start_date, end_date)
-            files = file_processor.process(report=report, worksheets=worksheets)
+            if use_streaming:
+                files = self._generate_streaming(report, start_date, end_date)
+            else:
+                file_processor = get_file_processor(report.format)
+                worksheets = self._get_worksheets(report, start_date, end_date)
+                files = file_processor.process(report=report, worksheets=worksheets)
 
         except Exception as e:
             logger.error(
@@ -894,14 +1235,7 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get events count.
         """
-        date_start = kwargs.get("date_start")
-        date_end = kwargs.get("date_end")
-
-        if date_start and isinstance(date_start, datetime):
-            kwargs["date_start"] = date_start.isoformat()
-
-        if date_end and isinstance(date_end, datetime):
-            kwargs["date_end"] = date_end.isoformat()
+        self._normalize_datalake_kwargs(kwargs)
 
         result = self.datalake_events_client.get_events_count(**kwargs)
 
@@ -937,14 +1271,7 @@ class ConversationsReportService(BaseConversationsReportService):
         current_page = 1
         page_limit = self.page_limit
 
-        date_start = kwargs.get("date_start")
-        date_end = kwargs.get("date_end")
-
-        if date_start and isinstance(date_start, datetime):
-            kwargs["date_start"] = date_start.isoformat()
-
-        if date_end and isinstance(date_end, datetime):
-            kwargs["date_end"] = date_end.isoformat()
+        self._normalize_datalake_kwargs(kwargs)
 
         while True:
             if current_page >= page_limit:
@@ -1018,15 +1345,6 @@ class ConversationsReportService(BaseConversationsReportService):
             )
             raise ValueError("Report %s is not in progress" % report.uuid)
 
-        date_start = kwargs.get("date_start")
-        date_end = kwargs.get("date_end")
-
-        if date_start and isinstance(date_start, datetime):
-            kwargs["date_start"] = date_start.isoformat()
-
-        if date_end and isinstance(date_end, datetime):
-            kwargs["date_end"] = date_end.isoformat()
-
         max_workers = min(total_pages, settings.REPORT_PARALLEL_FETCH_MAX_WORKERS)
 
         logger.info(
@@ -1036,40 +1354,9 @@ class ConversationsReportService(BaseConversationsReportService):
             report.uuid,
         )
 
-        def fetch_page(page_index: int) -> list[dict]:
-            offset = page_index * limit
-            return self.datalake_events_client.get_events(
-                **kwargs,
-                limit=limit,
-                offset=offset,
-            )
+        results = self._fetch_page_indices(report, range(total_pages), **kwargs)
 
-        results: list[list[dict] | None] = [None] * total_pages
-
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_index = {
-                executor.submit(fetch_page, i): i for i in range(total_pages)
-            }
-
-            for future in as_completed(future_to_index):
-                page_index = future_to_index[future]
-                try:
-                    page_events = future.result()
-                except Exception as e:
-                    logger.error(
-                        "[CONVERSATIONS REPORT SERVICE] Failed to fetch page %s for report %s. Error: %s",
-                        page_index,
-                        report.uuid,
-                        e,
-                    )
-                    raise
-
-                if page_events and page_events != [{}]:
-                    results[page_index] = page_events
-
-        events = [event for page in results if page is not None for event in page]
-
-        return events
+        return [event for page in results if page is not None for event in page]
 
     def get_datalake_events_in_parallel(self, report: Report, **kwargs) -> list[dict]:
         """
@@ -1114,11 +1401,140 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return events
 
-    def get_datalake_events(self, report: Report, **kwargs) -> list[dict]:
+    def get_datalake_events(
+        self, report: Report, **kwargs
+    ) -> list[dict] | Iterable[dict]:
         """
         Get datalake events.
         """
+        if self._use_streaming_events:
+            return self._iter_datalake_events(report, **kwargs)
         return self.get_datalake_events_in_parallel(report, **kwargs)
+
+    def _iter_datalake_events_sequential(self, report: Report, **kwargs):
+        """
+        Generator that yields datalake events one page at a time.
+        Used as a fallback when the count query fails.
+        """
+        limit = self.events_limit_per_page
+        offset = 0
+        current_page = 1
+        page_limit = self.page_limit
+
+        self._normalize_datalake_kwargs(kwargs)
+
+        while True:
+            if current_page >= page_limit:
+                logger.error(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s has more than %s pages (streaming). "
+                    "Finishing datalake events retrieval",
+                    report.uuid,
+                    page_limit,
+                )
+                raise ValueError("Report has more than %s pages" % page_limit)
+
+            report.refresh_from_db(fields=["status"])
+
+            if report.status != ReportStatus.IN_PROGRESS:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress (streaming). "
+                    "Finishing datalake events retrieval",
+                    report.uuid,
+                )
+                raise ValueError("Report %s is not in progress" % report.uuid)
+
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Retrieving datalake events for page %s for report %s (streaming)",
+                current_page,
+                report.uuid,
+            )
+
+            paginated_events = self.datalake_events_client.get_events(
+                **kwargs,
+                limit=limit,
+                offset=offset,
+            )
+
+            if len(paginated_events) == 0 or paginated_events == [{}]:
+                break
+
+            yield from paginated_events
+
+            offset += limit
+            current_page += 1
+
+    def _iter_datalake_events(self, report: Report, **kwargs):
+        """
+        Generator that yields datalake events page by page without
+        accumulating all results in memory. Used by the streaming
+        report generation path.
+        """
+        try:
+            total_count = self.get_events_count(**kwargs)
+        except Exception as e:
+            logger.warning(
+                "[CONVERSATIONS REPORT SERVICE] Failed to get events count for report %s, falling back to sequential streaming. Error: %s",
+                report.uuid,
+                e,
+            )
+            yield from self._iter_datalake_events_sequential(report, **kwargs)
+            return
+
+        if total_count == 0:
+            return
+
+        limit = self.events_limit_per_page
+        page_limit = self.page_limit
+        total_pages = math.ceil(total_count / limit)
+
+        if total_pages >= page_limit:
+            logger.error(
+                "[CONVERSATIONS REPORT SERVICE] Report %s has more than %s pages (streaming). "
+                "Finishing datalake events retrieval",
+                report.uuid,
+                page_limit,
+            )
+            raise ValueError("Report has more than %s pages" % page_limit)
+
+        report.refresh_from_db(fields=["status"])
+
+        if report.status != ReportStatus.IN_PROGRESS:
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress (streaming). "
+                "Finishing datalake events retrieval",
+                report.uuid,
+            )
+            raise ValueError("Report %s is not in progress" % report.uuid)
+
+        max_workers = settings.REPORT_PARALLEL_FETCH_MAX_WORKERS
+
+        for batch_start in range(0, total_pages, max_workers):
+            batch_end = min(batch_start + max_workers, total_pages)
+
+            logger.info(
+                "[CONVERSATIONS REPORT SERVICE] Fetching pages %s-%s in parallel (streaming) for report %s",
+                batch_start + 1,
+                batch_end,
+                report.uuid,
+            )
+
+            batch_results = self._fetch_page_indices(
+                report, range(batch_start, batch_end), **kwargs
+            )
+
+            report.refresh_from_db(fields=["status"])
+
+            if report.status != ReportStatus.IN_PROGRESS:
+                logger.info(
+                    "[CONVERSATIONS REPORT SERVICE] Report %s is not in progress (streaming). "
+                    "Finishing datalake events retrieval",
+                    report.uuid,
+                )
+                raise ValueError("Report %s is not in progress" % report.uuid)
+
+            for page_events in batch_results:
+                if page_events:
+                    yield from page_events
 
     def _format_date(self, original_date: str | int, report: Report) -> str:
         """
@@ -1251,50 +1667,18 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return data
 
-    def get_resolutions_worksheet(
+    def _iter_resolutions_rows(
         self,
+        events: Iterable[dict],
         report: Report,
-        start_date: datetime,
-        end_date: datetime,
-        conversation_classification_events: list[dict] | None = None,
-    ) -> ConversationsReportWorksheet:
-        """
-        Get the resolutions worksheet.
-        """
-        if conversation_classification_events is not None:
-            events = conversation_classification_events
-        else:
-            events = self.get_datalake_events(
-                report=report,
-                project=report.project.uuid,
-                date_start=start_date,
-                date_end=end_date,
-                event_name="weni_nexus_data",
-                key="conversation_classification",
-                table="conversation_classification",
-            )
-
-        with override(report.requested_by.language):
-            worksheet_name = gettext("Resolutions")
-
-            resolutions_label = gettext("Resolution")
-            date_label = gettext("Date")
-
-            resolved_label = gettext("AI-Assisted")
-            unresolved_label = gettext("Not assisted")
-            transferred_to_human_label = gettext("Transferred to human support")
-
-            unclassified_label = gettext("Unclassified")
-            unknown_label = gettext("Unknown")
-
-        if len(events) == 0:
-            return ConversationsReportWorksheet(
-                name=worksheet_name,
-                data=[],
-            )
-
-        data = []
-
+        resolutions_label: str,
+        date_label: str,
+        resolved_label: str,
+        unresolved_label: str,
+        transferred_to_human_label: str,
+        unclassified_label: str,
+        unknown_label: str,
+    ) -> Iterator[dict]:
         for event in events:
             metadata = event.get("metadata")
 
@@ -1330,32 +1714,82 @@ class ConversationsReportService(BaseConversationsReportService):
             else:
                 resolution_label = unknown_label
 
-            data.append(
-                {
-                    "URN": event.get("contact_urn", ""),
-                    resolutions_label: resolution_label,
-                    date_label: (
-                        self._format_date(event.get("date", ""), report)
-                        if event.get("date")
-                        else ""
-                    ),
-                }
+            yield {
+                "URN": event.get("contact_urn", ""),
+                resolutions_label: resolution_label,
+                date_label: (
+                    self._format_date(event.get("date", ""), report)
+                    if event.get("date")
+                    else ""
+                ),
+            }
+
+    def get_resolutions_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+        conversation_classification_events: list[dict] | Iterable[dict] | None = None,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get the resolutions worksheet.
+        """
+        if conversation_classification_events is not None:
+            events = conversation_classification_events
+        else:
+            events = self.get_datalake_events(
+                report=report,
+                project=report.project.uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name="weni_nexus_data",
+                key="conversation_classification",
+                table="conversation_classification",
             )
 
-        setattr(self, "_conversation_classification_events_cache", events)
+        with override(report.requested_by.language):
+            worksheet_name = gettext("Resolutions")
 
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
-                    resolutions_label: "",
-                    date_label: "",
-                }
-            ]
+            resolutions_label = gettext("Resolution")
+            date_label = gettext("Date")
+
+            resolved_label = gettext("AI-Assisted")
+            unresolved_label = gettext("Not assisted")
+            transferred_to_human_label = gettext("Transferred to human support")
+
+            unclassified_label = gettext("Unclassified")
+            unknown_label = gettext("Unknown")
+
+        if isinstance(events, list) and len(events) == 0:
+            return ConversationsReportWorksheet(
+                name=worksheet_name,
+                data=[],
+            )
+
+        empty_row = {
+            "URN": "",
+            resolutions_label: "",
+            date_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_resolutions_rows(
+                events,
+                report,
+                resolutions_label,
+                date_label,
+                resolved_label,
+                unresolved_label,
+                transferred_to_human_label,
+                unclassified_label,
+                unknown_label,
+            ),
+            empty_row,
+        )
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
+            headers=list(empty_row.keys()),
         )
 
     def _get_topics_data(self, report: Report) -> dict:
@@ -1424,6 +1858,35 @@ class ConversationsReportService(BaseConversationsReportService):
 
         return topic_name, subtopic_name
 
+    def _iter_topics_distribution_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        topics_data: dict,
+        topic_label: str,
+        subtopic_label: str,
+        date_label: str,
+        unclassified_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            topic_name, subtopic_name = self._process_topic_event_data(
+                event, topics_data, unclassified_label
+            )
+
+            if not topic_name or not subtopic_name:
+                continue
+
+            yield {
+                "URN": event.get("contact_urn"),
+                topic_label: topic_name,
+                subtopic_label: subtopic_name,
+                date_label: (
+                    self._format_date(event.get("date"), report)
+                    if event.get("date")
+                    else ""
+                ),
+            }
+
     def get_topics_distribution_worksheet(
         self,
         report: Report,
@@ -1463,43 +1926,45 @@ class ConversationsReportService(BaseConversationsReportService):
             subtopic_label = gettext("Subtopic")
             unclassified_label = gettext("Unclassified")
 
-        results_data = []
-
-        for event in events:
-            topic_name, subtopic_name = self._process_topic_event_data(
-                event, topics_data, unclassified_label
-            )
-
-            if not topic_name or not subtopic_name:
-                continue
-
-            results_data.append(
-                {
-                    "URN": event.get("contact_urn"),
-                    topic_label: topic_name,
-                    subtopic_label: subtopic_name,
-                    date_label: (
-                        self._format_date(event.get("date"), report)
-                        if event.get("date")
-                        else ""
-                    ),
-                }
-            )
-
-        if len(results_data) == 0:
-            results_data = [
-                {
-                    "URN": "",
-                    topic_label: "",
-                    subtopic_label: "",
-                    date_label: "",
-                }
-            ]
+        empty_row = {
+            "URN": "",
+            topic_label: "",
+            subtopic_label: "",
+            date_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_topics_distribution_rows(
+                events,
+                report,
+                topics_data,
+                topic_label,
+                subtopic_label,
+                date_label,
+                unclassified_label,
+            ),
+            empty_row,
+        )
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
-            data=results_data,
+            data=data,
+            headers=list(empty_row.keys()),
         )
+
+    def _iter_csat_ai_rows(
+        self, events: Iterable[dict], report: Report, date_label: str, rating_label: str
+    ) -> Iterator[dict]:
+        ratings = {"1", "2", "3", "4", "5"}
+
+        for event in events:
+            if event.get("value") not in ratings:
+                continue
+
+            yield {
+                "URN": event.get("contact_urn"),
+                date_label: self._format_date(event.get("date"), report),
+                rating_label: event.get("value"),
+            }
 
     def get_csat_ai_worksheet(
         self, report: Report, start_date: datetime, end_date: datetime
@@ -1529,35 +1994,40 @@ class ConversationsReportService(BaseConversationsReportService):
             date_label = gettext("Date")
             rating_label = gettext("Rating")
 
-        data = []
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            rating_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_csat_ai_rows(events, report, date_label, rating_label),
+            empty_row,
+        )
 
-        ratings = {"1", "2", "3", "4", "5"}
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+            headers=list(empty_row.keys()),
+        )
+
+    def _iter_nps_ai_rows(
+        self, events: Iterable[dict], report: Report, date_label: str, rating_label: str
+    ) -> Iterator[dict]:
+        ratings = {str(n): 0 for n in range(0, 11)}
 
         for event in events:
             if event.get("value") not in ratings:
                 continue
 
-            data.append(
-                {
-                    "URN": event.get("contact_urn"),
-                    date_label: self._format_date(event.get("date"), report),
-                    rating_label: event.get("value"),
-                }
-            )
-
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
-                    date_label: "",
-                    rating_label: "",
-                }
-            ]
-
-        return ConversationsReportWorksheet(
-            name=worksheet_name,
-            data=data,
-        )
+            yield {
+                "URN": event.get("contact_urn"),
+                date_label: (
+                    self._format_date(event.get("date"), report)
+                    if event.get("date")
+                    else ""
+                ),
+                rating_label: event.get("value"),
+            }
 
     def get_nps_ai_worksheet(
         self, report: Report, start_date: datetime, end_date: datetime
@@ -1588,35 +2058,19 @@ class ConversationsReportService(BaseConversationsReportService):
             date_label = gettext("Date")
             rating_label = gettext("Rating")
 
-        data = []
-        ratings = {str(n): 0 for n in range(0, 11)}
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            rating_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_nps_ai_rows(events, report, date_label, rating_label),
+            empty_row,
+        )
 
-        for event in events:
-            if event.get("value") not in ratings:
-                continue
-
-            data.append(
-                {
-                    "URN": event.get("contact_urn"),
-                    date_label: (
-                        self._format_date(event.get("date"), report)
-                        if event.get("date")
-                        else ""
-                    ),
-                    rating_label: event.get("value"),
-                }
-            )
-
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
-                    date_label: "",
-                    rating_label: "",
-                }
-            ]
-
-        return ConversationsReportWorksheet(name=worksheet_name, data=data)
+        return ConversationsReportWorksheet(
+            name=worksheet_name, data=data, headers=list(empty_row.keys())
+        )
 
     def get_csat_human_worksheet(
         self, report: Report, start_date: str, end_date: str
@@ -1759,6 +2213,20 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def _iter_custom_widget_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        date_label: str,
+        value_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            yield {
+                "URN": event.get("contact_urn"),
+                date_label: self._format_date(event.get("date"), report),
+                value_label: event.get("value"),
+            }
+
     def get_custom_widget_worksheet(
         self,
         report: Report,
@@ -1793,29 +2261,20 @@ class ConversationsReportService(BaseConversationsReportService):
             date_label = gettext("Date")
             value_label = gettext("Value")
 
-        data = []
-
-        for event in events:
-            data.append(
-                {
-                    "URN": event.get("contact_urn"),
-                    date_label: self._format_date(event.get("date"), report),
-                    value_label: event.get("value"),
-                }
-            )
-
-        if len(data) == 0:
-            data = [
-                {
-                    "URN": "",
-                    date_label: "",
-                    value_label: "",
-                }
-            ]
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            value_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_custom_widget_rows(events, report, date_label, value_label),
+            empty_row,
+        )
 
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
+            headers=list(empty_row.keys()),
         )
 
     def get_crosstab_widget_worksheet(
@@ -1879,6 +2338,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get tool result worksheet.
         """
+        if self._is_agents_tools_urn_list_enabled(report):
+            return self._get_tool_result_detailed_worksheet(
+                report, start_date, end_date
+            )
+
         tool_results = self.metrics_service.get_tool_results(
             project_uuid=report.project.uuid,
             start_date=start_date,
@@ -1916,6 +2380,66 @@ class ConversationsReportService(BaseConversationsReportService):
             data=data,
         )
 
+    def _iter_tool_result_detailed_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        urn_label: str,
+        tool_name_label: str,
+        date_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            metadata = event.get("metadata")
+
+            if metadata and not isinstance(metadata, dict):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    continue
+
+            tool_name = event.get("value", "")
+
+            yield {
+                urn_label: event.get("contact_urn", ""),
+                tool_name_label: tool_name,
+                date_label: self._format_date(event.get("date", ""), report),
+            }
+
+    def _get_tool_result_detailed_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="tool_result",
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Tool results")
+            urn_label = gettext("URN")
+            tool_name_label = gettext("Tool name")
+            date_label = gettext("Date")
+
+        empty_row = {urn_label: "", tool_name_label: "", date_label: ""}
+        data = self._finalize_worksheet_rows(
+            self._iter_tool_result_detailed_rows(
+                events, report, urn_label, tool_name_label, date_label
+            ),
+            empty_row,
+        )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+            headers=list(empty_row.keys()),
+        )
+
     def get_agent_invocation_worksheet(
         self,
         report: Report,
@@ -1925,6 +2449,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get agent invocation worksheet.
         """
+        if self._is_agents_tools_urn_list_enabled(report):
+            return self._get_agent_invocation_detailed_worksheet(
+                report, start_date, end_date
+            )
+
         agent_invocations = self.metrics_service.get_agent_invocations(
             project_uuid=report.project.uuid,
             start_date=start_date,
@@ -1960,6 +2489,89 @@ class ConversationsReportService(BaseConversationsReportService):
         return ConversationsReportWorksheet(
             name=worksheet_name,
             data=data,
+        )
+
+    def _iter_agent_invocation_detailed_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        agents_by_slug: dict[str, dict],
+        urn_label: str,
+        agent_name_label: str,
+        agent_uuid_label: str,
+        date_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            metadata = event.get("metadata")
+
+            if metadata and not isinstance(metadata, dict):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    continue
+
+            agent_slug = event.get("value", "")
+            agent_data = agents_by_slug.get(agent_slug) or {}
+            agent_name = agent_data.get("name") or agent_slug
+            agent_uuid = ""
+
+            if metadata:
+                agent_uuid = metadata.get("agent_uuid", None)
+
+            yield {
+                urn_label: event.get("contact_urn", ""),
+                agent_name_label: agent_name,
+                agent_uuid_label: agent_uuid,
+                date_label: self._format_date(event.get("date", ""), report),
+            }
+
+    def _get_agent_invocation_detailed_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        events = self.get_datalake_events(
+            report=report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key="agent_invocation",
+        )
+
+        agents_by_slug = self._get_project_agents_by_slug(report.project.uuid)
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Agent invocations")
+            urn_label = gettext("URN")
+            agent_name_label = gettext("Agent name")
+            agent_uuid_label = gettext("Agent UUID")
+            date_label = gettext("Date")
+
+        empty_row = {
+            urn_label: "",
+            agent_name_label: "",
+            agent_uuid_label: "",
+            date_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_agent_invocation_detailed_rows(
+                events,
+                report,
+                agents_by_slug,
+                urn_label,
+                agent_name_label,
+                agent_uuid_label,
+                date_label,
+            ),
+            empty_row,
+        )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+            headers=list(empty_row.keys()),
         )
 
     def get_contacts_summary_worksheet(
@@ -2014,7 +2626,7 @@ class ConversationsReportService(BaseConversationsReportService):
         report: Report,
         start_date: datetime,
         end_date: datetime,
-        conversation_classification_events: list[dict] | None = None,
+        conversation_classification_events: list[dict] | Iterable[dict] | None = None,
     ) -> list[ConversationsReportWorksheet]:
         try:
             attributes = {
@@ -2045,7 +2657,18 @@ class ConversationsReportService(BaseConversationsReportService):
                 )
             ]
 
-        events = conversation_classification_events or []
+        if conversation_classification_events is not None:
+            events = conversation_classification_events
+        else:
+            events = self.get_datalake_events(
+                report=report,
+                project=report.project.uuid,
+                date_start=start_date,
+                date_end=end_date,
+                event_name="weni_nexus_data",
+                key="conversation_classification",
+                table="conversation_classification",
+            )
 
         urn_counts: dict[str, int] = {}
         for event in events:
@@ -2089,6 +2712,234 @@ class ConversationsReportService(BaseConversationsReportService):
             ),
         ]
 
+    def _iter_search_terms_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        date_label: str,
+        terms_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            yield {
+                "URN": event.get("contact_urn", ""),
+                date_label: (
+                    self._format_date(event.get("date"), report)
+                    if event.get("date")
+                    else ""
+                ),
+                terms_label: event.get("value", ""),
+            }
+
+    def get_search_terms_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get search terms worksheet.
+        """
+        agent_uuid = self.get_concierge_agent_use_case.execute(report.project.uuid)
+
+        if not agent_uuid:
+            raise SearchTermsAgentUUIDNotConfiguredError(
+                "Search terms agent could not be resolved for this project"
+            )
+
+        key = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_KEY
+
+        events = self.get_datalake_events(
+            report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key=key,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Search terms")
+            date_label = gettext("Date")
+            terms_label = gettext("Terms")
+
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            terms_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_search_terms_rows(events, report, date_label, terms_label),
+            empty_row,
+        )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+            headers=list(empty_row.keys()),
+        )
+
+    def _iter_added_to_cart_rows(
+        self,
+        events: Iterable[dict],
+        report: Report,
+        date_label: str,
+        product_label: str,
+    ) -> Iterator[dict]:
+        for event in events:
+            yield {
+                "URN": event.get("contact_urn", ""),
+                date_label: (
+                    self._format_date(event.get("date"), report)
+                    if event.get("date")
+                    else ""
+                ),
+                product_label: event.get("value", ""),
+            }
+
+    def get_added_to_cart_worksheet(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> ConversationsReportWorksheet:
+        """
+        Get added to cart worksheet.
+        """
+        agent_uuid = self.get_payment_agent_use_case.execute(report.project.uuid)
+
+        if not agent_uuid:
+            raise AddedToCartAgentUUIDNotConfiguredError(
+                "Added to cart agent could not be resolved for this project"
+            )
+
+        key = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_KEY
+
+        events = self.get_datalake_events(
+            report,
+            project=report.project.uuid,
+            date_start=start_date,
+            date_end=end_date,
+            event_name="weni_nexus_data",
+            key=key,
+            metadata_key="agent_uuid",
+            metadata_value=agent_uuid,
+        )
+
+        with override(report.requested_by.language or "en"):
+            worksheet_name = gettext("Added to cart")
+            date_label = gettext("Date")
+            product_label = gettext("Product")
+
+        empty_row = {
+            "URN": "",
+            date_label: "",
+            product_label: "",
+        }
+        data = self._finalize_worksheet_rows(
+            self._iter_added_to_cart_rows(events, report, date_label, product_label),
+            empty_row,
+        )
+
+        return ConversationsReportWorksheet(
+            name=worksheet_name,
+            data=data,
+            headers=list(empty_row.keys()),
+        )
+
+    def _should_skip_worksheet(self, worksheet: ConversationsReportWorksheet) -> bool:
+        return isinstance(worksheet.data, list) and len(worksheet.data) == 0
+
+    def _resolve_worksheet_headers(
+        self, worksheet: ConversationsReportWorksheet
+    ) -> list[str]:
+        if worksheet.headers:
+            return worksheet.headers
+        if isinstance(worksheet.data, list) and worksheet.data:
+            return list(worksheet.data[0].keys())
+        raise ValueError(
+            "Worksheet '%s' has no headers and no materialized rows" % worksheet.name
+        )
+
+    def _cleanup_streaming_temp_paths(self, temp_paths: list[str]) -> None:
+        for temp_path in temp_paths:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+
+    def _generate_streaming(
+        self,
+        report: Report,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list[ConversationsReportFile]:
+        """
+        Generate a report by streaming datalake events page by page and
+        writing worksheet rows directly to temp files on disk.
+        """
+        self._use_streaming_events = True
+        self._streaming_spools = []
+        temp_paths: list[str] = []
+        workbook = None
+        xlsx_tmp_path = None
+
+        try:
+            worksheets = self._get_worksheets(report, start_date, end_date)
+
+            if report.format == ReportFormat.XLSX:
+                xlsx_processor = StreamingXLSXFileProcessor()
+                workbook, xlsx_tmp_path = xlsx_processor.create_workbook(report)
+                temp_paths.append(xlsx_tmp_path)
+
+                for ws in worksheets:
+                    if self._should_skip_worksheet(ws):
+                        continue
+
+                    headers = self._resolve_worksheet_headers(ws)
+                    row_count = xlsx_processor.write_worksheet(
+                        workbook, ws.name, headers, ws.data
+                    )
+                    logger.info(
+                        "[CONVERSATIONS REPORT SERVICE] Streaming worksheet '%s' wrote %s rows for report %s",
+                        ws.name,
+                        row_count,
+                        report.uuid,
+                    )
+
+                files = xlsx_processor.finalize(workbook, xlsx_tmp_path, report)
+            elif report.format == ReportFormat.CSV:
+                csv_processor = StreamingCSVFileProcessor()
+                files = []
+
+                for ws in worksheets:
+                    if self._should_skip_worksheet(ws):
+                        continue
+
+                    headers = self._resolve_worksheet_headers(ws)
+                    report_file, row_count = csv_processor.write_worksheet(
+                        ws.name, headers, ws.data
+                    )
+                    temp_paths.append(report_file.local_path)
+                    files.append(report_file)
+                    logger.info(
+                        "[CONVERSATIONS REPORT SERVICE] Streaming worksheet '%s' wrote %s rows for report %s",
+                        ws.name,
+                        row_count,
+                        report.uuid,
+                    )
+            else:
+                raise ValueError("Unsupported streaming format: %s" % report.format)
+        except Exception:
+            if workbook is not None:
+                workbook.close()
+            self._cleanup_streaming_temp_paths(temp_paths)
+            raise
+        finally:
+            self._use_streaming_events = False
+            self._cleanup_streaming_spools()
+
+        return files
+
     def get_available_widgets(self, project: Project) -> AvailableReportWidgets:
         """
         Get available widgets.
@@ -2104,6 +2955,8 @@ class ConversationsReportService(BaseConversationsReportService):
         ]
 
         special_widgets_get_functions = [
+            (get_added_to_cart_widget, "ADDED_TO_CART"),
+            (get_search_term_widget, "SEARCH_TERMS"),
             (get_csat_ai_widget, "CSAT_AI"),
             (get_csat_human_widget, "CSAT_HUMAN"),
             (get_nps_ai_widget, "NPS_AI"),

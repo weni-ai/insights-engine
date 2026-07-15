@@ -23,6 +23,7 @@ from insights.metrics.conversations.dataclass import (
     UniqueContactsMetricsData,
 )
 from insights.metrics.conversations.enums import (
+    AvailableWidgets,
     AvailableWidgetsListType,
     ConversationType,
     CsatMetricsType,
@@ -288,7 +289,13 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
     def get_available_widgets(
         self, project_uuid: UUID, widget_type: AvailableWidgetsListType | None = None
     ) -> AvailableWidgetsList:
-        return []
+        return AvailableWidgetsList(
+            available_widgets=[
+                AvailableWidgets.SALES_FUNNEL,
+                AvailableWidgets.SEARCH_TERMS,
+                AvailableWidgets.ADDED_TO_CART,
+            ]
+        )
 
     def get_contacts_metrics(
         self,
@@ -312,3 +319,85 @@ class MockConversationsMetricsService(BaseConversationsMetricsService):
         end_date: datetime,
     ) -> dict:
         return {}
+
+    def get_search_terms_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        counts = [
+            ("azeite", 120),
+            ("arroz", 95),
+            ("feijão", 80),
+            ("café", 72),
+            ("leite", 65),
+            ("açúcar", 58),
+            ("farinha", 50),
+            ("macarrão", 45),
+            ("óleo", 40),
+            ("sal", 36),
+            ("manteiga", 32),
+            ("biscoito", 28),
+            ("chocolate", 24),
+            ("iogurte", 20),
+            ("queijo", 18),
+            ("presunto", 15),
+            ("refrigerante", 12),
+            ("suco", 10),
+            ("água", 8),
+            ("cerveja", 5),
+        ]
+        total = sum(count for _, count in counts)
+
+        return {
+            "results": [
+                {
+                    "label": label,
+                    "value": round((count / total) * 100, 2),
+                    "full_value": count,
+                }
+                for label, count in counts
+            ]
+        }
+
+    def get_added_to_cart_metrics(
+        self,
+        project_uuid: UUID,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> dict:
+        counts = [
+            ("azeite", 120),
+            ("arroz", 95),
+            ("feijão", 80),
+            ("café", 72),
+            ("leite", 65),
+            ("açúcar", 58),
+            ("farinha", 50),
+            ("macarrão", 45),
+            ("óleo", 40),
+            ("sal", 36),
+            ("manteiga", 32),
+            ("biscoito", 28),
+            ("chocolate", 24),
+            ("iogurte", 20),
+            ("queijo", 18),
+            ("presunto", 15),
+            ("refrigerante", 12),
+            ("suco", 10),
+            ("água", 8),
+            ("cerveja", 5),
+        ]
+        total = sum(count for _, count in counts)
+
+        return {
+            "results": [
+                {
+                    "label": label,
+                    "value": round((count / total) * 100, 2),
+                    "full_value": count,
+                }
+                for label, count in counts
+            ]
+        }

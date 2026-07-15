@@ -1,10 +1,13 @@
 from django.test import TestCase
+import os
 
 from insights.metrics.conversations.reports.dataclass import (
     ConversationsReportWorksheet,
 )
 from insights.metrics.conversations.reports.file_processors import (
     CSVFileProcessor,
+    StreamingCSVFileProcessor,
+    StreamingXLSXFileProcessor,
     XLSXFileProcessor,
     get_file_processor,
 )
@@ -166,3 +169,66 @@ class TestGetFileProcessor(TestCase):
 
         processor = get_file_processor(ReportFormat.XLSX)
         self.assertIsInstance(processor, XLSXFileProcessor)
+
+
+class TestStreamingXLSXFileProcessor(TestCase):
+    def setUp(self):
+        self.processor = StreamingXLSXFileProcessor()
+        self.project = Project.objects.create(name="Test")
+        self.user = User.objects.create(email="test@test.com", language="en")
+        self.source = "test_source"
+
+    def test_finalize_returns_local_path_without_reading_content(self):
+        report = Report.objects.create(
+            project=self.project,
+            source=self.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.XLSX,
+            requested_by=self.user,
+        )
+
+        workbook, tmp_path = self.processor.create_workbook(report)
+        self.processor.write_worksheet(
+            workbook,
+            "Valid",
+            ["col1"],
+            [{"col1": "val1"}],
+        )
+
+        files = self.processor.finalize(workbook, tmp_path, report)
+
+        self.assertEqual(len(files), 1)
+        self.assertTrue(files[0].name.endswith(".xlsx"))
+        self.assertIsNone(files[0].content)
+        self.assertEqual(files[0].local_path, tmp_path)
+        self.assertTrue(os.path.exists(tmp_path))
+
+        os.unlink(tmp_path)
+
+
+class TestStreamingCSVFileProcessor(TestCase):
+    def setUp(self):
+        self.processor = StreamingCSVFileProcessor()
+
+    def test_write_worksheet_returns_local_path_without_content(self):
+        def row_generator():
+            yield {"col1": "val1", "col2": "val2"}
+
+        report_file, row_count = self.processor.write_worksheet(
+            "Valid",
+            ["col1", "col2"],
+            row_generator(),
+        )
+
+        self.assertEqual(row_count, 1)
+        self.assertEqual(report_file.name, "Valid.csv")
+        self.assertIsNone(report_file.content)
+        self.assertTrue(os.path.exists(report_file.local_path))
+
+        with open(report_file.local_path, encoding="utf-8") as csv_file:
+            content = csv_file.read()
+
+        self.assertEqual(content.splitlines(), ["col1,col2", "val1,val2"])
+
+        os.unlink(report_file.local_path)

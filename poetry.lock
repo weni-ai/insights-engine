@@ -3355,22 +3355,24 @@ files = [
 
 [[package]]
 name = "weni-commons"
-version = "1.1.0"
+version = "1.2.0a8"
 description = "Weni's common utilities for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main"]
 files = [
-    {file = "weni_commons-1.1.0-py3-none-any.whl", hash = "sha256:b7337fb5432040ce9a402b661ec67b067d3d8abf585853c5ba39284d7843dd6b"},
-    {file = "weni_commons-1.1.0.tar.gz", hash = "sha256:ecc4f8f8b374f35c18b5c736e28414c5781ce147016b7fd6ca7a951ba10a1889"},
+    {file = "weni_commons-1.2.0a8-py3-none-any.whl", hash = "sha256:d9a904c908515c01c9b34d686333341d310e3f683aafa4570a446cad9bb93708"},
+    {file = "weni_commons-1.2.0a8.tar.gz", hash = "sha256:b1210c0b52f2d62f9ec41df2be4650d8168d55b252d014c95c40e11b3e892034"},
 ]
 
 [package.dependencies]
 celery = ">=5.0.0,<6.0"
 django = ">=3.2.22,<6.0"
-django-redis = ">=4.0.0,<6.0"
+django-redis = ">=4.0.0,<=6.0"
 djangorestframework = ">=3.12.0,<4.0"
-weni-feature-flags = ">=2.1.0,<3.0.0"
+requests = ">=2.25.0"
+weni-eda = ">=0.1.2,<0.3.0"
+weni-feature-flags = ">=2.1.2,<3.0.0"
 
 [[package]]
 name = "weni-datalake-sdk"
@@ -3410,20 +3412,21 @@ amqp = ">=5.2.0,<6.0.0"
 
 [[package]]
 name = "weni-feature-flags"
-version = "2.1.0"
+version = "2.2.0"
 description = "Weni's feature flags SDK for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main"]
 files = [
-    {file = "weni_feature_flags-2.1.0-py3-none-any.whl", hash = "sha256:ff5ac66c809f0eff56818f85f7d3ba67b19164ffcf3493cd0a278497bf165e34"},
-    {file = "weni_feature_flags-2.1.0.tar.gz", hash = "sha256:026647c8ca97e09360df7f162b5655bc23d367cd21464f7688d7891047a865fd"},
+    {file = "weni_feature_flags-2.2.0-py3-none-any.whl", hash = "sha256:a3d1898fa4992eca979261978d3db996973adff23a7cf98a75d5a22f73ba6b83"},
+    {file = "weni_feature_flags-2.2.0.tar.gz", hash = "sha256:145bfe816354bed204dd5efb4981cf1b4ec8df31d058740a669a8f400b8215d1"},
 ]
 
 [package.dependencies]
 celery = ">=5.0.0,<6.0"
 django = ">=3.2.22,<6.0"
-django-redis = ">=4.0.0,<6.0"
+django-celery-beat = ">=2.5.0,<3.0"
+django-redis = ">=4.0.0,<=6.0"
 djangorestframework = ">=3.12.0,<4.0"
 growthbook = ">=1.0.0,<2.0"
 requests = ">=2.25.0,<3.0"
@@ -3771,4 +3774,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "1ad6102c16d10227fc53f5dcb5f26bb9c454c055eb02812745fd6fe227d4e58a"
+content-hash = "c7adc6b9f2894f7c53d332c590edc0bb5981d23fb4b7685ae14d39da3b34cf8c"

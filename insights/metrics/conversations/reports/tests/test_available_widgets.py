@@ -5,6 +5,7 @@ from insights.projects.models import Project
 from insights.dashboards.models import Dashboard
 from insights.widgets.models import Widget
 from insights.metrics.conversations.reports.available_widgets import (
+    get_added_to_cart_widget,
     get_crosstab_widgets,
     get_csat_ai_widget,
     get_csat_human_widget,
@@ -22,6 +23,62 @@ class TestAvailableWidgets(TestCase):
             name="Test Dashboard",
             description="Test Dashboard Description",
         )
+
+    def test_get_added_to_cart_widget_with_valid_widget(self):
+        """Test get_added_to_cart_widget returns widget when valid widget exists"""
+        widget = Widget.objects.create(
+            dashboard=self.dashboard,
+            name="Added to Cart Widget",
+            type="conversations.product_added_to_cart",
+            source="conversations.product_added_to_cart",
+            config={},
+            position={},
+        )
+
+        result = get_added_to_cart_widget(self.project)
+
+        self.assertEqual(result, widget)
+        self.assertEqual(result.type, "conversations.product_added_to_cart")
+
+    def test_get_added_to_cart_widget_without_widget(self):
+        """Test get_added_to_cart_widget returns None when no widget exists"""
+        result = get_added_to_cart_widget(self.project)
+        self.assertIsNone(result)
+
+    def test_get_added_to_cart_widget_with_different_type(self):
+        """Test get_added_to_cart_widget returns None when widget has different type"""
+        Widget.objects.create(
+            dashboard=self.dashboard,
+            name="Other Widget",
+            type="custom",
+            source="conversations.product_added_to_cart",
+            config={},
+            position={},
+        )
+
+        result = get_added_to_cart_widget(self.project)
+        self.assertIsNone(result)
+
+    def test_get_added_to_cart_widget_with_different_project(self):
+        """Test get_added_to_cart_widget only returns widgets for the specified project"""
+        other_project = Project.objects.create(name="Other Project")
+        other_dashboard = Dashboard.objects.create(
+            project=other_project,
+            name="Other Dashboard",
+            description="Other Dashboard Description",
+        )
+
+        Widget.objects.create(
+            dashboard=other_dashboard,
+            name="Added to Cart Widget",
+            type="conversations.product_added_to_cart",
+            source="conversations.product_added_to_cart",
+            config={},
+            position={},
+        )
+
+        result = get_added_to_cart_widget(self.project)
+        self.assertIsNone(result)
 
     def test_get_csat_ai_widget_with_valid_widget(self):
         """Test get_csat_ai_widget returns widget when valid CSAT AI widget exists"""

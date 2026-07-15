@@ -18,6 +18,7 @@ from insights.core.urls.proxy_pagination import (
 from insights.human_support.clients.chats import ChatsClient
 from insights.projects.dataclass import TicketID
 from insights.projects.models import Project
+from insights.projects.services.indexer_activation import is_project_indexer_active
 from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import (
     ListContactsQueryParamsSerializer,
@@ -90,10 +91,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
         project = Project.objects.get(pk=self.kwargs["pk"])
 
-        if str(project.pk) in settings.PROJECT_ALLOW_LIST or project.is_allowed:
-            return Response(True)
-
-        return Response(False)
+        return Response(is_project_indexer_active(project))
 
     @action(detail=False, methods=["post"], url_path="release_flows_dashboard")
     def release_flows_dashboard(self, request, *args, **kwargs):
@@ -165,7 +163,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         chats_params = query_params.validated_data.copy()
         chats_params["project"] = str(project.uuid)
 
-        chats_client = ChatsClient()
+        chats_client = ChatsClient(project)
         response = chats_client.get_contacts(query_params=chats_params)
 
         pagination_urls = get_cursor_based_pagination_urls(request, response)
@@ -193,7 +191,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         chats_params = query_params.validated_data.copy()
         chats_params["project"] = str(project.uuid)
 
-        chats_client = ChatsClient()
+        chats_client = ChatsClient(project)
         response = chats_client.get_protocols(query_params=chats_params)
         ticket_ids = [
             TicketID(protocol["protocol"]) for protocol in response.get("results")
@@ -228,9 +226,9 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     )
     def verify_csat(self, request, *args, **kwargs):
         project = self.get_object()
-        chats_client = ChatsRESTClient()
+        chats_client = ChatsRESTClient(project)
 
-        project_data = chats_client.get_project(str(project.uuid))
+        project_data = chats_client.get_project()
         is_csat_enabled = project_data.get("is_csat_enabled", False)
 
         return Response(is_csat_enabled, status=status.HTTP_200_OK)
