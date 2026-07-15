@@ -50,6 +50,12 @@ from insights.metrics.conversations.reports.file_processors import (
     StreamingXLSXFileProcessor,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.usecases.get_project_concierge_agent import (
+    GetProjectConciergeAgentUseCase,
+)
+from insights.metrics.conversations.usecases.get_project_payment_agent import (
+    GetProjectPaymentAgentUseCase,
+)
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
@@ -411,6 +417,8 @@ class ConversationsReportService(BaseConversationsReportService):
         page_limit: int = 100,
         elastic_page_size: int = 1000,
         elastic_page_limit: int = 100,
+        get_concierge_agent_use_case: GetProjectConciergeAgentUseCase | None = None,
+        get_payment_agent_use_case: GetProjectPaymentAgentUseCase | None = None,
     ):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.datalake_events_client = datalake_events_client
@@ -422,6 +430,14 @@ class ConversationsReportService(BaseConversationsReportService):
         self.nexus_client = nexus_client
         self.elastic_page_size = elastic_page_size
         self.elastic_page_limit = elastic_page_limit
+        self.get_concierge_agent_use_case = (
+            get_concierge_agent_use_case
+            or GetProjectConciergeAgentUseCase(nexus_client=nexus_client)
+        )
+        self.get_payment_agent_use_case = (
+            get_payment_agent_use_case
+            or GetProjectPaymentAgentUseCase(nexus_client=nexus_client)
+        )
 
         self.cache_keys = {}
         self._use_streaming_events = False
@@ -2723,11 +2739,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get search terms worksheet.
         """
-        agent_uuid = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID
+        agent_uuid = self.get_concierge_agent_use_case.execute(report.project.uuid)
 
         if not agent_uuid:
             raise SearchTermsAgentUUIDNotConfiguredError(
-                "CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID is not configured"
+                "Search terms agent could not be resolved for this project"
             )
 
         key = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_KEY
@@ -2791,11 +2807,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get added to cart worksheet.
         """
-        agent_uuid = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID
+        agent_uuid = self.get_payment_agent_use_case.execute(report.project.uuid)
 
         if not agent_uuid:
             raise AddedToCartAgentUUIDNotConfiguredError(
-                "CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID is not configured"
+                "Added to cart agent could not be resolved for this project"
             )
 
         key = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_KEY

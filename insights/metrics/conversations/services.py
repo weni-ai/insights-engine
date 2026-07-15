@@ -68,6 +68,12 @@ from insights.widgets.models import Widget
 from insights.metrics.conversations.usecases.dashboard_check_project_sales_funnel import (
     CheckProjectSalesFunnelOnDashboardUseCase,
 )
+from insights.metrics.conversations.usecases.get_project_concierge_agent import (
+    GetProjectConciergeAgentUseCase,
+)
+from insights.metrics.conversations.usecases.get_project_payment_agent import (
+    GetProjectPaymentAgentUseCase,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -302,6 +308,8 @@ class ConversationsMetricsService(
         nexus_conversations_cache_ttl: int = settings.NEXUS_CONVERSATIONS_CACHE_TTL,
         flowruns_query_executor: FlowRunsQueryExecutor = FlowRunsQueryExecutor,
         check_sales_funnel_use_case: CheckProjectSalesFunnelOnDashboardUseCase = CheckProjectSalesFunnelOnDashboardUseCase(),
+        get_concierge_agent_use_case: GetProjectConciergeAgentUseCase = GetProjectConciergeAgentUseCase(),
+        get_payment_agent_use_case: GetProjectPaymentAgentUseCase = GetProjectPaymentAgentUseCase(),
     ):
         self.datalake_service: BaseDatalakeConversationsMetricsService = (
             datalake_service
@@ -314,6 +322,12 @@ class ConversationsMetricsService(
         self.flowruns_query_executor: FlowRunsQueryExecutor = flowruns_query_executor
         self.check_sales_funnel_use_case: CheckProjectSalesFunnelOnDashboardUseCase = (
             check_sales_funnel_use_case
+        )
+        self.get_concierge_agent_use_case: GetProjectConciergeAgentUseCase = (
+            get_concierge_agent_use_case
+        )
+        self.get_payment_agent_use_case: GetProjectPaymentAgentUseCase = (
+            get_payment_agent_use_case
         )
 
     def _convert_to_iso_string(self, date_value: datetime | str) -> str:
@@ -897,11 +911,11 @@ class ConversationsMetricsService(
         """
         Get search terms metrics
         """
-        agent_uuid = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID
+        agent_uuid = self.get_concierge_agent_use_case.execute(project_uuid)
 
         if not agent_uuid:
             raise SearchTermsAgentUUIDNotConfiguredError(
-                "CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID is not configured"
+                "Search terms agent could not be resolved for this project"
             )
 
         key = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_KEY
@@ -934,11 +948,11 @@ class ConversationsMetricsService(
         """
         Get added to cart metrics
         """
-        agent_uuid = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID
+        agent_uuid = self.get_payment_agent_use_case.execute(project_uuid)
 
         if not agent_uuid:
             raise AddedToCartAgentUUIDNotConfiguredError(
-                "CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID is not configured"
+                "Added to cart agent could not be resolved for this project"
             )
 
         key = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_KEY
@@ -1007,6 +1021,12 @@ class ConversationsMetricsService(
 
         if self.check_if_sales_funnel_data_exists(project_uuid):
             available_widgets.append(AvailableWidgets.SALES_FUNNEL)
+
+        if self.get_concierge_agent_use_case.execute(project_uuid):
+            available_widgets.append(AvailableWidgets.SEARCH_TERMS)
+
+        if self.get_payment_agent_use_case.execute(project_uuid):
+            available_widgets.append(AvailableWidgets.ADDED_TO_CART)
 
         return available_widgets
 
