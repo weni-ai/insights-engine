@@ -1,4 +1,5 @@
 from amqp.channel import Channel
+from django.conf import settings
 
 from .consumers import (
     ProjectAuthConsumer,
@@ -9,7 +10,8 @@ from .consumers import (
 
 
 def handle_consumers(channel: Channel) -> None:
-    channel.basic_consume("insights.projects", callback=OldProjectConsumer().handle)
+    if not settings.DISABLE_OLD_PROJECT_CONSUMER:
+        channel.basic_consume("insights.projects", callback=OldProjectConsumer().handle)
     channel.basic_consume("insights.permissions", callback=ProjectAuthConsumer().handle)
     channel.basic_consume(
         "insights.update-project", callback=UpdateProjectConsumer().handle
