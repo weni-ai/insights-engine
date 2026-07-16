@@ -1,4 +1,6 @@
 [run]
+parallel = True
+concurrency = multiprocessing
 omit =
     ./manage.py
     insights/*/migrations/*
