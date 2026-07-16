@@ -200,7 +200,7 @@ class HumanSupportDashboardService:
         chat_avg = float(metrics.get("avg_conversation_duration", 0) or 0)
         chat_max = float(metrics.get("max_conversation_duration", 0) or 0)
 
-        return {
+        result = {
             "average_time_is_waiting": {"average": waiting_avg, "max": waiting_max},
             "average_time_first_response": {
                 "average": first_resp_avg,
@@ -208,6 +208,18 @@ class HumanSupportDashboardService:
             },
             "average_time_chat": {"average": chat_avg, "max": chat_max},
         }
+
+        goal_mapping = {
+            "waiting_time_goal": "average_time_is_waiting",
+            "first_response_time_goal": "average_time_first_response",
+            "conversation_duration_goal": "average_time_chat",
+        }
+
+        for goal_key, metric_key in goal_mapping.items():
+            if goal_key in metrics:
+                result[metric_key][goal_key] = metrics[goal_key]
+
+        return result
 
     def get_peaks_in_human_service(self, filters: dict | None = None):
         request_params = self._normalize_filters(filters)
@@ -379,6 +391,9 @@ class HumanSupportDashboardService:
                     "contact": room.get("contact"),
                     "link": room.get("link"),
                     "pending_response": room.get("pending_response"),
+                    "goals_metrics": self._filter_goals_metrics(
+                        room, ("first_response_time", "duration")
+                    ),
                 }
             )
 
@@ -388,6 +403,11 @@ class HumanSupportDashboardService:
             "count": response.get("count"),
             "results": formatted_results,
         }
+
+    @staticmethod
+    def _filter_goals_metrics(room: dict, allowed_keys: tuple[str, ...]) -> dict:
+        room_goals = room.get("goals_metrics") or {}
+        return {key: value for key, value in room_goals.items() if key in allowed_keys}
 
     def get_detailed_monitoring_awaiting(self, filters: dict | None = None) -> dict:
         """
@@ -447,6 +467,9 @@ class HumanSupportDashboardService:
                     "sector": room.get("sector"),
                     "queue": room.get("queue"),
                     "link": room.get("link"),
+                    "goals_metrics": self._filter_goals_metrics(
+                        room, ("awaiting_time",)
+                    ),
                 }
             )
         return {
