@@ -31,7 +31,7 @@ class PyAMQPConnectionBackend:
         "[+] Connection established. Waiting for events. To exit press CTRL+C"
     )
 
-    def __init__(self, handle_consumers: callable, connection_params: dict):
+    def __init__(self, handle_consumers: callable, connection_params: dict = None):
         self._handle_consumers = handle_consumers
         self.connection_params = connection_params
 
@@ -39,10 +39,25 @@ class PyAMQPConnectionBackend:
         while True:
             connection.drain_events()
 
-    def _conection(self, **kwargs) -> amqp.Connection:
-        return amqp.Connection(**self.connection_params, **kwargs)
+    def _get_connection_dict(self):
+        if self.connection_params is None:
+            return dict(
+                host=settings.EDA_BROKER_HOST,
+                port=settings.EDA_BROKER_PORT,
+                userid=settings.EDA_BROKER_USER,
+                password=settings.EDA_BROKER_PASSWORD,
+                virtual_host=settings.EDA_VIRTUAL_HOST,
+            )
+        if isinstance(self.connection_params, dict):
+            return self.connection_params
+        return self.connection_params.value
 
-    def start_consuming(self):
+    def _conection(self, **kwargs) -> amqp.Connection:
+        return amqp.Connection(**self._get_connection_dict(), **kwargs)
+
+    def start_consuming(self, connection_params=None):
+        if connection_params is not None:
+            self.connection_params = connection_params
         while True:
             try:
                 with self._conection() as connection:
