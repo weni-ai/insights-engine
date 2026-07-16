@@ -123,11 +123,30 @@ WSGI_APPLICATION = "insights.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# CONN_MAX_AGE: Keeps connections open for reuse (in seconds).
+# Set to 0 in CI / parallel tests — CONN_MAX_AGE>0 causes
+# "connection already closed" failures across fork()ed workers.
+CONN_MAX_AGE = env.int("CONN_MAX_AGE", default=0)
+
 DATABASES = {
-    "default": env.db(var="DEFAULT_DATABASE", default="sqlite:///insights_db.sqlite3"),
-    "chats": env.db(var="CHATS_PG_DATABASE", default="sqlite:///chats_db.sqlite3"),
-    "flows": env.db(var="FLOWS_PG_DATABASE", default="sqlite:///flows_db.sqlite3"),
+    "default": {
+        **env.db(var="DEFAULT_DATABASE", default="sqlite:///insights_db.sqlite3"),
+        "CONN_MAX_AGE": CONN_MAX_AGE,
+    },
+    "chats": {
+        **env.db(var="CHATS_PG_DATABASE", default="sqlite:///chats_db.sqlite3"),
+        "CONN_MAX_AGE": CONN_MAX_AGE,
+    },
+    "flows": {
+        **env.db(var="FLOWS_PG_DATABASE", default="sqlite:///flows_db.sqlite3"),
+        "CONN_MAX_AGE": CONN_MAX_AGE,
+    },
 }
+
+# Custom test runner that gives each parallel worker its own Redis DB so that
+# tests using `cache.clear()` / `get_redis_connection()` don't race with
+# sibling workers. See insights/core/test_runner.py for details.
+TEST_RUNNER = "insights.core.test_runner.IsolatedCacheTestRunner"
 PSYCOPG_DATABASES = {
     "flows": env.str(var="FLOWS_PG_DATABASE", default="sqlite:///flows_db.sqlite3"),
 }

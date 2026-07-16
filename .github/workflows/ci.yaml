@@ -10,13 +10,16 @@ on:
 env:
   SECRET_KEY: "SK"
   DEBUG: true
-  DATABASE_URL: "postgres://insights:insights@localhost:5432/insights"
+  DEFAULT_DATABASE: "postgres://insights:insights@localhost:5432/insights"
   USE_EDA: true
   INSIGHTS_DOMAIN: ""
   CHATS_URL: ""
   INTEGRATIONS_URL: "https://integrations.weni.local"
   GROWTHBOOK_CLIENT_KEY: "test"
   GROWTHBOOK_HOST_BASE_URL: "https://test.local"
+  # Disable persistent DB connections for the parallel test runner;
+  # CONN_MAX_AGE>0 causes "connection already closed" failures across fork()ed workers.
+  CONN_MAX_AGE: 0
 
 jobs:
   build:
@@ -73,7 +76,10 @@ jobs:
         run: isort .
 
       - name: Run tests
-        run: coverage run manage.py test --verbosity=2 --noinput
+        run: coverage run manage.py test --parallel=auto --verbosity=2 --noinput
+
+      - name: Combine coverage
+        run: coverage combine
 
       - name: Coverage report
         run: coverage report -m
