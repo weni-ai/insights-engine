@@ -1,10 +1,10 @@
 import requests
 from django.conf import settings
 
-from insights.internals.base import InternalAuthentication
+from insights.internals.base import InternalJWTAuthentication
 
 
-class ChatsTimeMetricsClient(InternalAuthentication):
+class ChatsTimeMetricsClient(InternalJWTAuthentication):
     def __init__(self, project) -> None:
         self.project = project
         self.base_url = settings.CHATS_URL

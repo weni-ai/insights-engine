@@ -397,8 +397,6 @@ class TestHumanSupportDashboardService(TestCase):
         result = service.csat_score_by_agents(user_request="test", filters={})
         self.assertEqual(result, {"results": []})
         mock_chats.csat_score_by_agents.assert_called_once()
-        call_kwargs = mock_chats.csat_score_by_agents.call_args[1]
-        self.assertEqual(call_kwargs["project_uuid"], str(self.project.uuid))
 
     @patch("insights.human_support.services.CustomStatusRESTClient")
     def test_get_analysis_detailed_monitoring_status(self, mock_client_class):
@@ -635,7 +633,7 @@ class TestHumanSupportDashboardService(TestCase):
             filters={"ordering": "agent", "limit": 5, "offset": 10}
         )
         call_args = mock_client_class.return_value.get_status_by_agent.call_args
-        params = call_args[0][1]
+        params = call_args[0][0]
         self.assertEqual(params.get("ordering"), "agent")
         self.assertEqual(params.get("limit"), 5)
         self.assertEqual(params.get("offset"), 10)
@@ -894,8 +892,8 @@ class TestHumanSupportDashboardService(TestCase):
                 "offset": 10,
             }
         )
-        mock_client.get_status_by_agent.assert_called_once()
-        params = mock_client.get_status_by_agent.call_args.args[1]
+        call_args = mock_client_class.return_value.get_status_by_agent.call_args
+        params = call_args[0][0]
         self.assertEqual(params["user_request"], "search")
         self.assertEqual(params["limit"], 5)
         self.assertEqual(params["offset"], 10)

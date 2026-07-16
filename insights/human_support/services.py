@@ -32,11 +32,11 @@ from insights.sources.tags.usecases.query_execute import (
 
 class HumanSupportDashboardService:
     def __init__(
-        self, project: Project, chats_client: ChatsClient = ChatsClient()
+        self, project: Project, chats_client: ChatsClient | None = None
     ) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
-        self.chats_client = chats_client
+        self.chats_client = chats_client or ChatsClient(project)
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
@@ -611,7 +611,7 @@ class HumanSupportDashboardService:
     def get_detailed_monitoring_agents_v2(self, filters: dict = {}):
         params = self._get_detailed_monitoring_agents_filters(filters)
 
-        response = ChatsRESTClient().get_agents(str(self.project.uuid), params)
+        response = ChatsRESTClient(self.project).get_agents(params)
 
         formatted_results = []
         for agent in response.get("results", []):
@@ -678,7 +678,7 @@ class HumanSupportDashboardService:
                     value = value.isoformat()
                 params[param] = str(value) if param_type == str else value
 
-        return ChatsRESTClient().get_status_by_agent(str(self.project.uuid), params)
+        return ChatsRESTClient(self.project).get_status_by_agent(params)
 
     def get_detailed_monitoring_agents_totals(self, filters: dict = {}) -> dict:
         params = self._get_detailed_monitoring_agents_filters(filters)
@@ -744,9 +744,7 @@ class HumanSupportDashboardService:
                 datetime.combine(today, datetime.max.time())
             )
 
-        return self.chats_client.csat_score_by_agents(
-            project_uuid=str(self.project.uuid), params=normalized_filters
-        )
+        return self.chats_client.csat_score_by_agents(params=normalized_filters)
 
     def _get_analysis_detailed_monitoring_status_filters(
         self, filters: dict, ordering_fields: set
@@ -874,7 +872,7 @@ class HumanSupportDashboardService:
             filters, ordering_fields
         )
 
-        response = ChatsRESTClient().get_status_by_agent(str(self.project.uuid), params)
+        response = ChatsRESTClient(self.project).get_status_by_agent(params)
 
         formatted_results = []
         for agent_data in response.get("results", []):
@@ -1148,9 +1146,7 @@ class HumanSupportDashboardService:
             if value:
                 params[filter_value] = value
 
-        ratings_from_chats = self.chats_client.csat_ratings(
-            project_uuid=str(self.project.uuid), params=params
-        )
+        ratings_from_chats = self.chats_client.csat_ratings(params=params)
         ratings_data = {
             str(rating): {"value": 0, "full_value": 0} for rating in range(1, 6)
         }

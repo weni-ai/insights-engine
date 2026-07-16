@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 import uuid
 
 from django.conf import settings
@@ -1015,6 +1015,8 @@ class TestConversationsReportServiceAdditional(TestCase):
     """Additional test cases for ConversationsReportService to increase coverage."""
 
     def setUp(self):
+        self.mock_get_concierge_agent_use_case = Mock()
+        self.mock_get_payment_agent_use_case = Mock()
         self.service = ConversationsReportService(
             elasticsearch_service=ConversationsElasticsearchService(
                 client=MockElasticsearchClient(),
@@ -1030,6 +1032,8 @@ class TestConversationsReportServiceAdditional(TestCase):
             ),
             cache_client=MockCacheClient(),
             nexus_client=MockNexusClient(),
+            get_concierge_agent_use_case=self.mock_get_concierge_agent_use_case,
+            get_payment_agent_use_case=self.mock_get_payment_agent_use_case,
         )
         self.project = Project.objects.create(name="Test")
         self.dashboard = Dashboard.objects.create(name="Test", project=self.project)
@@ -2034,14 +2038,14 @@ class TestConversationsReportServiceAdditional(TestCase):
 
         self.assertEqual(results, [])
 
-    @override_settings(
-        CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID="11111111-1111-1111-1111-111111111111",
-        CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term",
-    )
+    @override_settings(CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term")
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
     )
     def test_get_search_terms_worksheet(self, mock_get_datalake_events):
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
         mock_get_datalake_events.return_value = [
             {
                 "event_name": "weni_nexus_data",
@@ -2096,6 +2100,9 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertIn("11/04/2026", worksheet.data[1]["Date"])
         self.assertEqual(worksheet.data[1]["Terms"], "azeite")
 
+        self.mock_get_concierge_agent_use_case.execute.assert_called_once_with(
+            report.project.uuid
+        )
         mock_get_datalake_events.assert_called_once_with(
             report,
             project=report.project.uuid,
@@ -2107,14 +2114,14 @@ class TestConversationsReportServiceAdditional(TestCase):
             metadata_value="11111111-1111-1111-1111-111111111111",
         )
 
-    @override_settings(
-        CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID="11111111-1111-1111-1111-111111111111",
-        CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term",
-    )
+    @override_settings(CONVERSATIONS_METRICS_SEARCH_TERMS_KEY="search_term")
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
     )
     def test_get_search_terms_worksheet_with_empty_data(self, mock_get_datalake_events):
+        self.mock_get_concierge_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
         mock_get_datalake_events.return_value = []
 
         report = Report.objects.create(
@@ -2137,7 +2144,6 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(worksheet.data[0]["Date"], "")
         self.assertEqual(worksheet.data[0]["Terms"], "")
 
-    @override_settings(CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID="")
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
     )
@@ -2147,6 +2153,8 @@ class TestConversationsReportServiceAdditional(TestCase):
         from insights.metrics.conversations.exceptions import (
             SearchTermsAgentUUIDNotConfiguredError,
         )
+
+        self.mock_get_concierge_agent_use_case.execute.return_value = None
 
         report = Report.objects.create(
             project=self.project,
@@ -2622,13 +2630,15 @@ class TestConversationsReportServiceAdditional(TestCase):
         mock_get_crosstab_widgets.assert_called_once_with(self.project)
 
     @override_settings(
-        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
         CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
     )
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
     )
     def test_get_added_to_cart_worksheet(self, mock_get_datalake_events):
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
         mock_get_datalake_events.return_value = [
             {
                 "event_name": "weni_nexus_data",
@@ -2683,6 +2693,9 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertIn("11/04/2026", worksheet.data[1]["Date"])
         self.assertEqual(worksheet.data[1]["Product"], "azeite")
 
+        self.mock_get_payment_agent_use_case.execute.assert_called_once_with(
+            report.project.uuid
+        )
         mock_get_datalake_events.assert_called_once_with(
             report,
             project=report.project.uuid,
@@ -2695,7 +2708,6 @@ class TestConversationsReportServiceAdditional(TestCase):
         )
 
     @override_settings(
-        CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="11111111-1111-1111-1111-111111111111",
         CONVERSATIONS_METRICS_ADDED_TO_CART_KEY="product_added_to_cart",
     )
     @patch(
@@ -2704,6 +2716,9 @@ class TestConversationsReportServiceAdditional(TestCase):
     def test_get_added_to_cart_worksheet_with_empty_data(
         self, mock_get_datalake_events
     ):
+        self.mock_get_payment_agent_use_case.execute.return_value = (
+            "11111111-1111-1111-1111-111111111111"
+        )
         mock_get_datalake_events.return_value = []
 
         report = Report.objects.create(
@@ -2727,7 +2742,6 @@ class TestConversationsReportServiceAdditional(TestCase):
         self.assertEqual(worksheet.data[0]["Date"], "")
         self.assertEqual(worksheet.data[0]["Product"], "")
 
-    @override_settings(CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID="")
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_datalake_events"
     )
@@ -2737,6 +2751,8 @@ class TestConversationsReportServiceAdditional(TestCase):
         from insights.metrics.conversations.exceptions import (
             AddedToCartAgentUUIDNotConfiguredError,
         )
+
+        self.mock_get_payment_agent_use_case.execute.return_value = None
 
         report = Report.objects.create(
             project=self.project,
@@ -5447,6 +5463,150 @@ class TestStreamingPrefetch(TestCase):
         self.assertEqual(len(spool_paths), 1)
         self.assertFalse(os.path.exists(spool_paths[0]))
         self.assertEqual(self.service._streaming_spools, [])
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch.object(ConversationsReportService, "_iter_datalake_events")
+    def test_generate_streaming_csv_returns_local_path_files(
+        self, mock_iter_events, mock_feature_flag
+    ):
+        mock_iter_events.return_value = iter(
+            [
+                {
+                    "contact_urn": "urn:tel:+5511111111111",
+                    "date": "2025-01-01T12:00:00.000000Z",
+                    "value": "resolved",
+                    "metadata": "{}",
+                },
+            ]
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        files = self.service._generate_streaming(
+            report,
+            datetime(2025, 1, 1),
+            datetime(2025, 1, 2),
+        )
+
+        self.assertGreaterEqual(len(files), 1)
+        for report_file in files:
+            self.assertTrue(report_file.name.endswith(".csv"))
+            self.assertIsNone(report_file.content)
+            self.assertIsNotNone(report_file.local_path)
+            self.assertTrue(os.path.exists(report_file.local_path))
+
+        with open(files[0].local_path, encoding="utf-8") as csv_file:
+            content = csv_file.read()
+
+        self.assertIn("URN", content)
+        self.assertIn("urn:tel:+5511111111111", content)
+
+        for report_file in files:
+            if report_file.local_path and os.path.exists(report_file.local_path):
+                os.unlink(report_file.local_path)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch.object(ConversationsReportService, "_iter_datalake_events")
+    def test_generate_streaming_csv_cleans_up_spool_files(
+        self, mock_iter_events, mock_feature_flag
+    ):
+        mock_iter_events.return_value = iter(
+            [
+                {
+                    "contact_urn": "urn:tel:+5511111111111",
+                    "date": "2025-01-01T12:00:00.000000Z",
+                    "value": "resolved",
+                    "metadata": "{}",
+                },
+            ]
+        )
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS", "CONTACTS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.IN_PROGRESS,
+        )
+
+        spool_paths = []
+
+        from insights.metrics.conversations.reports import services as services_module
+
+        original_spool_factory = (
+            services_module._ReplayableDatalakeEventsSpool.from_parallel_fetch
+        )
+
+        def spool_factory(service, report, **kwargs):
+            spool = original_spool_factory(service, report, **kwargs)
+            spool_paths.append(spool.path)
+            return spool
+
+        with patch.object(
+            services_module._ReplayableDatalakeEventsSpool,
+            "from_parallel_fetch",
+            side_effect=spool_factory,
+        ):
+            files = self.service._generate_streaming(
+                report,
+                datetime(2025, 1, 1),
+                datetime(2025, 1, 2),
+            )
+
+        self.assertGreaterEqual(len(files), 1)
+        self.assertEqual(len(spool_paths), 1)
+        self.assertFalse(os.path.exists(spool_paths[0]))
+        self.assertEqual(self.service._streaming_spools, [])
+
+        for report_file in files:
+            if report_file.local_path and os.path.exists(report_file.local_path):
+                os.unlink(report_file.local_path)
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.send_email"
+    )
+    @patch.object(ConversationsReportService, "_generate_streaming")
+    @patch.object(
+        ConversationsReportService, "_is_streaming_mode_enabled", return_value=True
+    )
+    def test_generate_dispatches_to_streaming_for_csv(
+        self, mock_streaming_enabled, mock_generate_streaming, mock_send_email
+    ):
+        mock_generate_streaming.return_value = [
+            ConversationsReportFile(name="Resolutions.csv", local_path="/tmp/test.csv")
+        ]
+        mock_send_email.return_value = None
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.PENDING,
+        )
+
+        self.service.generate(report)
+
+        mock_generate_streaming.assert_called_once()
+        mock_send_email.assert_called_once()
 
 
 class TestGetDatalakeEventsInParallel(TestCase):

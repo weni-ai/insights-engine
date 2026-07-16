@@ -46,9 +46,16 @@ from insights.metrics.conversations.reports.dataclass import (
 )
 from insights.metrics.conversations.reports.file_processors import (
     get_file_processor,
+    StreamingCSVFileProcessor,
     StreamingXLSXFileProcessor,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.usecases.get_project_concierge_agent import (
+    GetProjectConciergeAgentUseCase,
+)
+from insights.metrics.conversations.usecases.get_project_payment_agent import (
+    GetProjectPaymentAgentUseCase,
+)
 from insights.reports.models import Report
 from insights.reports.choices import ReportStatus, ReportFormat, ReportSource
 from insights.users.models import User
@@ -410,6 +417,8 @@ class ConversationsReportService(BaseConversationsReportService):
         page_limit: int = 100,
         elastic_page_size: int = 1000,
         elastic_page_limit: int = 100,
+        get_concierge_agent_use_case: GetProjectConciergeAgentUseCase | None = None,
+        get_payment_agent_use_case: GetProjectPaymentAgentUseCase | None = None,
     ):
         self.source = ReportSource.CONVERSATIONS_DASHBOARD
         self.datalake_events_client = datalake_events_client
@@ -421,6 +430,14 @@ class ConversationsReportService(BaseConversationsReportService):
         self.nexus_client = nexus_client
         self.elastic_page_size = elastic_page_size
         self.elastic_page_limit = elastic_page_limit
+        self.get_concierge_agent_use_case = (
+            get_concierge_agent_use_case
+            or GetProjectConciergeAgentUseCase(nexus_client=nexus_client)
+        )
+        self.get_payment_agent_use_case = (
+            get_payment_agent_use_case
+            or GetProjectPaymentAgentUseCase(nexus_client=nexus_client)
+        )
 
         self.cache_keys = {}
         self._use_streaming_events = False
@@ -1082,7 +1099,7 @@ class ConversationsReportService(BaseConversationsReportService):
 
         report = self._update_report_status(report)
         use_streaming = (
-            report.format == ReportFormat.XLSX
+            report.format in (ReportFormat.XLSX, ReportFormat.CSV)
             and self._is_streaming_mode_enabled(report)
         )
 
@@ -2722,11 +2739,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get search terms worksheet.
         """
-        agent_uuid = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID
+        agent_uuid = self.get_concierge_agent_use_case.execute(report.project.uuid)
 
         if not agent_uuid:
             raise SearchTermsAgentUUIDNotConfiguredError(
-                "CONVERSATIONS_METRICS_SEARCH_TERMS_AGENT_UUID is not configured"
+                "Search terms agent could not be resolved for this project"
             )
 
         key = settings.CONVERSATIONS_METRICS_SEARCH_TERMS_KEY
@@ -2790,11 +2807,11 @@ class ConversationsReportService(BaseConversationsReportService):
         """
         Get added to cart worksheet.
         """
-        agent_uuid = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID
+        agent_uuid = self.get_payment_agent_use_case.execute(report.project.uuid)
 
         if not agent_uuid:
             raise AddedToCartAgentUUIDNotConfiguredError(
-                "CONVERSATIONS_METRICS_ADDED_TO_CART_AGENT_UUID is not configured"
+                "Added to cart agent could not be resolved for this project"
             )
 
         key = settings.CONVERSATIONS_METRICS_ADDED_TO_CART_KEY
@@ -2845,6 +2862,11 @@ class ConversationsReportService(BaseConversationsReportService):
             "Worksheet '%s' has no headers and no materialized rows" % worksheet.name
         )
 
+    def _cleanup_streaming_temp_paths(self, temp_paths: list[str]) -> None:
+        for temp_path in temp_paths:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+
     def _generate_streaming(
         self,
         report: Report,
@@ -2852,37 +2874,65 @@ class ConversationsReportService(BaseConversationsReportService):
         end_date: datetime,
     ) -> list[ConversationsReportFile]:
         """
-        Generate an XLSX report by streaming datalake events page by page
-        and writing worksheet rows directly to a temp file on disk.
+        Generate a report by streaming datalake events page by page and
+        writing worksheet rows directly to temp files on disk.
         """
         self._use_streaming_events = True
         self._streaming_spools = []
-        processor = StreamingXLSXFileProcessor()
-        workbook, tmp_path = processor.create_workbook(report)
+        temp_paths: list[str] = []
+        workbook = None
+        xlsx_tmp_path = None
 
         try:
             worksheets = self._get_worksheets(report, start_date, end_date)
 
-            for ws in worksheets:
-                if self._should_skip_worksheet(ws):
-                    continue
+            if report.format == ReportFormat.XLSX:
+                xlsx_processor = StreamingXLSXFileProcessor()
+                workbook, xlsx_tmp_path = xlsx_processor.create_workbook(report)
+                temp_paths.append(xlsx_tmp_path)
 
-                headers = self._resolve_worksheet_headers(ws)
-                row_count = processor.write_worksheet(
-                    workbook, ws.name, headers, ws.data
-                )
-                logger.info(
-                    "[CONVERSATIONS REPORT SERVICE] Streaming worksheet '%s' wrote %s rows for report %s",
-                    ws.name,
-                    row_count,
-                    report.uuid,
-                )
+                for ws in worksheets:
+                    if self._should_skip_worksheet(ws):
+                        continue
 
-            files = processor.finalize(workbook, tmp_path, report)
+                    headers = self._resolve_worksheet_headers(ws)
+                    row_count = xlsx_processor.write_worksheet(
+                        workbook, ws.name, headers, ws.data
+                    )
+                    logger.info(
+                        "[CONVERSATIONS REPORT SERVICE] Streaming worksheet '%s' wrote %s rows for report %s",
+                        ws.name,
+                        row_count,
+                        report.uuid,
+                    )
+
+                files = xlsx_processor.finalize(workbook, xlsx_tmp_path, report)
+            elif report.format == ReportFormat.CSV:
+                csv_processor = StreamingCSVFileProcessor()
+                files = []
+
+                for ws in worksheets:
+                    if self._should_skip_worksheet(ws):
+                        continue
+
+                    headers = self._resolve_worksheet_headers(ws)
+                    report_file, row_count = csv_processor.write_worksheet(
+                        ws.name, headers, ws.data
+                    )
+                    temp_paths.append(report_file.local_path)
+                    files.append(report_file)
+                    logger.info(
+                        "[CONVERSATIONS REPORT SERVICE] Streaming worksheet '%s' wrote %s rows for report %s",
+                        ws.name,
+                        row_count,
+                        report.uuid,
+                    )
+            else:
+                raise ValueError("Unsupported streaming format: %s" % report.format)
         except Exception:
-            workbook.close()
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
+            if workbook is not None:
+                workbook.close()
+            self._cleanup_streaming_temp_paths(temp_paths)
             raise
         finally:
             self._use_streaming_events = False

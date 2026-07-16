@@ -3215,21 +3215,22 @@ files = [
 
 [[package]]
 name = "weni-commons"
-version = "1.1.0"
+version = "1.3.1"
 description = "Weni's common utilities for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_commons-1.1.0-py3-none-any.whl", hash = "sha256:b7337fb5432040ce9a402b661ec67b067d3d8abf585853c5ba39284d7843dd6b"},
-    {file = "weni_commons-1.1.0.tar.gz", hash = "sha256:ecc4f8f8b374f35c18b5c736e28414c5781ce147016b7fd6ca7a951ba10a1889"},
+    {file = "weni_commons-1.3.1-py3-none-any.whl", hash = "sha256:05435733aab90693f8ca955da686ff7e29d58e77e63c5b79f862a4c8ff21d8dd"},
+    {file = "weni_commons-1.3.1.tar.gz", hash = "sha256:fb1f73eac33f38acf369ffaf9fcde139e58968f43546f8711c80ce9bc5ae0163"},
 ]
 
 [package.dependencies]
 celery = ">=5.0.0,<6.0"
 django = ">=3.2.22,<6.0"
-django-redis = ">=4.0.0,<6.0"
+django-redis = ">=4.0.0,<=6.0"
 djangorestframework = ">=3.12.0,<4.0"
-weni-feature-flags = ">=2.1.0,<3.0.0"
+weni-eda = ">=0.1.2,<0.2.0"
+weni-feature-flags = ">=2.2.0,<3.0.0"
 
 [[package]]
 name = "weni-datalake-sdk"
@@ -3253,13 +3254,13 @@ pytest = ">=8.4.0,<9.0.0"
 
 [[package]]
 name = "weni-eda"
-version = "0.1.1"
+version = "0.1.2"
 description = ""
 optional = false
-python-versions = "<4.0,>=3.10"
+python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_eda-0.1.1-py3-none-any.whl", hash = "sha256:24953f43b01976cd90345931c1552307d27d1f709ebd1792fa840126c7699cb8"},
-    {file = "weni_eda-0.1.1.tar.gz", hash = "sha256:f95934fcf27f3dd2aaadb96e16826a73fb5d0ef0e7cca24a4b0ccce026449f82"},
+    {file = "weni_eda-0.1.2-py3-none-any.whl", hash = "sha256:83696e1fa277dc494c0aa17c13340c7a3b8e491526419629f111a03cae934610"},
+    {file = "weni_eda-0.1.2.tar.gz", hash = "sha256:395ce3c9bf6a33a1a27c2482a60d49a40ccdad21fb1df39ce2b2db59f885f004"},
 ]
 
 [package.dependencies]
@@ -3267,19 +3268,20 @@ amqp = ">=5.2.0,<6.0.0"
 
 [[package]]
 name = "weni-feature-flags"
-version = "2.1.0"
+version = "2.2.0"
 description = "Weni's feature flags SDK for Python backends"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "weni_feature_flags-2.1.0-py3-none-any.whl", hash = "sha256:ff5ac66c809f0eff56818f85f7d3ba67b19164ffcf3493cd0a278497bf165e34"},
-    {file = "weni_feature_flags-2.1.0.tar.gz", hash = "sha256:026647c8ca97e09360df7f162b5655bc23d367cd21464f7688d7891047a865fd"},
+    {file = "weni_feature_flags-2.2.0-py3-none-any.whl", hash = "sha256:a3d1898fa4992eca979261978d3db996973adff23a7cf98a75d5a22f73ba6b83"},
+    {file = "weni_feature_flags-2.2.0.tar.gz", hash = "sha256:145bfe816354bed204dd5efb4981cf1b4ec8df31d058740a669a8f400b8215d1"},
 ]
 
 [package.dependencies]
 celery = ">=5.0.0,<6.0"
 django = ">=3.2.22,<6.0"
-django-redis = ">=4.0.0,<6.0"
+django-celery-beat = ">=2.5.0,<3.0"
+django-redis = ">=4.0.0,<=6.0"
 djangorestframework = ">=3.12.0,<4.0"
 growthbook = ">=1.0.0,<2.0"
 requests = ">=2.25.0,<3.0"
@@ -3619,4 +3621,4 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "fcbd53fd5aa8bd2a7a5fc28fe830a913190d04bdeb247731cd65264f8a123812"
+content-hash = "14ae482015467c1b27cd50ad0928b8ef7edfefe318aba9ea1004838904a33c65"
