@@ -28,9 +28,13 @@ _WORKER_REDIS_DB_OFFSET = 2
 _MAX_REDIS_DB = 15
 
 
-def _init_worker_with_isolated_cache(counter):
-    """Pool initializer: run Django's worker setup, then point Redis at a unique DB."""
-    django_init_worker(counter)
+def _init_worker_with_isolated_cache(counter, *args, **kwargs):
+    """Pool initializer: run Django's worker setup, then point Redis at a unique DB.
+
+    Django 5+ passes extra args (initial_settings, serialized_contents, etc.);
+    forward them so the stock worker init still runs correctly.
+    """
+    django_init_worker(counter, *args, **kwargs)
 
     from django.conf import settings
     from django.test import runner as _runner_module
