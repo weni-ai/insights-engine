@@ -1,3 +1,38 @@
+# 1.35.0
+# Add
+  - Risk alert goals metrics in human support average times and rooms endpoints
+  - Project managers filter endpoint for risk alert
+  - Viewer verification endpoint for projects
+  - Parallel CI test execution
+
+# 1.34.4
+# Fix
+  - Agent source query without UUID field dependency
+
+# 1.34.3
+# Add
+  - Indexer activation status in dashboard list and project verify indexer endpoint
+  - Concierge and payment agents resolution by slug in conversations metrics and reports
+  - Search terms and added to cart widgets in available widgets list
+
+# 1.34.2
+# Add
+  - Update weni-commons version
+
+# 1.34.1
+# Add
+  - Streaming CSV report generation for conversations reports
+
+# 1.34.0
+# Add
+  - JWT authentication on Live Desk calls
+# Remove
+  - Redundant Sentry capture on VTEX order fetch errors
+
+# 1.33.3
+# Add
+  - Unified abandoned cart skill and templates and orders metrics logic
+
 # 1.33.2
 # Add
   - Parallel streaming fetch with disk-backed event spool for classification events in conversations report
