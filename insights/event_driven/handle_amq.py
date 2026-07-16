@@ -5,5 +5,6 @@ from insights.projects.consumers import WeniEDAProjectConsumer
 
 
 def handle_amq_consumers(channel: Channel) -> None:
-    queue_name = settings.PROJECT_AMQ_QUEUE_NAME
-    channel.basic_consume(queue_name, callback=WeniEDAProjectConsumer().handle)
+    if not settings.DISABLE_NEW_PROJECT_CONSUMER:
+        queue_name = settings.PROJECT_AMQ_QUEUE_NAME
+        channel.basic_consume(queue_name, callback=WeniEDAProjectConsumer().handle)

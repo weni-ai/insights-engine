@@ -324,6 +324,7 @@ if USE_SENTRY:
 
 USE_EDA = env.bool("USE_EDA", default=False)
 DISABLE_OLD_PROJECT_CONSUMER = env.bool("DISABLE_OLD_PROJECT_CONSUMER", default=False)
+DISABLE_NEW_PROJECT_CONSUMER = env.bool("DISABLE_NEW_PROJECT_CONSUMER", default=False)
 
 EDA_CONSUMERS_HANDLES = {
     "edaconsume": "insights.event_driven.handle.handle_consumers",

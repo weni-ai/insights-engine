@@ -19,6 +19,7 @@ def handle_consumers(channel: Channel) -> None:
 
 
 def handle_consumers_amq(channel: Channel) -> None:
-    channel.basic_consume(
-        "insights.projects.queue", callback=WeniEDAProjectConsumer().handle
-    )
+    if not settings.DISABLE_NEW_PROJECT_CONSUMER:
+        channel.basic_consume(
+            "insights.projects.queue", callback=WeniEDAProjectConsumer().handle
+        )
