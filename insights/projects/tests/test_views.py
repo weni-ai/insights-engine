@@ -422,6 +422,63 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.data["results"][0]["ticket_id"], test_ticket_id)
 
     @with_project_auth
+    def test_search_project_managers_success(self):
+        url = reverse(
+            "project-search-project-managers", kwargs={"pk": self.project.uuid}
+        )
+
+        with patch(
+            "insights.projects.viewsets.ProjectAdminsAndManagersQueryExecutor"
+        ) as mock_executor:
+            mock_executor.execute.return_value = {
+                "next": None,
+                "previous": None,
+                "results": [
+                    {"uuid": "1", "email": "admin@test.com", "name": "Admin User"}
+                ],
+            }
+
+            response = self.client.get(url)
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                response.data["results"],
+                [{"uuid": "1", "email": "admin@test.com", "name": "Admin User"}],
+            )
+
+            call_kwargs = mock_executor.execute.call_args.kwargs
+            self.assertEqual(call_kwargs["filters"]["project"], str(self.project.uuid))
+            self.assertEqual(call_kwargs["operation"], "list")
+            self.assertEqual(call_kwargs["return_format"], "select_input")
+
+    def test_search_project_managers_without_permission(self):
+        url = reverse(
+            "project-search-project-managers", kwargs={"pk": self.project.uuid}
+        )
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    def test_search_project_managers_exception_handling(self):
+        url = reverse(
+            "project-search-project-managers", kwargs={"pk": self.project.uuid}
+        )
+
+        with patch(
+            "insights.projects.viewsets.ProjectAdminsAndManagersQueryExecutor"
+        ) as mock_executor:
+            mock_executor.execute.side_effect = Exception("Test error")
+
+            response = self.client.get(url)
+
+            self.assertEqual(
+                response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            self.assertEqual(response.data["detail"], "Failed to retrieve source data")
+
+    @with_project_auth
     def test_verify_csat(self):
         url = reverse("project-verify-csat", kwargs={"pk": self.project.uuid})
 

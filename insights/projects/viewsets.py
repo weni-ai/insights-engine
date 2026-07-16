@@ -28,6 +28,9 @@ from insights.projects.serializers import (
     TicketIDSerializer,
 )
 from insights.shared.viewsets import get_source
+from insights.sources.agents.usecases.query_execute import (
+    ProjectAdminsAndManagersQueryExecutor,
+)
 from insights.sources.chats.clients import ChatsRESTClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
 
@@ -219,6 +222,37 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         client = CustomStatusRESTClient(project)
         results = client.list_custom_status_types()
         return Response(results, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="filters/project_managers",
+    )
+    def search_project_managers(self, request, *args, **kwargs):
+        project = self.get_object()
+
+        filters = dict(request.query_params or {})
+        tags = filters.pop("tags", [None])[0]
+        if tags:
+            filters["tags"] = tags.split(",")
+        filters["project"] = str(project.uuid)
+
+        try:
+            serialized_source = ProjectAdminsAndManagersQueryExecutor.execute(
+                filters=filters,
+                operation="list",
+                parser=parse_dict_to_json,
+                user_email=self.request.user.email,
+                return_format="select_input",
+            )
+        except Exception as error:
+            logger.exception(f"Error executing project managers query: {error}")
+            return Response(
+                {"detail": "Failed to retrieve source data"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(serialized_source, status.HTTP_200_OK)
 
     @action(
         detail=True,
