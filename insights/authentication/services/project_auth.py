@@ -69,3 +69,32 @@ def has_external_general_project_permission(request, project_uuid) -> bool:
             exc,
         )
         return False
+
+
+def is_project_viewer(token: str, project_uuid: str) -> bool:
+    """
+    Checks if the authenticated user has the viewer role on the project
+    via the external Connect authorization API.
+    """
+    base_url = settings.PROJECT_AUTH_API_BASE_URL
+    url = f"{base_url}/v2/projects/{project_uuid}/authorization"
+
+    try:
+        response = requests.get(
+            url,
+            headers={"Authorization": token},
+            timeout=settings.PROJECT_AUTH_API_TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        logger.warning(
+            "External project viewer check failed for project=%s: %s",
+            project_uuid,
+            exc,
+        )
+        return False
+
+    if response.status_code != 200:
+        return False
+
+    role = response.json().get("project_authorization")
+    return role == EXISTING_ROLES["viewer"]
