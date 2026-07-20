@@ -11,7 +11,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import GenericViewSet
 from sentry_sdk import capture_exception
 
+from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
+    HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
@@ -65,6 +67,14 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         ProjectAuthQueryParamPermission,
         ProjectDashboardWABAPermission,
     ]
+
+    @property
+    def authentication_classes(self):
+        # Try JWT first so Bearer JWT tokens are accepted before OIDC
+        classes = list(super().authentication_classes)
+        if JWTAuthentication not in classes:
+            classes.insert(0, JWTAuthentication)
+        return classes
 
     @property
     def project_uuid_field(self):
@@ -308,10 +318,13 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         url_name="conversations-by-category",
         url_path="conversations-by-category",
         permission_classes=[
-            IsAuthenticated,
-            (
-                (ProjectAuthQueryParamPermission & ProjectDashboardWABAPermission)
-                | InternalAuthenticationPermission
+            HasInternalAuthenticationPermission
+            | (
+                IsAuthenticated
+                & (
+                    (ProjectAuthQueryParamPermission & ProjectDashboardWABAPermission)
+                    | InternalAuthenticationPermission
+                )
             ),
         ],
     )

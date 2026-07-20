@@ -8,7 +8,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
+from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
+    HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
@@ -80,6 +82,14 @@ class ConversationsMetricsViewSet(
     """
 
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+
+    @property
+    def authentication_classes(self):
+        # Try JWT first so Bearer JWT tokens are accepted before OIDC
+        classes = list(super().authentication_classes)
+        if JWTAuthentication not in classes:
+            classes.insert(0, JWTAuthentication)
+        return classes
 
     @action(
         detail=False,
@@ -337,8 +347,11 @@ class ConversationsMetricsViewSet(
         methods=["get"],
         serializer_class=ConversationTotalsMetricsSerializer,
         permission_classes=[
-            IsAuthenticated,
-            (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
+            HasInternalAuthenticationPermission
+            | (
+                IsAuthenticated
+                & (ProjectAuthQueryParamPermission | InternalAuthenticationPermission)
+            ),
         ],
     )
     def totals(self, request: "Request", *args, **kwargs) -> Response:
@@ -351,8 +364,11 @@ class ConversationsMetricsViewSet(
         )
         query_params_serializer.is_valid(raise_exception=True)
 
+        if not (project_uuid := getattr(request, "project_uuid", None)):
+            project_uuid = query_params_serializer.validated_data["project_uuid"]
+
         totals = self.service.get_totals(
-            project_uuid=query_params_serializer.validated_data["project_uuid"],
+            project_uuid=project_uuid,
             start_date=query_params_serializer.validated_data["start_date"].isoformat(),
             end_date=query_params_serializer.validated_data["end_date"].isoformat(),
         )
@@ -615,7 +631,18 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
     """
 
     service = ConversationsMetricsService()
-    permission_classes = [IsAuthenticated, InternalAuthenticationPermission]
+    permission_classes = [
+        HasInternalAuthenticationPermission
+        | (IsAuthenticated & InternalAuthenticationPermission)
+    ]
+
+    @property
+    def authentication_classes(self):
+        # Try JWT first so Bearer JWT tokens are accepted before OIDC
+        classes = list(super().authentication_classes)
+        if JWTAuthentication not in classes:
+            classes.insert(0, JWTAuthentication)
+        return classes
 
     @action(
         detail=False,
