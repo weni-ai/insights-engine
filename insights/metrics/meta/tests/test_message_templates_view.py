@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.cache import cache
+from django.test import override_settings
 from django.utils import timezone
 from django.utils.timezone import timedelta
 import responses
@@ -12,6 +13,12 @@ from rest_framework.test import APITestCase
 from rest_framework.response import Response
 
 from insights.authentication.authentication import User
+from insights.authentication.services.jwt_service import JWTService
+from insights.authentication.services.tests.test_jwt_service import (
+    generate_private_key,
+    generate_private_key_pem,
+    generate_public_key_pem,
+)
 from insights.authentication.tests.decorators import (
     with_project_auth,
 )
@@ -36,6 +43,10 @@ from insights.metrics.meta.tests.mock import (
     MOCK_TEMPLATE_DAILY_ANALYTICS,
     MOCK_TEMPLATES_LIST_BODY,
 )
+
+JWT_PRIVATE_KEY = generate_private_key()
+JWT_PRIVATE_KEY_PEM = generate_private_key_pem(JWT_PRIVATE_KEY)
+JWT_PUBLIC_KEY_PEM = generate_public_key_pem(JWT_PRIVATE_KEY.public_key())
 
 
 class BaseTestMetaMessageTemplatesView(APITestCase):
@@ -984,3 +995,53 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
             response.data,
             {"templates": {"SERVICE": 10, "MARKETING": 20}},
         )
+
+
+@override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
+@override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)
+class TestMetaMessageTemplatesViewWithJWTAuthentication(
+    BaseTestMetaMessageTemplatesView
+):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        token = JWTService().generate_jwt_token(self.project.uuid)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    @patch(
+        "insights.metrics.meta.clients.MetaGraphAPIClient.get_conversations_by_category"
+    )
+    def test_get_conversations_by_category_with_jwt(
+        self, mock_get_conversations_by_category
+    ):
+        mock_get_conversations_by_category.return_value = (
+            MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY
+        )
+
+        response = self.get_conversations_by_category(
+            {
+                "project": self.project.uuid,
+                "waba_id": "1234567890987654",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {"templates": {"SERVICE": 10, "MARKETING": 20}},
+        )
+
+    def test_get_conversations_by_category_with_invalid_token(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer invalid_token")
+
+        response = self.get_conversations_by_category(
+            {
+                "project": self.project.uuid,
+                "waba_id": "1234567890987654",
+                "start_date": "2024-01-01",
+                "end_date": "2024-01-31",
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

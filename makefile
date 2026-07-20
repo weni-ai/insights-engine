@@ -19,7 +19,8 @@ install:
 # @make add_initial_data
 
 test:
-	@coverage run manage.py test
+	@CONN_MAX_AGE=0 coverage run manage.py test --parallel=auto --noinput
+	@coverage combine
 	@coverage report -m
 
 lint:
@@ -68,7 +69,7 @@ create_environment_vars_file:
 	@echo "${INFO}Creating enviroment file...${NC}"
 	@echo "SECRET_KEY=SK" > "${ENVIRONMENT_VARS_FILE}"
 	@echo "DEBUG=true" >> "${ENVIRONMENT_VARS_FILE}"
-	@echo "DATABASE_URL=postgres://insights:insights@localhost:5432/insights" >> "${ENVIRONMENT_VARS_FILE}"
+	@echo "DEFAULT_DATABASE=postgres://insights:insights@localhost:5432/insights" >> "${ENVIRONMENT_VARS_FILE}"
 	@echo "OIDC_RP_SERVER_URL=''" >> "${ENVIRONMENT_VARS_FILE}"
 	@echo "OIDC_RP_REALM_NAME=''" >> "${ENVIRONMENT_VARS_FILE}"
 	@echo "OIDC_OP_JWKS_ENDPOINT=''" >> "${ENVIRONMENT_VARS_FILE}"

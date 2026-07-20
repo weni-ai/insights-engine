@@ -423,7 +423,9 @@ class HumanSupportDashboardService:
                     "contact": room.get("contact"),
                     "link": room.get("link"),
                     "pending_response": room.get("pending_response"),
-                    "goals_metrics": room.get("goals_metrics", {}),
+                    "goals_metrics": self._filter_goals_metrics(
+                        room, ("first_response_time", "duration")
+                    ),
                 }
             )
 
@@ -433,6 +435,11 @@ class HumanSupportDashboardService:
             "count": response.get("count"),
             "results": formatted_results,
         }
+
+    @staticmethod
+    def _filter_goals_metrics(room: dict, allowed_keys: tuple[str, ...]) -> dict:
+        room_goals = room.get("goals_metrics") or {}
+        return {key: value for key, value in room_goals.items() if key in allowed_keys}
 
     def get_detailed_monitoring_awaiting(self, filters: dict | None = None) -> dict:
         """
@@ -492,7 +499,9 @@ class HumanSupportDashboardService:
                     "sector": room.get("sector"),
                     "queue": room.get("queue"),
                     "link": room.get("link"),
-                    "goals_metrics": room.get("goals_metrics", {}),
+                    "goals_metrics": self._filter_goals_metrics(
+                        room, ("awaiting_time",)
+                    ),
                 }
             )
         return {

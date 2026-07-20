@@ -151,6 +151,7 @@ class TestHumanSupportDashboardService(TestCase):
                     "goals_metrics": {
                         "first_response_time": {"exceeded": True},
                         "duration": {"exceeded": True},
+                        "awaiting_time": {"exceeded": False},
                     },
                 },
             ],
@@ -172,6 +173,7 @@ class TestHumanSupportDashboardService(TestCase):
                 "duration": {"exceeded": True},
             },
         )
+        self.assertNotIn("awaiting_time", result["results"][0]["goals_metrics"])
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_detailed_monitoring_on_going_without_goals_metrics(self, mock_rooms):
@@ -241,7 +243,11 @@ class TestHumanSupportDashboardService(TestCase):
                     "sector": "S1",
                     "queue": "Q1",
                     "link": "https://link/a",
-                    "goals_metrics": {"waiting_time": {"exceeded": False}},
+                    "goals_metrics": {
+                        "awaiting_time": {"exceeded": False},
+                        "first_response_time": {"exceeded": True},
+                        "duration": {"exceeded": True},
+                    },
                 },
             ],
             "next": None,
@@ -254,8 +260,10 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["results"][0]["contact"], "Contact A")
         self.assertEqual(
             result["results"][0]["goals_metrics"],
-            {"waiting_time": {"exceeded": False}},
+            {"awaiting_time": {"exceeded": False}},
         )
+        self.assertNotIn("first_response_time", result["results"][0]["goals_metrics"])
+        self.assertNotIn("duration", result["results"][0]["goals_metrics"])
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_detailed_monitoring_awaiting_without_goals_metrics(self, mock_rooms):

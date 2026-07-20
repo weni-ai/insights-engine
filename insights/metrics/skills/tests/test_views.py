@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.test import override_settings
 from django.utils import timezone
 from django.utils.timezone import timedelta
 from rest_framework import status
@@ -7,11 +8,21 @@ from rest_framework.test import APITestCase
 from rest_framework.response import Response
 
 from insights.authentication.authentication import User
+from insights.authentication.services.jwt_service import JWTService
+from insights.authentication.services.tests.test_jwt_service import (
+    generate_private_key,
+    generate_private_key_pem,
+    generate_public_key_pem,
+)
 from insights.authentication.tests.decorators import (
     with_internal_auth,
     with_project_auth,
 )
 from insights.projects.models import Project
+
+JWT_PRIVATE_KEY = generate_private_key()
+JWT_PRIVATE_KEY_PEM = generate_private_key_pem(JWT_PRIVATE_KEY)
+JWT_PUBLIC_KEY_PEM = generate_public_key_pem(JWT_PRIVATE_KEY.public_key())
 
 
 class BaseTestSkillsMetrisView(APITestCase):
@@ -153,3 +164,43 @@ class TestSkillsMetricsViewAsInternalUser(BaseTestSkillsMetrisView):
         response = self.get_metrics_for_skill({"project_uuid": self.project.uuid})
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+@override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
+@override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)
+class TestSkillsMetricsViewWithJWTAuthentication(BaseTestSkillsMetrisView):
+    def setUp(self) -> None:
+        self.project = Project.objects.create()
+        token = JWTService().generate_jwt_token(self.project.uuid)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    @patch(
+        "insights.metrics.skills.services.abandoned_cart.AbandonedCartSkillService.get_metrics"
+    )
+    def test_can_get_metrics_for_skill_with_jwt(self, mock_metrics):
+        mock_metrics.return_value = {}
+
+        response = self.get_metrics_for_skill(
+            {
+                "project_uuid": self.project.uuid,
+                "skill": "abandoned_cart",
+                "start_date": (timezone.now() - timedelta(days=7)).date(),
+                "end_date": timezone.now().date(),
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_cannot_get_metrics_for_skill_with_invalid_token(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Bearer invalid_token")
+
+        response = self.get_metrics_for_skill(
+            {
+                "project_uuid": self.project.uuid,
+                "skill": "abandoned_cart",
+                "start_date": (timezone.now() - timedelta(days=7)).date(),
+                "end_date": timezone.now().date(),
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

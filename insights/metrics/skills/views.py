@@ -9,7 +9,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from sentry_sdk import capture_exception
 
+from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
+    HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
 )
@@ -30,14 +32,21 @@ logger = logging.getLogger(__name__)
 
 
 class SkillsMetricsView(APIView):
-    # permission_classes = [
-    #     IsAuthenticated,
-    #     (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
-    # ]
-    # Temporary
     permission_classes = [
-        IsAuthenticated,
+        HasInternalAuthenticationPermission
+        | (
+            IsAuthenticated
+            & (ProjectAuthQueryParamPermission | InternalAuthenticationPermission)
+        ),
     ]
+
+    @property
+    def authentication_classes(self):
+        # Try JWT first so Bearer JWT tokens are accepted before OIDC
+        classes = list(super().authentication_classes)
+        if JWTAuthentication not in classes:
+            classes.insert(0, JWTAuthentication)
+        return classes
 
     @extend_schema(
         parameters=[SkillMetricsQueryParamsSerializer],
@@ -51,9 +60,10 @@ class SkillsMetricsView(APIView):
         filters.pop("skill", None)
         filters.pop("project_uuid", None)
 
-        project = get_object_or_404(
-            Project, uuid=request.query_params.get("project_uuid")
-        )
+        if not (project_uuid := getattr(request, "project_uuid", None)):
+            project_uuid = serializer.validated_data["project_uuid"]
+
+        project = get_object_or_404(Project, uuid=project_uuid)
 
         try:
             service = SkillMetricsServiceFactory().get_service(

@@ -31,14 +31,12 @@ from insights.metrics.conversations.exceptions import (
     SearchTermsAgentUUIDNotConfiguredError,
 )
 from insights.metrics.conversations.reports.available_widgets import (
-    get_added_to_cart_widget,
     get_crosstab_widgets,
     get_csat_ai_widget,
     get_csat_human_widget,
     get_custom_widgets,
     get_nps_ai_widget,
     get_nps_human_widget,
-    get_search_term_widget,
 )
 from insights.metrics.conversations.reports.dataclass import (
     AvailableReportWidgets,
@@ -3030,9 +3028,13 @@ class ConversationsReportService(BaseConversationsReportService):
             "CONTACTS",
         ]
 
+        if self.get_payment_agent_use_case.execute(project.uuid):
+            available_widgets.append("ADDED_TO_CART")
+
+        if self.get_concierge_agent_use_case.execute(project.uuid):
+            available_widgets.append("SEARCH_TERMS")
+
         special_widgets_get_functions = [
-            (get_added_to_cart_widget, "ADDED_TO_CART"),
-            (get_search_term_widget, "SEARCH_TERMS"),
             (get_csat_ai_widget, "CSAT_AI"),
             (get_csat_human_widget, "CSAT_HUMAN"),
             (get_nps_ai_widget, "NPS_AI"),
