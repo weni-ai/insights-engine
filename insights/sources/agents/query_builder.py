@@ -21,10 +21,10 @@ class AgentSQLQueryBuilder:
             "SELECT u.email, CONCAT(u.first_name, ' ', u.last_name) AS name "
             "FROM public.projects_projectpermission AS pp "
             "INNER JOIN public.accounts_user AS u ON u.email=pp.user_id "
-            f"WHERE {self.where_clause} AND pp.is_deleted = %s;"
+            f"WHERE {self.where_clause} AND pp.is_deleted = false;"
         )
 
-        return query, self.params + [False]
+        return query, self.params
 
 
 class ProjectAdminsAndManagersSQLQueryBuilder(AgentSQLQueryBuilder):
@@ -50,7 +50,7 @@ class ProjectAdminsAndManagersSQLQueryBuilder(AgentSQLQueryBuilder):
             f"ON sa.permission_id=pp.uuid AND sa.role={self.ROLE_MANAGER} "
             f"WHERE {self.where_clause} AND "
             f"(pp.role={self.ROLE_ADMIN} OR sa.role={self.ROLE_MANAGER}) "
-            "AND pp.is_deleted = %s;"
+            "AND pp.is_deleted = false;"
         )
 
-        return query, self.params + [False]
+        return query, self.params
