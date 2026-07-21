@@ -17,7 +17,12 @@ class AgentSQLQueryBuilder:
     def list(self):
         if not self.is_valid:
             self.build_query()
-        query = f"SELECT u.email, CONCAT(u.first_name, ' ', u.last_name) AS name FROM public.projects_projectpermission AS pp INNER JOIN public.accounts_user AS u ON u.email=pp.user_id WHERE {self.where_clause};"
+        query = (
+            "SELECT u.email, CONCAT(u.first_name, ' ', u.last_name) AS name "
+            "FROM public.projects_projectpermission AS pp "
+            "INNER JOIN public.accounts_user AS u ON u.email=pp.user_id "
+            f"WHERE {self.where_clause} AND pp.is_deleted = false;"
+        )
 
         return query, self.params
 
@@ -27,6 +32,7 @@ class ProjectAdminsAndManagersSQLQueryBuilder(AgentSQLQueryBuilder):
     Same as AgentSQLQueryBuilder, but restricted to users who are either
     project admins (ProjectPermission.role == ROLE_ADMIN) or sector managers
     (SectorAuthorization.role == ROLE_MANAGER) for at least one sector.
+    Soft-deleted project permissions are always excluded.
     """
 
     ROLE_ADMIN = 1
@@ -42,7 +48,9 @@ class ProjectAdminsAndManagersSQLQueryBuilder(AgentSQLQueryBuilder):
             "INNER JOIN public.accounts_user AS u ON u.email=pp.user_id "
             "LEFT JOIN public.sectors_sectorauthorization AS sa "
             f"ON sa.permission_id=pp.uuid AND sa.role={self.ROLE_MANAGER} "
-            f"WHERE {self.where_clause} AND (pp.role={self.ROLE_ADMIN} OR sa.role={self.ROLE_MANAGER});"
+            f"WHERE {self.where_clause} AND "
+            f"(pp.role={self.ROLE_ADMIN} OR sa.role={self.ROLE_MANAGER}) "
+            "AND pp.is_deleted = false;"
         )
 
         return query, self.params
