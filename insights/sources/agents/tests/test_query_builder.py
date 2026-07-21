@@ -20,7 +20,17 @@ class TestAgentSQLQueryBuilder(TestCase):
             "FROM public.projects_projectpermission AS pp", query
         )
         self.assertNotIn("sectors_sectorauthorization", query)
-        self.assertEqual(params, ["project-uuid"])
+        self.assertIn("pp.is_deleted = %s", query)
+        self.assertEqual(params, ["project-uuid", False])
+
+    def test_list_query_excludes_soft_deleted(self):
+        self.builder.where_clauses = ["pp.project_id = (%s)"]
+        self.builder.params = ["project-uuid"]
+
+        query, params = self.builder.list()
+
+        self.assertIn("pp.is_deleted = %s", query)
+        self.assertEqual(params, ["project-uuid", False])
 
 
 class TestProjectAdminsAndManagersSQLQueryBuilder(TestCase):
@@ -37,7 +47,7 @@ class TestProjectAdminsAndManagersSQLQueryBuilder(TestCase):
             "LEFT JOIN public.sectors_sectorauthorization AS sa", query
         )
         self.assertIn("sa.permission_id=pp.uuid AND sa.role=1", query)
-        self.assertEqual(params, ["project-uuid"])
+        self.assertEqual(params, ["project-uuid", False])
 
     def test_list_query_filters_by_admin_or_manager_role(self):
         self.builder.where_clauses = ["pp.project_id = (%s)"]
@@ -45,7 +55,18 @@ class TestProjectAdminsAndManagersSQLQueryBuilder(TestCase):
 
         query, _ = self.builder.list()
 
-        self.assertIn("WHERE pp.project_id = (%s) AND (pp.role=1 OR sa.role=1)", query)
+        self.assertIn(
+            "WHERE pp.project_id = (%s) AND (pp.role=1 OR sa.role=1)", query
+        )
+
+    def test_list_query_excludes_soft_deleted(self):
+        self.builder.where_clauses = ["pp.project_id = (%s)"]
+        self.builder.params = ["project-uuid"]
+
+        query, params = self.builder.list()
+
+        self.assertIn("pp.is_deleted = %s", query)
+        self.assertEqual(params, ["project-uuid", False])
 
     def test_list_query_uses_distinct_to_avoid_duplicated_rows(self):
         self.builder.where_clauses = ["pp.project_id = (%s)"]
