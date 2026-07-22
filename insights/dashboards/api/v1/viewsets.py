@@ -11,6 +11,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from weni.feature_flags.shortcuts import is_feature_active_for_attributes
+from weni_commons.auth import SessionTokenAuthentication
+from weni_commons.kong import kong_expose
 
 from insights.authentication.permissions import ProjectAuthPermission
 from insights.core.filters import get_filters_from_query_params
@@ -47,6 +49,7 @@ from insights.widgets.usecases.get_source_data import get_source_data_from_widge
 logger = logging.getLogger(__name__)
 
 
+@kong_expose
 class DashboardViewSet(
     mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
@@ -56,6 +59,13 @@ class DashboardViewSet(
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = DashboardFilter
+
+    @property
+    def authentication_classes(self):
+        classes = list(super().authentication_classes)
+        if SessionTokenAuthentication not in classes:
+            classes.insert(0, SessionTokenAuthentication)
+        return classes
 
     @property
     def source_data_service(self):
