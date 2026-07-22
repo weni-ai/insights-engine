@@ -83,13 +83,6 @@ class DashboardListAPIView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = DashboardFilter
 
-    @property
-    def authentication_classes(self):
-        classes = list(super().authentication_classes)
-        if SessionTokenAuthentication not in classes:
-            classes.insert(0, SessionTokenAuthentication)
-        return classes
-
     def get_queryset(self):
         return get_dashboard_queryset_for_request(
             self.request, dashboard_pk=self.kwargs.get("pk")
