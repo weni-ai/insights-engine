@@ -23,6 +23,15 @@ class TestAgentSQLQueryBuilder(TestCase):
         self.assertIn("pp.is_deleted = %s", query)
         self.assertEqual(params, ["project-uuid", False])
 
+    def test_list_query_excludes_soft_deleted(self):
+        self.builder.where_clauses = ["pp.project_id = (%s)"]
+        self.builder.params = ["project-uuid"]
+
+        query, params = self.builder.list()
+
+        self.assertIn("pp.is_deleted = %s", query)
+        self.assertEqual(params, ["project-uuid", False])
+
 
 class TestProjectAdminsAndManagersSQLQueryBuilder(TestCase):
     def setUp(self):
@@ -46,7 +55,18 @@ class TestProjectAdminsAndManagersSQLQueryBuilder(TestCase):
 
         query, _ = self.builder.list()
 
-        self.assertIn("WHERE pp.project_id = (%s) AND (pp.role=1 OR sa.role=1)", query)
+        self.assertIn(
+            "WHERE pp.project_id = (%s) AND (pp.role=1 OR sa.role=1)", query
+        )
+
+    def test_list_query_excludes_soft_deleted(self):
+        self.builder.where_clauses = ["pp.project_id = (%s)"]
+        self.builder.params = ["project-uuid"]
+
+        query, params = self.builder.list()
+
+        self.assertIn("pp.is_deleted = false", query)
+        self.assertEqual(params, ["project-uuid"])
 
     def test_list_query_uses_distinct_to_avoid_duplicated_rows(self):
         self.builder.where_clauses = ["pp.project_id = (%s)"]
