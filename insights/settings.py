@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_spectacular",
     "weni.feature_flags",
+    "weni-commons",
 ]
 
 if ADMIN_ENABLED is True:
