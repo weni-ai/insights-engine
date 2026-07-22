@@ -5,7 +5,7 @@ from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import mixins, status, viewsets
+from rest_framework import generics, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -54,10 +54,82 @@ from insights.widgets.usecases.get_source_data import get_source_data_from_widge
 logger = logging.getLogger(__name__)
 
 
+def _check_marketing_messages_status(project_uuid: UUID):
+    should_check_marketing_messages_status = Dashboard.objects.filter(
+        Q(project__uuid=project_uuid)
+        & Q(config__is_whatsapp_integration=True)
+        & (
+            Q(config__is_mm_lite_active=False)
+            | Q(config__is_mm_lite_active__isnull=True)
+        ),
+    ).exists()
+
+    if should_check_marketing_messages_status:
+        check_dashboards_marketing_messages_status_for_project.delay(project_uuid)
+
+
 @kong_expose
-class DashboardViewSet(
-    mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
-):
+class DashboardListAPIView(generics.ListAPIView):
+    """
+    Dashboard listing exposed as ListAPIView so kong_sync can discover it.
+
+    DRF ViewSets set callback.cls (not view_class), which discover_routes
+    does not inspect — hence this dedicated APIView for the list endpoint.
+    """
+
+    permission_classes = [IsAuthenticated, ProjectAuthPermission]
+    serializer_class = DashboardSerializer
+    pagination_class = DefaultPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DashboardFilter
+
+    @property
+    def authentication_classes(self):
+        classes = list(super().authentication_classes)
+        if SessionTokenAuthentication not in classes:
+            classes.insert(0, SessionTokenAuthentication)
+        return classes
+
+    def get_queryset(self):
+        return get_dashboard_queryset_for_request(
+            self.request, dashboard_pk=self.kwargs.get("pk")
+        )
+
+    def list(self, request, *args, **kwargs):
+        project = None
+
+        if project_uuid := request.query_params.get("project"):
+            project = get_object_or_404(Project, uuid=project_uuid)
+            is_indexer_active = is_project_indexer_active(project)
+            is_nexus_multi_agents_active = project.is_nexus_multi_agents_active
+
+            if not is_nexus_multi_agents_active:
+                check_nexus_multi_agents_status.delay(project_uuid)
+
+            if (
+                settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION
+                and is_nexus_multi_agents_active
+                and not is_indexer_active
+            ):
+                handle_project_created_with_inline_agent_switch.delay(project_uuid)
+
+            _check_marketing_messages_status(project_uuid)
+
+        response = super().list(request, *args, **kwargs)
+
+        if project is not None and isinstance(response.data, dict) and "results" in response.data:
+            response.data = {
+                "count": response.data["count"],
+                "next": response.data["next"],
+                "previous": response.data["previous"],
+                "is_indexer_active": is_indexer_active,
+                "results": response.data["results"],
+            }
+
+        return response
+
+
+class DashboardViewSet(mixins.UpdateModelMixin, viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated, ProjectAuthPermission]
     serializer_class = DashboardSerializer
     pagination_class = DefaultPagination
@@ -102,52 +174,6 @@ class DashboardViewSet(
         return get_dashboard_queryset_for_request(
             self.request, dashboard_pk=self.kwargs.get("pk")
         )
-
-    def _check_marketing_messages_status(self, project_uuid: UUID):
-        should_check_marketing_messages_status = Dashboard.objects.filter(
-            Q(project__uuid=project_uuid)
-            & Q(config__is_whatsapp_integration=True)
-            & (
-                Q(config__is_mm_lite_active=False)
-                | Q(config__is_mm_lite_active__isnull=True)
-            ),
-        ).exists()
-
-        if should_check_marketing_messages_status:
-            check_dashboards_marketing_messages_status_for_project.delay(project_uuid)
-
-    def list(self, request, *args, **kwargs):
-        project = None
-
-        if project_uuid := request.query_params.get("project"):
-            project = get_object_or_404(Project, uuid=project_uuid)
-            is_indexer_active = is_project_indexer_active(project)
-            is_nexus_multi_agents_active = project.is_nexus_multi_agents_active
-
-            if not is_nexus_multi_agents_active:
-                check_nexus_multi_agents_status.delay(project_uuid)
-
-            if (
-                settings.CONVERSATIONS_DASHBOARD_REQUIRES_INDEXER_ACTIVATION
-                and is_nexus_multi_agents_active
-                and not is_indexer_active
-            ):
-                handle_project_created_with_inline_agent_switch.delay(project_uuid)
-
-            self._check_marketing_messages_status(project_uuid)
-
-        response = super().list(request, *args, **kwargs)
-
-        if project is not None and isinstance(response.data, dict) and "results" in response.data:
-            response.data = {
-                "count": response.data["count"],
-                "next": response.data["next"],
-                "previous": response.data["previous"],
-                "is_indexer_active": is_indexer_active,
-                "results": response.data["results"],
-            }
-
-        return response
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)

@@ -24,10 +24,11 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 from rest_framework.routers import DefaultRouter
+from rest_framework.urlpatterns import format_suffix_patterns
 from weni.feature_flags.views import FeatureFlagsWebhookView
 
 from insights.authentication.admin_sso import admin_oidc_login, admin_oidc_logout
-from insights.dashboards.api.v1.viewsets import DashboardViewSet
+from insights.dashboards.api.v1.viewsets import DashboardListAPIView, DashboardViewSet
 from insights.feature_flags.views import FeatureFlagsViewSet
 from insights.projects.viewsets import ProjectViewSet
 from insights.widgets.viewsets import WidgetViewSet
@@ -75,6 +76,15 @@ urlpatterns += [
     ),
     path("v1/user-projects/", UserProjectsView.as_view(), name="user-projects"),
     path("v1/commerce/", include("insights.commerce.urls")),
+    *format_suffix_patterns(
+        [
+            path(
+                "v1/dashboards/",
+                DashboardListAPIView.as_view(),
+                name="dashboard-list",
+            ),
+        ]
+    ),
     path("v1/", include(router.urls)),
 ]
 
