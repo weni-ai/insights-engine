@@ -2,7 +2,10 @@ from typing import Any
 from uuid import uuid4
 
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+from insights.shared.managers import SoftDeletableManager
 
 
 class UUIDModel(models.Model):
@@ -27,6 +30,25 @@ class SoftDeleteModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class SoftDeletableModel(models.Model):
+    is_deleted = models.BooleanField(_("is deleted?"), default=False)
+
+    objects = SoftDeletableManager()
+    all_objects = SoftDeletableManager(include_deleted=True)
+
+    class Meta:
+        abstract = True
+
+    def deleted_sufix(self):
+        return "_is_deleted_" + str(timezone.now())
+
+    def delete(self, using=None, keep_parents=False):
+        self.is_deleted = True
+        if hasattr(self, "name"):
+            self.name += self.deleted_sufix()
+        self.save()
 
 
 class ConfigurableModel(models.Model):
