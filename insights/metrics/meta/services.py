@@ -7,6 +7,9 @@ from insights.metrics.meta.aggregations import ConversationsByCategoryAggregatio
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.meta.typing import PricingDataPoint
 from insights.metrics.meta.exception import MarketingMessagesStatusError
+from insights.metrics.meta.usecases.waba_migration_analytics import (
+    ConsolidateWabaAnalyticsUseCase,
+)
 from insights.metrics.meta.validators import (
     validate_analytics_kwargs,
     validate_list_templates_filters,
@@ -24,6 +27,7 @@ class MetaMessageTemplatesService:
 
     def __init__(self):
         self.client = MetaGraphAPIClient()
+        self.waba_analytics = ConsolidateWabaAnalyticsUseCase(self.client)
 
     def get_templates_list(self, filters: dict):
         """
@@ -180,7 +184,7 @@ class MetaMessageTemplatesService:
                 }
             }
 
-        return self.client.get_messages_analytics(
+        return self.waba_analytics.get_messages_analytics(
             **valid_filters,
             include_data_points=include_data_points,
             return_exceptions=return_exceptions,
@@ -213,7 +217,7 @@ class MetaMessageTemplatesService:
                 ]
             }
 
-        return self.client.get_buttons_analytics(**valid_filters)
+        return self.waba_analytics.get_buttons_analytics(**valid_filters)
 
     def get_conversations_by_category(
         self, waba_id: int, start_date: date, end_date: date

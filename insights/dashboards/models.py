@@ -2,7 +2,7 @@ from contextlib import suppress
 from django.db import models, transaction
 from model_utils import FieldTracker
 
-from insights.shared.models import BaseModel, ConfigurableModel
+from insights.shared.models import BaseModel, ConfigurableModel, SoftDeletableModel
 
 
 HUMAN_SERVICE_DASHBOARD_V1_NAME = "Atendimento humano"
@@ -31,7 +31,7 @@ class DashboardTemplate(BaseModel, ConfigurableModel):
         return f"{self.name}"
 
 
-class Dashboard(BaseModel, ConfigurableModel):
+class Dashboard(BaseModel, ConfigurableModel, SoftDeletableModel):
     project = models.ForeignKey(
         "projects.Project", related_name="dashboards", on_delete=models.CASCADE
     )
@@ -59,7 +59,7 @@ class Dashboard(BaseModel, ConfigurableModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["project", "is_default"],
-                condition=models.Q(is_default=True),
+                condition=models.Q(is_default=True, is_deleted=False),
                 name="unique_default_dashboard_per_project",
             )
         ]
@@ -85,7 +85,8 @@ class Dashboard(BaseModel, ConfigurableModel):
     def delete(self, using=None, keep_parents=False):
         if self.is_default:
             with transaction.atomic():
-                deleted = super().delete(using, keep_parents)
+                self.is_default = False
+                super().delete(using, keep_parents)
 
                 with suppress(Dashboard.DoesNotExist):
                     human_service_dashboard = Dashboard.objects.get(
@@ -94,6 +95,6 @@ class Dashboard(BaseModel, ConfigurableModel):
                     human_service_dashboard.is_default = True
                     human_service_dashboard.save(update_fields=["is_default"])
 
-                return deleted
+                return
 
         return super().delete(using, keep_parents)

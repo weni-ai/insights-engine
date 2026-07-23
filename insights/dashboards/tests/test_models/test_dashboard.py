@@ -70,6 +70,9 @@ class TestDashboardModel(TestCase):
         dashboard.delete()
 
         self.assertFalse(Dashboard.objects.filter(uuid=dashboard_id).exists())
+        soft_deleted = Dashboard.all_objects.get(uuid=dashboard_id)
+        self.assertTrue(soft_deleted.is_deleted)
+        self.assertIn("_is_deleted_", soft_deleted.name)
         self.human_service_dashboard.refresh_from_db(fields=["is_default"])
         self.assertFalse(self.human_service_dashboard.is_default)
 
@@ -87,5 +90,9 @@ class TestDashboardModel(TestCase):
         dashboard.delete()
 
         self.assertFalse(Dashboard.objects.filter(uuid=dashboard_id).exists())
+        soft_deleted = Dashboard.all_objects.get(uuid=dashboard_id)
+        self.assertTrue(soft_deleted.is_deleted)
+        self.assertFalse(soft_deleted.is_default)
+        self.assertIn("_is_deleted_", soft_deleted.name)
         self.human_service_dashboard.refresh_from_db(fields=["is_default"])
         self.assertTrue(self.human_service_dashboard.is_default)
