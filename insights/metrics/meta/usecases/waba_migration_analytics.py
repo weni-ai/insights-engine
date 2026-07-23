@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Callable
 
 from insights.dashboards.models import Dashboard
+
+logger = logging.getLogger(__name__)
 
 MESSAGE_STATUS_KEYS = ("sent", "delivered", "read", "clicked")
 
@@ -16,6 +19,7 @@ class WabaAnalyticsPeriod:
     waba_id: str
     start_date: date | datetime
     end_date: date | datetime
+    template_id: str | None = None
 
 
 def get_migration_data_for_waba(waba_id: str) -> dict | None:
@@ -64,13 +68,19 @@ def resolve_waba_analytics_periods(
     Decide which WABA(s) to query based on the requested range and migration cutover.
 
     Cutover rule (migrated_at date in UTC):
-    - days before migrated_at → old WABA
-    - migrated_at and after → current WABA
+    - days strictly before migrated_at → old WABA only
+    - days strictly after migrated_at → current WABA only
+    - the migration day itself is included in BOTH requests
+
+    Migrations do not happen at midnight. Meta analytics is daily, so including
+    the cutover day on both WABAs keeps morning traffic on the old WABA and
+    afternoon traffic on the new one. Merging sums that day without losing data.
 
     Examples (migrated_at = 2026-03-15):
     - 03-01..03-10 → only old
     - 03-20..03-31 → only current
-    - 03-01..03-31 → old (03-01..03-14) + current (03-15..03-31)
+    - 03-01..03-31 → old (03-01..03-15) + current (03-15..03-31)
+    - 03-15..03-15 → old (03-15) + current (03-15)
     """
     start = _as_date(start_date)
     end = _as_date(end_date)
@@ -90,7 +100,7 @@ def resolve_waba_analytics_periods(
     old_waba_id = migration_data["waba_id"]
     migrated_at = _parse_migrated_at(migration_data["migrated_at"])
 
-    # Entire range is before the migration day.
+    # Entire range is strictly before the migration day.
     if end < migrated_at:
         return [
             WabaAnalyticsPeriod(
@@ -100,8 +110,8 @@ def resolve_waba_analytics_periods(
             )
         ]
 
-    # Entire range is on/after the migration day.
-    if start >= migrated_at:
+    # Entire range is strictly after the migration day.
+    if start > migrated_at:
         return [
             WabaAnalyticsPeriod(
                 waba_id=current_waba_id,
@@ -110,26 +120,27 @@ def resolve_waba_analytics_periods(
             )
         ]
 
-    # Range crosses the cutover: split into old + current periods.
+    # Range includes the migration day: query both WABAs for that day.
     periods: list[WabaAnalyticsPeriod] = []
-    old_end = migrated_at - timedelta(days=1)
 
-    if start <= old_end:
+    if start <= migrated_at:
         periods.append(
             WabaAnalyticsPeriod(
                 waba_id=old_waba_id,
                 start_date=start,
-                end_date=old_end,
+                end_date=min(end, migrated_at),
             )
         )
 
-    periods.append(
-        WabaAnalyticsPeriod(
-            waba_id=current_waba_id,
-            start_date=migrated_at,
-            end_date=end,
+    if end >= migrated_at:
+        periods.append(
+            WabaAnalyticsPeriod(
+                waba_id=current_waba_id,
+                start_date=max(start, migrated_at),
+                end_date=end,
+            )
         )
-    )
+
     return periods
 
 
@@ -239,12 +250,85 @@ def merge_buttons_analytics(responses: list[dict]) -> dict:
     return {"data": merged_buttons}
 
 
+def find_exact_template_id_by_name(
+    templates_response: dict | list | None,
+    template_name: str,
+) -> str | None:
+    """
+    Pick the template whose name matches exactly from a Meta list response.
+
+    Meta's name filter is a search, so similar names may appear; only an exact
+    match is accepted.
+    """
+    if not template_name:
+        return None
+
+    if isinstance(templates_response, dict):
+        templates = templates_response.get("data") or []
+    elif isinstance(templates_response, list):
+        templates = templates_response
+    else:
+        templates = []
+
+    for template in templates:
+        if not isinstance(template, dict):
+            continue
+        if template.get("name") == template_name and template.get("id"):
+            return str(template["id"])
+
+    return None
+
+
+def resolve_old_template_id(
+    meta_client,
+    *,
+    old_waba_id: str,
+    new_template_id: str,
+) -> str | None:
+    """
+    Resolve the equivalent template id on the old WABA from the new template name.
+
+    Returns None when the cloned template does not exist on the old WABA
+    (e.g. created after migration).
+    """
+    preview = meta_client.get_template_preview(template_id=new_template_id)
+    template_name = (preview or {}).get("name") if isinstance(preview, dict) else None
+
+    if not template_name:
+        logger.info(
+            "Could not resolve template name for template_id=%s when looking up "
+            "equivalent on old_waba_id=%s; using new WABA analytics only",
+            new_template_id,
+            old_waba_id,
+        )
+        return None
+
+    templates_response = meta_client.get_templates_list(
+        waba_id=old_waba_id,
+        name=template_name,
+    )
+    old_template_id = find_exact_template_id_by_name(templates_response, template_name)
+
+    if not old_template_id:
+        logger.info(
+            "No exact template name match for name=%s on old_waba_id=%s "
+            "(new_template_id=%s); using new WABA analytics only",
+            template_name,
+            old_waba_id,
+            new_template_id,
+        )
+        return None
+
+    return old_template_id
+
+
 class ConsolidateWabaAnalyticsUseCase:
     """
     Intermediate layer between the service and the Meta client.
 
-    Looks up migration_data, splits the date range when needed, calls Meta for
-    each period, and returns one consolidated response.
+    Looks up migration_data, splits the date range when needed, resolves the
+    equivalent old template id by name when querying the old WABA, calls Meta
+    for each period, and returns one consolidated response.
     """
 
     def __init__(self, meta_client):
@@ -266,6 +350,80 @@ class ConsolidateWabaAnalyticsUseCase:
             fetch_kwargs=kwargs,
         )
 
+    def _periods_with_template_ids(
+        self,
+        *,
+        current_waba_id: str,
+        new_template_id: str,
+        start_date: date | datetime,
+        end_date: date | datetime,
+    ) -> list[WabaAnalyticsPeriod]:
+        periods = resolve_waba_analytics_periods(
+            current_waba_id=current_waba_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        if len(periods) == 1 and periods[0].waba_id == current_waba_id:
+            return [
+                WabaAnalyticsPeriod(
+                    waba_id=periods[0].waba_id,
+                    start_date=periods[0].start_date,
+                    end_date=periods[0].end_date,
+                    template_id=new_template_id,
+                )
+            ]
+
+        old_waba_ids = {
+            period.waba_id for period in periods if period.waba_id != current_waba_id
+        }
+        old_template_id = None
+        if old_waba_ids:
+            old_waba_id = next(iter(old_waba_ids))
+            old_template_id = resolve_old_template_id(
+                self.meta_client,
+                old_waba_id=old_waba_id,
+                new_template_id=new_template_id,
+            )
+
+        resolved: list[WabaAnalyticsPeriod] = []
+        for period in periods:
+            if period.waba_id == current_waba_id:
+                resolved.append(
+                    WabaAnalyticsPeriod(
+                        waba_id=period.waba_id,
+                        start_date=period.start_date,
+                        end_date=period.end_date,
+                        template_id=new_template_id,
+                    )
+                )
+                continue
+
+            if not old_template_id:
+                continue
+
+            resolved.append(
+                WabaAnalyticsPeriod(
+                    waba_id=period.waba_id,
+                    start_date=period.start_date,
+                    end_date=period.end_date,
+                    template_id=old_template_id,
+                )
+            )
+
+        if not resolved:
+            # Fallback: only the current WABA with the requested range.
+            return [
+                WabaAnalyticsPeriod(
+                    waba_id=current_waba_id,
+                    start_date=start_date,
+                    end_date=end_date,
+                    template_id=new_template_id,
+                )
+            ]
+
+        return resolved
+
     def _fetch_and_consolidate(
         self,
         *,
@@ -273,8 +431,9 @@ class ConsolidateWabaAnalyticsUseCase:
         merge: Callable[[list[dict]], dict],
         fetch_kwargs: dict,
     ) -> dict:
-        periods = resolve_waba_analytics_periods(
+        periods = self._periods_with_template_ids(
             current_waba_id=fetch_kwargs["waba_id"],
+            new_template_id=fetch_kwargs["template_id"],
             start_date=fetch_kwargs["start_date"],
             end_date=fetch_kwargs["end_date"],
         )
@@ -284,6 +443,7 @@ class ConsolidateWabaAnalyticsUseCase:
                 **{
                     **fetch_kwargs,
                     "waba_id": period.waba_id,
+                    "template_id": period.template_id,
                     "start_date": period.start_date,
                     "end_date": period.end_date,
                 }

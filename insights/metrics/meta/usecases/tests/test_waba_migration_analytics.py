@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 from django.test import TestCase
 
@@ -7,8 +7,10 @@ from insights.dashboards.models import Dashboard
 from insights.metrics.meta.usecases.waba_migration_analytics import (
     ConsolidateWabaAnalyticsUseCase,
     WabaAnalyticsPeriod,
+    find_exact_template_id_by_name,
     merge_buttons_analytics,
     merge_messages_analytics,
+    resolve_old_template_id,
     resolve_waba_analytics_periods,
 )
 from insights.projects.models import Project
@@ -111,7 +113,7 @@ class TestResolveWabaAnalyticsPeriods(TestCase):
                 WabaAnalyticsPeriod(
                     waba_id=self.old_waba_id,
                     start_date=date(2026, 3, 1),
-                    end_date=date(2026, 3, 14),
+                    end_date=date(2026, 3, 15),
                 ),
                 WabaAnalyticsPeriod(
                     waba_id=self.current_waba_id,
@@ -120,6 +122,102 @@ class TestResolveWabaAnalyticsPeriods(TestCase):
                 ),
             ],
         )
+
+    def test_includes_migration_day_in_both_wabas(self):
+        periods = resolve_waba_analytics_periods(
+            current_waba_id=self.current_waba_id,
+            start_date=date(2026, 3, 15),
+            end_date=date(2026, 3, 15),
+        )
+
+        self.assertEqual(
+            periods,
+            [
+                WabaAnalyticsPeriod(
+                    waba_id=self.old_waba_id,
+                    start_date=date(2026, 3, 15),
+                    end_date=date(2026, 3, 15),
+                ),
+                WabaAnalyticsPeriod(
+                    waba_id=self.current_waba_id,
+                    start_date=date(2026, 3, 15),
+                    end_date=date(2026, 3, 15),
+                ),
+            ],
+        )
+
+
+class TestFindExactTemplateIdByName(TestCase):
+    def test_returns_exact_match_and_ignores_similar_names(self):
+        response = {
+            "data": [
+                {"id": "1", "name": "promo_cart"},
+                {"id": "2", "name": "promo_cart_v2"},
+                {"id": "3", "name": "promo"},
+            ]
+        }
+
+        self.assertEqual(
+            find_exact_template_id_by_name(response, "promo_cart"),
+            "1",
+        )
+
+    def test_returns_none_when_no_exact_match(self):
+        response = {"data": [{"id": "1", "name": "promo_cart_v2"}]}
+        self.assertIsNone(find_exact_template_id_by_name(response, "promo_cart"))
+
+
+class TestResolveOldTemplateId(TestCase):
+    def setUp(self):
+        self.meta_client = MagicMock()
+        self.old_waba_id = "old_waba"
+        self.new_template_id = "new-template-id"
+
+    def test_resolves_old_template_id_by_exact_name(self):
+        self.meta_client.get_template_preview.return_value = {
+            "name": "confirmados391_varzeagrande",
+            "id": self.new_template_id,
+        }
+        self.meta_client.get_templates_list.return_value = {
+            "data": [
+                {"id": "similar-id", "name": "confirmados391_varzeagrande_v2"},
+                {"id": "old-template-id", "name": "confirmados391_varzeagrande"},
+            ]
+        }
+
+        old_template_id = resolve_old_template_id(
+            self.meta_client,
+            old_waba_id=self.old_waba_id,
+            new_template_id=self.new_template_id,
+        )
+
+        self.assertEqual(old_template_id, "old-template-id")
+        self.meta_client.get_template_preview.assert_called_once_with(
+            template_id=self.new_template_id
+        )
+        self.meta_client.get_templates_list.assert_called_once_with(
+            waba_id=self.old_waba_id,
+            name="confirmados391_varzeagrande",
+        )
+
+    @patch("insights.metrics.meta.usecases.waba_migration_analytics.logger")
+    def test_returns_none_and_logs_info_when_template_missing_on_old_waba(
+        self, mock_logger
+    ):
+        self.meta_client.get_template_preview.return_value = {
+            "name": "brand_new_template",
+            "id": self.new_template_id,
+        }
+        self.meta_client.get_templates_list.return_value = {"data": []}
+
+        old_template_id = resolve_old_template_id(
+            self.meta_client,
+            old_waba_id=self.old_waba_id,
+            new_template_id=self.new_template_id,
+        )
+
+        self.assertIsNone(old_template_id)
+        mock_logger.info.assert_called_once()
 
 
 class TestMergeAnalyticsResponses(TestCase):
@@ -264,7 +362,9 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
         self.project = Project.objects.create(name="Test Project")
         self.current_waba_id = "new_waba"
         self.old_waba_id = "old_waba"
-        self.template_id = "template-1"
+        self.new_template_id = "new-template-id"
+        self.old_template_id = "old-template-id"
+        self.template_name = "shared_template_name"
 
         Dashboard.objects.create(
             project=self.project,
@@ -281,21 +381,34 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
         self.meta_client = MagicMock()
         self.usecase = ConsolidateWabaAnalyticsUseCase(self.meta_client)
 
+    def _mock_old_template_resolution(self, old_template_id: str | None):
+        self.meta_client.get_template_preview.return_value = {
+            "name": self.template_name,
+            "id": self.new_template_id,
+        }
+        if old_template_id:
+            self.meta_client.get_templates_list.return_value = {
+                "data": [{"id": old_template_id, "name": self.template_name}]
+            }
+        else:
+            self.meta_client.get_templates_list.return_value = {"data": []}
+
     def test_calls_only_old_waba_for_pre_migration_range(self):
+        self._mock_old_template_resolution(self.old_template_id)
         self.meta_client.get_messages_analytics.return_value = {
             "data": {"status_count": {}, "data_points": []}
         }
 
         self.usecase.get_messages_analytics(
             waba_id=self.current_waba_id,
-            template_id=self.template_id,
+            template_id=self.new_template_id,
             start_date=date(2026, 3, 1),
             end_date=date(2026, 3, 10),
         )
 
         self.meta_client.get_messages_analytics.assert_called_once_with(
             waba_id=self.old_waba_id,
-            template_id=self.template_id,
+            template_id=self.old_template_id,
             start_date=date(2026, 3, 1),
             end_date=date(2026, 3, 10),
             include_data_points=True,
@@ -308,20 +421,25 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
 
         self.usecase.get_messages_analytics(
             waba_id=self.current_waba_id,
-            template_id=self.template_id,
+            template_id=self.new_template_id,
             start_date=date(2026, 3, 20),
             end_date=date(2026, 3, 31),
         )
 
         self.meta_client.get_messages_analytics.assert_called_once_with(
             waba_id=self.current_waba_id,
-            template_id=self.template_id,
+            template_id=self.new_template_id,
             start_date=date(2026, 3, 20),
             end_date=date(2026, 3, 31),
             include_data_points=True,
         )
+        self.meta_client.get_template_preview.assert_not_called()
+        self.meta_client.get_templates_list.assert_not_called()
 
-    def test_calls_both_wabas_and_merges_when_range_crosses_migration(self):
+    def test_calls_both_wabas_with_resolved_template_ids_when_range_crosses_migration(
+        self,
+    ):
+        self._mock_old_template_resolution(self.old_template_id)
         self.meta_client.get_messages_analytics.side_effect = [
             {
                 "data": {
@@ -349,7 +467,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
 
         result = self.usecase.get_messages_analytics(
             waba_id=self.current_waba_id,
-            template_id=self.template_id,
+            template_id=self.new_template_id,
             start_date=date(2026, 3, 1),
             end_date=date(2026, 3, 31),
             include_data_points=False,
@@ -360,14 +478,14 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             [
                 call(
                     waba_id=self.old_waba_id,
-                    template_id=self.template_id,
+                    template_id=self.old_template_id,
                     start_date=date(2026, 3, 1),
-                    end_date=date(2026, 3, 14),
+                    end_date=date(2026, 3, 15),
                     include_data_points=False,
                 ),
                 call(
                     waba_id=self.current_waba_id,
-                    template_id=self.template_id,
+                    template_id=self.new_template_id,
                     start_date=date(2026, 3, 15),
                     end_date=date(2026, 3, 31),
                     include_data_points=False,
@@ -376,7 +494,39 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
         )
         self.assertEqual(result["data"]["status_count"]["sent"]["value"], 30)
 
+    def test_skips_old_waba_when_equivalent_template_is_missing(self):
+        self._mock_old_template_resolution(None)
+        self.meta_client.get_messages_analytics.return_value = {
+            "data": {
+                "status_count": {
+                    "sent": {"value": 20},
+                    "delivered": {"value": 20, "percentage": 100},
+                    "read": {"value": 10, "percentage": 50},
+                    "clicked": {"value": 2, "percentage": 10},
+                },
+                "data_points": [],
+            }
+        }
+
+        result = self.usecase.get_messages_analytics(
+            waba_id=self.current_waba_id,
+            template_id=self.new_template_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 31),
+            include_data_points=False,
+        )
+
+        self.meta_client.get_messages_analytics.assert_called_once_with(
+            waba_id=self.current_waba_id,
+            template_id=self.new_template_id,
+            start_date=date(2026, 3, 15),
+            end_date=date(2026, 3, 31),
+            include_data_points=False,
+        )
+        self.assertEqual(result["data"]["status_count"]["sent"]["value"], 20)
+
     def test_buttons_analytics_calls_both_wabas_when_range_crosses_migration(self):
+        self._mock_old_template_resolution(self.old_template_id)
         self.meta_client.get_buttons_analytics.side_effect = [
             {
                 "data": [
@@ -402,10 +552,28 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
 
         result = self.usecase.get_buttons_analytics(
             waba_id=self.current_waba_id,
-            template_id=self.template_id,
+            template_id=self.new_template_id,
             start_date=date(2026, 3, 1),
             end_date=date(2026, 3, 31),
         )
 
         self.assertEqual(self.meta_client.get_buttons_analytics.call_count, 2)
+        self.assertEqual(
+            self.meta_client.get_buttons_analytics.call_args_list[0],
+            call(
+                waba_id=self.old_waba_id,
+                template_id=self.old_template_id,
+                start_date=date(2026, 3, 1),
+                end_date=date(2026, 3, 15),
+            ),
+        )
+        self.assertEqual(
+            self.meta_client.get_buttons_analytics.call_args_list[1],
+            call(
+                waba_id=self.current_waba_id,
+                template_id=self.new_template_id,
+                start_date=date(2026, 3, 15),
+                end_date=date(2026, 3, 31),
+            ),
+        )
         self.assertEqual(result["data"][0]["total"], 10)
