@@ -95,12 +95,14 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
                 "is_whatsapp_integration": True,
                 "waba_id": waba_id,
                 "app_uuid": str(uuid.uuid4()),
+                "is_mm_lite_active": True,
                 "phone_number": {
                     "id": "996622598897977",
                     "display_phone_number": "+55 82 98877 6655",
                 },
             },
         )
+        old_dashboard_uuid = dashboard.uuid
 
         payload = {
             "project_uuid": project.uuid,
@@ -116,14 +118,63 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        dashboard.refresh_from_db(fields=["config"])
+        self.assertFalse(Dashboard.objects.filter(uuid=old_dashboard_uuid).exists())
+        soft_deleted = Dashboard.all_objects.get(uuid=old_dashboard_uuid)
+        self.assertTrue(soft_deleted.is_deleted)
 
+        new_dashboard = Dashboard.objects.filter(
+            project=project, config__is_whatsapp_integration=True
+        ).get()
+        self.assertNotEqual(new_dashboard.uuid, old_dashboard_uuid)
         self.assertEqual(
-            dashboard.config["phone_number"]["display_phone_number"],
+            new_dashboard.config["phone_number"]["display_phone_number"],
             payload["phone_number"]["display_phone_number"],
         )
         self.assertEqual(
-            dashboard.config["phone_number"]["id"], payload["phone_number"]["id"]
+            new_dashboard.config["phone_number"]["id"], payload["phone_number"]["id"]
+        )
+        self.assertTrue(new_dashboard.config["is_mm_lite_active"])
+
+    @with_internal_auth
+    def test_receive_integration_with_old_waba_id_saves_migration_data(self):
+        project = Project.objects.create()
+        old_waba_id = "old_waba_123"
+        Dashboard.objects.create(
+            project=project,
+            config={
+                "is_whatsapp_integration": True,
+                "waba_id": old_waba_id,
+                "app_uuid": str(uuid.uuid4()),
+                "phone_number": {
+                    "id": "111111111111111",
+                    "display_phone_number": "+55 11 11111 1111",
+                },
+            },
+        )
+
+        payload = {
+            "project_uuid": project.uuid,
+            "app_uuid": str(uuid.uuid4()),
+            "waba_id": "new_waba_456",
+            "old_waba_id": old_waba_id,
+            "phone_number": {
+                "id": "445303688657575",
+                "display_phone_number": "+55 82 98877 6655",
+            },
+        }
+
+        response = self.receive_integration_data(payload)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        dashboard = Dashboard.objects.filter(
+            project=project, config__is_whatsapp_integration=True
+        ).get()
+        self.assertEqual(dashboard.config["waba_id"], payload["waba_id"])
+        self.assertEqual(dashboard.config["migration_data"]["waba_id"], old_waba_id)
+        self.assertIn("migrated_at", dashboard.config["migration_data"])
+        self.assertFalse(
+            Dashboard.objects.filter(config__waba_id=old_waba_id).exists()
         )
 
     @with_internal_auth
@@ -288,3 +339,7 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
                 project=project, config__is_whatsapp_integration=True
             ).exists()
         )
+        soft_deleted = Dashboard.all_objects.filter(
+            project=project, config__waba_id=waba_id
+        ).get()
+        self.assertTrue(soft_deleted.is_deleted)

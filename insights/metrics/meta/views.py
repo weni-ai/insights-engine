@@ -351,6 +351,7 @@ class WhatsappIntegrationWebhookView(APIView):
                 app_uuid=serializer.validated_data["app_uuid"],
                 waba_id=serializer.validated_data["waba_id"],
                 phone_number=serializer.validated_data["phone_number"],
+                old_waba_id=serializer.validated_data.get("old_waba_id"),
             )
         except Exception as e:
             logger.exception(f"Database error in WhatsApp integration: {e}")
