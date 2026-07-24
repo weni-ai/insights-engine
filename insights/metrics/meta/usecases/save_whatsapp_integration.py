@@ -21,6 +21,8 @@ class SaveWhatsappIntegrationUseCase:
     If a matching dashboard already exists, it is soft-deleted and a new one is
     created (instead of updating in place). Existing config keys are preserved
     and only the integration fields (and optional migration_data) are merged.
+    When old_waba_id is provided, favorite templates are moved asynchronously
+    from the old dashboard to the new one.
     When the project belongs to an organization that has a main project, a copy
     of the dashboard is also created in the main project.
     """
@@ -39,6 +41,7 @@ class SaveWhatsappIntegrationUseCase:
             phone_number_id=phone_number["id"],
             old_waba_id=old_waba_id,
         )
+        old_dashboard_uuid = existing.uuid if existing else None
 
         config = dict(existing.config) if existing and existing.config else {}
         config.update(
@@ -72,12 +75,28 @@ class SaveWhatsappIntegrationUseCase:
             name=name,
         )
 
+        if old_waba_id and old_dashboard_uuid:
+            self._enqueue_move_favorite_templates(
+                old_dashboard_uuid=old_dashboard_uuid,
+                new_dashboard_uuid=dashboard.uuid,
+            )
+
         main_project = Project.objects.filter(
             org_uuid=project.org_uuid,
             config__is_main_project=True,
         ).first()
 
         if main_project and main_project.pk != project.pk:
+            main_existing = self._find_existing(
+                project=main_project,
+                waba_id=waba_id,
+                phone_number_id=phone_number["id"],
+                old_waba_id=old_waba_id,
+            )
+            main_old_dashboard_uuid = (
+                main_existing.uuid if main_existing else None
+            )
+
             self._soft_delete_existing(
                 project=main_project,
                 waba_id=waba_id,
@@ -86,13 +105,32 @@ class SaveWhatsappIntegrationUseCase:
             )
 
             copy_name = f"{project.name} {phone_number['display_phone_number']}"
-            Dashboard.objects.create(
+            main_dashboard = Dashboard.objects.create(
                 project=main_project,
                 config=config,
                 name=copy_name,
             )
 
+            if old_waba_id and main_old_dashboard_uuid:
+                self._enqueue_move_favorite_templates(
+                    old_dashboard_uuid=main_old_dashboard_uuid,
+                    new_dashboard_uuid=main_dashboard.uuid,
+                )
+
         return dashboard
+
+    def _enqueue_move_favorite_templates(
+        self,
+        *,
+        old_dashboard_uuid: uuid.UUID,
+        new_dashboard_uuid: uuid.UUID,
+    ) -> None:
+        from insights.metrics.meta.tasks import move_favorite_templates
+
+        move_favorite_templates.delay(
+            str(old_dashboard_uuid),
+            str(new_dashboard_uuid),
+        )
 
     def _matching_filter(
         self,
