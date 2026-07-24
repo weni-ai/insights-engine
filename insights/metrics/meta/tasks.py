@@ -102,3 +102,38 @@ def check_marketing_messages_status(dashboard_uuid: UUID):
     config["marketing_messages_status_last_checked_at"] = timezone.now().isoformat()
     dashboard.config = config
     dashboard.save(update_fields=["config"])
+
+
+@app.task
+def move_favorite_templates(
+    old_dashboard_uuid: UUID | str,
+    new_dashboard_uuid: UUID | str,
+):
+    """
+    After a WABA migration, copy favorite templates from the old dashboard to
+    the new one, resolving template ids on the new WABA by exact name match.
+    """
+    from insights.metrics.meta.usecases.move_favorite_templates import (
+        MoveFavoriteTemplatesUseCase,
+    )
+
+    try:
+        moved = MoveFavoriteTemplatesUseCase().execute(
+            old_dashboard_uuid=old_dashboard_uuid,
+            new_dashboard_uuid=new_dashboard_uuid,
+        )
+        logger.info(
+            "Moved %s favorite template(s) from dashboard %s to %s",
+            moved,
+            old_dashboard_uuid,
+            new_dashboard_uuid,
+        )
+    except Exception as e:
+        event_id = capture_exception(e)
+        logger.error(
+            "Error moving favorite templates from %s to %s. Event ID: %s",
+            old_dashboard_uuid,
+            new_dashboard_uuid,
+            event_id,
+            exc_info=True,
+        )

@@ -171,3 +171,38 @@ class TestCheckMarketingMessagesStatus(TestCase):
             "marketing_messages_status_last_checked_at",
             dashboard.config,
         )
+
+
+class TestMoveFavoriteTemplatesTask(TestCase):
+    @patch(
+        "insights.metrics.meta.usecases.move_favorite_templates."
+        "MoveFavoriteTemplatesUseCase.execute"
+    )
+    def test_calls_use_case(self, mock_execute):
+        from insights.metrics.meta.tasks import move_favorite_templates
+
+        mock_execute.return_value = 2
+        old_uuid = uuid.uuid4()
+        new_uuid = uuid.uuid4()
+
+        move_favorite_templates(old_uuid, new_uuid)
+
+        mock_execute.assert_called_once_with(
+            old_dashboard_uuid=old_uuid,
+            new_dashboard_uuid=new_uuid,
+        )
+
+    @patch("insights.metrics.meta.tasks.capture_exception")
+    @patch(
+        "insights.metrics.meta.usecases.move_favorite_templates."
+        "MoveFavoriteTemplatesUseCase.execute"
+    )
+    def test_captures_exception(self, mock_execute, mock_capture):
+        from insights.metrics.meta.tasks import move_favorite_templates
+
+        mock_execute.side_effect = RuntimeError("boom")
+        mock_capture.return_value = "event-789"
+
+        move_favorite_templates(uuid.uuid4(), uuid.uuid4())
+
+        mock_capture.assert_called_once()
