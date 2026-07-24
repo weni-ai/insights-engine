@@ -341,6 +341,9 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         response = self.destroy(str(dashboard.uuid))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Dashboard.objects.filter(uuid=dashboard.uuid).exists())
+        soft_deleted = Dashboard.all_objects.get(uuid=dashboard.uuid)
+        self.assertTrue(soft_deleted.is_deleted)
+        self.assertIn("_is_deleted_", soft_deleted.name)
 
     @with_project_auth
     def test_destroy_dashboard_not_deletable(self):
