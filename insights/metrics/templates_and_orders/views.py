@@ -7,11 +7,15 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from sentry_sdk import capture_exception
+from weni_commons.auth import WeniAuthViewMixin
 
-from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
     HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
+)
+from insights.authentication.weni_auth import (
+    query_params_with_auth_project_uuid,
+    weni_authentication_classes,
 )
 from insights.metrics.templates_and_orders.exceptions import (
     ErrorGettingOrdersMetrics,
@@ -30,7 +34,7 @@ from insights.projects.models import Project
 logger = logging.getLogger(__name__)
 
 
-class InternalTemplatesAndOrdersMetricsView(APIView):
+class InternalTemplatesAndOrdersMetricsView(WeniAuthViewMixin, APIView):
     permission_classes = [
         HasInternalAuthenticationPermission
         | (IsAuthenticated & InternalAuthenticationPermission)
@@ -38,23 +42,16 @@ class InternalTemplatesAndOrdersMetricsView(APIView):
 
     @property
     def authentication_classes(self):
-        classes = list(super().authentication_classes)
-        if JWTAuthentication not in classes:
-            classes.insert(0, JWTAuthentication)
-        return classes
+        return weni_authentication_classes(super().authentication_classes)
 
     def get(self, request: Request) -> Response:
         serializer = TemplatesAndOrdersQueryParamsSerializer(
-            data=request.query_params
+            data=query_params_with_auth_project_uuid(request)
         )
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
 
-        if not (project_uuid := getattr(request, "project_uuid", None)):
-            project_uuid = validated["project_uuid"]
-
-        project_uuid = str(project_uuid)
-        project = get_object_or_404(Project, uuid=project_uuid)
+        project = get_object_or_404(Project, uuid=self.auth.project_uuid)
 
         get_metrics = GetTemplatesAndOrdersMetrics()
         format_response = FormatTemplatesAndOrdersResponse()

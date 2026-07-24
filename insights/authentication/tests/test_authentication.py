@@ -16,7 +16,6 @@ from insights.authentication.admin_sso import (
     admin_oidc_logout,
     get_oidc_logout_url,
 )
-from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
     FeatureFlagPermission,
     HasInternalAuthenticationPermission,
@@ -30,8 +29,10 @@ from insights.authentication.services.tests.test_jwt_service import (
     generate_public_key,
     generate_public_key_pem,
 )
+from insights.authentication.weni_auth import weni_authentication_classes
 from insights.dashboards.models import Dashboard
 from insights.projects.models import Project, ProjectAuth
+from weni_commons.auth import WeniAuthViewMixin
 
 User = get_user_model()
 
@@ -43,13 +44,21 @@ TEST_PUBLIC_KEY = generate_public_key(TEST_PRIVATE_KEY)
 TEST_PUBLIC_KEY_PEM = generate_public_key_pem(TEST_PUBLIC_KEY)
 
 
-class MockJWTAuthenticationView(APIView):
-    authentication_classes = [JWTAuthentication]
-    # Same as internal VTEX/conversations views: allow when JWT set request.jwt_payload/project_uuid
+class MockJWTAuthenticationView(WeniAuthViewMixin, APIView):
     permission_classes = [HasInternalAuthenticationPermission]
 
+    @property
+    def authentication_classes(self):
+        return weni_authentication_classes(super().authentication_classes)
+
     def get(self, request):
-        return Response({"status": "ok"}, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "status": "ok",
+                "project_uuid": self.auth.project_uuid,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class TestJWTAuthentication(APITestCase):
@@ -63,19 +72,35 @@ class TestJWTAuthentication(APITestCase):
         project = Project.objects.create(name="Test Project")
         token = self.jwt_service.generate_jwt_token(project_uuid=project.uuid)
         url = reverse("jwt-authentication-view")
-        response = self.client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
+        response = self.client.get(url, HTTP_X_WENI_AUTH=token)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"status": "ok"})
+        self.assertEqual(
+            response.data,
+            {"status": "ok", "project_uuid": str(project.uuid)},
+        )
 
     @override_settings(ROOT_URLCONF="insights.authentication.tests.test_urls")
     @override_settings(JWT_SECRET_KEY=TEST_PRIVATE_KEY_PEM)
     @override_settings(JWT_PUBLIC_KEY=TEST_PUBLIC_KEY_PEM)
-    def test_jwt_authentication_project_not_found(self):
-        token = self.jwt_service.generate_jwt_token(project_uuid=uuid.uuid4())
+    def test_jwt_authentication_via_bearer_header(self):
+        project = Project.objects.create(name="Test Project")
+        token = self.jwt_service.generate_jwt_token(project_uuid=project.uuid)
         url = reverse("jwt-authentication-view")
         response = self.client.get(url, HTTP_AUTHORIZATION=f"Bearer {token}")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data, {"detail": "Project not found"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["project_uuid"], str(project.uuid))
+
+    @override_settings(ROOT_URLCONF="insights.authentication.tests.test_urls")
+    @override_settings(JWT_SECRET_KEY=TEST_PRIVATE_KEY_PEM)
+    @override_settings(JWT_PUBLIC_KEY=TEST_PUBLIC_KEY_PEM)
+    def test_jwt_authentication_unknown_project_still_authenticates(self):
+        # Tenant existence is enforced by the view/use case, not by auth.
+        unknown_uuid = uuid.uuid4()
+        token = self.jwt_service.generate_jwt_token(project_uuid=unknown_uuid)
+        url = reverse("jwt-authentication-view")
+        response = self.client.get(url, HTTP_X_WENI_AUTH=token)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["project_uuid"], str(unknown_uuid))
 
     @override_settings(ROOT_URLCONF="insights.authentication.tests.test_urls")
     def test_jwt_authentication_missing_header(self):
@@ -84,6 +109,7 @@ class TestJWTAuthentication(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @override_settings(ROOT_URLCONF="insights.authentication.tests.test_urls")
+    @override_settings(JWT_PUBLIC_KEY=TEST_PUBLIC_KEY_PEM)
     def test_jwt_authentication_invalid_header(self):
         url = reverse("jwt-authentication-view")
         response = self.client.get(url, HTTP_AUTHORIZATION="Bearer invalid-token")

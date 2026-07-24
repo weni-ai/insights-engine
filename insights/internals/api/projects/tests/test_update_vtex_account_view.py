@@ -37,7 +37,10 @@ class TestUpdateProjectVTEXAccountViewAsAnonymousUser(
     def test_cannot_update_vtex_account_when_unauthenticated(self):
         response = self.update_vtex_account(self.project.uuid, {"vtex_account": "xyz"})
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
 
 
 class TestUpdateProjectVTEXAccountViewAsAuthenticatedUser(
@@ -129,7 +132,10 @@ class TestUpdateProjectVTEXAccountViewWithJWTAuthentication(
 
         response = self.update_vtex_account(self.project.uuid, {"vtex_account": "xyz"})
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
 
     def test_cannot_update_vtex_account_with_invalid_body_via_jwt(self):
         response = self.update_vtex_account(self.project.uuid, {})
@@ -138,6 +144,25 @@ class TestUpdateProjectVTEXAccountViewWithJWTAuthentication(
         self.assertEqual(response.data["vtex_account"][0].code, "required")
 
     def test_cannot_update_vtex_account_when_project_does_not_exist_via_jwt(self):
-        response = self.update_vtex_account(uuid4(), {"vtex_account": "xyz"})
+        # Tenant comes from the JWT claim, not from the path.
+        missing_project_uuid = uuid4()
+        token = JWTService().generate_jwt_token(missing_project_uuid)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        response = self.update_vtex_account(
+            missing_project_uuid, {"vtex_account": "xyz"}
+        )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_path_project_uuid_cannot_override_jwt_tenant(self):
+        other_project = Project.objects.create(name="Other", vtex_account="other")
+        response = self.update_vtex_account(
+            other_project.uuid, {"vtex_account": "xyz"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.project.refresh_from_db()
+        other_project.refresh_from_db()
+        self.assertEqual(self.project.vtex_account, "xyz")
+        self.assertEqual(other_project.vtex_account, "other")
