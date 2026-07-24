@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -111,7 +112,10 @@ class TestSaveWhatsappIntegrationUseCase(TestCase):
             1,
         )
 
-    def test_creates_migration_data_when_old_waba_id_is_provided(self):
+    @patch(
+        "insights.metrics.meta.tasks.move_favorite_templates.delay",
+    )
+    def test_creates_migration_data_when_old_waba_id_is_provided(self, mock_delay):
         old_waba_id = "old_waba_999"
         existing = Dashboard.objects.create(
             project=self.project,
@@ -146,6 +150,31 @@ class TestSaveWhatsappIntegrationUseCase(TestCase):
 
         soft_deleted = Dashboard.all_objects.get(pk=existing.pk)
         self.assertTrue(soft_deleted.is_deleted)
+        mock_delay.assert_called_once_with(str(existing.uuid), str(dashboard.uuid))
+
+    @patch(
+        "insights.metrics.meta.tasks.move_favorite_templates.delay",
+    )
+    def test_does_not_enqueue_move_favorites_without_old_waba_id(self, mock_delay):
+        Dashboard.objects.create(
+            project=self.project,
+            name="Existing Dashboard",
+            config={
+                "is_whatsapp_integration": True,
+                "app_uuid": str(self.app_uuid),
+                "waba_id": self.waba_id,
+                "phone_number": self.phone_number,
+            },
+        )
+
+        SaveWhatsappIntegrationUseCase().execute(
+            project=self.project,
+            app_uuid=self.app_uuid,
+            waba_id=self.waba_id,
+            phone_number=self.phone_number,
+        )
+
+        mock_delay.assert_not_called()
 
     def test_does_not_update_dashboard_from_a_different_project(self):
         other_project = Project.objects.create(name="Other Project")
