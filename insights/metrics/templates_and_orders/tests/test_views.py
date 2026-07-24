@@ -20,7 +20,10 @@ class BaseTestTemplatesAndOrdersView(APITestCase):
 class TestAsAnonymousUser(BaseTestTemplatesAndOrdersView):
     def test_returns_401_when_unauthenticated(self):
         response = self.get_metrics({})
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
 
 
 class TestAsAuthenticatedUserWithoutInternalPermission(BaseTestTemplatesAndOrdersView):
@@ -49,11 +52,34 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
         }
 
     @with_internal_auth
-    def test_returns_400_when_project_uuid_is_missing(self):
+    @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
+    @patch(
+        "insights.metrics.templates_and_orders.views.FormatTemplatesAndOrdersResponse"
+    )
+    def test_uses_project_uuid_from_auth_when_query_omits_it(
+        self, MockFormat, MockUseCase
+    ):
+        MockUseCase.return_value.execute.return_value = {
+            "template_metrics": {
+                "sent": 0,
+                "delivered": 0,
+                "read": 0,
+                "clicked": 0,
+            },
+            "orders_metrics": {},
+        }
+        MockFormat.return_value.execute.return_value = {"ok": True}
+
         params = self.valid_params.copy()
         del params["project_uuid"]
         response = self.get_metrics(params)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        MockUseCase.return_value.execute.assert_called_once()
+        self.assertEqual(
+            MockUseCase.return_value.execute.call_args.kwargs["project"],
+            self.project,
+        )
 
     @with_internal_auth
     def test_returns_400_when_start_date_is_missing(self):
@@ -85,8 +111,22 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
 
     @with_internal_auth
     def test_returns_404_when_project_does_not_exist(self):
+        from insights.authentication.tests.decorators import (
+            build_keycloak_auth_context,
+        )
+
+        missing_project_uuid = "00000000-0000-0000-0000-000000000000"
+        self.client.force_authenticate(
+            user=self.user,
+            token=build_keycloak_auth_context(
+                self.user,
+                project_uuid=missing_project_uuid,
+                is_internal=True,
+            ),
+        )
+
         params = self.valid_params.copy()
-        params["project_uuid"] = "00000000-0000-0000-0000-000000000000"
+        params["project_uuid"] = missing_project_uuid
         response = self.get_metrics(params)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 

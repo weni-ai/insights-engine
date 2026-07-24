@@ -11,11 +11,16 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import GenericViewSet
 from sentry_sdk import capture_exception
 
-from insights.authentication.authentication import JWTAuthentication
+from weni_commons.auth import WeniAuthViewMixin
+
 from insights.authentication.permissions import (
     HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
+)
+from insights.authentication.weni_auth import (
+    query_params_with_auth_project_uuid,
+    weni_authentication_classes,
 )
 from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesCategories,
@@ -60,7 +65,7 @@ from insights.sources.integrations.clients import WeniIntegrationsClient
 logger = logging.getLogger(__name__)
 
 
-class WhatsAppMessageTemplatesView(GenericViewSet):
+class WhatsAppMessageTemplatesView(WeniAuthViewMixin, GenericViewSet):
     service = MetaMessageTemplatesService()
     permission_classes = [
         IsAuthenticated,
@@ -70,11 +75,7 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
 
     @property
     def authentication_classes(self):
-        # Try JWT first so Bearer JWT tokens are accepted before OIDC
-        classes = list(super().authentication_classes)
-        if JWTAuthentication not in classes:
-            classes.insert(0, JWTAuthentication)
-        return classes
+        return weni_authentication_classes(super().authentication_classes)
 
     @property
     def project_uuid_field(self):
@@ -329,8 +330,9 @@ class WhatsAppMessageTemplatesView(GenericViewSet):
         ],
     )
     def get_conversations_by_category(self, request: Request) -> Response:
+        # Force tenant from auth so query ``project`` cannot override JWT claims.
         serializer = ConversationsByCategoryQueryParamsSerializer(
-            data=request.query_params
+            data=query_params_with_auth_project_uuid(request, project_key="project")
         )
         serializer.is_valid(raise_exception=True)
 

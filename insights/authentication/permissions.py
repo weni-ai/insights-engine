@@ -150,7 +150,20 @@ class FeatureFlagPermission(permissions.BasePermission):
 
 
 class HasInternalAuthenticationPermission(permissions.BasePermission):
+    """
+    Grants access for App IO / inter-module JWT callers.
+
+    Prefers ``WeniAuthContext`` from ``weni_commons`` (``request.auth.is_jwt``).
+    Falls back to the legacy ``request.jwt_payload`` / ``request.project_uuid``
+    attributes set by ``JWTAuthentication``.
+    """
+
     def has_permission(self, request: Request, view: APIView) -> bool:
+        from weni_commons.auth.context import WeniAuthContext
+
+        if isinstance(request.auth, WeniAuthContext):
+            return request.auth.is_jwt
+
         jwt_payload = getattr(request, "jwt_payload", None)
         project_uuid = getattr(request, "project_uuid", None)
 
