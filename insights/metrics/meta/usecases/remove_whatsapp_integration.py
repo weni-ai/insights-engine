@@ -4,10 +4,10 @@ from insights.projects.models import Project
 
 class RemoveWhatsappIntegrationUseCase:
     """
-    Remove the dashboards that represent a WhatsApp integration for the
+    Soft-delete the dashboards that represent a WhatsApp integration for the
     given project and waba_id. When the project belongs to an organization
     that has a main project, the dashboard copy in the main project is also
-    removed.
+    soft-deleted.
     """
 
     def execute(self, project: Project, waba_id: str) -> int:
@@ -21,10 +21,15 @@ class RemoveWhatsappIntegrationUseCase:
         if main_project and main_project.pk != project.pk:
             projects.append(main_project)
 
-        deleted_count, _ = Dashboard.objects.filter(
+        dashboards = Dashboard.objects.filter(
             project__in=projects,
             config__waba_id=waba_id,
             config__is_whatsapp_integration=True,
-        ).delete()
+        )
+
+        deleted_count = 0
+        for dashboard in dashboards:
+            dashboard.delete()
+            deleted_count += 1
 
         return deleted_count

@@ -61,6 +61,7 @@ class WhatsappIntegrationWebhookSerializer(serializers.Serializer):
     project_uuid = serializers.UUIDField(required=True)
     waba_id = serializers.CharField(required=True)
     phone_number = WhatsappPhoneNumberSerializer(required=True)
+    old_waba_id = serializers.CharField(required=False, allow_null=True)
 
     def validate_project_uuid(self, value) -> uuid.UUID:
         if not Project.objects.filter(uuid=value).exists():
