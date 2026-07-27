@@ -18,6 +18,7 @@ from insights.metrics.templates_and_orders.usecases.get_templates_and_orders_met
     GetTemplatesAndOrdersMetrics,
     MetricsLimits,
 )
+from insights.metrics.vtex.date_utils import to_utc_range
 from insights.projects.models import Project
 
 
@@ -41,6 +42,9 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         self.end_date = date(2024, 1, 31)
         self.utm_source = "weniabandonedcart"
         self.template_name_prefix = "weni_abandoned_cart"
+        self.expected_orders_start, self.expected_orders_end = to_utc_range(
+            self.start_date, self.end_date, self.project
+        )
 
     @patch(
         "insights.metrics.templates_and_orders.usecases"
@@ -112,8 +116,8 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         mock_orders_instance.get_metrics_from_utm_source.assert_called_once_with(
             utm_source=custom_utm,
             filters={
-                "start_date": self.start_date,
-                "end_date": self.end_date,
+                "start_date": self.expected_orders_start,
+                "end_date": self.expected_orders_end,
             },
         )
 
@@ -489,4 +493,50 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         self.assertEqual(
             result["template_metrics"],
             {"sent": 0, "delivered": 0, "read": 0, "clicked": 0},
+        )
+
+    @patch(
+        "insights.metrics.templates_and_orders.usecases"
+        ".get_templates_and_orders_metrics.OrdersService"
+    )
+    def test_converts_order_dates_to_project_timezone_utc_range(
+        self, MockOrdersService
+    ):
+        self.project.timezone = "America/Sao_Paulo"
+        self.project.save(update_fields=["timezone"])
+
+        self.mock_get_wabas.execute.return_value = []
+        self.mock_get_metrics.execute.return_value = {
+            "sent": 0,
+            "delivered": 0,
+            "read": 0,
+            "clicked": 0,
+        }
+
+        mock_orders_instance = MockOrdersService.return_value
+        mock_orders_instance.get_metrics_from_utm_source.return_value = {
+            "revenue": {"value": 0, "currency_code": "", "increase_percentage": 0},
+            "orders_placed": {"value": 0, "increase_percentage": 0},
+        }
+
+        start_date = date(2026, 7, 17)
+        end_date = date(2026, 7, 23)
+        expected_start, expected_end = to_utc_range(
+            start_date, end_date, self.project
+        )
+
+        self.usecase.execute(
+            project=self.project,
+            start_date=start_date,
+            end_date=end_date,
+            utm_source=self.utm_source,
+            template_name_prefix=self.template_name_prefix,
+        )
+
+        mock_orders_instance.get_metrics_from_utm_source.assert_called_once_with(
+            utm_source=self.utm_source,
+            filters={
+                "start_date": expected_start,
+                "end_date": expected_end,
+            },
         )
