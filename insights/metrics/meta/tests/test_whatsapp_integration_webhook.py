@@ -139,16 +139,17 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
     def test_receive_integration_with_old_waba_id_saves_migration_data(self):
         project = Project.objects.create()
         old_waba_id = "old_waba_123"
+        old_phone = {
+            "id": "111111111111111",
+            "display_phone_number": "+55 11 11111 1111",
+        }
         Dashboard.objects.create(
             project=project,
             config={
                 "is_whatsapp_integration": True,
                 "waba_id": old_waba_id,
                 "app_uuid": str(uuid.uuid4()),
-                "phone_number": {
-                    "id": "111111111111111",
-                    "display_phone_number": "+55 11 11111 1111",
-                },
+                "phone_number": old_phone,
             },
         )
 
@@ -171,8 +172,61 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
             project=project, config__is_whatsapp_integration=True
         ).get()
         self.assertEqual(dashboard.config["waba_id"], payload["waba_id"])
+        self.assertEqual(dashboard.config["phone_number"], old_phone)
         self.assertEqual(dashboard.config["migration_data"]["waba_id"], old_waba_id)
         self.assertIn("migrated_at", dashboard.config["migration_data"])
+        self.assertFalse(
+            Dashboard.objects.filter(config__waba_id=old_waba_id).exists()
+        )
+
+    @with_internal_auth
+    def test_receive_integration_migrates_all_dashboards_with_same_old_waba(self):
+        project = Project.objects.create()
+        old_waba_id = "old_waba_multi"
+        phone_a = {
+            "id": "phone-a",
+            "display_phone_number": "+55 11 5116-1712",
+        }
+        phone_b = {
+            "id": "phone-b",
+            "display_phone_number": "+55 11 3164-0630",
+        }
+        for phone in (phone_a, phone_b):
+            Dashboard.objects.create(
+                project=project,
+                config={
+                    "is_whatsapp_integration": True,
+                    "waba_id": old_waba_id,
+                    "app_uuid": str(uuid.uuid4()),
+                    "phone_number": phone,
+                },
+            )
+
+        payload = {
+            "project_uuid": project.uuid,
+            "app_uuid": str(uuid.uuid4()),
+            "waba_id": "new_waba_multi",
+            "old_waba_id": old_waba_id,
+            "phone_number": phone_a,
+        }
+
+        response = self.receive_integration_data(payload)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        active = Dashboard.objects.filter(
+            project=project, config__is_whatsapp_integration=True
+        )
+        self.assertEqual(active.count(), 2)
+        self.assertEqual(
+            {(d.config.get("phone_number") or {}).get("id") for d in active},
+            {"phone-a", "phone-b"},
+        )
+        for dashboard in active:
+            self.assertEqual(dashboard.config["waba_id"], payload["waba_id"])
+            self.assertEqual(
+                dashboard.config["migration_data"]["waba_id"], old_waba_id
+            )
         self.assertFalse(
             Dashboard.objects.filter(config__waba_id=old_waba_id).exists()
         )
