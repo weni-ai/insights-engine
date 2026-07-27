@@ -3,6 +3,8 @@ from zoneinfo import ZoneInfo
 
 from insights.projects.models import Project
 
+END_OF_DAY_TIME = time(23, 59, 59)
+
 
 def to_utc_range(
     start_date: date, end_date: date, project: Project
@@ -15,7 +17,7 @@ def to_utc_range(
     """
     project_tz = ZoneInfo(project.timezone) if project.timezone else ZoneInfo("UTC")
     start_local = datetime.combine(start_date, time.min, tzinfo=project_tz)
-    end_local = datetime.combine(end_date, time(23, 59, 59), tzinfo=project_tz)
+    end_local = datetime.combine(end_date, END_OF_DAY_TIME, tzinfo=project_tz)
     return (
         start_local.astimezone(timezone.utc),
         end_local.astimezone(timezone.utc),
