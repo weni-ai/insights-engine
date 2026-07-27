@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date
 from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
