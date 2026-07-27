@@ -127,10 +127,7 @@ class TestInternalVTEXOrdersViewAsUnauthenticatedUser(BaseTestInternalVTEXOrders
     def test_cannot_get_metrics_from_utm_source_when_unauthenticated(self):
         response = self.get_metrics_from_utm_source({})
 
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 @override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
@@ -199,10 +196,7 @@ class TestInternalVTEXOrdersViewWithJWTAuthentication(BaseTestInternalVTEXOrders
         }
         response = self.get_metrics_from_utm_source(query_params)
 
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TestInternalVTEXOrdersViewWithInternalAuthentication(

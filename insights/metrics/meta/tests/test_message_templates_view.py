@@ -1044,7 +1044,4 @@ class TestMetaMessageTemplatesViewWithJWTAuthentication(
             }
         )
 
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

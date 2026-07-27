@@ -20,10 +20,7 @@ class BaseTestTemplatesAndOrdersView(APITestCase):
 class TestAsAnonymousUser(BaseTestTemplatesAndOrdersView):
     def test_returns_401_when_unauthenticated(self):
         response = self.get_metrics({})
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TestAsAuthenticatedUserWithoutInternalPermission(BaseTestTemplatesAndOrdersView):

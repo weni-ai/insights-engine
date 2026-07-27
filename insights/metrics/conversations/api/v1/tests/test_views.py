@@ -250,10 +250,7 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
     def test_cannot_get_totals_when_not_authenticated(self):
         response = self.get_totals({})
 
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_cannot_get_csat_metrics_when_unauthenticated(self):
         response = self.get_csat_metrics({})
@@ -1720,10 +1717,7 @@ class TestConversationsMetricsViewSetWithJWTAuthentication(
             }
         )
 
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 @override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
@@ -1790,7 +1784,4 @@ class TestInternalConversationsMetricsViewSetWithJWTAuthentication(
             }
         )
 
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

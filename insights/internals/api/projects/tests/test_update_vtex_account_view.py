@@ -37,10 +37,7 @@ class TestUpdateProjectVTEXAccountViewAsAnonymousUser(
     def test_cannot_update_vtex_account_when_unauthenticated(self):
         response = self.update_vtex_account(self.project.uuid, {"vtex_account": "xyz"})
 
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class TestUpdateProjectVTEXAccountViewAsAuthenticatedUser(
@@ -132,10 +129,7 @@ class TestUpdateProjectVTEXAccountViewWithJWTAuthentication(
 
         response = self.update_vtex_account(self.project.uuid, {"vtex_account": "xyz"})
 
-        self.assertIn(
-            response.status_code,
-            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
-        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_cannot_update_vtex_account_with_invalid_body_via_jwt(self):
         response = self.update_vtex_account(self.project.uuid, {})
