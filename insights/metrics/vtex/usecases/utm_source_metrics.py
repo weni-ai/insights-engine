@@ -1,10 +1,10 @@
 import logging
-from datetime import date, datetime, time, timezone
-from zoneinfo import ZoneInfo
+from datetime import date, datetime
 
 from rest_framework import status
 from sentry_sdk import capture_exception
 
+from insights.metrics.vtex.date_utils import to_utc_range
 from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.projects.models import Project
 from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
@@ -18,23 +18,10 @@ class UTMSourceMetricsUseCase:
     Use case to get metrics from UTM source
     """
 
-    def _convert_dates(
-        self, start_date: date, end_date: date, project_tz: ZoneInfo
-    ) -> tuple[datetime, datetime]:
-        start_local = datetime.combine(start_date, time.min, tzinfo=project_tz)
-        end_local = datetime.combine(
-            end_date, time(23, 59, 59), tzinfo=project_tz
-        )
-        return (
-            start_local.astimezone(timezone.utc),
-            end_local.astimezone(timezone.utc),
-        )
-
     def to_utc_range(
         self, start_date: date, end_date: date, project: Project
     ) -> tuple[datetime, datetime]:
-        project_tz = ZoneInfo(project.timezone) if project.timezone else ZoneInfo("UTC")
-        return self._convert_dates(start_date, end_date, project_tz)
+        return to_utc_range(start_date, end_date, project)
 
     def execute(
         self, project: Project, utm_source: str, start_date: date, end_date: date
