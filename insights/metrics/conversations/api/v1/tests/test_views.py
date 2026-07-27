@@ -1718,7 +1718,8 @@ class TestInternalConversationsMetricsViewSetWithInternalAuthentication(
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["start_date"][0].code, "required")
         self.assertEqual(response.data["end_date"][0].code, "required")
-        self.assertEqual(response.data["project_uuid"][0].code, "required")
+        # project_uuid comes from auth context, not from the query string
+        self.assertNotIn("project_uuid", response.data)
 
     @with_internal_auth
     @patch(

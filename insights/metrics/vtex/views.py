@@ -4,12 +4,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import viewsets
+from weni_commons.auth import WeniAuthViewMixin
 
-from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
     HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
+)
+from insights.authentication.weni_auth import (
+    query_params_with_auth_project_uuid,
+    weni_authentication_classes,
 )
 from insights.metrics.vtex.serializers import (
     InternalVTEXOrdersRequestSerializer,
@@ -41,7 +45,7 @@ class VtexOrdersViewSet(viewsets.ViewSet):
         return Response(response_data, status=status_code)
 
 
-class InternalVTEXOrdersViewSet(viewsets.ViewSet):
+class InternalVTEXOrdersViewSet(WeniAuthViewMixin, viewsets.ViewSet):
     permission_classes = [
         HasInternalAuthenticationPermission
         | (IsAuthenticated & InternalAuthenticationPermission)
@@ -49,22 +53,16 @@ class InternalVTEXOrdersViewSet(viewsets.ViewSet):
 
     @property
     def authentication_classes(self):
-        # Try JWT first so Bearer JWT tokens are accepted before OIDC (which would raise on invalid OIDC token)
-        classes = list(super().authentication_classes)
-        if JWTAuthentication not in classes:
-            classes.insert(0, JWTAuthentication)
-        return classes
+        return weni_authentication_classes(super().authentication_classes)
 
     @action(methods=["get"], detail=False)
     def from_utm_source(self, request: Request) -> Response:
-        serializer = InternalVTEXOrdersRequestSerializer(data=request.query_params)
+        serializer = InternalVTEXOrdersRequestSerializer(
+            data=query_params_with_auth_project_uuid(request)
+        )
         serializer.is_valid(raise_exception=True)
 
-        if not (project_uuid := getattr(request, "project_uuid", None)):
-            project_uuid = serializer.validated_data["project_uuid"]
-
-        project_uuid = str(project_uuid)
-        project = get_object_or_404(Project, uuid=project_uuid)
+        project = get_object_or_404(Project, uuid=self.auth.project_uuid)
 
         validated = serializer.validated_data
         use_case = UTMSourceMetricsUseCase()

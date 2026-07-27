@@ -8,12 +8,16 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from sentry_sdk import capture_exception
+from weni_commons.auth import WeniAuthViewMixin
 
-from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
     HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
+)
+from insights.authentication.weni_auth import (
+    query_params_with_auth_project_uuid,
+    weni_authentication_classes,
 )
 from insights.metrics.skills.exceptions import (
     InvalidDateRangeError,
@@ -31,7 +35,7 @@ from insights.projects.models import Project
 logger = logging.getLogger(__name__)
 
 
-class SkillsMetricsView(APIView):
+class SkillsMetricsView(WeniAuthViewMixin, APIView):
     permission_classes = [
         HasInternalAuthenticationPermission
         | (
@@ -42,28 +46,23 @@ class SkillsMetricsView(APIView):
 
     @property
     def authentication_classes(self):
-        # Try JWT first so Bearer JWT tokens are accepted before OIDC
-        classes = list(super().authentication_classes)
-        if JWTAuthentication not in classes:
-            classes.insert(0, JWTAuthentication)
-        return classes
+        return weni_authentication_classes(super().authentication_classes)
 
     @extend_schema(
         parameters=[SkillMetricsQueryParamsSerializer],
         responses={status.HTTP_200_OK: dict},
     )
     def get(self, request: Request) -> Response:
-        serializer = SkillMetricsQueryParamsSerializer(data=request.query_params)
+        serializer = SkillMetricsQueryParamsSerializer(
+            data=query_params_with_auth_project_uuid(request)
+        )
         serializer.is_valid(raise_exception=True)
 
         filters = request.query_params.copy()
         filters.pop("skill", None)
         filters.pop("project_uuid", None)
 
-        if not (project_uuid := getattr(request, "project_uuid", None)):
-            project_uuid = serializer.validated_data["project_uuid"]
-
-        project = get_object_or_404(Project, uuid=project_uuid)
+        project = get_object_or_404(Project, uuid=self.auth.project_uuid)
 
         try:
             service = SkillMetricsServiceFactory().get_service(
