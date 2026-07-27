@@ -519,10 +519,16 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
             "orders_placed": {"value": 0, "increase_percentage": 0},
         }
 
+        start_date = date(2026, 7, 17)
+        end_date = date(2026, 7, 23)
+        expected_start, expected_end = to_utc_range(
+            start_date, end_date, self.project
+        )
+
         self.usecase.execute(
             project=self.project,
-            start_date=date(2026, 7, 17),
-            end_date=date(2026, 7, 23),
+            start_date=start_date,
+            end_date=end_date,
             utm_source=self.utm_source,
             template_name_prefix=self.template_name_prefix,
         )
@@ -530,7 +536,7 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         mock_orders_instance.get_metrics_from_utm_source.assert_called_once_with(
             utm_source=self.utm_source,
             filters={
-                "start_date": datetime(2026, 7, 17, 3, 0, 0, tzinfo=timezone.utc),
-                "end_date": datetime(2026, 7, 24, 2, 59, 59, tzinfo=timezone.utc),
+                "start_date": expected_start,
+                "end_date": expected_end,
             },
         )
