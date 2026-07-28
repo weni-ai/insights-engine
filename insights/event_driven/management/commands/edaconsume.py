@@ -4,5 +4,11 @@ from ...base_app import EventDrivenAPP
 
 
 class Command(BaseCommand):
+    """
+    RabbitMQ consumers (EDA_* settings / Insights backend).
+
+    Amazon MQ should use ``edaconsume_amq``.
+    """
+
     def handle(self, *args, **options):
         EventDrivenAPP().backend.start_consuming()
