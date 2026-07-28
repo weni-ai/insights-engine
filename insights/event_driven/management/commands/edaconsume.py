@@ -1,27 +1,14 @@
-import os
-import signal
+from django.core.management.base import BaseCommand
 
-from weni.eda.django.eda_app.management.commands.edaconsume import (
-    Command as WeniEDACommand,
-)
+from ...base_app import EventDrivenAPP
 
 
-def handle_sigterm(*args):
+class Command(BaseCommand):
     """
-    Handle SIGTERM signal - exit gracefully.
-    """
-    print("[msg_edaconsume] - Received SIGTERM signal, exiting gracefully")
-    os._exit(0)
+    RabbitMQ consumers (EDA_* settings / Insights backend).
 
-
-class Command(WeniEDACommand):
-    """
-    RabbitMQ consumers (EDA_* / ConnectionParamsFactory).
-
-    Amazon MQ should use ``edaconsume_amq`` or pass
-    ``--params-class weni.eda.django.AMQConnectionParamsFactory``.
+    Amazon MQ should use ``edaconsume_amq``.
     """
 
     def handle(self, *args, **options):
-        signal.signal(signal.SIGTERM, handle_sigterm)
-        super().handle(*args, **options)
+        EventDrivenAPP().backend.start_consuming()

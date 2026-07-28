@@ -1,6 +1,7 @@
 import os
 import signal
 
+from django.conf import settings
 from weni.eda.django.eda_app.management.commands.edaconsume import (
     Command as WeniEDACommand,
 )
@@ -15,7 +16,7 @@ def handle_sigterm(*args):
     """
     Handle SIGTERM signal - exit gracefully.
     """
-    print("[msg_edaconsume_amq] - Received SIGTERM signal, exiting gracefully")
+    print("[edaconsume_amq] - Received SIGTERM signal, exiting gracefully")
     os._exit(0)
 
 
@@ -25,4 +26,11 @@ class Command(WeniEDACommand):
         options["handle"] = options.get("handle") or AMQ_HANDLE
         options["params_class"] = AMQ_PARAMS_CLASS
         options["backend"] = options.get("backend") or AMQ_BACKEND
+
+        print(
+            "[edaconsume_amq] Connecting to Amazon MQ "
+            f"host={settings.AMQ_BROKER_HOST} port={settings.AMQ_BROKER_PORT} "
+            f"vhost={settings.AMQ_VIRTUAL_HOST} "
+            f"queue={settings.PROJECT_AMQ_QUEUE_NAME}"
+        )
         super().handle(*args, **options)
