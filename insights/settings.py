@@ -236,6 +236,11 @@ LOGGING["handlers"]["console"] = {
     "class": "logging.StreamHandler",
     "formatter": "verbose",
 }
+LOGGING["loggers"]["weni.eda"] = {
+    "level": "INFO",
+    "handlers": ["console"],
+    "propagate": False,
+}
 
 # mozilla-django-oidc
 
@@ -339,7 +344,9 @@ EDA_CONSUMERS_HANDLES = {
 }
 
 if USE_EDA:
-    EDA_CONNECTION_BACKEND = "weni.eda.backends.pyamqp_backend.PyAMQPConnectionBackend"
+    # RabbitMQ (edaconsume) uses the Insights backend via EventDrivenAPP.
+    # Amazon MQ (edaconsume_amq) forces the Weni EDA backend in the command.
+    EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"
     _command = sys.argv[1] if len(sys.argv) > 1 else None
     EDA_CONSUMERS_HANDLE = EDA_CONSUMERS_HANDLES.get(
         _command, EDA_CONSUMERS_HANDLES["edaconsume"]
