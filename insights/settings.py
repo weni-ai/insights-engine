@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "weni.feature_flags",
     "weni_commons",
+    "weni.eda.django.eda_app",
 ]
 
 if ADMIN_ENABLED is True:
@@ -338,7 +339,7 @@ EDA_CONSUMERS_HANDLES = {
 }
 
 if USE_EDA:
-    EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"
+    EDA_CONNECTION_BACKEND = "weni.eda.backends.pyamqp_backend.PyAMQPConnectionBackend"
     _command = sys.argv[1] if len(sys.argv) > 1 else None
     EDA_CONSUMERS_HANDLE = EDA_CONSUMERS_HANDLES.get(
         _command, EDA_CONSUMERS_HANDLES["edaconsume"]
@@ -355,7 +356,7 @@ if USE_EDA:
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
 
 # Amazon MQ
-AMQ_BROKER_HOST = env.str("AMQ_BROKER_HOST", default="localhost:5672")
+AMQ_BROKER_HOST = env.str("AMQ_BROKER_HOST", default="localhost")
 AMQ_BROKER_PORT = env.int("AMQ_BROKER_PORT", default=5671)
 AMQ_BROKER_USER = env.str("AMQ_BROKER_USER", default="guest")
 AMQ_BROKER_PASSWORD = env.str("AMQ_BROKER_PASSWORD", default="guest")
