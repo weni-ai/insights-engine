@@ -1,9 +1,15 @@
 from dataclasses import dataclass
 from datetime import date
 
+from django.conf import settings
+
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.meta.enums import ProductType
-from django.conf import settings
+from insights.metrics.meta.usecases.waba_migration_analytics import (
+    WabaAnalyticsPeriod,
+    resolve_old_template_id,
+    resolve_waba_analytics_periods,
+)
 
 
 @dataclass
@@ -38,6 +44,28 @@ class GetTemplatesMetricsFromMultipleWabasUseCase:
             data_points.extend(metrics.get("data", {}).get("data_points", []))
         return data_points
 
+    def _template_ids_for_period(
+        self,
+        *,
+        current_waba_id: str,
+        period: WabaAnalyticsPeriod,
+        new_template_ids: list[str],
+    ) -> list[str]:
+        if period.waba_id == current_waba_id:
+            return new_template_ids
+
+        old_template_ids: list[str] = []
+        for new_template_id in new_template_ids:
+            old_template_id = resolve_old_template_id(
+                self.meta_client,
+                old_waba_id=period.waba_id,
+                new_template_id=new_template_id,
+            )
+            if old_template_id:
+                old_template_ids.append(old_template_id)
+
+        return old_template_ids
+
     def execute(
         self,
         waba_templates: list[WabaTemplateIDs],
@@ -47,19 +75,34 @@ class GetTemplatesMetricsFromMultipleWabasUseCase:
         data_points: list[dict] = []
 
         for group in waba_templates:
-            for product_type in (
-                ProductType.CLOUD_API.value,
-                ProductType.MM_LITE.value,
-            ):
-                data_points.extend(
-                    self._fetch_analytics_in_chunks(
-                        waba_id=group.waba_id,
-                        template_ids=group.template_ids,
-                        start_date=start_date,
-                        end_date=end_date,
-                        product_type=product_type,
-                    )
+            periods = resolve_waba_analytics_periods(
+                current_waba_id=group.waba_id,
+                start_date=start_date,
+                end_date=end_date,
+            )
+
+            for period in periods:
+                template_ids = self._template_ids_for_period(
+                    current_waba_id=group.waba_id,
+                    period=period,
+                    new_template_ids=group.template_ids,
                 )
+                if not template_ids:
+                    continue
+
+                for product_type in (
+                    ProductType.CLOUD_API.value,
+                    ProductType.MM_LITE.value,
+                ):
+                    data_points.extend(
+                        self._fetch_analytics_in_chunks(
+                            waba_id=period.waba_id,
+                            template_ids=template_ids,
+                            start_date=period.start_date,
+                            end_date=period.end_date,
+                            product_type=product_type,
+                        )
+                    )
 
         result = {
             "sent": 0,
