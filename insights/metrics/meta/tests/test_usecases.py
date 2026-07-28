@@ -113,6 +113,10 @@ class TestSaveWhatsappIntegrationUseCase(TestCase):
 
     def test_creates_migration_data_when_old_waba_id_is_provided(self):
         old_waba_id = "old_waba_999"
+        old_phone = {
+            "id": "different-phone-id",
+            "display_phone_number": "+55 11 11111 1111",
+        }
         existing = Dashboard.objects.create(
             project=self.project,
             name="Old Waba Dashboard",
@@ -120,10 +124,7 @@ class TestSaveWhatsappIntegrationUseCase(TestCase):
                 "is_whatsapp_integration": True,
                 "app_uuid": str(uuid.uuid4()),
                 "waba_id": old_waba_id,
-                "phone_number": {
-                    "id": "different-phone-id",
-                    "display_phone_number": "+55 11 11111 1111",
-                },
+                "phone_number": old_phone,
             },
         )
 
@@ -136,6 +137,7 @@ class TestSaveWhatsappIntegrationUseCase(TestCase):
         )
 
         self.assertNotEqual(dashboard.pk, existing.pk)
+        self.assertEqual(dashboard.config["phone_number"], old_phone)
         self.assertIn("migration_data", dashboard.config)
         self.assertEqual(dashboard.config["migration_data"]["waba_id"], old_waba_id)
         self.assertIn("migrated_at", dashboard.config["migration_data"])
@@ -146,6 +148,105 @@ class TestSaveWhatsappIntegrationUseCase(TestCase):
 
         soft_deleted = Dashboard.all_objects.get(pk=existing.pk)
         self.assertTrue(soft_deleted.is_deleted)
+
+    def test_migrates_all_dashboards_with_same_old_waba_id(self):
+        old_waba_id = "old_waba_multi"
+        phone_a = {
+            "id": "phone-a",
+            "display_phone_number": "+55 11 5116-1712",
+        }
+        phone_b = {
+            "id": "phone-b",
+            "display_phone_number": "+55 11 3164-0630",
+        }
+        dash_a = Dashboard.objects.create(
+            project=self.project,
+            name="Meta A",
+            config={
+                "is_whatsapp_integration": True,
+                "app_uuid": str(uuid.uuid4()),
+                "waba_id": old_waba_id,
+                "is_mm_lite_active": True,
+                "phone_number": phone_a,
+            },
+        )
+        dash_b = Dashboard.objects.create(
+            project=self.project,
+            name="Meta B",
+            config={
+                "is_whatsapp_integration": True,
+                "app_uuid": str(uuid.uuid4()),
+                "waba_id": old_waba_id,
+                "phone_number": phone_b,
+            },
+        )
+
+        returned = SaveWhatsappIntegrationUseCase().execute(
+            project=self.project,
+            app_uuid=self.app_uuid,
+            waba_id=self.waba_id,
+            phone_number=phone_a,
+            old_waba_id=old_waba_id,
+        )
+
+        active = list(
+            Dashboard.objects.filter(
+                project=self.project,
+                config__is_whatsapp_integration=True,
+                config__waba_id=self.waba_id,
+            )
+        )
+        self.assertEqual(len(active), 2)
+        self.assertEqual(
+            {(d.config["phone_number"]["id"]) for d in active},
+            {"phone-a", "phone-b"},
+        )
+        for dashboard in active:
+            self.assertEqual(dashboard.config["migration_data"]["waba_id"], old_waba_id)
+            self.assertIn("migrated_at", dashboard.config["migration_data"])
+            self.assertEqual(dashboard.config["app_uuid"], str(self.app_uuid))
+
+        self.assertEqual(returned.config["phone_number"]["id"], "phone-a")
+        self.assertTrue(Dashboard.all_objects.get(pk=dash_a.pk).is_deleted)
+        self.assertTrue(Dashboard.all_objects.get(pk=dash_b.pk).is_deleted)
+        self.assertTrue(
+            Dashboard.objects.get(
+                project=self.project,
+                config__phone_number__id="phone-a",
+            ).config["is_mm_lite_active"]
+        )
+
+    def test_upsert_by_phone_does_not_delete_other_numbers_on_same_waba(self):
+        other_phone = {
+            "id": "other-phone",
+            "display_phone_number": "+55 11 2222-2222",
+        }
+        other = Dashboard.objects.create(
+            project=self.project,
+            name="Other Number",
+            config={
+                "is_whatsapp_integration": True,
+                "app_uuid": str(uuid.uuid4()),
+                "waba_id": self.waba_id,
+                "phone_number": other_phone,
+            },
+        )
+
+        SaveWhatsappIntegrationUseCase().execute(
+            project=self.project,
+            app_uuid=self.app_uuid,
+            waba_id=self.waba_id,
+            phone_number=self.phone_number,
+        )
+
+        other.refresh_from_db()
+        self.assertFalse(other.is_deleted)
+        self.assertEqual(
+            Dashboard.objects.filter(
+                project=self.project, config__is_whatsapp_integration=True
+            ).count(),
+            2,
+        )
 
     def test_does_not_update_dashboard_from_a_different_project(self):
         other_project = Project.objects.create(name="Other Project")
