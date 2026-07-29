@@ -10,6 +10,7 @@ from insights.metrics.meta.usecases.waba_migration_analytics import (
     find_exact_template_id_by_name,
     merge_buttons_analytics,
     merge_messages_analytics,
+    merge_pricing_analytics_responses,
     resolve_old_template_id,
     resolve_waba_analytics_periods,
 )
@@ -577,3 +578,183 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             ),
         )
         self.assertEqual(result["data"][0]["total"], 10)
+
+    def test_conversations_by_category_calls_only_old_waba_for_pre_migration_range(self):
+        self.meta_client.get_conversations_by_category.return_value = {
+            "pricing_analytics": {
+                "data": [
+                    {
+                        "data_points": [
+                            {"pricing_category": "MARKETING", "volume": 10, "cost": 0}
+                        ]
+                    }
+                ]
+            }
+        }
+
+        result = self.usecase.get_conversations_by_category(
+            waba_id=self.current_waba_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 10),
+        )
+
+        self.meta_client.get_conversations_by_category.assert_called_once_with(
+            waba_id=self.old_waba_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 10),
+        )
+        self.assertEqual(
+            result["pricing_analytics"]["data"][0]["data_points"][0]["volume"], 10
+        )
+
+    def test_conversations_by_category_calls_only_new_waba_for_post_migration_range(
+        self,
+    ):
+        self.meta_client.get_conversations_by_category.return_value = {
+            "pricing_analytics": {
+                "data": [
+                    {
+                        "data_points": [
+                            {"pricing_category": "MARKETING", "volume": 5, "cost": 0}
+                        ]
+                    }
+                ]
+            }
+        }
+
+        self.usecase.get_conversations_by_category(
+            waba_id=self.current_waba_id,
+            start_date=date(2026, 3, 20),
+            end_date=date(2026, 3, 31),
+        )
+
+        self.meta_client.get_conversations_by_category.assert_called_once_with(
+            waba_id=self.current_waba_id,
+            start_date=date(2026, 3, 20),
+            end_date=date(2026, 3, 31),
+        )
+
+    def test_conversations_by_category_merges_both_wabas_when_range_crosses_migration(
+        self,
+    ):
+        self.meta_client.get_conversations_by_category.side_effect = [
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 10,
+                                    "cost": 0,
+                                },
+                                {
+                                    "pricing_category": "UTILITY",
+                                    "volume": 3,
+                                    "cost": 0,
+                                },
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 5,
+                                    "cost": 0,
+                                },
+                                {
+                                    "pricing_category": "SERVICE",
+                                    "volume": 2,
+                                    "cost": 0,
+                                },
+                            ]
+                        }
+                    ]
+                }
+            },
+        ]
+
+        result = self.usecase.get_conversations_by_category(
+            waba_id=self.current_waba_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 31),
+        )
+
+        self.assertEqual(self.meta_client.get_conversations_by_category.call_count, 2)
+        self.assertEqual(
+            self.meta_client.get_conversations_by_category.call_args_list[0],
+            call(
+                waba_id=self.old_waba_id,
+                start_date=date(2026, 3, 1),
+                end_date=date(2026, 3, 15),
+            ),
+        )
+        self.assertEqual(
+            self.meta_client.get_conversations_by_category.call_args_list[1],
+            call(
+                waba_id=self.current_waba_id,
+                start_date=date(2026, 3, 15),
+                end_date=date(2026, 3, 31),
+            ),
+        )
+        self.assertEqual(
+            len(result["pricing_analytics"]["data"][0]["data_points"]), 4
+        )
+
+
+class TestMergePricingAnalyticsResponses(TestCase):
+    def test_concatenates_data_points_from_multiple_responses(self):
+        responses = [
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 10,
+                                    "cost": 0,
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 5,
+                                    "cost": 0,
+                                },
+                                {
+                                    "pricing_category": "SERVICE",
+                                    "volume": 2,
+                                    "cost": 0,
+                                },
+                            ]
+                        }
+                    ]
+                }
+            },
+        ]
+
+        merged = merge_pricing_analytics_responses(responses)
+
+        self.assertEqual(
+            merged["pricing_analytics"]["data"][0]["data_points"],
+            [
+                {"pricing_category": "MARKETING", "volume": 10, "cost": 0},
+                {"pricing_category": "MARKETING", "volume": 5, "cost": 0},
+                {"pricing_category": "SERVICE", "volume": 2, "cost": 0},
+            ],
+        )
