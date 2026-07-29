@@ -1,3 +1,4 @@
+from copy import deepcopy
 from uuid import UUID
 from insights.celery import app
 import logging
@@ -5,8 +6,13 @@ from datetime import datetime
 
 from django.conf import settings
 
+from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.meta.services import MetaMessageTemplatesService
+from insights.metrics.meta.usecases.waba_migration_analytics import (
+    resolve_new_template_id,
+)
 from insights.dashboards.models import Dashboard
+from insights.widgets.models import Widget
 from sentry_sdk import capture_exception
 from django.utils import timezone
 from django.db.models import Q
@@ -142,3 +148,133 @@ def move_favorite_templates(
             exc_info=True,
         )
         raise
+
+
+@app.task
+def migrate_widgets_waba_config(
+    project_uuid: str,
+    old_waba_id: str,
+    new_waba_id: str,
+):
+    """
+    Update vtex_conversions widgets that store waba_id (and template_id) in
+    config.filter after a WABA migration.
+
+    Only the matching filter keys are changed; every other config field is kept.
+    """
+    if not old_waba_id or not new_waba_id or old_waba_id == new_waba_id:
+        logger.info(
+            "Skipping widget WABA config migration for project=%s "
+            "(old_waba_id=%s, new_waba_id=%s)",
+            project_uuid,
+            old_waba_id,
+            new_waba_id,
+        )
+        return
+
+    try:
+        project = Project.objects.get(uuid=project_uuid)
+    except Project.DoesNotExist as e:
+        event_id = capture_exception(e)
+        logger.error(
+            "Project %s not found while migrating widget WABA configs. Event ID: %s",
+            project_uuid,
+            event_id,
+            exc_info=True,
+        )
+        return
+
+    widgets = Widget.objects.filter(
+        dashboard__project=project,
+        source="vtex_conversions",
+        config__filter__waba_id=old_waba_id,
+    )
+
+    if not widgets.exists():
+        logger.info(
+            "No vtex_conversions widgets with filter.waba_id=%s for project=%s",
+            old_waba_id,
+            project_uuid,
+        )
+        return
+
+    meta_client = MetaGraphAPIClient()
+    template_id_cache: dict[str, str | None] = {}
+    updated_count = 0
+
+    for widget in widgets.iterator():
+        try:
+            if _update_widget_waba_filter(
+                widget=widget,
+                old_waba_id=old_waba_id,
+                new_waba_id=new_waba_id,
+                meta_client=meta_client,
+                template_id_cache=template_id_cache,
+            ):
+                updated_count += 1
+        except Exception as e:
+            event_id = capture_exception(e)
+            logger.error(
+                "Error migrating widget %s WABA config "
+                "(old_waba_id=%s, new_waba_id=%s). Event ID: %s",
+                widget.uuid,
+                old_waba_id,
+                new_waba_id,
+                event_id,
+                exc_info=True,
+            )
+
+    logger.info(
+        "Migrated WABA config on %s widgets for project=%s "
+        "(old_waba_id=%s, new_waba_id=%s)",
+        updated_count,
+        project_uuid,
+        old_waba_id,
+        new_waba_id,
+    )
+
+
+def _update_widget_waba_filter(
+    *,
+    widget: Widget,
+    old_waba_id: str,
+    new_waba_id: str,
+    meta_client: MetaGraphAPIClient,
+    template_id_cache: dict[str, str | None],
+) -> bool:
+    config = deepcopy(widget.config) if widget.config else {}
+    filters = config.get("filter")
+
+    if not isinstance(filters, dict):
+        return False
+
+    if filters.get("waba_id") != old_waba_id:
+        return False
+
+    filters["waba_id"] = new_waba_id
+
+    old_template_id = filters.get("template_id")
+    if old_template_id:
+        if old_template_id not in template_id_cache:
+            template_id_cache[old_template_id] = resolve_new_template_id(
+                meta_client,
+                new_waba_id=new_waba_id,
+                old_template_id=str(old_template_id),
+            )
+
+        new_template_id = template_id_cache[old_template_id]
+        if new_template_id:
+            filters["template_id"] = new_template_id
+        else:
+            logger.warning(
+                "Keeping original template_id=%s on widget=%s; "
+                "could not resolve equivalent on new_waba_id=%s",
+                old_template_id,
+                widget.uuid,
+                new_waba_id,
+            )
+
+    config["filter"] = filters
+    widget.config = config
+    widget.save(update_fields=["config"])
+    return True

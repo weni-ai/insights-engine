@@ -42,6 +42,16 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
 
         self.user = User.objects.create_user(email="test@test.com")
         self.client.force_authenticate(user=self.user)
+        self.widgets_migration_patcher = patch(
+            "insights.metrics.meta.tasks.migrate_widgets_waba_config.apply_async"
+        )
+        self.widgets_migration_patcher.start()
+        self.addCleanup(self.widgets_migration_patcher.stop)
+        self.favorites_migration_patcher = patch(
+            "insights.metrics.meta.tasks.move_favorite_templates.delay"
+        )
+        self.favorites_migration_patcher.start()
+        self.addCleanup(self.favorites_migration_patcher.stop)
 
     def test_cannot_receive_integration_data_when_not_internal_user(self):
         response = self.receive_integration_data({})
