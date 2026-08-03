@@ -69,17 +69,21 @@ def resolve_waba_analytics_periods(
 
     Cutover rule (migrated_at date in UTC):
     - days strictly before migrated_at → old WABA only
-    - days strictly after migrated_at → current WABA only
-    - the migration day itself is included in BOTH requests
+    - any range that includes migrated_at or later → query old for the FULL
+      requested range AND current from migrated_at (or start) to end
 
-    Migrations do not happen at midnight. Meta analytics is daily, so including
-    the cutover day on both WABAs keeps morning traffic on the old WABA and
-    afternoon traffic on the new one. Merging sums that day without losing data.
+    Traffic can keep landing on the old WABA after migrated_at (e.g. delayed
+    cutover, dual routing). Stopping the old query at migrated_at undercounts.
+    Overlapping days are merged by summing; when the new WABA has no volume,
+    the sum keeps the old WABA totals.
+
+    The migration day is included in BOTH requests so morning traffic on the
+    old WABA and afternoon traffic on the new one are both kept.
 
     Examples (migrated_at = 2026-03-15):
     - 03-01..03-10 → only old
-    - 03-20..03-31 → only current
-    - 03-01..03-31 → old (03-01..03-15) + current (03-15..03-31)
+    - 03-20..03-31 → old (03-20..03-31) + current (03-20..03-31)
+    - 03-01..03-31 → old (03-01..03-31) + current (03-15..03-31)
     - 03-15..03-15 → old (03-15) + current (03-15)
     """
     start = _as_date(start_date)
@@ -110,38 +114,21 @@ def resolve_waba_analytics_periods(
             )
         ]
 
-    # Entire range is strictly after the migration day.
-    if start > migrated_at:
-        return [
-            WabaAnalyticsPeriod(
-                waba_id=current_waba_id,
-                start_date=start_date,
-                end_date=end_date,
-            )
-        ]
-
-    # Range includes the migration day: query both WABAs for that day.
-    periods: list[WabaAnalyticsPeriod] = []
-
-    if start <= migrated_at:
-        periods.append(
-            WabaAnalyticsPeriod(
-                waba_id=old_waba_id,
-                start_date=start,
-                end_date=min(end, migrated_at),
-            )
-        )
-
-    if end >= migrated_at:
-        periods.append(
-            WabaAnalyticsPeriod(
-                waba_id=current_waba_id,
-                start_date=max(start, migrated_at),
-                end_date=end,
-            )
-        )
-
-    return periods
+    # Range reaches the migration day or later: keep querying the old WABA for
+    # the full filter window (post-migration traffic may still land there),
+    # and also query the current WABA from the cutover day onward.
+    return [
+        WabaAnalyticsPeriod(
+            waba_id=old_waba_id,
+            start_date=start,
+            end_date=end,
+        ),
+        WabaAnalyticsPeriod(
+            waba_id=current_waba_id,
+            start_date=max(start, migrated_at),
+            end_date=end,
+        ),
+    ]
 
 
 def _recalculate_status_percentages(status_count: dict) -> dict:

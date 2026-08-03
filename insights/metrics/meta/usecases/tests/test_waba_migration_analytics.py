@@ -83,7 +83,7 @@ class TestResolveWabaAnalyticsPeriods(TestCase):
             ],
         )
 
-    def test_returns_only_new_waba_when_range_is_after_migration(self):
+    def test_queries_both_wabas_when_range_is_after_migration(self):
         periods = resolve_waba_analytics_periods(
             current_waba_id=self.current_waba_id,
             start_date=date(2026, 3, 20),
@@ -94,10 +94,15 @@ class TestResolveWabaAnalyticsPeriods(TestCase):
             periods,
             [
                 WabaAnalyticsPeriod(
+                    waba_id=self.old_waba_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                ),
+                WabaAnalyticsPeriod(
                     waba_id=self.current_waba_id,
                     start_date=date(2026, 3, 20),
                     end_date=date(2026, 3, 31),
-                )
+                ),
             ],
         )
 
@@ -114,7 +119,7 @@ class TestResolveWabaAnalyticsPeriods(TestCase):
                 WabaAnalyticsPeriod(
                     waba_id=self.old_waba_id,
                     start_date=date(2026, 3, 1),
-                    end_date=date(2026, 3, 15),
+                    end_date=date(2026, 3, 31),
                 ),
                 WabaAnalyticsPeriod(
                     waba_id=self.current_waba_id,
@@ -415,10 +420,12 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             include_data_points=True,
         )
 
-    def test_calls_only_new_waba_for_post_migration_range(self):
-        self.meta_client.get_messages_analytics.return_value = {
-            "data": {"status_count": {}, "data_points": []}
-        }
+    def test_calls_both_wabas_for_post_migration_range(self):
+        self._mock_old_template_resolution(self.old_template_id)
+        self.meta_client.get_messages_analytics.side_effect = [
+            {"data": {"status_count": {}, "data_points": []}},
+            {"data": {"status_count": {}, "data_points": []}},
+        ]
 
         self.usecase.get_messages_analytics(
             waba_id=self.current_waba_id,
@@ -427,15 +434,25 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             end_date=date(2026, 3, 31),
         )
 
-        self.meta_client.get_messages_analytics.assert_called_once_with(
-            waba_id=self.current_waba_id,
-            template_id=self.new_template_id,
-            start_date=date(2026, 3, 20),
-            end_date=date(2026, 3, 31),
-            include_data_points=True,
+        self.assertEqual(
+            self.meta_client.get_messages_analytics.call_args_list,
+            [
+                call(
+                    waba_id=self.old_waba_id,
+                    template_id=self.old_template_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                    include_data_points=True,
+                ),
+                call(
+                    waba_id=self.current_waba_id,
+                    template_id=self.new_template_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                    include_data_points=True,
+                ),
+            ],
         )
-        self.meta_client.get_template_preview.assert_not_called()
-        self.meta_client.get_templates_list.assert_not_called()
 
     def test_calls_both_wabas_with_resolved_template_ids_when_range_crosses_migration(
         self,
@@ -481,7 +498,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                     waba_id=self.old_waba_id,
                     template_id=self.old_template_id,
                     start_date=date(2026, 3, 1),
-                    end_date=date(2026, 3, 15),
+                    end_date=date(2026, 3, 31),
                     include_data_points=False,
                 ),
                 call(
@@ -565,7 +582,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                 waba_id=self.old_waba_id,
                 template_id=self.old_template_id,
                 start_date=date(2026, 3, 1),
-                end_date=date(2026, 3, 15),
+                end_date=date(2026, 3, 31),
             ),
         )
         self.assertEqual(
@@ -607,20 +624,41 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             result["pricing_analytics"]["data"][0]["data_points"][0]["volume"], 10
         )
 
-    def test_conversations_by_category_calls_only_new_waba_for_post_migration_range(
+    def test_conversations_by_category_calls_both_wabas_for_post_migration_range(
         self,
     ):
-        self.meta_client.get_conversations_by_category.return_value = {
-            "pricing_analytics": {
-                "data": [
-                    {
-                        "data_points": [
-                            {"pricing_category": "MARKETING", "volume": 5, "cost": 0}
-                        ]
-                    }
-                ]
-            }
-        }
+        self.meta_client.get_conversations_by_category.side_effect = [
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 3,
+                                    "cost": 0,
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 5,
+                                    "cost": 0,
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+        ]
 
         self.usecase.get_conversations_by_category(
             waba_id=self.current_waba_id,
@@ -628,10 +666,20 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             end_date=date(2026, 3, 31),
         )
 
-        self.meta_client.get_conversations_by_category.assert_called_once_with(
-            waba_id=self.current_waba_id,
-            start_date=date(2026, 3, 20),
-            end_date=date(2026, 3, 31),
+        self.assertEqual(
+            self.meta_client.get_conversations_by_category.call_args_list,
+            [
+                call(
+                    waba_id=self.old_waba_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                ),
+                call(
+                    waba_id=self.current_waba_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                ),
+            ],
         )
 
     def test_conversations_by_category_merges_both_wabas_when_range_crosses_migration(
@@ -692,7 +740,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             call(
                 waba_id=self.old_waba_id,
                 start_date=date(2026, 3, 1),
-                end_date=date(2026, 3, 15),
+                end_date=date(2026, 3, 31),
             ),
         )
         self.assertEqual(

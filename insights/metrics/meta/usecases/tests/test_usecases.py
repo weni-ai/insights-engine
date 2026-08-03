@@ -414,7 +414,7 @@ class TestGetTemplatesMetricsFromMultipleWabasUseCase(TestCase):
         self.assertEqual(result["clicked"], 4)
 
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
-    def test_queries_only_current_waba_when_range_is_after_migration(
+    def test_queries_both_wabas_when_range_is_after_migration(
         self, mock_analytics
     ):
         current_waba_id = "new_waba"
@@ -431,24 +431,59 @@ class TestGetTemplatesMetricsFromMultipleWabasUseCase(TestCase):
             }
         }
 
-        usecase = GetTemplatesMetricsFromMultipleWabasUseCase()
-        result = usecase.execute(
-            waba_templates=[
-                WabaTemplateIDs(waba_id=current_waba_id, template_ids=["new_t1"]),
-            ],
-            start_date=date(2026, 3, 20),
-            end_date=date(2026, 3, 31),
-        )
+        with (
+            patch(
+                "insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview"
+            ) as mock_preview,
+            patch(
+                "insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list"
+            ) as mock_list,
+        ):
+            mock_preview.return_value = {"name": "weni_abandoned_cart"}
+            mock_list.return_value = {
+                "data": [{"name": "weni_abandoned_cart", "id": "old_t1"}]
+            }
 
-        self.assertEqual(mock_analytics.call_count, 2)
-        for call in mock_analytics.call_args_list:
-            self.assertEqual(call.kwargs["waba_id"], current_waba_id)
+            usecase = GetTemplatesMetricsFromMultipleWabasUseCase()
+            result = usecase.execute(
+                waba_templates=[
+                    WabaTemplateIDs(waba_id=current_waba_id, template_ids=["new_t1"]),
+                ],
+                start_date=date(2026, 3, 20),
+                end_date=date(2026, 3, 31),
+            )
+
+        # 2 periods (old + new) x 2 product types
+        self.assertEqual(mock_analytics.call_count, 4)
+
+        old_calls = [
+            call
+            for call in mock_analytics.call_args_list
+            if call.kwargs["waba_id"] == old_waba_id
+        ]
+        new_calls = [
+            call
+            for call in mock_analytics.call_args_list
+            if call.kwargs["waba_id"] == current_waba_id
+        ]
+        self.assertEqual(len(old_calls), 2)
+        self.assertEqual(len(new_calls), 2)
+
+        for call in old_calls:
+            self.assertEqual(call.kwargs["template_id"], ["old_t1"])
+            self.assertEqual(call.kwargs["start_date"], date(2026, 3, 20))
+            self.assertEqual(call.kwargs["end_date"], date(2026, 3, 31))
+
+        for call in new_calls:
             self.assertEqual(call.kwargs["template_id"], ["new_t1"])
+            self.assertEqual(call.kwargs["start_date"], date(2026, 3, 20))
+            self.assertEqual(call.kwargs["end_date"], date(2026, 3, 31))
 
-        self.assertEqual(result["sent"], 14)
-        self.assertEqual(result["delivered"], 12)
-        self.assertEqual(result["read"], 8)
-        self.assertEqual(result["clicked"], 2)
+        # 4 calls x (7, 6, 4, 1)
+        self.assertEqual(result["sent"], 28)
+        self.assertEqual(result["delivered"], 24)
+        self.assertEqual(result["read"], 16)
+        self.assertEqual(result["clicked"], 4)
 
     @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
     def test_queries_both_wabas_when_range_crosses_migration(self, mock_analytics):
@@ -509,7 +544,7 @@ class TestGetTemplatesMetricsFromMultipleWabasUseCase(TestCase):
         for call in old_calls:
             self.assertEqual(call.kwargs["template_id"], ["old_t1"])
             self.assertEqual(call.kwargs["start_date"], date(2026, 3, 1))
-            self.assertEqual(call.kwargs["end_date"], date(2026, 3, 15))
+            self.assertEqual(call.kwargs["end_date"], date(2026, 3, 31))
 
         for call in new_calls:
             self.assertEqual(call.kwargs["template_id"], ["new_t1"])
