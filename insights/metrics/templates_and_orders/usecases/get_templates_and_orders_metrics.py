@@ -17,6 +17,7 @@ from insights.metrics.templates_and_orders.exceptions import (
     ErrorGettingOrdersMetrics,
     TemplatesNotFoundError,
 )
+from insights.metrics.vtex.date_utils import to_utc_range
 from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.projects.models import Project
 
@@ -93,10 +94,11 @@ class GetTemplatesAndOrdersMetrics:
         end_date: date,
     ) -> dict:
         service = OrdersService(project)
+        start_dt, end_dt = to_utc_range(start_date, end_date, project)
 
         filters = {
-            "start_date": start_date,
-            "end_date": end_date,
+            "start_date": start_dt,
+            "end_date": end_dt,
         }
 
         try:
