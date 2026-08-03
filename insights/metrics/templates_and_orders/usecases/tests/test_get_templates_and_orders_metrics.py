@@ -499,6 +499,43 @@ class TestGetTemplatesAndOrdersMetrics(TestCase):
         "insights.metrics.templates_and_orders.usecases"
         ".get_templates_and_orders_metrics.OrdersService"
     )
+    def test_template_metrics_failure_returns_zeroed_templates_and_orders(
+        self, MockOrdersService
+    ):
+        self.mock_get_wabas.execute.return_value = ["waba_1"]
+        self.mock_get_templates.execute.return_value = ["t1"]
+        self.mock_get_metrics.execute.side_effect = Exception("meta unavailable")
+
+        mock_orders_instance = MockOrdersService.return_value
+        mock_orders_instance.get_metrics_from_utm_source.return_value = {
+            "revenue": {
+                "value": 1500,
+                "currency_code": "MXN",
+                "increase_percentage": 0,
+            },
+            "orders_placed": {"value": 10, "increase_percentage": 0},
+        }
+
+        result = self.usecase.execute(
+            project=self.project,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            utm_source=self.utm_source,
+            template_name_prefix=self.template_name_prefix,
+        )
+
+        self.assertEqual(
+            result["template_metrics"],
+            {"sent": 0, "delivered": 0, "read": 0, "clicked": 0},
+        )
+        self.assertEqual(result["orders_metrics"]["revenue"]["value"], 1500)
+        self.assertEqual(result["orders_metrics"]["orders_placed"]["value"], 10)
+        MockOrdersService.assert_called_once()
+
+    @patch(
+        "insights.metrics.templates_and_orders.usecases"
+        ".get_templates_and_orders_metrics.OrdersService"
+    )
     def test_converts_order_dates_to_project_timezone_utc_range(
         self, MockOrdersService
     ):
