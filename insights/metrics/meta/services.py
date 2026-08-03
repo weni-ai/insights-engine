@@ -89,9 +89,12 @@ class MetaMessageTemplatesService:
     ) -> dict:
         """
         Get conversations by category.
+
+        When the WABA was migrated, consolidates pricing analytics from the old
+        and current WABA for the requested date range.
         """
 
-        response: dict = self.client.get_conversations_by_category(
+        response: dict = self.waba_analytics.get_conversations_by_category(
             waba_id=waba_id, start_date=start_date, end_date=end_date
         )
 

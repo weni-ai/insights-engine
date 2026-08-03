@@ -322,6 +322,36 @@ def resolve_old_template_id(
     return old_template_id
 
 
+def extract_pricing_data_points(response: dict | None) -> list:
+    """Extract pricing analytics data_points from a Meta Graph API response."""
+    if not isinstance(response, dict):
+        return []
+
+    data = response.get("pricing_analytics", {}).get("data") or []
+    if not data:
+        return []
+
+    first = data[0] if isinstance(data[0], dict) else {}
+    return list(first.get("data_points") or [])
+
+
+def merge_pricing_analytics_responses(responses: list[dict]) -> dict:
+    """
+    Merge Meta pricing_analytics responses by concatenating data_points.
+
+    Aggregation by category happens later in ConversationsByCategoryAggregations.
+    """
+    all_points: list = []
+    for response in responses:
+        all_points.extend(extract_pricing_data_points(response))
+
+    return {
+        "pricing_analytics": {
+            "data": [{"data_points": all_points}],
+        }
+    }
+
+
 class ConsolidateWabaAnalyticsUseCase:
     """
     Intermediate layer between the service and the Meta client.
@@ -349,6 +379,39 @@ class ConsolidateWabaAnalyticsUseCase:
             merge=merge_buttons_analytics,
             fetch_kwargs=kwargs,
         )
+
+    def get_conversations_by_category(
+        self,
+        *,
+        waba_id: str,
+        start_date: date | datetime,
+        end_date: date | datetime,
+    ) -> dict:
+        """
+        Fetch pricing analytics by category, splitting across WABAs when needed.
+
+        Unlike template analytics, this endpoint is WABA-scoped and does not
+        require template_id remapping.
+        """
+        periods = resolve_waba_analytics_periods(
+            current_waba_id=waba_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        responses = [
+            self.meta_client.get_conversations_by_category(
+                waba_id=period.waba_id,
+                start_date=period.start_date,
+                end_date=period.end_date,
+            )
+            for period in periods
+        ]
+
+        if len(responses) == 1:
+            return responses[0]
+
+        return merge_pricing_analytics_responses(responses)
 
     def _periods_with_template_ids(
         self,
