@@ -571,3 +571,145 @@ class TestGetTemplatesMetricsFromMultipleWabasUseCase(TestCase):
         self.assertEqual(result["delivered"], 4)
         self.assertEqual(result["read"], 2)
         self.assertEqual(result["clicked"], 0)
+
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
+    def test_deduplicates_resolved_old_template_ids(self, mock_analytics):
+        current_waba_id = "new_waba"
+        old_waba_id = "old_waba"
+        self._create_migrated_dashboard(
+            current_waba_id=current_waba_id,
+            old_waba_id=old_waba_id,
+        )
+        mock_analytics.return_value = {
+            "data": {
+                "data_points": [
+                    {"sent": 1, "delivered": 1, "read": 1, "clicked": 1},
+                ]
+            }
+        }
+
+        with (
+            patch(
+                "insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview"
+            ) as mock_preview,
+            patch(
+                "insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list"
+            ) as mock_list,
+        ):
+            mock_preview.return_value = {"name": "weni_abandoned_cart"}
+            mock_list.return_value = {
+                "data": [{"name": "weni_abandoned_cart", "id": "old_t1"}]
+            }
+
+            usecase = GetTemplatesMetricsFromMultipleWabasUseCase()
+            usecase.execute(
+                waba_templates=[
+                    WabaTemplateIDs(
+                        waba_id=current_waba_id,
+                        template_ids=["new_t1", "new_t2"],
+                    ),
+                ],
+                start_date=date(2026, 3, 1),
+                end_date=date(2026, 3, 10),
+            )
+
+        for call in mock_analytics.call_args_list:
+            self.assertEqual(call.kwargs["template_id"], ["old_t1"])
+
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
+    def test_skips_old_template_when_resolve_raises(self, mock_analytics):
+        current_waba_id = "new_waba"
+        old_waba_id = "old_waba"
+        self._create_migrated_dashboard(
+            current_waba_id=current_waba_id,
+            old_waba_id=old_waba_id,
+        )
+        mock_analytics.return_value = {
+            "data": {
+                "data_points": [
+                    {"sent": 3, "delivered": 2, "read": 1, "clicked": 0},
+                ]
+            }
+        }
+
+        with patch(
+            "insights.metrics.meta.usecases.get_templates_metrics_from_multiple_wabas"
+            ".resolve_old_template_id",
+            side_effect=Exception("meta unavailable"),
+        ):
+            usecase = GetTemplatesMetricsFromMultipleWabasUseCase()
+            result = usecase.execute(
+                waba_templates=[
+                    WabaTemplateIDs(
+                        waba_id=current_waba_id, template_ids=["new_t1"]
+                    ),
+                ],
+                start_date=date(2026, 3, 1),
+                end_date=date(2026, 3, 31),
+            )
+
+        self.assertEqual(mock_analytics.call_count, 2)
+        for call in mock_analytics.call_args_list:
+            self.assertEqual(call.kwargs["waba_id"], current_waba_id)
+
+        self.assertEqual(result["sent"], 6)
+        self.assertEqual(result["delivered"], 4)
+        self.assertEqual(result["read"], 2)
+        self.assertEqual(result["clicked"], 0)
+
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
+    def test_skips_old_waba_fetch_when_analytics_raises(self, mock_analytics):
+        current_waba_id = "new_waba"
+        old_waba_id = "old_waba"
+        self._create_migrated_dashboard(
+            current_waba_id=current_waba_id,
+            old_waba_id=old_waba_id,
+        )
+
+        def analytics_side_effect(**kwargs):
+            if kwargs["waba_id"] == old_waba_id:
+                raise Exception("old waba analytics failed")
+            return {
+                "data": {
+                    "data_points": [
+                        {"sent": 4, "delivered": 3, "read": 2, "clicked": 1},
+                    ]
+                }
+            }
+
+        mock_analytics.side_effect = analytics_side_effect
+
+        with (
+            patch(
+                "insights.metrics.meta.clients.MetaGraphAPIClient.get_template_preview"
+            ) as mock_preview,
+            patch(
+                "insights.metrics.meta.clients.MetaGraphAPIClient.get_templates_list"
+            ) as mock_list,
+        ):
+            mock_preview.return_value = {"name": "weni_abandoned_cart"}
+            mock_list.return_value = {
+                "data": [{"name": "weni_abandoned_cart", "id": "old_t1"}]
+            }
+
+            usecase = GetTemplatesMetricsFromMultipleWabasUseCase()
+            result = usecase.execute(
+                waba_templates=[
+                    WabaTemplateIDs(
+                        waba_id=current_waba_id, template_ids=["new_t1"]
+                    ),
+                ],
+                start_date=date(2026, 3, 1),
+                end_date=date(2026, 3, 31),
+            )
+
+        new_calls = [
+            call
+            for call in mock_analytics.call_args_list
+            if call.kwargs["waba_id"] == current_waba_id
+        ]
+        self.assertEqual(len(new_calls), 2)
+        self.assertEqual(result["sent"], 8)
+        self.assertEqual(result["delivered"], 6)
+        self.assertEqual(result["read"], 4)
+        self.assertEqual(result["clicked"], 2)
