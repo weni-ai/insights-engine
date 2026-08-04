@@ -148,13 +148,16 @@ class TestInternalVTEXOrdersViewWithJWTAuthentication(BaseTestInternalVTEXOrders
         self.assertEqual(response.data["end_date"][0].code, "required")
 
     def test_cannot_get_metrics_from_utm_source_without_project_uuid(self):
+        # project_uuid comes from the JWT claim; query omits it on purpose.
         query_params = {
             "utm_source": "weniabandonedcart",
         }
         response = self.get_metrics_from_utm_source(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["project_uuid"][0].code, "required")
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+        self.assertNotIn("project_uuid", response.data)
 
     @patch(
         "insights.metrics.vtex.usecases.utm_source_metrics.OrdersService.get_metrics_from_utm_source"

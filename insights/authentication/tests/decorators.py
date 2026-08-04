@@ -3,10 +3,33 @@ import functools
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
+from weni_commons.auth import TOKEN_TYPE_KEYCLOAK, WeniAuthContext
 
 from insights.projects.models import ProjectAuth
 
 User = get_user_model()
+
+
+def build_keycloak_auth_context(
+    user,
+    *,
+    project=None,
+    project_uuid=None,
+    vtex_account=None,
+    is_internal: bool = False,
+) -> WeniAuthContext:
+    """Build a Keycloak-style ``WeniAuthContext`` for ``force_authenticate``."""
+    resolved_project_uuid = project_uuid
+    if resolved_project_uuid is None and project is not None:
+        resolved_project_uuid = str(project.uuid)
+
+    return WeniAuthContext(
+        project_uuid=str(resolved_project_uuid) if resolved_project_uuid else None,
+        vtex_account=vtex_account,
+        user_email=getattr(user, "email", None),
+        is_internal=is_internal,
+        token_type=TOKEN_TYPE_KEYCLOAK,
+    )
 
 
 def with_project_auth(func):
@@ -16,6 +39,10 @@ def with_project_auth(func):
         user = self.user
 
         ProjectAuth.objects.create(project=project, user=user, role=1)
+        self.client.force_authenticate(
+            user=user,
+            token=build_keycloak_auth_context(user, project=project),
+        )
 
         return func(self, *args, **kwargs)
 
@@ -32,6 +59,14 @@ def with_internal_auth(func):
             content_type=content_type,
         )
         user.user_permissions.add(permission)
+
+        project = getattr(self, "project", None)
+        self.client.force_authenticate(
+            user=user,
+            token=build_keycloak_auth_context(
+                user, project=project, is_internal=True
+            ),
+        )
 
         return func(self, *args, **kwargs)
 
