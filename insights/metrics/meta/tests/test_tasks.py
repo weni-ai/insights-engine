@@ -197,12 +197,17 @@ class TestMoveFavoriteTemplatesTask(TestCase):
         "insights.metrics.meta.usecases.move_favorite_templates."
         "MoveFavoriteTemplatesUseCase.execute"
     )
-    def test_captures_exception(self, mock_execute, mock_capture):
+    def test_captures_and_reraises_exception_for_retry(
+        self, mock_execute, mock_capture
+    ):
+        from celery.exceptions import Retry
+
         from insights.metrics.meta.tasks import move_favorite_templates
 
         mock_execute.side_effect = RuntimeError("boom")
         mock_capture.return_value = "event-789"
 
-        move_favorite_templates(uuid.uuid4(), uuid.uuid4())
+        with self.assertRaises((Retry, RuntimeError)):
+            move_favorite_templates(uuid.uuid4(), uuid.uuid4())
 
         mock_capture.assert_called_once()

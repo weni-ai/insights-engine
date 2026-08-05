@@ -1,12 +1,16 @@
+import logging
 import uuid
 from copy import deepcopy
 from datetime import timezone as dt_timezone
 from typing import TypedDict
 
 from django.utils import timezone
+from sentry_sdk import capture_exception
 
 from insights.dashboards.models import Dashboard
 from insights.projects.models import Project
+
+logger = logging.getLogger(__name__)
 
 
 class WhatsappPhoneNumber(TypedDict):
@@ -290,10 +294,21 @@ class SaveWhatsappIntegrationUseCase:
     ) -> None:
         from insights.metrics.meta.tasks import move_favorite_templates
 
-        move_favorite_templates.delay(
-            str(old_dashboard_uuid),
-            str(new_dashboard_uuid),
-        )
+        try:
+            move_favorite_templates.delay(
+                str(old_dashboard_uuid),
+                str(new_dashboard_uuid),
+            )
+        except Exception as e:
+            event_id = capture_exception(e)
+            logger.error(
+                "Failed to enqueue move_favorite_templates from %s to %s. "
+                "Event ID: %s",
+                old_dashboard_uuid,
+                new_dashboard_uuid,
+                event_id,
+                exc_info=True,
+            )
 
     def _get_main_project(self, project: Project) -> Project | None:
         if not project.org_uuid:

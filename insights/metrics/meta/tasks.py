@@ -104,7 +104,11 @@ def check_marketing_messages_status(dashboard_uuid: UUID):
     dashboard.save(update_fields=["config"])
 
 
-@app.task
+@app.task(
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+    retry_backoff=True,
+)
 def move_favorite_templates(
     old_dashboard_uuid: UUID | str,
     new_dashboard_uuid: UUID | str,
@@ -137,3 +141,4 @@ def move_favorite_templates(
             event_id,
             exc_info=True,
         )
+        raise
