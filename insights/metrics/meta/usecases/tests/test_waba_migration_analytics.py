@@ -11,6 +11,7 @@ from insights.metrics.meta.usecases.waba_migration_analytics import (
     merge_buttons_analytics,
     merge_messages_analytics,
     merge_pricing_analytics_responses,
+    resolve_new_template_id,
     resolve_old_template_id,
     resolve_waba_analytics_periods,
 )
@@ -223,6 +224,57 @@ class TestResolveOldTemplateId(TestCase):
         )
 
         self.assertIsNone(old_template_id)
+        mock_logger.info.assert_called_once()
+
+
+class TestResolveNewTemplateId(TestCase):
+    def setUp(self):
+        self.meta_client = MagicMock()
+        self.new_waba_id = "new_waba"
+        self.old_template_id = "old-template-id"
+
+    def test_resolves_new_template_id_by_exact_name(self):
+        self.meta_client.get_template_preview.return_value = {
+            "name": "weni_abandoned_cart",
+            "id": self.old_template_id,
+        }
+        self.meta_client.get_templates_list.return_value = {
+            "data": [
+                {"id": "similar-id", "name": "weni_abandoned_cart_v2"},
+                {"id": "new-template-id", "name": "weni_abandoned_cart"},
+            ]
+        }
+
+        new_template_id = resolve_new_template_id(
+            self.meta_client,
+            new_waba_id=self.new_waba_id,
+            old_template_id=self.old_template_id,
+        )
+
+        self.assertEqual(new_template_id, "new-template-id")
+        self.meta_client.get_template_preview.assert_called_once_with(
+            template_id=self.old_template_id
+        )
+        self.meta_client.get_templates_list.assert_called_once_with(
+            waba_id=self.new_waba_id,
+            name="weni_abandoned_cart",
+        )
+
+    @patch("insights.metrics.meta.usecases.waba_migration_analytics.logger")
+    def test_returns_none_when_template_missing_on_new_waba(self, mock_logger):
+        self.meta_client.get_template_preview.return_value = {
+            "name": "missing_template",
+            "id": self.old_template_id,
+        }
+        self.meta_client.get_templates_list.return_value = {"data": []}
+
+        new_template_id = resolve_new_template_id(
+            self.meta_client,
+            new_waba_id=self.new_waba_id,
+            old_template_id=self.old_template_id,
+        )
+
+        self.assertIsNone(new_template_id)
         mock_logger.info.assert_called_once()
 
 

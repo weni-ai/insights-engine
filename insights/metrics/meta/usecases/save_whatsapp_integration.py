@@ -30,7 +30,9 @@ class SaveWhatsappIntegrationUseCase:
     (and main project copy, if any) with that waba_id is migrated 1:1 — soft-deleted
     and recreated with the new waba_id and migration_data — so multiple phone
     numbers under the same WABA are all preserved. Favorite templates are moved
-    asynchronously from each old dashboard to the corresponding new one.
+    asynchronously from each old dashboard to the corresponding new one. Custom
+    vtex_conversions widgets that store the old waba_id in config.filter are also
+    updated asynchronously.
 
     Without old_waba_id, matching is by phone_number.id only, so other numbers
     on the same WABA are left untouched.
@@ -111,6 +113,12 @@ class SaveWhatsappIntegrationUseCase:
             created_dashboards=created,
         )
 
+        self._enqueue_widget_waba_migrations(
+            project=project,
+            old_waba_id=old_waba_id,
+            new_waba_id=waba_id,
+        )
+
         if not created:
             return self._upsert_by_phone(
                 project=project,
@@ -126,6 +134,41 @@ class SaveWhatsappIntegrationUseCase:
                 return dashboard
 
         return created[0]
+
+    def _enqueue_widget_waba_migrations(
+        self,
+        *,
+        project: Project,
+        old_waba_id: str,
+        new_waba_id: str,
+    ) -> None:
+        from insights.metrics.meta.tasks import migrate_widgets_waba_config
+
+        project_uuids = {str(project.uuid)}
+        main_project = self._get_main_project(project)
+        if main_project and main_project.pk != project.pk:
+            project_uuids.add(str(main_project.uuid))
+
+        for project_uuid in project_uuids:
+            try:
+                migrate_widgets_waba_config.apply_async(
+                    kwargs={
+                        "project_uuid": project_uuid,
+                        "old_waba_id": old_waba_id,
+                        "new_waba_id": new_waba_id,
+                    }
+                )
+            except Exception as e:
+                event_id = capture_exception(e)
+                logger.error(
+                    "Failed to enqueue migrate_widgets_waba_config for "
+                    "project=%s (old_waba_id=%s, new_waba_id=%s). Event ID: %s",
+                    project_uuid,
+                    old_waba_id,
+                    new_waba_id,
+                    event_id,
+                    exc_info=True,
+                )
 
     def _upsert_by_phone(
         self,

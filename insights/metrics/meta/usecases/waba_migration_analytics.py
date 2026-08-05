@@ -309,6 +309,49 @@ def resolve_old_template_id(
     return old_template_id
 
 
+def resolve_new_template_id(
+    meta_client,
+    *,
+    new_waba_id: str,
+    old_template_id: str,
+) -> str | None:
+    """
+    Resolve the equivalent template id on the new WABA from the old template name.
+
+    Returns None when the template cannot be resolved on the new WABA
+    (e.g. not cloned yet or renamed).
+    """
+    preview = meta_client.get_template_preview(template_id=old_template_id)
+    template_name = (preview or {}).get("name") if isinstance(preview, dict) else None
+
+    if not template_name:
+        logger.info(
+            "Could not resolve template name for template_id=%s when looking up "
+            "equivalent on new_waba_id=%s",
+            old_template_id,
+            new_waba_id,
+        )
+        return None
+
+    templates_response = meta_client.get_templates_list(
+        waba_id=new_waba_id,
+        name=template_name,
+    )
+    new_template_id = find_exact_template_id_by_name(templates_response, template_name)
+
+    if not new_template_id:
+        logger.info(
+            "No exact template name match for name=%s on new_waba_id=%s "
+            "(old_template_id=%s)",
+            template_name,
+            new_waba_id,
+            old_template_id,
+        )
+        return None
+
+    return new_template_id
+
+
 def extract_pricing_data_points(response: dict | None) -> list:
     """Extract pricing analytics data_points from a Meta Graph API response."""
     if not isinstance(response, dict):
