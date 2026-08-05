@@ -1,12 +1,16 @@
+import logging
 import uuid
 from copy import deepcopy
 from datetime import timezone as dt_timezone
 from typing import TypedDict
 
 from django.utils import timezone
+from sentry_sdk import capture_exception
 
 from insights.dashboards.models import Dashboard
 from insights.projects.models import Project
+
+logger = logging.getLogger(__name__)
 
 
 class WhatsappPhoneNumber(TypedDict):
@@ -25,7 +29,8 @@ class SaveWhatsappIntegrationUseCase:
     When old_waba_id is provided, every active WhatsApp dashboard in the project
     (and main project copy, if any) with that waba_id is migrated 1:1 — soft-deleted
     and recreated with the new waba_id and migration_data — so multiple phone
-    numbers under the same WABA are all preserved.
+    numbers under the same WABA are all preserved. Favorite templates are moved
+    asynchronously from each old dashboard to the corresponding new one.
 
     Without old_waba_id, matching is by phone_number.id only, so other numbers
     on the same WABA are left untouched.
@@ -257,6 +262,7 @@ class SaveWhatsappIntegrationUseCase:
         if migration_data is not None:
             config["migration_data"] = migration_data
 
+        old_dashboard_uuid = source.uuid if source is not None else None
         if source is not None:
             source.delete()
 
@@ -266,11 +272,43 @@ class SaveWhatsappIntegrationUseCase:
             else None
         ) or "unknown"
 
-        return Dashboard.objects.create(
+        dashboard = Dashboard.objects.create(
             project=project,
             config=config,
             name=f"{name_prefix} {display}",
         )
+
+        if old_dashboard_uuid is not None and migration_data is not None:
+            self._enqueue_move_favorite_templates(
+                old_dashboard_uuid=old_dashboard_uuid,
+                new_dashboard_uuid=dashboard.uuid,
+            )
+
+        return dashboard
+
+    def _enqueue_move_favorite_templates(
+        self,
+        *,
+        old_dashboard_uuid: uuid.UUID,
+        new_dashboard_uuid: uuid.UUID,
+    ) -> None:
+        from insights.metrics.meta.tasks import move_favorite_templates
+
+        try:
+            move_favorite_templates.delay(
+                str(old_dashboard_uuid),
+                str(new_dashboard_uuid),
+            )
+        except Exception as e:
+            event_id = capture_exception(e)
+            logger.error(
+                "Failed to enqueue move_favorite_templates from %s to %s. "
+                "Event ID: %s",
+                old_dashboard_uuid,
+                new_dashboard_uuid,
+                event_id,
+                exc_info=True,
+            )
 
     def _get_main_project(self, project: Project) -> Project | None:
         if not project.org_uuid:
