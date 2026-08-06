@@ -30,9 +30,11 @@ def request_with_retry(
             return response
         except requests.exceptions.RequestException as e:
             if retry == max_retries - 1:
-                logger.error(f"Error making request: {e}")
+                logger.warning("Error making request: %s", e)
                 raise e
 
             time.sleep(wait_time)
             wait_time *= 2
-            logger.error(f"Error making request: {e}. Retrying in {wait_time} seconds.")
+            logger.warning(
+                "Error making request: %s. Retrying in %s seconds.", e, wait_time
+            )

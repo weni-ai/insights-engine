@@ -6,7 +6,6 @@ from datetime import date, datetime
 
 from django.conf import settings
 from rest_framework.exceptions import ValidationError, NotFound
-from sentry_sdk import capture_exception
 
 from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes, ProductType
 from insights.metrics.meta.exception import MarketingMessagesStatusError
@@ -71,16 +70,13 @@ class MetaGraphAPIClient:
             )
             response.raise_for_status()
         except requests.HTTPError as err:
-            logger.error(
+            logger.warning(
                 "Error getting templates list: %s. Original exception: %s",
                 err.response.text,
                 err,
-                exc_info=True,
             )
-            event_id = capture_exception(err)
-
             raise ValidationError(
-                {"error": f"An error has occurred. Event ID: {event_id}"},
+                {"error": "An error has occurred"},
                 code="meta_api_error",
             ) from err
 
@@ -101,16 +97,13 @@ class MetaGraphAPIClient:
             response = requests.get(url, headers=self.headers, timeout=60)
             response.raise_for_status()
         except requests.HTTPError as err:
-            logger.error(
+            logger.warning(
                 "Error getting template preview: %s. Original exception: %s",
                 err.response.text,
                 err,
-                exc_info=True,
             )
-            event_id = capture_exception(err)
-
             raise ValidationError(
-                {"error": f"An error has occurred. Event ID: {event_id}"},
+                {"error": "An error has occurred"},
                 code="meta_api_error",
             ) from err
 
@@ -186,19 +179,16 @@ class MetaGraphAPIClient:
             response.raise_for_status()
 
         except requests.HTTPError as err:
-            logger.error(
+            logger.warning(
                 "Error getting messages analytics: %s. Original exception: %s",
                 err.response.text,
                 err,
-                exc_info=True,
             )
-            event_id = capture_exception(err)
-
             if return_exceptions:
                 raise err
 
             raise ValidationError(
-                {"error": f"An error has occurred. Event ID: {event_id}"},
+                {"error": "An error has occurred"},
                 code="meta_api_error",
             ) from err
 
@@ -291,16 +281,13 @@ class MetaGraphAPIClient:
                     {"error": "Template not found"}, code="template_not_found"
                 ) from err
 
-            logger.error(
+            logger.warning(
                 "Error getting buttons analytics: %s. Original exception: %s",
                 err.response.text,
                 err,
-                exc_info=True,
             )
-            event_id = capture_exception(err)
-
             raise ValidationError(
-                {"error": f"An error has occurred. Event ID: {event_id}"},
+                {"error": "An error has occurred"},
                 code="meta_api_error",
             ) from err
 
@@ -337,13 +324,11 @@ class MetaGraphAPIClient:
             )
             response.raise_for_status()
         except requests.HTTPError as err:
-            logger.error(
+            logger.warning(
                 "Error getting conversations by category: %s. Original exception: %s",
                 err.response.text,
                 err,
-                exc_info=True,
             )
-
             raise err
 
         return response.json()
@@ -361,17 +346,11 @@ class MetaGraphAPIClient:
             )
             response.raise_for_status()
         except requests.HTTPError as err:
-            logger.error(
+            logger.warning(
                 "Error checking marketing messages status: %s. Original exception: %s",
                 err.response.text,
                 err,
-                exc_info=True,
             )
-
-            event_id = capture_exception(err)
-
-            raise MarketingMessagesStatusError(
-                f"An error has occurred. Event ID: {event_id}"
-            ) from err
+            raise MarketingMessagesStatusError("An error has occurred") from err
 
         return response.json()

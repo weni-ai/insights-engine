@@ -3,6 +3,7 @@ import logging
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -80,13 +81,13 @@ class SkillsMetricsView(WeniAuthViewMixin, APIView):
         try:
             metrics = service.get_metrics()
         except (MissingFiltersError, InvalidDateRangeError, TemplateNotFound) as error:
-            logger.exception(
-                "Error getting metrics for skill: %s", str(error), exc_info=True
-            )
+            logger.warning("Expected error getting metrics for skill: %s", error)
             return Response(
                 {"error": str(error)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        except ValidationError:
+            raise
         except Exception as error:
             capture_exception(error)
             logger.exception(
