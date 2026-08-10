@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_spectacular",
     "weni.feature_flags",
+    "weni.eda.django.eda_app",
 ]
 
 if ADMIN_ENABLED is True:
@@ -333,6 +334,8 @@ EDA_CONSUMERS_HANDLES = {
 
 
 if USE_EDA:
+    # RabbitMQ (edaconsume) uses the Insights backend via EventDrivenAPP.
+    # Amazon MQ (edaconsume_amq) forces the Weni EDA backend in the command.
     EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"
     _command = sys.argv[1] if len(sys.argv) > 1 else None
     EDA_CONSUMERS_HANDLE = EDA_CONSUMERS_HANDLES.get(
@@ -350,7 +353,7 @@ if USE_EDA:
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
 
 # Amazon MQ
-AMQ_BROKER_HOST = env.str("AMQ_BROKER_HOST", default="localhost:5672")
+AMQ_BROKER_HOST = env.str("AMQ_BROKER_HOST", default="localhost")
 AMQ_BROKER_PORT = env.int("AMQ_BROKER_PORT", default=5671)
 AMQ_BROKER_USER = env.str("AMQ_BROKER_USER", default="guest")
 AMQ_BROKER_PASSWORD = env.str("AMQ_BROKER_PASSWORD", default="guest")

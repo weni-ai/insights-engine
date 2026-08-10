@@ -1,3 +1,7 @@
+# 1.35.1
+# Fix
+  - Amazon MQ project consumer startup using Weni EDA backend and params factory
+
 # 1.35.0
 # Add
   - Risk alert goals metrics in human support average times and rooms endpoints
