@@ -1,3 +1,8 @@
+# 1.36.0
+# Change
+  - Project creation consumer to use weni-eda event envelope (event_type/data)
+  - Update weni-commons to 1.4.1 and weni-eda to 0.3.0
+
 # 1.35.1
 # Fix
   - Amazon MQ project consumer startup using Weni EDA backend and params factory

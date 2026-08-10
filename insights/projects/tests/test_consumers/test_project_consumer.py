@@ -5,6 +5,7 @@ from uuid import uuid4
 from django.test import TestCase
 
 from insights.projects.consumers.project_consumer import (
+    EVENT_TYPE_PROJECT_CREATED,
     OldProjectConsumer,
     WeniEDAProjectConsumer,
     get_inline_agent_switch,
@@ -117,32 +118,36 @@ class TestOldProjectConsumer(TestCase):
 
 
 class TestWeniEDAProjectConsumer(TestCase):
-    def _make_message(self, body: dict) -> MagicMock:
+    def _make_message(self, event_type: str, data: dict) -> MagicMock:
+        event = MagicMock()
+        event.event_type = event_type
+        event.data = data
+
         message = MagicMock()
-        message.body = json.dumps(body).encode()
-        message.delivery_tag = "test-delivery-tag"
-        message.channel = MagicMock()
+        message.event.return_value = event
         return message
 
     @patch("insights.projects.consumers.project_consumer.ProjectAuthCreationUseCase")
     @patch("insights.projects.consumers.project_consumer.ProjectsUseCase")
-    def test_consume_processes_message_and_acks(self, mock_projects_uc, mock_auth_uc):
+    def test_consume_project_created_and_acks(self, mock_projects_uc, mock_auth_uc):
         project_uuid = str(uuid4())
         org_uuid = str(uuid4())
         mock_project = MagicMock()
         mock_project.uuid = project_uuid
         mock_projects_uc.return_value.create_project.return_value = mock_project
 
-        body = {
-            "uuid": project_uuid,
-            "name": "Test Project",
-            "is_template": False,
-            "date_format": "DD/MM/YYYY",
-            "timezone": "UTC",
-            "organization_uuid": org_uuid,
-            "authorizations": [],
-        }
-        message = self._make_message(body)
+        message = self._make_message(
+            EVENT_TYPE_PROJECT_CREATED,
+            {
+                "uuid": project_uuid,
+                "name": "Test Project",
+                "is_template": False,
+                "date_format": "DD/MM/YYYY",
+                "timezone": "UTC",
+                "organization_uuid": org_uuid,
+                "authorizations": [],
+            },
+        )
 
         consumer = WeniEDAProjectConsumer()
         consumer.ack = MagicMock()
@@ -150,11 +155,40 @@ class TestWeniEDAProjectConsumer(TestCase):
         consumer.consume(message)
 
         mock_projects_uc.return_value.create_project.assert_called_once()
+        dto = mock_projects_uc.return_value.create_project.call_args[0][0]
+        self.assertEqual(dto.uuid, project_uuid)
+        self.assertEqual(str(dto.org_uuid), org_uuid)
         mock_auth_uc.return_value.bulk_create.assert_called_once_with(
             project=project_uuid,
             authorizations=[],
         )
         consumer.ack.assert_called_once()
+
+    def test_consume_raises_on_unsupported_event_type(self):
+        message = self._make_message("project.unknown", {})
+
+        consumer = WeniEDAProjectConsumer()
+        consumer.ack = MagicMock()
+
+        with self.assertRaises(ValueError) as ctx:
+            consumer.consume(message)
+
+        self.assertIn("Unsupported event_type", str(ctx.exception))
+        consumer.ack.assert_not_called()
+
+    def test_consume_project_created_requires_uuid(self):
+        message = self._make_message(
+            EVENT_TYPE_PROJECT_CREATED,
+            {"name": "Missing uuid"},
+        )
+
+        consumer = WeniEDAProjectConsumer()
+        consumer.ack = MagicMock()
+
+        with self.assertRaises(ValueError):
+            consumer.consume(message)
+
+        consumer.ack.assert_not_called()
 
 
 class TestUpdateProjectConsumer(TestCase):
