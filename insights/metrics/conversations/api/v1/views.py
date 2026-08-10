@@ -8,9 +8,16 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
+from weni_commons.auth import WeniAuthViewMixin
+
 from insights.authentication.permissions import (
+    HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
+)
+from insights.authentication.weni_auth import (
+    query_params_with_auth_project_uuid,
+    weni_authentication_classes,
 )
 from insights.metrics.conversations.api.permissions import WidgetQueryParamPermission
 from insights.metrics.conversations.api.decorators import force_use_real_service
@@ -56,7 +63,7 @@ from insights.metrics.conversations.api.v1.serializers import (
 from insights.metrics.conversations.services import (
     ConversationsMetricsService,
 )
-from insights.projects.models import ProjectAuth
+from insights.projects.models import Project, ProjectAuth
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
 from insights.metrics.conversations.api.mixins import ConversationsMetricsResponseMixin
 
@@ -71,6 +78,7 @@ if TYPE_CHECKING:
 
 
 class ConversationsMetricsViewSet(
+    WeniAuthViewMixin,
     ConversationsMetricsServiceResolverMixin,
     ConversationsMetricsResponseMixin,
     GenericViewSet,
@@ -80,6 +88,10 @@ class ConversationsMetricsViewSet(
     """
 
     permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+
+    @property
+    def authentication_classes(self):
+        return weni_authentication_classes(super().authentication_classes)
 
     @action(
         detail=False,
@@ -337,8 +349,11 @@ class ConversationsMetricsViewSet(
         methods=["get"],
         serializer_class=ConversationTotalsMetricsSerializer,
         permission_classes=[
-            IsAuthenticated,
-            (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
+            HasInternalAuthenticationPermission
+            | (
+                IsAuthenticated
+                & (ProjectAuthQueryParamPermission | InternalAuthenticationPermission)
+            ),
         ],
     )
     def totals(self, request: "Request", *args, **kwargs) -> Response:
@@ -347,12 +362,12 @@ class ConversationsMetricsViewSet(
         """
 
         query_params_serializer = ConversationTotalsMetricsQueryParamsSerializer(
-            data=request.query_params,
+            data=query_params_with_auth_project_uuid(request),
         )
         query_params_serializer.is_valid(raise_exception=True)
 
         totals = self.service.get_totals(
-            project_uuid=query_params_serializer.validated_data["project_uuid"],
+            project_uuid=self.auth.project_uuid,
             start_date=query_params_serializer.validated_data["start_date"].isoformat(),
             end_date=query_params_serializer.validated_data["end_date"].isoformat(),
         )
@@ -609,13 +624,20 @@ class ConversationsMetricsViewSet(
         return Response(metrics, status=status.HTTP_200_OK)
 
 
-class InternalConversationsMetricsViewSet(GenericViewSet):
+class InternalConversationsMetricsViewSet(WeniAuthViewMixin, GenericViewSet):
     """
     ViewSet to get conversations metrics
     """
 
     service = ConversationsMetricsService()
-    permission_classes = [IsAuthenticated, InternalAuthenticationPermission]
+    permission_classes = [
+        HasInternalAuthenticationPermission
+        | (IsAuthenticated & InternalAuthenticationPermission)
+    ]
+
+    @property
+    def authentication_classes(self):
+        return weni_authentication_classes(super().authentication_classes)
 
     @action(
         detail=False,
@@ -627,20 +649,18 @@ class InternalConversationsMetricsViewSet(GenericViewSet):
         """
         Get project AI CSAT metrics. Validates input, delegates to use case, returns response.
         """
+        project = Project.objects.filter(uuid=self.auth.project_uuid).first()
         query_params = InternalCsatMetricsQueryParamsSerializer(
             data=request.query_params,
-            context={"project": getattr(request, "project", None)},
+            context={"project": project},
         )
         query_params.is_valid(raise_exception=True)
-
-        if not (project_uuid := getattr(request, "project_uuid", None)):
-            project_uuid = query_params.validated_data.get("project_uuid")
 
         start_date = query_params.validated_data["start_date"]
         end_date = query_params.validated_data["end_date"]
 
         metrics = GetProjectAiCsatMetricsUseCase().execute(
-            project_uuid=project_uuid,
+            project_uuid=self.auth.project_uuid,
             start_date=start_date,
             end_date=end_date,
         )

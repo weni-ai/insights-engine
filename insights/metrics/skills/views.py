@@ -8,10 +8,16 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from sentry_sdk import capture_exception
+from weni_commons.auth import WeniAuthViewMixin
 
 from insights.authentication.permissions import (
+    HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
     ProjectAuthQueryParamPermission,
+)
+from insights.authentication.weni_auth import (
+    query_params_with_auth_project_uuid,
+    weni_authentication_classes,
 )
 from insights.metrics.skills.exceptions import (
     InvalidDateRangeError,
@@ -29,27 +35,34 @@ from insights.projects.models import Project
 logger = logging.getLogger(__name__)
 
 
-class SkillsMetricsView(APIView):
+class SkillsMetricsView(WeniAuthViewMixin, APIView):
     permission_classes = [
-        IsAuthenticated,
-        (ProjectAuthQueryParamPermission | InternalAuthenticationPermission),
+        HasInternalAuthenticationPermission
+        | (
+            IsAuthenticated
+            & (ProjectAuthQueryParamPermission | InternalAuthenticationPermission)
+        ),
     ]
+
+    @property
+    def authentication_classes(self):
+        return weni_authentication_classes(super().authentication_classes)
 
     @extend_schema(
         parameters=[SkillMetricsQueryParamsSerializer],
         responses={status.HTTP_200_OK: dict},
     )
     def get(self, request: Request) -> Response:
-        serializer = SkillMetricsQueryParamsSerializer(data=request.query_params)
+        serializer = SkillMetricsQueryParamsSerializer(
+            data=query_params_with_auth_project_uuid(request)
+        )
         serializer.is_valid(raise_exception=True)
 
         filters = request.query_params.copy()
         filters.pop("skill", None)
         filters.pop("project_uuid", None)
 
-        project = get_object_or_404(
-            Project, uuid=request.query_params.get("project_uuid")
-        )
+        project = get_object_or_404(Project, uuid=self.auth.project_uuid)
 
         try:
             service = SkillMetricsServiceFactory().get_service(

@@ -3,12 +3,13 @@ from rest_framework import status, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from weni_commons.auth import WeniAuthViewMixin
 
-from insights.authentication.authentication import JWTAuthentication
 from insights.authentication.permissions import (
     HasInternalAuthenticationPermission,
     InternalAuthenticationPermission,
 )
+from insights.authentication.weni_auth import weni_authentication_classes
 from insights.projects.models import Project
 from insights.projects.usecases.update_vtex_account import UpdateProjectVTEXAccount
 
@@ -18,7 +19,7 @@ from .serializers import (
 )
 
 
-class UpdateProjectVTEXAccountView(views.APIView):
+class UpdateProjectVTEXAccountView(WeniAuthViewMixin, views.APIView):
     permission_classes = [
         HasInternalAuthenticationPermission
         | (IsAuthenticated & InternalAuthenticationPermission)
@@ -26,20 +27,17 @@ class UpdateProjectVTEXAccountView(views.APIView):
 
     @property
     def authentication_classes(self):
-        # Try JWT first so Bearer JWT tokens are accepted before OIDC (which would raise on invalid OIDC token)
-        classes = list(super().authentication_classes)
-        if JWTAuthentication not in classes:
-            classes.insert(0, JWTAuthentication)
-        return classes
+        return weni_authentication_classes(super().authentication_classes)
 
     def patch(self, request: Request, project_uuid: str) -> Response:
         serializer = UpdateProjectVTEXAccountRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        project = get_object_or_404(Project, uuid=project_uuid)
+        # Tenant comes from auth context (JWT claim or Keycloak resolver), never
+        # from a client-controlled path segment alone.
+        project = get_object_or_404(Project, uuid=self.auth.project_uuid)
 
-        user = getattr(request, "user", None)
-        user_email = user.email if user is not None and user.is_authenticated else None
+        user_email = self.user_email
 
         project, projects_unlinked = UpdateProjectVTEXAccount().execute(
             project=project,
