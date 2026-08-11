@@ -17,6 +17,7 @@ from insights.authentication.weni_auth import (
     query_params_with_auth_project_uuid,
     weni_authentication_classes,
 )
+from insights.metrics.meta.exception import MetaAPIError
 from insights.metrics.templates_and_orders.exceptions import (
     ErrorGettingOrdersMetrics,
 )
@@ -64,6 +65,8 @@ class InternalTemplatesAndOrdersMetricsView(WeniAuthViewMixin, APIView):
                 utm_source=validated["utm_source"],
                 template_name_prefix=validated["template_name_prefix"],
             )
+        except MetaAPIError as e:
+            return Response(e.detail, status=e.status_code)
         except ErrorGettingOrdersMetrics as e:
             logger.error("Error getting orders metrics: %s", e, exc_info=True)
             return Response(
