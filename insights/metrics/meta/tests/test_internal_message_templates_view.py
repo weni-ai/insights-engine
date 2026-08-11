@@ -101,3 +101,41 @@ class TestInternalMetaMessageTemplatesViewAsAuthenticatedUser(
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, expected_response)
+
+    @with_internal_auth
+    @patch("insights.metrics.meta.clients.MetaGraphAPIClient.get_messages_analytics")
+    def test_returns_502_with_structured_meta_error(
+        self, mock_get_templates_metrics_analytics
+    ):
+        from insights.metrics.meta.exception import MetaAPIError
+
+        mock_get_templates_metrics_analytics.side_effect = MetaAPIError(
+            meta_error={
+                "message": "Invalid parameter",
+                "type": "OAuthException",
+                "code": 100,
+                "error_subcode": 4182001,
+                "fbtrace_id": "trace123",
+                "error_user_msg": "Start time must be earlier than end time.",
+            },
+            event_id="sentry-event-id",
+        )
+
+        response = self.get_templates_metrics_analytics(
+            {
+                "template_ids": ["123"],
+            },
+            {
+                "waba_id": "123",
+                "start_date": timezone.now() - timedelta(days=1),
+                "end_date": timezone.now(),
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(response.data["error"]["code"], "meta_api_error")
+        self.assertEqual(response.data["error"]["message"], "Invalid parameter")
+        self.assertEqual(response.data["error"]["meta"]["code"], 100)
+        self.assertEqual(response.data["error"]["meta"]["error_subcode"], 4182001)
+        self.assertEqual(response.data["error"]["meta"]["fbtrace_id"], "trace123")
+        self.assertEqual(response.data["error"]["event_id"], "sentry-event-id")
