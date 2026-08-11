@@ -27,6 +27,7 @@ from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesLanguages,
 )
 from insights.metrics.meta.enums import ProductType
+from insights.metrics.meta.exception import MetaAPIError
 from insights.metrics.meta.models import FavoriteTemplate
 from insights.metrics.meta.permissions import ProjectDashboardWABAPermission
 from insights.metrics.meta.schema import (
@@ -443,12 +444,13 @@ class InternalWhatsAppMessageTemplatesView(GenericViewSet):
             or ProductType.CLOUD_API.value,
         }
 
-        data = self.service.get_messages_analytics(
-            filters=filters,
-            skip_kwargs_validation=True,
-            include_data_points=False,
-            # Returning the original exceptions because this is an internal endpoint
-            return_exceptions=True,
-        )
+        try:
+            data = self.service.get_messages_analytics(
+                filters=filters,
+                skip_kwargs_validation=True,
+                include_data_points=False,
+            )
+        except MetaAPIError as error:
+            return Response(error.detail, status=error.status_code)
 
         return Response(data, status=status.HTTP_200_OK)
