@@ -10,7 +10,6 @@ from uuid import UUID
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import override, gettext
-from sentry_sdk import capture_exception
 
 from insights.metrics.conversations.dataclass import (
     ConversationsTotalsMetric,
@@ -363,8 +362,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 table="weni_csat",
             )
         except Exception as e:
-            logger.error("Failed to get csat metrics: %s", e)
-            capture_exception(e)
+            logger.warning("Failed to get csat metrics: %s", e)
 
             raise e
 
@@ -441,8 +439,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 table="weni_nps",
             )
         except Exception as e:
-            logger.error("Failed to get nps metrics: %s", e)
-            capture_exception(e)
+            logger.warning("Failed to get nps metrics: %s", e)
 
             raise e
 
@@ -506,8 +503,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 table="topics",
             )
         except Exception as e:
-            logger.error("Failed to get topics events from Datalake: %s", e)
-            capture_exception(e)
+            logger.warning("Failed to get topics events from Datalake: %s", e)
 
             raise e
 
@@ -540,8 +536,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 table="topics",
             )
         except Exception as e:
-            logger.error("Failed to get subtopics events from Datalake: %s", e)
-            capture_exception(e)
+            logger.warning("Failed to get subtopics events from Datalake: %s", e)
 
             raise e
 
@@ -696,8 +691,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                     "count", 0
                 )
         except Exception as e:
-            capture_exception(e)
-            logger.error(e)
+            logger.warning("Failed to get conversation totals from Datalake: %s", e)
 
             raise e
 
@@ -798,8 +792,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 metadata_value=agent_uuid,
             )
         except Exception as e:
-            logger.error("Failed to get generic metrics by key: %s", e)
-            capture_exception(e)
+            logger.warning("Failed to get generic metrics by key: %s", e)
 
             raise e
 
@@ -868,8 +861,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 metadata_key="agent_uuid",
             )
         except Exception as e:
-            logger.error("Failed to get agent invocations: %s", e)
-            capture_exception(e)
+            logger.warning("Failed to get agent invocations: %s", e)
 
             raise e
 
@@ -946,8 +938,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 metadata_key="agent_uuid",
             )
         except Exception as e:
-            logger.error("Failed to get tool results: %s", e)
-            capture_exception(e)
+            logger.warning("Failed to get tool results: %s", e)
 
             raise e
 
@@ -1160,7 +1151,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                     offset=offset,
                 )
             except Exception as e:
-                logger.error("Failed to get raw events data: %s", e)
+                logger.warning("Failed to get raw events data: %s", e)
                 raise e
 
             if len(events) == 0 or events == [{}]:
@@ -1288,7 +1279,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 metadata_value=agent_uuid,
             )[0].get("count", 0)
         except Exception as e:
-            logger.error("Failed to get event count: %s", e)
+            logger.warning("Failed to get event count: %s", e)
             raise e
 
         if self.cache_results:
@@ -1539,8 +1530,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 table="conversation_classification",
             )
         except Exception as e:
-            logger.error("Failed to get unique contacts count: %s", e)
-            capture_exception(e)
+            logger.warning("Failed to get unique contacts count: %s", e)
             raise e
 
         if not isinstance(data, list) or (isinstance(data, list) and len(data) == 0):
@@ -1581,8 +1571,7 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
                 table="conversation_classification",
             )
         except Exception as e:
-            logger.error("Failed to get returning contacts count: %s", e)
-            capture_exception(e)
+            logger.warning("Failed to get returning contacts count: %s", e)
             raise e
 
         if not isinstance(data, list) or (isinstance(data, list) and len(data) == 0):

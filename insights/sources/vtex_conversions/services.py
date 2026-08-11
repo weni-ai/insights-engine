@@ -66,7 +66,7 @@ class VTEXOrdersConversionsService:
         """
 
         if not self.project_has_permission_to_access_waba(waba_id):
-            logger.error(
+            logger.warning(
                 "Verified that project %s does not have permission to access WABA %s while checking permissions in the VTEX orders conversions service",
                 self.project.uuid,
                 waba_id,

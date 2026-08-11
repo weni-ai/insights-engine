@@ -317,10 +317,13 @@ S3_BUCKET_NAME = env.str("S3_BUCKET_NAME", default="")
 USE_SENTRY = env.bool("USE_SENTRY", default=False)
 
 if USE_SENTRY:
+    from insights.core.sentry import sentry_before_send
+
     sentry_sdk.init(
         dsn=env.str("SENTRY_DSN"),
         integrations=[DjangoIntegration()],
         environment=env.str("ENVIRONMENT", default="develop"),
+        before_send=sentry_before_send,
     )
 
 USE_EDA = env.bool("USE_EDA", default=False)

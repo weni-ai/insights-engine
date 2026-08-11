@@ -116,7 +116,7 @@ def get_edit_template_url_from_template_data(
     )
 
     if not response or not http_status.is_success(response.status_code):
-        logger.error(
+        logger.warning(
             "Failed to get template data for project_uuid=%s, template_id=%s: %s - %s",
             project_uuid,
             template_id,
@@ -128,7 +128,7 @@ def get_edit_template_url_from_template_data(
     template_data = response.json()
 
     if not isinstance(template_data, list):
-        logger.error(
+        logger.warning(
             "Invalid template data for project_uuid=%s, template_id=%s: %s",
             project_uuid,
             template_id,
@@ -148,7 +148,7 @@ def get_edit_template_url_from_template_data(
     templates_uuid = template_data[0].get("templates_uuid", [])
 
     if not app_uuid or not templates_uuid:
-        logger.error(
+        logger.warning(
             "No templates_uuid found for project_uuid=%s, template_id=%s",
             project_uuid,
             template_id,

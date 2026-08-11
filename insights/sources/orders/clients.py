@@ -5,7 +5,6 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 import requests
-from sentry_sdk import capture_message
 from dateutil.parser import parse as date_parser
 from rest_framework import status
 
@@ -139,7 +138,7 @@ class VtexOrdersRestClient(VtexAuthentication):
                 "headers": response.headers,
             }
 
-            logger.error(
+            logger.warning(
                 "[VTEX Orders] Response (%s): Error on request URL: %s"
                 % (response_details["status_code"], response_details["url"]),
                 stack_info=False,
@@ -216,17 +215,10 @@ class VtexOrdersRestClient(VtexAuthentication):
                     response = page_future.result()
 
                     if not status.is_success(response.status_code):
-                        logger.error(
-                            f"VTEX API error processing page: status={response.status_code}, response={response.text}"
-                        )
-                        capture_message(
-                            f"VTEX API error processing page: status={response.status_code}, response={response.text}",
-                            level="error",
-                            extra={
-                                "response": response.text,
-                                "request": response.request.url,
-                                "headers": response.request.headers,
-                            },
+                        logger.warning(
+                            "VTEX API error processing page: status=%s, response=%s",
+                            response.status_code,
+                            response.text,
                         )
                         raise VTEXOrdersAPIError(
                             f"VTEX API error processing page: status={response.status_code}, response={response.text}"
@@ -256,15 +248,11 @@ class VtexOrdersRestClient(VtexAuthentication):
                                 metrics.last_authorized_date = authorized_date
 
                 except Exception as exc:
-                    logger.error(f"VTEX API error processing page: {exc}")
-                    capture_message(
-                        f"VTEX API error processing page: status={response.status_code}, response={response.text}",
-                        level="error",
-                        extra={
-                            "response": response.text,
-                            "request": response.request.url,
-                            "headers": response.request.headers,
-                        },
+                    logger.warning(
+                        "VTEX API error processing page: status=%s, response=%s, error=%s",
+                        response.status_code,
+                        response.text,
+                        exc,
                     )
                     if isinstance(exc, VTEXOrdersAPIError):
                         raise exc from exc

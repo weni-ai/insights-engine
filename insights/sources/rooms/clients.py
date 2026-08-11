@@ -1,8 +1,14 @@
+import json
+import logging
+
 import requests
 from django.conf import settings
 
 from insights.internals.base import InternalJWTAuthentication
 from insights.sources.clients import GenericSQLQueryGenerator
+
+
+logger = logging.getLogger(__name__)
 
 
 class RoomSQLQueryGenerator(GenericSQLQueryGenerator):
@@ -20,4 +26,13 @@ class RoomRESTClient(InternalJWTAuthentication):
         response = requests.get(
             url=self.url, headers=self.headers, params=query_filters
         )
-        return response.json()
+        try:
+            return response.json()
+        except json.JSONDecodeError as exc:
+            logger.warning(
+                "Chats rooms API returned empty/invalid JSON: status=%s url=%s body=%s",
+                response.status_code,
+                response.url,
+                response.text[:500],
+            )
+            raise exc
