@@ -5,11 +5,15 @@ import requests
 from datetime import date, datetime
 
 from django.conf import settings
-from rest_framework.exceptions import ValidationError, NotFound
+from rest_framework.exceptions import NotFound
 from sentry_sdk import capture_exception
 
 from insights.metrics.meta.enums import AnalyticsGranularity, MetricsTypes, ProductType
-from insights.metrics.meta.exception import MarketingMessagesStatusError
+from insights.metrics.meta.exception import (
+    MarketingMessagesStatusError,
+    MetaAPIError,
+    parse_meta_error_payload,
+)
 from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
@@ -33,6 +37,22 @@ class MetaGraphAPIClient:
     @property
     def headers(self):
         return {"Authorization": f"Bearer {self.access_token}"}
+
+    def _handle_http_error(
+        self, err: requests.HTTPError, context: str
+    ) -> None:
+        response = getattr(err, "response", None)
+        response_text = getattr(response, "text", None) or str(err)
+        logger.error(
+            "Error %s: %s. Original exception: %s",
+            context,
+            response_text,
+            err,
+            exc_info=True,
+        )
+        event_id = capture_exception(err)
+        meta_error = parse_meta_error_payload(response)
+        raise MetaAPIError(meta_error=meta_error, event_id=event_id) from err
 
     def get_templates_list(
         self,
@@ -71,18 +91,7 @@ class MetaGraphAPIClient:
             )
             response.raise_for_status()
         except requests.HTTPError as err:
-            logger.error(
-                "Error getting templates list: %s. Original exception: %s",
-                err.response.text,
-                err,
-                exc_info=True,
-            )
-            event_id = capture_exception(err)
-
-            raise ValidationError(
-                {"error": f"An error has occurred. Event ID: {event_id}"},
-                code="meta_api_error",
-            ) from err
+            self._handle_http_error(err, "getting templates list")
 
         return response.json()
 
@@ -101,18 +110,7 @@ class MetaGraphAPIClient:
             response = requests.get(url, headers=self.headers, timeout=60)
             response.raise_for_status()
         except requests.HTTPError as err:
-            logger.error(
-                "Error getting template preview: %s. Original exception: %s",
-                err.response.text,
-                err,
-                exc_info=True,
-            )
-            event_id = capture_exception(err)
-
-            raise ValidationError(
-                {"error": f"An error has occurred. Event ID: {event_id}"},
-                code="meta_api_error",
-            ) from err
+            self._handle_http_error(err, "getting template preview")
 
         response = response.json()
         self.cache.set(cache_key, json.dumps(response, default=str), self.cache_ttl)
@@ -134,6 +132,9 @@ class MetaGraphAPIClient:
         include_data_points: bool = True,
         return_exceptions: bool = False,
     ):
+        # return_exceptions kept for signature compatibility; Meta HTTP errors
+        # always raise MetaAPIError.
+        _ = return_exceptions
         url = f"{self.base_host_url}/{self.version}/{waba_id}/template_analytics?"
 
         metrics_types = [
@@ -191,21 +192,7 @@ class MetaGraphAPIClient:
             response.raise_for_status()
 
         except requests.HTTPError as err:
-            logger.error(
-                "Error getting messages analytics: %s. Original exception: %s",
-                err.response.text,
-                err,
-                exc_info=True,
-            )
-            event_id = capture_exception(err)
-
-            if return_exceptions:
-                raise err
-
-            raise ValidationError(
-                {"error": f"An error has occurred. Event ID: {event_id}"},
-                code="meta_api_error",
-            ) from err
+            self._handle_http_error(err, "getting messages analytics")
 
         meta_response = response.json()
         response = {
@@ -296,18 +283,7 @@ class MetaGraphAPIClient:
                     {"error": "Template not found"}, code="template_not_found"
                 ) from err
 
-            logger.error(
-                "Error getting buttons analytics: %s. Original exception: %s",
-                err.response.text,
-                err,
-                exc_info=True,
-            )
-            event_id = capture_exception(err)
-
-            raise ValidationError(
-                {"error": f"An error has occurred. Event ID: {event_id}"},
-                code="meta_api_error",
-            ) from err
+            self._handle_http_error(err, "getting buttons analytics")
 
         meta_response = response.json()
         data_points = meta_response.get("data", {})[0].get("data_points", [])

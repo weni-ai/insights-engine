@@ -15,7 +15,7 @@ def handle_sigterm(*args):
     """
     Handle SIGTERM signal - exit gracefully.
     """
-    print("[msg_edaconsume_amq] - Received SIGTERM signal, exiting gracefully")
+    print("[edaconsume_amq] - Received SIGTERM signal, exiting gracefully")
     os._exit(0)
 
 

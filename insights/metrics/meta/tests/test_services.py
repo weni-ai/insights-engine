@@ -189,3 +189,82 @@ class TestMetaMessageTemplatesService(TestCase):
             )
 
             self.assertEqual(result, {"SERVICE": 10, "MARKETING": 20})
+
+    def test_get_conversations_by_category_consolidates_migrated_wabas(self):
+        from datetime import date
+        from unittest.mock import patch
+
+        from insights.dashboards.models import Dashboard
+        from insights.projects.models import Project
+
+        project = Project.objects.create(name="Migrated Project")
+        Dashboard.objects.create(
+            project=project,
+            name="Meta dashboard",
+            config={
+                "is_whatsapp_integration": True,
+                "waba_id": "new_waba",
+                "migration_data": {
+                    "waba_id": "old_waba",
+                    "migrated_at": "2026-03-15T12:00:00+00:00",
+                },
+            },
+        )
+
+        with patch.object(
+            self.service.client, "get_conversations_by_category"
+        ) as mock_get:
+            mock_get.side_effect = [
+                {
+                    "pricing_analytics": {
+                        "data": [
+                            {
+                                "data_points": [
+                                    {
+                                        "pricing_category": "MARKETING",
+                                        "volume": 10,
+                                        "cost": 0,
+                                    },
+                                    {
+                                        "pricing_category": "UTILITY",
+                                        "volume": 3,
+                                        "cost": 0,
+                                    },
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "pricing_analytics": {
+                        "data": [
+                            {
+                                "data_points": [
+                                    {
+                                        "pricing_category": "MARKETING",
+                                        "volume": 5,
+                                        "cost": 0,
+                                    },
+                                    {
+                                        "pricing_category": "SERVICE",
+                                        "volume": 2,
+                                        "cost": 0,
+                                    },
+                                ]
+                            }
+                        ]
+                    }
+                },
+            ]
+
+            result = self.service.get_conversations_by_category(
+                waba_id="new_waba",
+                start_date=date(2026, 3, 1),
+                end_date=date(2026, 3, 31),
+            )
+
+        self.assertEqual(mock_get.call_count, 2)
+        self.assertEqual(
+            result,
+            {"MARKETING": 15, "UTILITY": 3, "SERVICE": 2},
+        )

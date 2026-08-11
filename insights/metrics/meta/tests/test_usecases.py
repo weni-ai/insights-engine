@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -21,6 +22,16 @@ class TestSaveWhatsappIntegrationUseCase(TestCase):
             "id": "445303688657575",
             "display_phone_number": "+55 82 98877 6655",
         }
+        self.widgets_migration_patcher = patch(
+            "insights.metrics.meta.tasks.migrate_widgets_waba_config.apply_async"
+        )
+        self.mock_widgets_migration = self.widgets_migration_patcher.start()
+        self.addCleanup(self.widgets_migration_patcher.stop)
+        self.favorites_migration_patcher = patch(
+            "insights.metrics.meta.tasks.move_favorite_templates.delay"
+        )
+        self.mock_favorites_migration = self.favorites_migration_patcher.start()
+        self.addCleanup(self.favorites_migration_patcher.stop)
 
     def test_creates_dashboard_when_none_exists(self):
         self.assertFalse(
@@ -111,7 +122,10 @@ class TestSaveWhatsappIntegrationUseCase(TestCase):
             1,
         )
 
-    def test_creates_migration_data_when_old_waba_id_is_provided(self):
+    @patch(
+        "insights.metrics.meta.tasks.move_favorite_templates.delay",
+    )
+    def test_creates_migration_data_when_old_waba_id_is_provided(self, mock_delay):
         old_waba_id = "old_waba_999"
         old_phone = {
             "id": "different-phone-id",
@@ -148,6 +162,116 @@ class TestSaveWhatsappIntegrationUseCase(TestCase):
 
         soft_deleted = Dashboard.all_objects.get(pk=existing.pk)
         self.assertTrue(soft_deleted.is_deleted)
+        mock_delay.assert_called_once_with(str(existing.uuid), str(dashboard.uuid))
+        self.mock_widgets_migration.assert_called_once_with(
+            kwargs={
+                "project_uuid": str(self.project.uuid),
+                "old_waba_id": old_waba_id,
+                "new_waba_id": self.waba_id,
+            }
+        )
+
+    @patch(
+        "insights.metrics.meta.tasks.move_favorite_templates.delay",
+    )
+    def test_does_not_enqueue_move_favorites_without_old_waba_id(self, mock_delay):
+        Dashboard.objects.create(
+            project=self.project,
+            name="Existing Dashboard",
+            config={
+                "is_whatsapp_integration": True,
+                "app_uuid": str(self.app_uuid),
+                "waba_id": self.waba_id,
+                "phone_number": self.phone_number,
+            },
+        )
+
+        SaveWhatsappIntegrationUseCase().execute(
+            project=self.project,
+            app_uuid=self.app_uuid,
+            waba_id=self.waba_id,
+            phone_number=self.phone_number,
+        )
+
+        mock_delay.assert_not_called()
+        self.mock_widgets_migration.assert_not_called()
+
+    @patch(
+        "insights.metrics.meta.usecases.save_whatsapp_integration.capture_exception"
+    )
+    @patch(
+        "insights.metrics.meta.tasks.move_favorite_templates.delay",
+    )
+    def test_favorites_enqueue_failure_does_not_break_migration(
+        self, mock_delay, mock_capture
+    ):
+        old_waba_id = "old_waba_favorites_enqueue_fail"
+        existing = Dashboard.objects.create(
+            project=self.project,
+            name="Old Waba Dashboard",
+            config={
+                "is_whatsapp_integration": True,
+                "app_uuid": str(uuid.uuid4()),
+                "waba_id": old_waba_id,
+                "phone_number": {
+                    "id": "phone-favorites-enqueue-fail",
+                    "display_phone_number": "+55 11 99999 9999",
+                },
+            },
+        )
+        mock_delay.side_effect = RuntimeError("broker down")
+        mock_capture.return_value = "event-broker"
+
+        dashboard = SaveWhatsappIntegrationUseCase().execute(
+            project=self.project,
+            app_uuid=self.app_uuid,
+            waba_id=self.waba_id,
+            phone_number=self.phone_number,
+            old_waba_id=old_waba_id,
+        )
+
+        self.assertIsNotNone(dashboard.pk)
+        self.assertTrue(Dashboard.all_objects.get(pk=existing.pk).is_deleted)
+        mock_capture.assert_called_once()
+
+    @patch(
+        "insights.metrics.meta.usecases.save_whatsapp_integration.capture_exception"
+    )
+    @patch(
+        "insights.metrics.meta.tasks.move_favorite_templates.delay",
+    )
+    def test_widget_migration_enqueue_failure_does_not_break_migration(
+        self, mock_delay, mock_capture
+    ):
+        old_waba_id = "old_waba_widgets_enqueue_fail"
+        existing = Dashboard.objects.create(
+            project=self.project,
+            name="Old Waba Dashboard",
+            config={
+                "is_whatsapp_integration": True,
+                "app_uuid": str(uuid.uuid4()),
+                "waba_id": old_waba_id,
+                "phone_number": {
+                    "id": "phone-widgets-enqueue-fail",
+                    "display_phone_number": "+55 11 88888 8888",
+                },
+            },
+        )
+        self.mock_widgets_migration.side_effect = RuntimeError("broker down")
+        mock_capture.return_value = "event-broker"
+
+        dashboard = SaveWhatsappIntegrationUseCase().execute(
+            project=self.project,
+            app_uuid=self.app_uuid,
+            waba_id=self.waba_id,
+            phone_number=self.phone_number,
+            old_waba_id=old_waba_id,
+        )
+
+        self.assertIsNotNone(dashboard.pk)
+        self.assertTrue(Dashboard.all_objects.get(pk=existing.pk).is_deleted)
+        mock_capture.assert_called_once()
+        mock_delay.assert_called_once()
 
     def test_migrates_all_dashboards_with_same_old_waba_id(self):
         old_waba_id = "old_waba_multi"

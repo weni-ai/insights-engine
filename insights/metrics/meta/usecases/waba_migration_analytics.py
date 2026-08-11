@@ -69,17 +69,21 @@ def resolve_waba_analytics_periods(
 
     Cutover rule (migrated_at date in UTC):
     - days strictly before migrated_at → old WABA only
-    - days strictly after migrated_at → current WABA only
-    - the migration day itself is included in BOTH requests
+    - any range that includes migrated_at or later → query old for the FULL
+      requested range AND current from migrated_at (or start) to end
 
-    Migrations do not happen at midnight. Meta analytics is daily, so including
-    the cutover day on both WABAs keeps morning traffic on the old WABA and
-    afternoon traffic on the new one. Merging sums that day without losing data.
+    Traffic can keep landing on the old WABA after migrated_at (e.g. delayed
+    cutover, dual routing). Stopping the old query at migrated_at undercounts.
+    Overlapping days are merged by summing; when the new WABA has no volume,
+    the sum keeps the old WABA totals.
+
+    The migration day is included in BOTH requests so morning traffic on the
+    old WABA and afternoon traffic on the new one are both kept.
 
     Examples (migrated_at = 2026-03-15):
     - 03-01..03-10 → only old
-    - 03-20..03-31 → only current
-    - 03-01..03-31 → old (03-01..03-15) + current (03-15..03-31)
+    - 03-20..03-31 → old (03-20..03-31) + current (03-20..03-31)
+    - 03-01..03-31 → old (03-01..03-31) + current (03-15..03-31)
     - 03-15..03-15 → old (03-15) + current (03-15)
     """
     start = _as_date(start_date)
@@ -110,38 +114,21 @@ def resolve_waba_analytics_periods(
             )
         ]
 
-    # Entire range is strictly after the migration day.
-    if start > migrated_at:
-        return [
-            WabaAnalyticsPeriod(
-                waba_id=current_waba_id,
-                start_date=start_date,
-                end_date=end_date,
-            )
-        ]
-
-    # Range includes the migration day: query both WABAs for that day.
-    periods: list[WabaAnalyticsPeriod] = []
-
-    if start <= migrated_at:
-        periods.append(
-            WabaAnalyticsPeriod(
-                waba_id=old_waba_id,
-                start_date=start,
-                end_date=min(end, migrated_at),
-            )
-        )
-
-    if end >= migrated_at:
-        periods.append(
-            WabaAnalyticsPeriod(
-                waba_id=current_waba_id,
-                start_date=max(start, migrated_at),
-                end_date=end,
-            )
-        )
-
-    return periods
+    # Range reaches the migration day or later: keep querying the old WABA for
+    # the full filter window (post-migration traffic may still land there),
+    # and also query the current WABA from the cutover day onward.
+    return [
+        WabaAnalyticsPeriod(
+            waba_id=old_waba_id,
+            start_date=start,
+            end_date=end,
+        ),
+        WabaAnalyticsPeriod(
+            waba_id=current_waba_id,
+            start_date=max(start, migrated_at),
+            end_date=end,
+        ),
+    ]
 
 
 def _recalculate_status_percentages(status_count: dict) -> dict:
@@ -322,6 +309,79 @@ def resolve_old_template_id(
     return old_template_id
 
 
+def resolve_new_template_id(
+    meta_client,
+    *,
+    new_waba_id: str,
+    old_template_id: str,
+) -> str | None:
+    """
+    Resolve the equivalent template id on the new WABA from the old template name.
+
+    Returns None when the template cannot be resolved on the new WABA
+    (e.g. not cloned yet or renamed).
+    """
+    preview = meta_client.get_template_preview(template_id=old_template_id)
+    template_name = (preview or {}).get("name") if isinstance(preview, dict) else None
+
+    if not template_name:
+        logger.info(
+            "Could not resolve template name for template_id=%s when looking up "
+            "equivalent on new_waba_id=%s",
+            old_template_id,
+            new_waba_id,
+        )
+        return None
+
+    templates_response = meta_client.get_templates_list(
+        waba_id=new_waba_id,
+        name=template_name,
+    )
+    new_template_id = find_exact_template_id_by_name(templates_response, template_name)
+
+    if not new_template_id:
+        logger.info(
+            "No exact template name match for name=%s on new_waba_id=%s "
+            "(old_template_id=%s)",
+            template_name,
+            new_waba_id,
+            old_template_id,
+        )
+        return None
+
+    return new_template_id
+
+
+def extract_pricing_data_points(response: dict | None) -> list:
+    """Extract pricing analytics data_points from a Meta Graph API response."""
+    if not isinstance(response, dict):
+        return []
+
+    data = response.get("pricing_analytics", {}).get("data") or []
+    if not data:
+        return []
+
+    first = data[0] if isinstance(data[0], dict) else {}
+    return list(first.get("data_points") or [])
+
+
+def merge_pricing_analytics_responses(responses: list[dict]) -> dict:
+    """
+    Merge Meta pricing_analytics responses by concatenating data_points.
+
+    Aggregation by category happens later in ConversationsByCategoryAggregations.
+    """
+    all_points: list = []
+    for response in responses:
+        all_points.extend(extract_pricing_data_points(response))
+
+    return {
+        "pricing_analytics": {
+            "data": [{"data_points": all_points}],
+        }
+    }
+
+
 class ConsolidateWabaAnalyticsUseCase:
     """
     Intermediate layer between the service and the Meta client.
@@ -349,6 +409,39 @@ class ConsolidateWabaAnalyticsUseCase:
             merge=merge_buttons_analytics,
             fetch_kwargs=kwargs,
         )
+
+    def get_conversations_by_category(
+        self,
+        *,
+        waba_id: str,
+        start_date: date | datetime,
+        end_date: date | datetime,
+    ) -> dict:
+        """
+        Fetch pricing analytics by category, splitting across WABAs when needed.
+
+        Unlike template analytics, this endpoint is WABA-scoped and does not
+        require template_id remapping.
+        """
+        periods = resolve_waba_analytics_periods(
+            current_waba_id=waba_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        responses = [
+            self.meta_client.get_conversations_by_category(
+                waba_id=period.waba_id,
+                start_date=period.start_date,
+                end_date=period.end_date,
+            )
+            for period in periods
+        ]
+
+        if len(responses) == 1:
+            return responses[0]
+
+        return merge_pricing_analytics_responses(responses)
 
     def _periods_with_template_ids(
         self,

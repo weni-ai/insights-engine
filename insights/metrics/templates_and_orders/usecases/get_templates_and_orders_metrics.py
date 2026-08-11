@@ -4,11 +4,13 @@ from datetime import date
 
 from sentry_sdk import capture_exception
 
+from insights.metrics.meta.exception import MetaAPIError
 from insights.metrics.meta.usecases.get_project_wabas import GetProjectWabasUseCase
 from insights.metrics.meta.usecases.get_templates_from_prefix import (
     GetTemplatesFromPrefixUseCase,
 )
 from insights.metrics.meta.usecases.get_templates_metrics_from_multiple_wabas import (
+    EMPTY_TEMPLATE_METRICS,
     GetTemplatesMetricsFromMultipleWabasUseCase,
     WabaTemplateIDs,
 )
@@ -119,14 +121,28 @@ class GetTemplatesAndOrdersMetrics:
         limits: MetricsLimits | None = None,
         require_templates: bool = False,
     ) -> dict:
-        template_metrics = self._get_template_metrics(
-            project=project,
-            template_name_prefix=template_name_prefix,
-            start_date=start_date,
-            end_date=end_date,
-            limits=limits,
-            require_templates=require_templates,
-        )
+        try:
+            template_metrics = self._get_template_metrics(
+                project=project,
+                template_name_prefix=template_name_prefix,
+                start_date=start_date,
+                end_date=end_date,
+                limits=limits,
+                require_templates=require_templates,
+            )
+        except (TemplatesNotFoundError, MetaAPIError):
+            raise
+        except Exception as error:
+            capture_exception(error)
+            logger.error(
+                "Error getting template metrics for project=%s; "
+                "returning zeroed template metrics and continuing with orders. "
+                "Error: %s",
+                project.uuid,
+                error,
+                exc_info=True,
+            )
+            template_metrics = dict(EMPTY_TEMPLATE_METRICS)
 
         orders_metrics = self._get_orders_metrics(
             project=project,

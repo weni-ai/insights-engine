@@ -10,6 +10,8 @@ from insights.metrics.meta.usecases.waba_migration_analytics import (
     find_exact_template_id_by_name,
     merge_buttons_analytics,
     merge_messages_analytics,
+    merge_pricing_analytics_responses,
+    resolve_new_template_id,
     resolve_old_template_id,
     resolve_waba_analytics_periods,
 )
@@ -82,7 +84,7 @@ class TestResolveWabaAnalyticsPeriods(TestCase):
             ],
         )
 
-    def test_returns_only_new_waba_when_range_is_after_migration(self):
+    def test_queries_both_wabas_when_range_is_after_migration(self):
         periods = resolve_waba_analytics_periods(
             current_waba_id=self.current_waba_id,
             start_date=date(2026, 3, 20),
@@ -93,10 +95,15 @@ class TestResolveWabaAnalyticsPeriods(TestCase):
             periods,
             [
                 WabaAnalyticsPeriod(
+                    waba_id=self.old_waba_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                ),
+                WabaAnalyticsPeriod(
                     waba_id=self.current_waba_id,
                     start_date=date(2026, 3, 20),
                     end_date=date(2026, 3, 31),
-                )
+                ),
             ],
         )
 
@@ -113,7 +120,7 @@ class TestResolveWabaAnalyticsPeriods(TestCase):
                 WabaAnalyticsPeriod(
                     waba_id=self.old_waba_id,
                     start_date=date(2026, 3, 1),
-                    end_date=date(2026, 3, 15),
+                    end_date=date(2026, 3, 31),
                 ),
                 WabaAnalyticsPeriod(
                     waba_id=self.current_waba_id,
@@ -217,6 +224,57 @@ class TestResolveOldTemplateId(TestCase):
         )
 
         self.assertIsNone(old_template_id)
+        mock_logger.info.assert_called_once()
+
+
+class TestResolveNewTemplateId(TestCase):
+    def setUp(self):
+        self.meta_client = MagicMock()
+        self.new_waba_id = "new_waba"
+        self.old_template_id = "old-template-id"
+
+    def test_resolves_new_template_id_by_exact_name(self):
+        self.meta_client.get_template_preview.return_value = {
+            "name": "weni_abandoned_cart",
+            "id": self.old_template_id,
+        }
+        self.meta_client.get_templates_list.return_value = {
+            "data": [
+                {"id": "similar-id", "name": "weni_abandoned_cart_v2"},
+                {"id": "new-template-id", "name": "weni_abandoned_cart"},
+            ]
+        }
+
+        new_template_id = resolve_new_template_id(
+            self.meta_client,
+            new_waba_id=self.new_waba_id,
+            old_template_id=self.old_template_id,
+        )
+
+        self.assertEqual(new_template_id, "new-template-id")
+        self.meta_client.get_template_preview.assert_called_once_with(
+            template_id=self.old_template_id
+        )
+        self.meta_client.get_templates_list.assert_called_once_with(
+            waba_id=self.new_waba_id,
+            name="weni_abandoned_cart",
+        )
+
+    @patch("insights.metrics.meta.usecases.waba_migration_analytics.logger")
+    def test_returns_none_when_template_missing_on_new_waba(self, mock_logger):
+        self.meta_client.get_template_preview.return_value = {
+            "name": "missing_template",
+            "id": self.old_template_id,
+        }
+        self.meta_client.get_templates_list.return_value = {"data": []}
+
+        new_template_id = resolve_new_template_id(
+            self.meta_client,
+            new_waba_id=self.new_waba_id,
+            old_template_id=self.old_template_id,
+        )
+
+        self.assertIsNone(new_template_id)
         mock_logger.info.assert_called_once()
 
 
@@ -414,10 +472,12 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             include_data_points=True,
         )
 
-    def test_calls_only_new_waba_for_post_migration_range(self):
-        self.meta_client.get_messages_analytics.return_value = {
-            "data": {"status_count": {}, "data_points": []}
-        }
+    def test_calls_both_wabas_for_post_migration_range(self):
+        self._mock_old_template_resolution(self.old_template_id)
+        self.meta_client.get_messages_analytics.side_effect = [
+            {"data": {"status_count": {}, "data_points": []}},
+            {"data": {"status_count": {}, "data_points": []}},
+        ]
 
         self.usecase.get_messages_analytics(
             waba_id=self.current_waba_id,
@@ -426,15 +486,25 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             end_date=date(2026, 3, 31),
         )
 
-        self.meta_client.get_messages_analytics.assert_called_once_with(
-            waba_id=self.current_waba_id,
-            template_id=self.new_template_id,
-            start_date=date(2026, 3, 20),
-            end_date=date(2026, 3, 31),
-            include_data_points=True,
+        self.assertEqual(
+            self.meta_client.get_messages_analytics.call_args_list,
+            [
+                call(
+                    waba_id=self.old_waba_id,
+                    template_id=self.old_template_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                    include_data_points=True,
+                ),
+                call(
+                    waba_id=self.current_waba_id,
+                    template_id=self.new_template_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                    include_data_points=True,
+                ),
+            ],
         )
-        self.meta_client.get_template_preview.assert_not_called()
-        self.meta_client.get_templates_list.assert_not_called()
 
     def test_calls_both_wabas_with_resolved_template_ids_when_range_crosses_migration(
         self,
@@ -480,7 +550,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                     waba_id=self.old_waba_id,
                     template_id=self.old_template_id,
                     start_date=date(2026, 3, 1),
-                    end_date=date(2026, 3, 15),
+                    end_date=date(2026, 3, 31),
                     include_data_points=False,
                 ),
                 call(
@@ -564,7 +634,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                 waba_id=self.old_waba_id,
                 template_id=self.old_template_id,
                 start_date=date(2026, 3, 1),
-                end_date=date(2026, 3, 15),
+                end_date=date(2026, 3, 31),
             ),
         )
         self.assertEqual(
@@ -577,3 +647,214 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             ),
         )
         self.assertEqual(result["data"][0]["total"], 10)
+
+    def test_conversations_by_category_calls_only_old_waba_for_pre_migration_range(self):
+        self.meta_client.get_conversations_by_category.return_value = {
+            "pricing_analytics": {
+                "data": [
+                    {
+                        "data_points": [
+                            {"pricing_category": "MARKETING", "volume": 10, "cost": 0}
+                        ]
+                    }
+                ]
+            }
+        }
+
+        result = self.usecase.get_conversations_by_category(
+            waba_id=self.current_waba_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 10),
+        )
+
+        self.meta_client.get_conversations_by_category.assert_called_once_with(
+            waba_id=self.old_waba_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 10),
+        )
+        self.assertEqual(
+            result["pricing_analytics"]["data"][0]["data_points"][0]["volume"], 10
+        )
+
+    def test_conversations_by_category_calls_both_wabas_for_post_migration_range(
+        self,
+    ):
+        self.meta_client.get_conversations_by_category.side_effect = [
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 3,
+                                    "cost": 0,
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 5,
+                                    "cost": 0,
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+        ]
+
+        self.usecase.get_conversations_by_category(
+            waba_id=self.current_waba_id,
+            start_date=date(2026, 3, 20),
+            end_date=date(2026, 3, 31),
+        )
+
+        self.assertEqual(
+            self.meta_client.get_conversations_by_category.call_args_list,
+            [
+                call(
+                    waba_id=self.old_waba_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                ),
+                call(
+                    waba_id=self.current_waba_id,
+                    start_date=date(2026, 3, 20),
+                    end_date=date(2026, 3, 31),
+                ),
+            ],
+        )
+
+    def test_conversations_by_category_merges_both_wabas_when_range_crosses_migration(
+        self,
+    ):
+        self.meta_client.get_conversations_by_category.side_effect = [
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 10,
+                                    "cost": 0,
+                                },
+                                {
+                                    "pricing_category": "UTILITY",
+                                    "volume": 3,
+                                    "cost": 0,
+                                },
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 5,
+                                    "cost": 0,
+                                },
+                                {
+                                    "pricing_category": "SERVICE",
+                                    "volume": 2,
+                                    "cost": 0,
+                                },
+                            ]
+                        }
+                    ]
+                }
+            },
+        ]
+
+        result = self.usecase.get_conversations_by_category(
+            waba_id=self.current_waba_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 31),
+        )
+
+        self.assertEqual(self.meta_client.get_conversations_by_category.call_count, 2)
+        self.assertEqual(
+            self.meta_client.get_conversations_by_category.call_args_list[0],
+            call(
+                waba_id=self.old_waba_id,
+                start_date=date(2026, 3, 1),
+                end_date=date(2026, 3, 31),
+            ),
+        )
+        self.assertEqual(
+            self.meta_client.get_conversations_by_category.call_args_list[1],
+            call(
+                waba_id=self.current_waba_id,
+                start_date=date(2026, 3, 15),
+                end_date=date(2026, 3, 31),
+            ),
+        )
+        self.assertEqual(
+            len(result["pricing_analytics"]["data"][0]["data_points"]), 4
+        )
+
+
+class TestMergePricingAnalyticsResponses(TestCase):
+    def test_concatenates_data_points_from_multiple_responses(self):
+        responses = [
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 10,
+                                    "cost": 0,
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "pricing_analytics": {
+                    "data": [
+                        {
+                            "data_points": [
+                                {
+                                    "pricing_category": "MARKETING",
+                                    "volume": 5,
+                                    "cost": 0,
+                                },
+                                {
+                                    "pricing_category": "SERVICE",
+                                    "volume": 2,
+                                    "cost": 0,
+                                },
+                            ]
+                        }
+                    ]
+                }
+            },
+        ]
+
+        merged = merge_pricing_analytics_responses(responses)
+
+        self.assertEqual(
+            merged["pricing_analytics"]["data"][0]["data_points"],
+            [
+                {"pricing_category": "MARKETING", "volume": 10, "cost": 0},
+                {"pricing_category": "MARKETING", "volume": 5, "cost": 0},
+                {"pricing_category": "SERVICE", "volume": 2, "cost": 0},
+            ],
+        )
