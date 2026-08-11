@@ -5,7 +5,6 @@ from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
 
 from insights.metrics.meta.clients import MetaGraphAPIClient
 from insights.metrics.meta.enums import (
@@ -13,6 +12,7 @@ from insights.metrics.meta.enums import (
     MetricsTypes,
     ProductType,
 )
+from insights.metrics.meta.exception import MetaAPIError
 from insights.metrics.meta.utils import (
     format_button_metrics_data,
     format_messages_metrics_data,
@@ -101,10 +101,22 @@ class TestMetaGraphAPIClient(TestCase):
                 body=json.dumps(MOCK_ERROR_RESPONSE_BODY),
             )
 
-            with self.assertRaises(ValidationError) as context:
+            with self.assertRaises(MetaAPIError) as context:
                 self.client.get_template_preview(template_id=template_id)
-                self.assertEqual(context.exception.code, "meta_api_error")
 
+            error = context.exception
+            self.assertEqual(error.status_code, status.HTTP_502_BAD_GATEWAY)
+            self.assertEqual(error.detail["error"]["code"], "meta_api_error")
+            self.assertEqual(error.meta_error["code"], 100)
+            self.assertEqual(error.meta_error["error_subcode"], 33)
+            self.assertEqual(
+                error.meta_error["fbtrace_id"],
+                MOCK_ERROR_RESPONSE_BODY["error"]["fbtrace_id"],
+            )
+            self.assertEqual(
+                error.meta_error["type"],
+                MOCK_ERROR_RESPONSE_BODY["error"]["type"],
+            )
     def test_get_template_daily_analytics(self):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
@@ -194,15 +206,27 @@ class TestMetaGraphAPIClient(TestCase):
             start_date = convert_date_str_to_datetime_date("2022-01-01")
             end_date = convert_date_str_to_datetime_date("2024-12-31")
 
-            with self.assertRaises(ValidationError) as context:
+            with self.assertRaises(MetaAPIError) as context:
                 self.client.get_messages_analytics(
                     waba_id=waba_id,
                     template_id=template_id,
                     start_date=start_date,
                     end_date=end_date,
                 )
-                self.assertEqual(context.exception.code, "meta_api_error")
 
+            error = context.exception
+            meta_error = MOCK_TEMPLATE_DAILY_ANALYTICS_INVALID_PERIOD["error"]
+            self.assertEqual(error.status_code, status.HTTP_502_BAD_GATEWAY)
+            self.assertEqual(error.detail["error"]["code"], "meta_api_error")
+            self.assertEqual(error.detail["error"]["message"], meta_error["message"])
+            self.assertEqual(error.meta_error["code"], meta_error["code"])
+            self.assertEqual(
+                error.meta_error["error_subcode"], meta_error["error_subcode"]
+            )
+            self.assertEqual(error.meta_error["fbtrace_id"], meta_error["fbtrace_id"])
+            self.assertEqual(
+                error.meta_error["error_user_msg"], meta_error["error_user_msg"]
+            )
     def test_get_template_buttons_analytics(self):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
