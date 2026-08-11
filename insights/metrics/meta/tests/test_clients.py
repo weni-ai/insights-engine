@@ -117,6 +117,7 @@ class TestMetaGraphAPIClient(TestCase):
                 error.meta_error["type"],
                 MOCK_ERROR_RESPONSE_BODY["error"]["type"],
             )
+
     def test_get_template_daily_analytics(self):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"
@@ -227,6 +228,7 @@ class TestMetaGraphAPIClient(TestCase):
             self.assertEqual(
                 error.meta_error["error_user_msg"], meta_error["error_user_msg"]
             )
+
     def test_get_template_buttons_analytics(self):
         waba_id = "0000000000000000"
         template_id = "1234567890987654"

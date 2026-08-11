@@ -134,7 +134,6 @@ class TestSkillsMetricsViewAsAuthenticatedUser(BaseTestSkillsMetrisView):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-
     @with_project_auth
     @patch(
         "insights.metrics.skills.services.abandoned_cart.AbandonedCartSkillService.get_metrics"
