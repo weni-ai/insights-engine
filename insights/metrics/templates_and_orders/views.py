@@ -73,7 +73,7 @@ class InternalTemplatesAndOrdersMetricsView(WeniAuthViewMixin, APIView):
                 {"error": "Failed to retrieve orders metrics"},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
-        except Exception as e:
+        except Exception as e:  # last resort: truly unexpected errors
             capture_exception(e)
             logger.error(
                 "Unexpected error getting templates and orders metrics: %s",

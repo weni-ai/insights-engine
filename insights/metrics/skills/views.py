@@ -80,6 +80,8 @@ class SkillsMetricsView(WeniAuthViewMixin, APIView):
 
         try:
             metrics = service.get_metrics()
+        except MetaAPIError as error:
+            return Response(error.detail, status=error.status_code)
         except (MissingFiltersError, InvalidDateRangeError, TemplateNotFound) as error:
             logger.exception(
                 "Error getting metrics for skill: %s", str(error), exc_info=True
@@ -88,12 +90,10 @@ class SkillsMetricsView(WeniAuthViewMixin, APIView):
                 {"error": str(error)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        except MetaAPIError as error:
-            return Response(error.detail, status=error.status_code)
-        except Exception as error:
+        except Exception as error:  # last resort: truly unexpected errors
             capture_exception(error)
             logger.exception(
-                "Error getting metrics for skill: %s", str(error), exc_info=True
+                "Unexpected error in skills view: %s", error, exc_info=True
             )
             return Response(
                 {"error": "Failed to calculate skill metrics"},
