@@ -134,6 +134,42 @@ class TestSkillsMetricsViewAsAuthenticatedUser(BaseTestSkillsMetrisView):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @with_project_auth
+    @patch(
+        "insights.metrics.skills.services.abandoned_cart.AbandonedCartSkillService.get_metrics"
+    )
+    def test_returns_502_with_structured_meta_error(self, mock_metrics):
+        from insights.metrics.meta.exception import MetaAPIError
+
+        mock_metrics.side_effect = MetaAPIError(
+            meta_error={
+                "message": "Invalid parameter",
+                "type": "OAuthException",
+                "code": 100,
+                "error_subcode": 4182001,
+                "fbtrace_id": "trace123",
+                "error_user_msg": "Start time must be earlier than end time.",
+            },
+            event_id="sentry-event-id",
+        )
+
+        response = self.get_metrics_for_skill(
+            {
+                "project_uuid": self.project.uuid,
+                "skill": "abandoned_cart",
+                "start_date": (timezone.now() - timedelta(days=7)).date(),
+                "end_date": timezone.now().date(),
+            }
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(response.data["error"]["code"], "meta_api_error")
+        self.assertEqual(response.data["error"]["message"], "Invalid parameter")
+        self.assertEqual(response.data["error"]["meta"]["code"], 100)
+        self.assertEqual(response.data["error"]["meta"]["error_subcode"], 4182001)
+        self.assertEqual(response.data["error"]["meta"]["fbtrace_id"], "trace123")
+        self.assertEqual(response.data["error"]["event_id"], "sentry-event-id")
+
 
 class TestSkillsMetricsViewAsInternalUser(BaseTestSkillsMetrisView):
     def setUp(self) -> None:
