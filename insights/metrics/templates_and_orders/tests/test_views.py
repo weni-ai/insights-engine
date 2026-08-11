@@ -244,6 +244,33 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
 
     @with_internal_auth
     @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
+    def test_returns_502_with_structured_meta_error(self, MockUseCase):
+        from insights.metrics.meta.exception import MetaAPIError
+
+        mock_instance = MockUseCase.return_value
+        mock_instance.execute.side_effect = MetaAPIError(
+            meta_error={
+                "message": "Invalid parameter",
+                "type": "OAuthException",
+                "code": 100,
+                "error_subcode": 4182001,
+                "fbtrace_id": "trace123",
+            },
+            event_id="sentry-event-id",
+        )
+
+        response = self.get_metrics(self.valid_params)
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(response.data["error"]["code"], "meta_api_error")
+        self.assertEqual(response.data["error"]["message"], "Invalid parameter")
+        self.assertEqual(response.data["error"]["meta"]["code"], 100)
+        self.assertEqual(response.data["error"]["meta"]["error_subcode"], 4182001)
+        self.assertEqual(response.data["error"]["meta"]["fbtrace_id"], "trace123")
+        self.assertEqual(response.data["error"]["event_id"], "sentry-event-id")
+
+    @with_internal_auth
+    @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
     def test_returns_500_on_unexpected_error(self, MockUseCase):
         mock_instance = MockUseCase.return_value
         mock_instance.execute.side_effect = Exception("Unexpected failure")
