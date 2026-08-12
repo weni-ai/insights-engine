@@ -1,16 +1,16 @@
-from unittest.mock import patch
 import uuid
+from unittest.mock import patch
 from urllib.parse import urlencode
 
+import responses
 from django.conf import settings
 from django.core.cache import cache
 from django.test import override_settings
 from django.utils import timezone
 from django.utils.timezone import timedelta
-import responses
 from rest_framework import status
-from rest_framework.test import APITestCase
 from rest_framework.response import Response
+from rest_framework.test import APITestCase
 
 from insights.authentication.authentication import User
 from insights.authentication.services.jwt_service import JWTService
@@ -19,23 +19,17 @@ from insights.authentication.services.tests.test_jwt_service import (
     generate_private_key_pem,
     generate_public_key_pem,
 )
-from insights.authentication.tests.decorators import (
-    with_project_auth,
-)
+from insights.authentication.tests.decorators import with_project_auth
 from insights.dashboards.models import Dashboard
-from insights.metrics.meta.clients import MetaGraphAPIClient
-from insights.metrics.meta.models import (
-    FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD,
-    FavoriteTemplate,
-)
 from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesCategories,
     WhatsAppMessageTemplatesLanguages,
 )
-from insights.projects.models import Project
-from insights.metrics.meta.utils import (
-    format_button_metrics_data,
-    format_messages_metrics_data,
+from insights.metrics.meta.clients import MetaGraphAPIClient
+from insights.metrics.meta.enums import ProductType
+from insights.metrics.meta.models import (
+    FAVORITE_TEMPLATE_LIMIT_PER_DASHBOARD,
+    FavoriteTemplate,
 )
 from insights.metrics.meta.tests.mock import (
     MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY,
@@ -43,6 +37,11 @@ from insights.metrics.meta.tests.mock import (
     MOCK_TEMPLATE_DAILY_ANALYTICS,
     MOCK_TEMPLATES_LIST_BODY,
 )
+from insights.metrics.meta.utils import (
+    format_button_metrics_data,
+    format_messages_metrics_data,
+)
+from insights.projects.models import Project
 
 JWT_PRIVATE_KEY = generate_private_key()
 JWT_PRIVATE_KEY_PEM = generate_private_key_pem(JWT_PRIVATE_KEY)
@@ -467,6 +466,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
                 "template_id": template_id,
                 "start_date": str(timezone.now().date() - timedelta(days=7)),
                 "end_date": str(timezone.now().date()),
+                "product_type": ProductType.CLOUD_API.value,
             }
         )
 
@@ -620,6 +620,7 @@ class TestMetaMessageTemplatesViewAsAuthenticatedUser(BaseTestMetaMessageTemplat
                 "template_id": template_id,
                 "start_date": str(timezone.now().date() - timedelta(days=7)),
                 "end_date": str(timezone.now().date()),
+                "product_type": ProductType.CLOUD_API.value,
             }
         )
 

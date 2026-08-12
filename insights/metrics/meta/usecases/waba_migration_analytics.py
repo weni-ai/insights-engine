@@ -5,11 +5,30 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Callable
 
+from sentry_sdk import capture_exception
+
 from insights.dashboards.models import Dashboard
+from insights.metrics.meta.enums import ProductType
 
 logger = logging.getLogger(__name__)
 
 MESSAGE_STATUS_KEYS = ("sent", "delivered", "read", "clicked")
+DEFAULT_PRODUCT_TYPES = (
+    ProductType.CLOUD_API.value,
+    ProductType.MM_LITE.value,
+)
+
+
+def resolve_product_types(product_type: str | None) -> list[str]:
+    """
+    Resolve which Meta product_type values to query.
+
+    When product_type is omitted, fetch Cloud API and MM Lite so the dashboard
+    no longer needs a data-source filter.
+    """
+    if product_type:
+        return [product_type]
+    return list(DEFAULT_PRODUCT_TYPES)
 
 
 @dataclass(frozen=True)
@@ -170,9 +189,7 @@ def merge_messages_analytics(
             for status in MESSAGE_STATUS_KEYS:
                 merged[status] += point.get(status, 0)
 
-    status_count = {
-        status: {"value": value} for status, value in status_totals.items()
-    }
+    status_count = {status: {"value": value} for status, value in status_totals.items()}
     result = {
         "data": {
             "status_count": _recalculate_status_percentages(status_count),
@@ -481,6 +498,11 @@ class ConsolidateWabaAnalyticsUseCase:
         merge: Callable[[list[dict]], dict],
         fetch_kwargs: dict,
     ) -> dict:
+        fetch_kwargs = dict(fetch_kwargs)
+        product_type = fetch_kwargs.pop("product_type", None) or None
+        product_types = resolve_product_types(product_type)
+        merging_both_sources = product_type is None
+
         periods = self._periods_with_template_ids(
             current_waba_id=fetch_kwargs["waba_id"],
             new_template_id=fetch_kwargs["template_id"],
@@ -488,18 +510,42 @@ class ConsolidateWabaAnalyticsUseCase:
             end_date=fetch_kwargs["end_date"],
         )
 
-        responses = [
-            fetch(
-                **{
-                    **fetch_kwargs,
-                    "waba_id": period.waba_id,
-                    "template_id": period.template_id,
-                    "start_date": period.start_date,
-                    "end_date": period.end_date,
-                }
-            )
-            for period in periods
-        ]
+        responses: list[dict] = []
+        for period in periods:
+            for resolved_product_type in product_types:
+                try:
+                    responses.append(
+                        fetch(
+                            **{
+                                **fetch_kwargs,
+                                "waba_id": period.waba_id,
+                                "template_id": period.template_id,
+                                "start_date": period.start_date,
+                                "end_date": period.end_date,
+                                "product_type": resolved_product_type,
+                            }
+                        )
+                    )
+                except Exception as error:
+                    # MM Lite may be unavailable for some WABAs; keep Cloud API data.
+                    if (
+                        merging_both_sources
+                        and resolved_product_type == ProductType.MM_LITE.value
+                    ):
+                        capture_exception(error)
+                        logger.warning(
+                            "Failed to fetch analytics for waba_id=%s "
+                            "product_type=%s; skipping this source. Error: %s",
+                            period.waba_id,
+                            resolved_product_type,
+                            error,
+                            exc_info=True,
+                        )
+                        continue
+                    raise
+
+        if not responses:
+            return merge([])
 
         if len(responses) == 1:
             return responses[0]

@@ -1,6 +1,6 @@
 import json
-import responses
 
+import responses
 from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase
@@ -9,6 +9,7 @@ from django.utils.timezone import timedelta
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
+from insights.metrics.meta.enums import ProductType
 from insights.metrics.meta.services import MetaMessageTemplatesService
 from insights.metrics.meta.tests.mock import (
     MOCK_CONVERSATIONS_BY_CATEGORY_RESPONSE_BODY,
@@ -99,6 +100,7 @@ class TestMetaMessageTemplatesService(TestCase):
                     "template_id": template_id,
                     "start_date": str(timezone.now().date() - timedelta(days=7)),
                     "end_date": str(timezone.now().date()),
+                    "product_type": ProductType.CLOUD_API.value,
                 }
             )
 
@@ -144,6 +146,7 @@ class TestMetaMessageTemplatesService(TestCase):
                     "template_id": template_id,
                     "start_date": str(timezone.now().date() - timedelta(days=7)),
                     "end_date": str(timezone.now().date()),
+                    "product_type": ProductType.CLOUD_API.value,
                 }
             )
 

@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, call, patch
 from django.test import TestCase
 
 from insights.dashboards.models import Dashboard
+from insights.metrics.meta.enums import ProductType
 from insights.metrics.meta.usecases.waba_migration_analytics import (
     ConsolidateWabaAnalyticsUseCase,
     WabaAnalyticsPeriod,
@@ -12,6 +13,7 @@ from insights.metrics.meta.usecases.waba_migration_analytics import (
     merge_messages_analytics,
     merge_pricing_analytics_responses,
     resolve_old_template_id,
+    resolve_product_types,
     resolve_waba_analytics_periods,
 )
 from insights.projects.models import Project
@@ -273,7 +275,9 @@ class TestMergeAnalyticsResponses(TestCase):
 
         self.assertEqual(merged["data"]["status_count"]["sent"]["value"], 30)
         self.assertEqual(merged["data"]["status_count"]["delivered"]["value"], 24)
-        self.assertEqual(merged["data"]["status_count"]["delivered"]["percentage"], 80.0)
+        self.assertEqual(
+            merged["data"]["status_count"]["delivered"]["percentage"], 80.0
+        )
         self.assertEqual(len(merged["data"]["data_points"]), 2)
         self.assertEqual(merged["data"]["data_points"][0]["date"], "2026-03-10")
         self.assertEqual(merged["data"]["data_points"][1]["date"], "2026-03-20")
@@ -322,15 +326,18 @@ class TestMergeAnalyticsResponses(TestCase):
 
         merged = merge_messages_analytics(responses)
 
-        self.assertEqual(merged["data"]["data_points"], [
-            {
-                "date": "2026-03-15",
-                "sent": 12,
-                "delivered": 12,
-                "read": 3,
-                "clicked": 1,
-            }
-        ])
+        self.assertEqual(
+            merged["data"]["data_points"],
+            [
+                {
+                    "date": "2026-03-15",
+                    "sent": 12,
+                    "delivered": 12,
+                    "read": 3,
+                    "clicked": 1,
+                }
+            ],
+        )
 
     def test_merge_buttons_analytics_sums_totals(self):
         responses = [
@@ -410,6 +417,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             template_id=self.new_template_id,
             start_date=date(2026, 3, 1),
             end_date=date(2026, 3, 10),
+            product_type=ProductType.CLOUD_API.value,
         )
 
         self.meta_client.get_messages_analytics.assert_called_once_with(
@@ -418,6 +426,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             start_date=date(2026, 3, 1),
             end_date=date(2026, 3, 10),
             include_data_points=True,
+            product_type=ProductType.CLOUD_API.value,
         )
 
     def test_calls_both_wabas_for_post_migration_range(self):
@@ -432,6 +441,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             template_id=self.new_template_id,
             start_date=date(2026, 3, 20),
             end_date=date(2026, 3, 31),
+            product_type=ProductType.CLOUD_API.value,
         )
 
         self.assertEqual(
@@ -443,6 +453,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                     start_date=date(2026, 3, 20),
                     end_date=date(2026, 3, 31),
                     include_data_points=True,
+                    product_type=ProductType.CLOUD_API.value,
                 ),
                 call(
                     waba_id=self.current_waba_id,
@@ -450,6 +461,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                     start_date=date(2026, 3, 20),
                     end_date=date(2026, 3, 31),
                     include_data_points=True,
+                    product_type=ProductType.CLOUD_API.value,
                 ),
             ],
         )
@@ -489,6 +501,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             start_date=date(2026, 3, 1),
             end_date=date(2026, 3, 31),
             include_data_points=False,
+            product_type=ProductType.CLOUD_API.value,
         )
 
         self.assertEqual(
@@ -500,6 +513,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                     start_date=date(2026, 3, 1),
                     end_date=date(2026, 3, 31),
                     include_data_points=False,
+                    product_type=ProductType.CLOUD_API.value,
                 ),
                 call(
                     waba_id=self.current_waba_id,
@@ -507,6 +521,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                     start_date=date(2026, 3, 15),
                     end_date=date(2026, 3, 31),
                     include_data_points=False,
+                    product_type=ProductType.CLOUD_API.value,
                 ),
             ],
         )
@@ -532,6 +547,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             start_date=date(2026, 3, 1),
             end_date=date(2026, 3, 31),
             include_data_points=False,
+            product_type=ProductType.CLOUD_API.value,
         )
 
         self.meta_client.get_messages_analytics.assert_called_once_with(
@@ -540,6 +556,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             start_date=date(2026, 3, 15),
             end_date=date(2026, 3, 31),
             include_data_points=False,
+            product_type=ProductType.CLOUD_API.value,
         )
         self.assertEqual(result["data"]["status_count"]["sent"]["value"], 20)
 
@@ -573,6 +590,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
             template_id=self.new_template_id,
             start_date=date(2026, 3, 1),
             end_date=date(2026, 3, 31),
+            product_type=ProductType.CLOUD_API.value,
         )
 
         self.assertEqual(self.meta_client.get_buttons_analytics.call_count, 2)
@@ -583,6 +601,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                 template_id=self.old_template_id,
                 start_date=date(2026, 3, 1),
                 end_date=date(2026, 3, 31),
+                product_type=ProductType.CLOUD_API.value,
             ),
         )
         self.assertEqual(
@@ -592,11 +611,14 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                 template_id=self.new_template_id,
                 start_date=date(2026, 3, 15),
                 end_date=date(2026, 3, 31),
+                product_type=ProductType.CLOUD_API.value,
             ),
         )
         self.assertEqual(result["data"][0]["total"], 10)
 
-    def test_conversations_by_category_calls_only_old_waba_for_pre_migration_range(self):
+    def test_conversations_by_category_calls_only_old_waba_for_pre_migration_range(
+        self,
+    ):
         self.meta_client.get_conversations_by_category.return_value = {
             "pricing_analytics": {
                 "data": [
@@ -751,9 +773,7 @@ class TestConsolidateWabaAnalyticsUseCase(TestCase):
                 end_date=date(2026, 3, 31),
             ),
         )
-        self.assertEqual(
-            len(result["pricing_analytics"]["data"][0]["data_points"]), 4
-        )
+        self.assertEqual(len(result["pricing_analytics"]["data"][0]["data_points"]), 4)
 
 
 class TestMergePricingAnalyticsResponses(TestCase):
@@ -806,3 +826,216 @@ class TestMergePricingAnalyticsResponses(TestCase):
                 {"pricing_category": "SERVICE", "volume": 2, "cost": 0},
             ],
         )
+
+
+class TestResolveProductTypes(TestCase):
+    def test_returns_both_when_product_type_is_omitted(self):
+        self.assertEqual(
+            resolve_product_types(None),
+            [ProductType.CLOUD_API.value, ProductType.MM_LITE.value],
+        )
+
+    def test_returns_single_product_type_when_provided(self):
+        self.assertEqual(
+            resolve_product_types(ProductType.CLOUD_API.value),
+            [ProductType.CLOUD_API.value],
+        )
+        self.assertEqual(
+            resolve_product_types(ProductType.MM_LITE.value),
+            [ProductType.MM_LITE.value],
+        )
+
+
+class TestConsolidateProductTypes(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.waba_id = "waba-123"
+        self.template_id = "template-123"
+
+        Dashboard.objects.create(
+            project=self.project,
+            name="Meta dashboard",
+            config={
+                "is_whatsapp_integration": True,
+                "waba_id": self.waba_id,
+            },
+        )
+        self.meta_client = MagicMock()
+        self.usecase = ConsolidateWabaAnalyticsUseCase(self.meta_client)
+
+    def test_messages_analytics_fetches_and_merges_both_product_types_by_default(self):
+        self.meta_client.get_messages_analytics.side_effect = [
+            {
+                "data": {
+                    "status_count": {
+                        "sent": {"value": 10},
+                        "delivered": {"value": 8, "percentage": 80},
+                        "read": {"value": 4, "percentage": 40},
+                        "clicked": {"value": 1, "percentage": 10},
+                    },
+                    "data_points": [
+                        {
+                            "date": "2026-03-10",
+                            "sent": 10,
+                            "delivered": 8,
+                            "read": 4,
+                            "clicked": 1,
+                        }
+                    ],
+                }
+            },
+            {
+                "data": {
+                    "status_count": {
+                        "sent": {"value": 5},
+                        "delivered": {"value": 4, "percentage": 80},
+                        "read": {"value": 2, "percentage": 40},
+                        "clicked": {"value": 1, "percentage": 20},
+                    },
+                    "data_points": [
+                        {
+                            "date": "2026-03-10",
+                            "sent": 5,
+                            "delivered": 4,
+                            "read": 2,
+                            "clicked": 1,
+                        }
+                    ],
+                }
+            },
+        ]
+
+        result = self.usecase.get_messages_analytics(
+            waba_id=self.waba_id,
+            template_id=self.template_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 31),
+        )
+
+        self.assertEqual(self.meta_client.get_messages_analytics.call_count, 2)
+        self.assertEqual(
+            self.meta_client.get_messages_analytics.call_args_list,
+            [
+                call(
+                    waba_id=self.waba_id,
+                    template_id=self.template_id,
+                    start_date=date(2026, 3, 1),
+                    end_date=date(2026, 3, 31),
+                    include_data_points=True,
+                    product_type=ProductType.CLOUD_API.value,
+                ),
+                call(
+                    waba_id=self.waba_id,
+                    template_id=self.template_id,
+                    start_date=date(2026, 3, 1),
+                    end_date=date(2026, 3, 31),
+                    include_data_points=True,
+                    product_type=ProductType.MM_LITE.value,
+                ),
+            ],
+        )
+        self.assertEqual(result["data"]["status_count"]["sent"]["value"], 15)
+        self.assertEqual(result["data"]["status_count"]["delivered"]["value"], 12)
+        self.assertEqual(
+            result["data"]["status_count"]["delivered"]["percentage"], 80.0
+        )
+        self.assertEqual(result["data"]["data_points"][0]["sent"], 15)
+
+    def test_messages_analytics_uses_single_product_type_when_provided(self):
+        self.meta_client.get_messages_analytics.return_value = {
+            "data": {
+                "status_count": {
+                    "sent": {"value": 10},
+                    "delivered": {"value": 8, "percentage": 80},
+                    "read": {"value": 4, "percentage": 40},
+                    "clicked": {"value": 1, "percentage": 10},
+                },
+                "data_points": [],
+            }
+        }
+
+        result = self.usecase.get_messages_analytics(
+            waba_id=self.waba_id,
+            template_id=self.template_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 31),
+            product_type=ProductType.MM_LITE.value,
+        )
+
+        self.meta_client.get_messages_analytics.assert_called_once_with(
+            waba_id=self.waba_id,
+            template_id=self.template_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 31),
+            include_data_points=True,
+            product_type=ProductType.MM_LITE.value,
+        )
+        self.assertEqual(result["data"]["status_count"]["sent"]["value"], 10)
+
+    def test_messages_analytics_skips_mm_lite_failure_when_merging_both(self):
+        self.meta_client.get_messages_analytics.side_effect = [
+            {
+                "data": {
+                    "status_count": {
+                        "sent": {"value": 10},
+                        "delivered": {"value": 8, "percentage": 80},
+                        "read": {"value": 4, "percentage": 40},
+                        "clicked": {"value": 1, "percentage": 10},
+                    },
+                    "data_points": [],
+                }
+            },
+            Exception("MM Lite unavailable"),
+        ]
+
+        result = self.usecase.get_messages_analytics(
+            waba_id=self.waba_id,
+            template_id=self.template_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 31),
+            include_data_points=False,
+        )
+
+        self.assertEqual(self.meta_client.get_messages_analytics.call_count, 2)
+        self.assertEqual(result["data"]["status_count"]["sent"]["value"], 10)
+
+    def test_buttons_analytics_fetches_and_merges_both_product_types_by_default(self):
+        self.meta_client.get_buttons_analytics.side_effect = [
+            {
+                "data": [
+                    {
+                        "label": "Continue",
+                        "type": "QUICK_REPLY",
+                        "total": 4,
+                        "click_rate": 40.0,
+                    }
+                ]
+            },
+            {
+                "data": [
+                    {
+                        "label": "Continue",
+                        "type": "QUICK_REPLY",
+                        "total": 6,
+                        "click_rate": 30.0,
+                    }
+                ]
+            },
+        ]
+
+        result = self.usecase.get_buttons_analytics(
+            waba_id=self.waba_id,
+            template_id=self.template_id,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 31),
+        )
+
+        self.assertEqual(self.meta_client.get_buttons_analytics.call_count, 2)
+        self.assertEqual(
+            [
+                call.kwargs["product_type"]
+                for call in self.meta_client.get_buttons_analytics.call_args_list
+            ],
+            [ProductType.CLOUD_API.value, ProductType.MM_LITE.value],
+        )
+        self.assertEqual(result["data"][0]["total"], 10)

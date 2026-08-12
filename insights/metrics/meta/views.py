@@ -3,14 +3,13 @@ import logging
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import ValidationError
 from rest_framework.viewsets import GenericViewSet
 from sentry_sdk import capture_exception
-
 from weni_commons.auth import WeniAuthViewMixin
 
 from insights.authentication.permissions import (
@@ -26,7 +25,6 @@ from insights.metrics.meta.choices import (
     WhatsAppMessageTemplatesCategories,
     WhatsAppMessageTemplatesLanguages,
 )
-from insights.metrics.meta.enums import ProductType
 from insights.metrics.meta.models import FavoriteTemplate
 from insights.metrics.meta.permissions import ProjectDashboardWABAPermission
 from insights.metrics.meta.schema import (
@@ -35,18 +33,18 @@ from insights.metrics.meta.schema import (
     WHATSAPP_MESSAGE_TEMPLATES_MSGS_ANALYTICS_PARAMS,
 )
 from insights.metrics.meta.serializers import (
-    ConversationsByCategoryQueryParamsSerializer,
-    TemplatesMetricsAnalyticsBodySerializer,
-    TemplatesMetricsAnalyticsQueryParamsSerializer,
-    WhatsappIntegrationWebhookRemoveSerializer,
     AddTemplateToFavoritesSerializer,
+    ConversationsByCategoryQueryParamsSerializer,
     FavoriteTemplatesQueryParamsSerializer,
     FavoriteTemplatesSerializer,
     MessageTemplatesCategoriesSerializer,
     MessageTemplatesLanguagesSerializer,
     MessageTemplatesQueryParamsSerializer,
     RemoveTemplateFromFavoritesSerializer,
+    TemplatesMetricsAnalyticsBodySerializer,
+    TemplatesMetricsAnalyticsQueryParamsSerializer,
     WabaSerializer,
+    WhatsappIntegrationWebhookRemoveSerializer,
     WhatsappIntegrationWebhookSerializer,
 )
 from insights.metrics.meta.services import MetaMessageTemplatesService
@@ -439,8 +437,8 @@ class InternalWhatsAppMessageTemplatesView(GenericViewSet):
             "start_date": query_params_serializer.validated_data["start_date"],
             "end_date": query_params_serializer.validated_data["end_date"],
             "template_id": body_serializer.validated_data["template_ids"],
-            "product_type": body_serializer.validated_data.get("product_type")
-            or ProductType.CLOUD_API.value,
+            # Omit product_type to merge Cloud API + MM Lite (same as public API).
+            "product_type": body_serializer.validated_data.get("product_type"),
         }
 
         data = self.service.get_messages_analytics(

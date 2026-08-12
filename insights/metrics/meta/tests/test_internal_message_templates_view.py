@@ -5,14 +5,13 @@ from django.core.cache import cache
 from django.utils import timezone
 from django.utils.timezone import timedelta
 from rest_framework import status
-from rest_framework.test import APITestCase
 from rest_framework.response import Response
+from rest_framework.test import APITestCase
 
 from insights.authentication.authentication import User
-from insights.authentication.tests.decorators import (
-    with_internal_auth,
-)
+from insights.authentication.tests.decorators import with_internal_auth
 from insights.metrics.meta.clients import MetaGraphAPIClient
+from insights.metrics.meta.enums import ProductType
 from insights.metrics.meta.tests.mock import MOCK_TEMPLATE_DAILY_ANALYTICS
 from insights.metrics.meta.utils import format_messages_metrics_data
 
@@ -91,6 +90,7 @@ class TestInternalMetaMessageTemplatesViewAsAuthenticatedUser(
         response = self.get_templates_metrics_analytics(
             {
                 "template_ids": [template_id],
+                "product_type": ProductType.CLOUD_API.value,
             },
             {
                 "waba_id": "123",
