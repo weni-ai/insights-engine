@@ -244,7 +244,7 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
 
     @with_internal_auth
     @patch("insights.metrics.templates_and_orders.views.GetTemplatesAndOrdersMetrics")
-    def test_returns_502_with_structured_meta_error(self, MockUseCase):
+    def test_returns_422_with_structured_meta_error(self, MockUseCase):
         from insights.metrics.meta.exception import MetaAPIError
 
         mock_instance = MockUseCase.return_value
@@ -261,7 +261,7 @@ class TestAsInternalUser(BaseTestTemplatesAndOrdersView):
 
         response = self.get_metrics(self.valid_params)
 
-        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
         self.assertEqual(response.data["error"]["code"], "meta_api_error")
         self.assertEqual(response.data["error"]["message"], "Invalid parameter")
         self.assertEqual(response.data["error"]["meta"]["code"], 100)
