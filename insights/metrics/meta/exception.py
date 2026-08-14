@@ -50,7 +50,7 @@ def parse_meta_error_payload(response) -> dict[str, Any]:
 
 
 class MetaAPIError(APIException):
-    status_code = status.HTTP_502_BAD_GATEWAY
+    status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     default_code = "meta_api_error"
     default_detail = "An error occurred while calling the Meta API"
 
