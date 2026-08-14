@@ -45,6 +45,13 @@ class BaseProjectViewSetTestCase(APITestCase):
 
         return self.client.get(url, query_params)
 
+    def get_ctwa_performance_by_campaign(
+        self, uuid: str, query_params: dict = None
+    ) -> Response:
+        url = reverse("project-ctwa-performance-by-campaign", kwargs={"pk": uuid})
+
+        return self.client.get(url, query_params)
+
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_project_as_anonymous_user(self):
@@ -108,6 +115,14 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
 
     def test_cannot_get_ctwa_conversions_as_anonymous_user(self):
         response = self.get_ctwa_conversions(
+            str(uuid.uuid4()),
+            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_ctwa_performance_by_campaign_as_anonymous_user(self):
+        response = self.get_ctwa_performance_by_campaign(
             str(uuid.uuid4()),
             {"start_date": "2026-08-06", "end_date": "2026-08-12"},
         )
@@ -252,7 +267,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["attributed_revenue"]["currency"], "USD")
-        self.assertEqual(response.data["attributed_revenue"]["value"], 1030000)
+        self.assertEqual(response.data["attributed_revenue"]["value"], 1034300)
         self.assertEqual(response.data["attributed_revenue"]["avg"], 359)
         self.assertEqual(response.data["ctwa_conversations"], 19400)
         self.assertEqual(response.data["organic_conversations"], 22800)
@@ -277,6 +292,39 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.data["conversations_started"]["percentage"], 100)
         self.assertEqual(response.data["conversations_qualified"]["total"], 7180)
         self.assertEqual(response.data["conversations_converted"]["total"], 2880)
+
+    @with_project_auth
+    def test_ctwa_data_filters_by_campaign(self):
+        response = self.get_ctwa_data(
+            self.project.uuid,
+            {
+                "start_date": "2026-08-06",
+                "end_date": "2026-08-12",
+                "campaign": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["ctwa_conversations"], 3200)
+        self.assertEqual(response.data["attributed_revenue"]["value"], 509600)
+
+    @with_project_auth
+    def test_ctwa_performance_by_campaign(self):
+        response = self.get_ctwa_performance_by_campaign(
+            self.project.uuid,
+            {"start_date": "2026-08-06", "end_date": "2026-08-12", "limit": 2},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 5)
+        self.assertEqual(response.data["currency"], "USD")
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(
+            response.data["results"][0]["campaign"], "Contractor Bulk Pricing"
+        )
+        self.assertIsNotNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+        self.assertIn("offset=2", response.data["next"])
 
     @with_project_auth
     def test_retrieve_source_data_exception_handling(self):

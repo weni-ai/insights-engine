@@ -1,10 +1,9 @@
 from rest_framework import serializers
 
 
-class CTWADataQueryParamsSerializer(serializers.Serializer):
+class CTWADateRangeQueryParamsSerializer(serializers.Serializer):
     start_date = serializers.DateField(required=True)
     end_date = serializers.DateField(required=True)
-    campaign = serializers.UUIDField(required=False)
 
     def validate(self, attrs: dict) -> dict:
         if attrs["start_date"] > attrs["end_date"]:
@@ -13,6 +12,19 @@ class CTWADataQueryParamsSerializer(serializers.Serializer):
                 code="end_date_before_start_date",
             )
         return attrs
+
+
+class CTWADataQueryParamsSerializer(CTWADateRangeQueryParamsSerializer):
+    campaign = serializers.UUIDField(required=False)
+
+
+class CTWAPerformanceByCampaignQueryParamsSerializer(
+    CTWADateRangeQueryParamsSerializer
+):
+    limit = serializers.IntegerField(
+        required=False, default=10, min_value=1, max_value=100
+    )
+    offset = serializers.IntegerField(required=False, default=0, min_value=0)
 
 
 class CTWAAttributedRevenueSerializer(serializers.Serializer):
@@ -36,3 +48,11 @@ class CTWAConversionsSerializer(serializers.Serializer):
     conversations_started = CTWAFunnelStepSerializer()
     conversations_qualified = CTWAFunnelStepSerializer()
     conversations_converted = CTWAFunnelStepSerializer()
+
+
+class CTWACampaignPerformanceSerializer(serializers.Serializer):
+    campaign = serializers.CharField()
+    conversations = serializers.IntegerField()
+    qualified = serializers.IntegerField()
+    conversions = serializers.IntegerField()
+    revenue = serializers.FloatField()
