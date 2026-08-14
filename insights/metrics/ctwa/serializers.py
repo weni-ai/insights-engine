@@ -25,3 +25,14 @@ class CTWADataSerializer(serializers.Serializer):
     attributed_revenue = CTWAAttributedRevenueSerializer()
     ctwa_conversations = serializers.IntegerField()
     organic_conversations = serializers.IntegerField()
+
+
+class CTWAFunnelStepSerializer(serializers.Serializer):
+    total = serializers.IntegerField()
+    percentage = serializers.FloatField()
+
+
+class CTWAConversionsSerializer(serializers.Serializer):
+    conversations_started = CTWAFunnelStepSerializer()
+    conversations_qualified = CTWAFunnelStepSerializer()
+    conversations_converted = CTWAFunnelStepSerializer()

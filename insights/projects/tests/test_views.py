@@ -40,6 +40,11 @@ class BaseProjectViewSetTestCase(APITestCase):
 
         return self.client.get(url, query_params)
 
+    def get_ctwa_conversions(self, uuid: str, query_params: dict = None) -> Response:
+        url = reverse("project-ctwa-conversions", kwargs={"pk": uuid})
+
+        return self.client.get(url, query_params)
+
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_project_as_anonymous_user(self):
@@ -95,6 +100,14 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
 
     def test_cannot_get_ctwa_data_as_anonymous_user(self):
         response = self.get_ctwa_data(
+            str(uuid.uuid4()),
+            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_ctwa_conversions_as_anonymous_user(self):
+        response = self.get_ctwa_conversions(
             str(uuid.uuid4()),
             {"start_date": "2026-08-06", "end_date": "2026-08-12"},
         )
@@ -251,6 +264,19 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("start_date", response.data)
         self.assertIn("end_date", response.data)
+
+    @with_project_auth
+    def test_ctwa_conversions(self):
+        response = self.get_ctwa_conversions(
+            self.project.uuid,
+            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["conversations_started"]["total"], 19400)
+        self.assertEqual(response.data["conversations_started"]["percentage"], 100)
+        self.assertEqual(response.data["conversations_qualified"]["total"], 7180)
+        self.assertEqual(response.data["conversations_converted"]["total"], 2880)
 
     @with_project_auth
     def test_retrieve_source_data_exception_handling(self):
