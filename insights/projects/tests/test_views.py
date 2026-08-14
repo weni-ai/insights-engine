@@ -30,6 +30,11 @@ class BaseProjectViewSetTestCase(APITestCase):
 
         return self.client.get(url, query_params)
 
+    def get_meta_campaigns(self, uuid: str, query_params: dict = None) -> Response:
+        url = reverse("project-list-meta-campaigns", kwargs={"pk": uuid})
+
+        return self.client.get(url, query_params)
+
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_project_as_anonymous_user(self):
@@ -75,6 +80,11 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
 
     def test_cannot_get_ticket_ids_as_anonymous_user(self):
         response = self.get_ticket_ids(str(uuid.uuid4()), {"ordering": "name"})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_list_meta_campaigns_as_anonymous_user(self):
+        response = self.get_meta_campaigns(str(uuid.uuid4()), {"search": "black"})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -163,6 +173,49 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             )
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @with_project_auth
+    def test_list_meta_campaigns(self):
+        response = self.get_meta_campaigns(self.project.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 5)
+        self.assertIsNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+        self.assertEqual(len(response.data["results"]), 5)
+        self.assertEqual(
+            set(response.data["results"][0].keys()),
+            {"name", "uuid"},
+        )
+
+    @with_project_auth
+    def test_list_meta_campaigns_search(self):
+        response = self.get_meta_campaigns(self.project.uuid, {"search": "black"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["name"], "Black friday")
+
+    @with_project_auth
+    def test_list_meta_campaigns_pagination(self):
+        response = self.get_meta_campaigns(
+            self.project.uuid, {"page": 1, "page_size": 2}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 5)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertIsNotNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+        self.assertIn("page=2", response.data["next"])
+
+        next_page = self.get_meta_campaigns(
+            self.project.uuid, {"page": 2, "page_size": 2}
+        )
+        self.assertEqual(next_page.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(next_page.data["results"]), 2)
+        self.assertIsNotNone(next_page.data["previous"])
+        self.assertIn("page=1", next_page.data["previous"])
 
     @with_project_auth
     def test_retrieve_source_data_exception_handling(self):
