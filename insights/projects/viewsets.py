@@ -24,6 +24,7 @@ from insights.metrics.ctwa.serializers import (
     CTWADataSerializer,
 )
 from insights.metrics.ctwa.services import CTWADashboardService
+from insights.projects.dataclass import TicketID
 from insights.projects.models import Project, ProjectAuth
 from insights.projects.services.indexer_activation import is_project_indexer_active
 from insights.projects.parsers import parse_dict_to_json
