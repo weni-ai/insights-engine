@@ -138,7 +138,7 @@ class TestSkillsMetricsViewAsAuthenticatedUser(BaseTestSkillsMetrisView):
     @patch(
         "insights.metrics.skills.services.abandoned_cart.AbandonedCartSkillService.get_metrics"
     )
-    def test_returns_502_with_structured_meta_error(self, mock_metrics):
+    def test_returns_422_with_structured_meta_error(self, mock_metrics):
         from insights.metrics.meta.exception import MetaAPIError
 
         mock_metrics.side_effect = MetaAPIError(
@@ -162,7 +162,7 @@ class TestSkillsMetricsViewAsAuthenticatedUser(BaseTestSkillsMetrisView):
             }
         )
 
-        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
         self.assertEqual(response.data["error"]["code"], "meta_api_error")
         self.assertEqual(response.data["error"]["message"], "Invalid parameter")
         self.assertEqual(response.data["error"]["meta"]["code"], 100)
