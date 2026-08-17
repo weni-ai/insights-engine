@@ -16,7 +16,12 @@ from insights.authentication.permissions import ProjectAuthPermission
 from insights.core.filters import get_filters_from_query_params
 from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 from insights.dashboards.filters import DashboardFilter
-from insights.dashboards.models import CONVERSATIONS_DASHBOARD_NAME, Dashboard
+from insights.dashboards.models import (
+    CONVERSATIONS_DASHBOARD_NAME,
+    CTWA_DASHBOARD_NAME,
+    Dashboard,
+)
+from insights.dashboards.tasks import check_and_create_ctwa_dashboard
 from insights.dashboards.serializers import (
     DashboardEditSerializer,
     DashboardIsDefaultSerializer,
@@ -119,6 +124,14 @@ class DashboardViewSet(
         if should_check_marketing_messages_status:
             check_dashboards_marketing_messages_status_for_project.delay(project_uuid)
 
+    def _maybe_enqueue_ctwa_dashboard_check(self, project: Project):
+        if Dashboard.objects.filter(
+            project=project, name=CTWA_DASHBOARD_NAME
+        ).exists():
+            return
+
+        check_and_create_ctwa_dashboard.delay(str(project.uuid))
+
     def list(self, request, *args, **kwargs):
         project = None
 
@@ -138,6 +151,7 @@ class DashboardViewSet(
                 handle_project_created_with_inline_agent_switch.delay(project_uuid)
 
             self._check_marketing_messages_status(project_uuid)
+            self._maybe_enqueue_ctwa_dashboard_check(project)
 
         response = super().list(request, *args, **kwargs)
 

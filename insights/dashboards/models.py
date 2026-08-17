@@ -8,12 +8,19 @@ from insights.shared.models import BaseModel, ConfigurableModel, SoftDeletableMo
 HUMAN_SERVICE_DASHBOARD_V1_NAME = "Atendimento humano"
 HUMAN_SERVICE_DASHBOARD_V2_NAME = "human_support_dashboard.title"
 CONVERSATIONS_DASHBOARD_NAME = "conversations_dashboard.title"
+CTWA_DASHBOARD_NAME = "ctwa_dashboard.title"
 
 PROTECTED_DASHBOARD_NAMES = [
     CONVERSATIONS_DASHBOARD_NAME,
+    CTWA_DASHBOARD_NAME,
     HUMAN_SERVICE_DASHBOARD_V1_NAME,
     HUMAN_SERVICE_DASHBOARD_V2_NAME,
 ]
+
+UNIQUE_PER_PROJECT_DASHBOARD_NAMES = {
+    CONVERSATIONS_DASHBOARD_NAME: "Conversation dashboard already exists for this project",
+    CTWA_DASHBOARD_NAME: "CTWA dashboard already exists for this project",
+}
 
 
 class DashboardTemplate(BaseModel, ConfigurableModel):
@@ -66,19 +73,18 @@ class Dashboard(BaseModel, ConfigurableModel, SoftDeletableModel):
 
     def save(self, *args, **kwargs):
         if self._state.adding or self.tracker.has_changed("name"):
-            if self.name == CONVERSATIONS_DASHBOARD_NAME:
+            error_message = UNIQUE_PER_PROJECT_DASHBOARD_NAMES.get(self.name)
+            if error_message:
                 existing_dashboards = Dashboard.objects.filter(
                     project=self.project,
-                    name=CONVERSATIONS_DASHBOARD_NAME,
+                    name=self.name,
                 )
 
                 if self._state.adding:
                     existing_dashboards = existing_dashboards.exclude(pk=self.pk)
 
                 if existing_dashboards.exists():
-                    raise ValueError(
-                        "Conversation dashboard already exists for this project"
-                    )
+                    raise ValueError(error_message)
 
         return super().save(*args, **kwargs)
 
