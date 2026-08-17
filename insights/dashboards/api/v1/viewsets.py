@@ -23,7 +23,8 @@ from insights.authentication.project_access import (
 from insights.core.filters import get_filters_from_query_params
 from insights.core.urls.proxy_pagination import get_cursor_based_pagination_urls
 from insights.dashboards.filters import DashboardFilter
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import CTWA_DASHBOARD_NAME, Dashboard
+from insights.dashboards.tasks import check_and_create_ctwa_dashboard
 from insights.dashboards.serializers import (
     DashboardEditSerializer,
     DashboardIsDefaultSerializer,
@@ -68,6 +69,13 @@ def _check_marketing_messages_status(project_uuid: UUID):
         check_dashboards_marketing_messages_status_for_project.delay(project_uuid)
 
 
+def _maybe_enqueue_ctwa_dashboard_check(project: Project):
+    if Dashboard.objects.filter(project=project, name=CTWA_DASHBOARD_NAME).exists():
+        return
+
+    check_and_create_ctwa_dashboard.delay(str(project.uuid))
+
+
 @kong_expose
 class DashboardListAPIView(generics.ListAPIView):
     """
@@ -107,6 +115,7 @@ class DashboardListAPIView(generics.ListAPIView):
                 handle_project_created_with_inline_agent_switch.delay(project_uuid)
 
             _check_marketing_messages_status(project_uuid)
+            _maybe_enqueue_ctwa_dashboard_check(project)
 
         response = super().list(request, *args, **kwargs)
 
