@@ -1,4 +1,6 @@
 import logging
+from math import ceil
+from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
@@ -18,6 +20,14 @@ from insights.core.urls.proxy_pagination import (
     get_cursor_based_pagination_urls,
 )
 from insights.human_support.clients.chats import ChatsClient
+from insights.metrics.ctwa.serializers import (
+    CTWAConversionsSerializer,
+    CTWADataQueryParamsSerializer,
+    CTWADataSerializer,
+    CTWACampaignPerformanceSerializer,
+    CTWAPerformanceByCampaignQueryParamsSerializer,
+)
+from insights.metrics.ctwa.services import CTWADashboardService
 from insights.projects.dataclass import TicketID
 from insights.projects.models import Project, ProjectAuth
 from insights.projects.services.indexer_activation import is_project_indexer_active
@@ -26,6 +36,8 @@ from insights.projects.serializers import (
     SetProjectAsSecondarySerializer,
     ListContactsQueryParamsSerializer,
     ListTicketIDsQueryParamsSerializer,
+    MetaCampaignQueryParamsSerializer,
+    MetaCampaignSerializer,
     ProjectSerializer,
     TicketIDSerializer,
 )
@@ -35,6 +47,9 @@ from insights.sources.agents.usecases.query_execute import (
 )
 from insights.sources.chats.clients import ChatsRESTClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
+from insights.sources.meta.campaign.usecases.query_execute import (
+    QueryExecutor as MetaCampaignQueryExecutor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +120,182 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         return Response(serialized_source, status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="sources/meta/campaign",
+    )
+    def list_meta_campaigns(self, request, *args, **kwargs):
+        project = self.get_object()
+        query_params = MetaCampaignQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        filters = {
+            "project": str(project.uuid),
+            **query_params.validated_data,
+        }
+
+        try:
+            source_data = MetaCampaignQueryExecutor.execute(
+                filters=filters,
+                operation="list",
+                parser=parse_dict_to_json,
+            )
+        except Exception as error:
+            logger.exception(f"Error listing Meta campaigns: {error}")
+            return Response(
+                {"detail": "Failed to retrieve source data"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        page = query_params.validated_data["page"]
+        page_size = query_params.validated_data["page_size"]
+        count = source_data.get("count", 0)
+        total_pages = ceil(count / page_size) if page_size and count else 0
+        search = query_params.validated_data.get("search")
+
+        return Response(
+            {
+                "count": count,
+                "next": self._meta_campaign_page_url(
+                    request, page + 1, page_size, search
+                )
+                if page < total_pages
+                else None,
+                "previous": self._meta_campaign_page_url(
+                    request, page - 1, page_size, search
+                )
+                if page > 1
+                else None,
+                "results": MetaCampaignSerializer(
+                    source_data.get("results", []), many=True
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _meta_campaign_page_url(self, request, page, page_size, search):
+        params = {"page": page, "page_size": page_size}
+        if search:
+            params["search"] = search
+        return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="ctwa/data",
+    )
+    def ctwa_data(self, request, *args, **kwargs):
+        project = self.get_object()
+        query_params = CTWADataQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            data = CTWADashboardService().get_data(
+                project_uuid=str(project.uuid),
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+                campaign=query_params.validated_data.get("campaign"),
+            )
+        except Exception as error:
+            logger.exception(f"Error retrieving CTWA data: {error}")
+            return Response(
+                {"detail": "Failed to retrieve CTWA data"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(CTWADataSerializer(data).data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="ctwa/conversions",
+    )
+    def ctwa_conversions(self, request, *args, **kwargs):
+        project = self.get_object()
+        query_params = CTWADataQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            data = CTWADashboardService().get_conversions(
+                project_uuid=str(project.uuid),
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+                campaign=query_params.validated_data.get("campaign"),
+            )
+        except Exception as error:
+            logger.exception(f"Error retrieving CTWA conversions: {error}")
+            return Response(
+                {"detail": "Failed to retrieve CTWA conversions"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            CTWAConversionsSerializer(data).data, status=status.HTTP_200_OK
+        )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="ctwa/performance_by_campaign",
+    )
+    def ctwa_performance_by_campaign(self, request, *args, **kwargs):
+        project = self.get_object()
+        query_params = CTWAPerformanceByCampaignQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+
+        limit = query_params.validated_data["limit"]
+        offset = query_params.validated_data["offset"]
+
+        try:
+            data = CTWADashboardService().get_performance_by_campaign(
+                project_uuid=str(project.uuid),
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+                limit=limit,
+                offset=offset,
+            )
+        except Exception as error:
+            logger.exception(f"Error retrieving CTWA performance by campaign: {error}")
+            return Response(
+                {"detail": "Failed to retrieve CTWA performance by campaign"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        count = data.get("count", 0)
+        next_offset = offset + limit
+        previous_offset = max(offset - limit, 0)
+
+        return Response(
+            {
+                "count": count,
+                "next": self._ctwa_limit_offset_url(request, query_params, next_offset)
+                if next_offset < count
+                else None,
+                "previous": self._ctwa_limit_offset_url(
+                    request, query_params, previous_offset
+                )
+                if offset > 0
+                else None,
+                "currency": data.get("currency"),
+                "results": CTWACampaignPerformanceSerializer(
+                    data.get("results", []), many=True
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _ctwa_limit_offset_url(self, request, query_params, offset):
+        params = {
+            "start_date": query_params.validated_data["start_date"].isoformat(),
+            "end_date": query_params.validated_data["end_date"].isoformat(),
+            "limit": query_params.validated_data["limit"],
+            "offset": offset,
+        }
+        return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
 
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")
     def verify_project_indexer(self, request, source_slug=None, *args, **kwargs):
