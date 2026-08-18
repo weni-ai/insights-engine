@@ -1,4 +1,6 @@
 import logging
+from math import ceil
+from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
@@ -24,6 +26,8 @@ from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import (
     ListContactsQueryParamsSerializer,
     ListTicketIDsQueryParamsSerializer,
+    MetaCampaignQueryParamsSerializer,
+    MetaCampaignSerializer,
     ProjectSerializer,
     TicketIDSerializer,
 )
@@ -33,6 +37,9 @@ from insights.sources.agents.usecases.query_execute import (
 )
 from insights.sources.chats.clients import ChatsRESTClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
+from insights.sources.meta.campaign.usecases.query_execute import (
+    QueryExecutor as MetaCampaignQueryExecutor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +96,66 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         return Response(serialized_source, status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="sources/meta/campaign",
+    )
+    def list_meta_campaigns(self, request, *args, **kwargs):
+        project = self.get_object()
+        query_params = MetaCampaignQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        filters = {
+            "project": str(project.uuid),
+            **query_params.validated_data,
+        }
+
+        try:
+            source_data = MetaCampaignQueryExecutor.execute(
+                filters=filters,
+                operation="list",
+                parser=parse_dict_to_json,
+            )
+        except Exception as error:
+            logger.exception(f"Error listing Meta campaigns: {error}")
+            return Response(
+                {"detail": "Failed to retrieve source data"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        page = query_params.validated_data["page"]
+        page_size = query_params.validated_data["page_size"]
+        count = source_data.get("count", 0)
+        total_pages = ceil(count / page_size) if page_size and count else 0
+        search = query_params.validated_data.get("search")
+
+        return Response(
+            {
+                "count": count,
+                "next": self._meta_campaign_page_url(
+                    request, page + 1, page_size, search
+                )
+                if page < total_pages
+                else None,
+                "previous": self._meta_campaign_page_url(
+                    request, page - 1, page_size, search
+                )
+                if page > 1
+                else None,
+                "results": MetaCampaignSerializer(
+                    source_data.get("results", []), many=True
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _meta_campaign_page_url(self, request, page, page_size, search):
+        params = {"page": page, "page_size": page_size}
+        if search:
+            params["search"] = search
+        return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
 
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")
     def verify_project_indexer(self, request, source_slug=None, *args, **kwargs):
