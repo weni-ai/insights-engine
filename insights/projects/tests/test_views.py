@@ -35,11 +35,6 @@ class BaseProjectViewSetTestCase(APITestCase):
 
         return self.client.get(url, query_params)
 
-    def get_ctwa_data(self, uuid: str, query_params: dict = None) -> Response:
-        url = reverse("project-ctwa-data", kwargs={"pk": uuid})
-
-        return self.client.get(url, query_params)
-
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_project_as_anonymous_user(self):
@@ -90,14 +85,6 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
 
     def test_cannot_list_meta_campaigns_as_anonymous_user(self):
         response = self.get_meta_campaigns(str(uuid.uuid4()), {"search": "black"})
-
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_cannot_get_ctwa_data_as_anonymous_user(self):
-        response = self.get_ctwa_data(
-            str(uuid.uuid4()),
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
-        )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -229,28 +216,6 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(len(next_page.data["results"]), 2)
         self.assertIsNotNone(next_page.data["previous"])
         self.assertIn("page=1", next_page.data["previous"])
-
-    @with_project_auth
-    def test_ctwa_data(self):
-        response = self.get_ctwa_data(
-            self.project.uuid,
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["attributed_revenue"]["currency"], "USD")
-        self.assertEqual(response.data["attributed_revenue"]["value"], 1030000)
-        self.assertEqual(response.data["attributed_revenue"]["avg"], 359)
-        self.assertEqual(response.data["ctwa_conversations"], 19400)
-        self.assertEqual(response.data["organic_conversations"], 22800)
-
-    @with_project_auth
-    def test_ctwa_data_requires_dates(self):
-        response = self.get_ctwa_data(self.project.uuid)
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("start_date", response.data)
-        self.assertIn("end_date", response.data)
 
     @with_project_auth
     def test_retrieve_source_data_exception_handling(self):
