@@ -19,6 +19,11 @@ from insights.core.urls.proxy_pagination import (
     get_cursor_based_pagination_urls,
 )
 from insights.human_support.clients.chats import ChatsClient
+from insights.metrics.ctwa.serializers import (
+    CTWADataQueryParamsSerializer,
+    CTWADataSerializer,
+)
+from insights.metrics.ctwa.services import CTWADashboardService
 from insights.projects.dataclass import TicketID
 from insights.projects.models import Project, ProjectAuth
 from insights.projects.services.indexer_activation import is_project_indexer_active
@@ -156,6 +161,32 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         if search:
             params["search"] = search
         return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="ctwa/data",
+    )
+    def ctwa_data(self, request, *args, **kwargs):
+        project = self.get_object()
+        query_params = CTWADataQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            data = CTWADashboardService().get_data(
+                project_uuid=str(project.uuid),
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+                campaign=query_params.validated_data.get("campaign"),
+            )
+        except Exception as error:
+            logger.exception(f"Error retrieving CTWA data: {error}")
+            return Response(
+                {"detail": "Failed to retrieve CTWA data"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(CTWADataSerializer(data).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")
     def verify_project_indexer(self, request, source_slug=None, *args, **kwargs):
