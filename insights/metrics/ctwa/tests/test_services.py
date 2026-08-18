@@ -26,6 +26,11 @@ class TestCTWADashboardService(TestCase):
         )
 
         self.assertEqual(data, MOCK_CTWA_DATA)
+        self.assertIn("currency", data["attributed_revenue"])
+        self.assertIn("value", data["attributed_revenue"])
+        self.assertIn("avg", data["attributed_revenue"])
+        self.assertIn("ctwa_conversations", data)
+        self.assertIn("organic_conversations", data)
 
     def test_get_conversions_maps_datalake_counts_to_funnel(self):
         data = self.service.get_conversions(

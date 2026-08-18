@@ -15,8 +15,9 @@ class CTWADashboardService:
     """
     CTWA dashboard metrics.
 
-    Summary data source is still undefined. Conversions are expected to come
-    from Datalake and are mocked until the events query is available.
+    Summary data source is still undefined; ``get_data`` currently returns
+    mocked values matching the dashboard contract. Conversions are expected
+    to come from Datalake and are mocked until the events query is available.
     """
 
     def __init__(self, datalake_service: CTWADatalakeService | None = None):

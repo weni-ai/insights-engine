@@ -67,7 +67,7 @@ class TestMetaAPIError(SimpleTestCase):
 
         error = MetaAPIError(meta_error=meta_error, event_id="sentry-id")
 
-        self.assertEqual(error.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(error.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
         self.assertEqual(error.detail["error"]["code"], "meta_api_error")
         self.assertEqual(error.detail["error"]["message"], "Invalid parameter")
         self.assertEqual(error.detail["error"]["event_id"], "sentry-id")
