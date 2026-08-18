@@ -20,6 +20,7 @@ from insights.core.urls.proxy_pagination import (
 )
 from insights.human_support.clients.chats import ChatsClient
 from insights.metrics.ctwa.serializers import (
+    CTWAConversionsSerializer,
     CTWADataQueryParamsSerializer,
     CTWADataSerializer,
 )
@@ -187,6 +188,34 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             )
 
         return Response(CTWADataSerializer(data).data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="ctwa/conversions",
+    )
+    def ctwa_conversions(self, request, *args, **kwargs):
+        project = self.get_object()
+        query_params = CTWADataQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        try:
+            data = CTWADashboardService().get_conversions(
+                project_uuid=str(project.uuid),
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+                campaign=query_params.validated_data.get("campaign"),
+            )
+        except Exception as error:
+            logger.exception(f"Error retrieving CTWA conversions: {error}")
+            return Response(
+                {"detail": "Failed to retrieve CTWA conversions"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            CTWAConversionsSerializer(data).data, status=status.HTTP_200_OK
+        )
 
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")
     def verify_project_indexer(self, request, source_slug=None, *args, **kwargs):
