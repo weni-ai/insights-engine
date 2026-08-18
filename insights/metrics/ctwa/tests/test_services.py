@@ -26,6 +26,11 @@ class TestCTWADashboardService(TestCase):
         self.assertEqual(data["attributed_revenue"]["value"], 1034300)
         self.assertEqual(data["attributed_revenue"]["avg"], 359)
         self.assertEqual(data["organic_conversations"], 22800)
+        self.assertIn("currency", data["attributed_revenue"])
+        self.assertIn("value", data["attributed_revenue"])
+        self.assertIn("avg", data["attributed_revenue"])
+        self.assertIn("ctwa_conversations", data)
+        self.assertIn("organic_conversations", data)
 
     def test_get_data_filters_by_campaign_uuid(self):
         campaign_uuid = MOCK_CAMPAIGNS_PERFORMANCE[0]["uuid"]

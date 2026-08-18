@@ -105,7 +105,7 @@ class TestMetaGraphAPIClient(TestCase):
                 self.client.get_template_preview(template_id=template_id)
 
             error = context.exception
-            self.assertEqual(error.status_code, status.HTTP_502_BAD_GATEWAY)
+            self.assertEqual(error.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
             self.assertEqual(error.detail["error"]["code"], "meta_api_error")
             self.assertEqual(error.meta_error["code"], 100)
             self.assertEqual(error.meta_error["error_subcode"], 33)
@@ -217,7 +217,7 @@ class TestMetaGraphAPIClient(TestCase):
 
             error = context.exception
             meta_error = MOCK_TEMPLATE_DAILY_ANALYTICS_INVALID_PERIOD["error"]
-            self.assertEqual(error.status_code, status.HTTP_502_BAD_GATEWAY)
+            self.assertEqual(error.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
             self.assertEqual(error.detail["error"]["code"], "meta_api_error")
             self.assertEqual(error.detail["error"]["message"], meta_error["message"])
             self.assertEqual(error.meta_error["code"], meta_error["code"])

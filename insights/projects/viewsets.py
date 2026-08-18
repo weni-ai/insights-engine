@@ -20,10 +20,10 @@ from insights.core.urls.proxy_pagination import (
 )
 from insights.human_support.clients.chats import ChatsClient
 from insights.metrics.ctwa.serializers import (
+    CTWACampaignPerformanceSerializer,
     CTWAConversionsSerializer,
     CTWADataQueryParamsSerializer,
     CTWADataSerializer,
-    CTWACampaignPerformanceSerializer,
     CTWAPerformanceByCampaignQueryParamsSerializer,
 )
 from insights.metrics.ctwa.services import CTWADashboardService
