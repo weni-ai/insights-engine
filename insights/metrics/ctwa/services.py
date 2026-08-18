@@ -1,23 +1,13 @@
 from insights.metrics.ctwa.integrations.datalake.services import CTWADatalakeService
 
-MOCK_CTWA_DATA = {
-    "attributed_revenue": {
-        "currency": "USD",
-        "value": 1030000,
-        "avg": 359,
-    },
-    "ctwa_conversations": 19400,
-    "organic_conversations": 22800,
-}
-
 
 class CTWADashboardService:
     """
     CTWA dashboard metrics.
 
-    Summary data source is still undefined; ``get_data`` currently returns
-    mocked values matching the dashboard contract. Conversions are expected
-    to come from Datalake and are mocked until the events query is available.
+    Summary, conversions and performance by campaign are expected to come
+    from Datalake and are mocked until the events query is available.
+    Campaign filter uses the same UUIDs returned by the campaign source.
     """
 
     def __init__(self, datalake_service: CTWADatalakeService | None = None):
@@ -30,7 +20,21 @@ class CTWADashboardService:
         end_date,
         campaign: str | None = None,
     ) -> dict:
-        return dict(MOCK_CTWA_DATA)
+        data = self.datalake_service.get_summary_data(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            campaign=campaign,
+        )
+        return {
+            "attributed_revenue": {
+                "currency": data.currency,
+                "value": data.attributed_revenue,
+                "avg": data.avg_order_value,
+            },
+            "ctwa_conversations": data.ctwa_conversations,
+            "organic_conversations": data.organic_conversations,
+        }
 
     def get_conversions(
         self,
@@ -61,6 +65,22 @@ class CTWADashboardService:
                 "percentage": self._percentage(data.conversations_converted, started),
             },
         }
+
+    def get_performance_by_campaign(
+        self,
+        project_uuid: str,
+        start_date,
+        end_date,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> dict:
+        return self.datalake_service.get_performance_by_campaign(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            offset=offset,
+        )
 
     def _percentage(self, value: int, total: int) -> float:
         if not total:

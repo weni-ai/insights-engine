@@ -20,9 +20,11 @@ from insights.core.urls.proxy_pagination import (
 )
 from insights.human_support.clients.chats import ChatsClient
 from insights.metrics.ctwa.serializers import (
+    CTWACampaignPerformanceSerializer,
     CTWAConversionsSerializer,
     CTWADataQueryParamsSerializer,
     CTWADataSerializer,
+    CTWAPerformanceByCampaignQueryParamsSerializer,
 )
 from insights.metrics.ctwa.services import CTWADashboardService
 from insights.projects.dataclass import TicketID
@@ -216,6 +218,68 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         return Response(
             CTWAConversionsSerializer(data).data, status=status.HTTP_200_OK
         )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="ctwa/performance_by_campaign",
+    )
+    def ctwa_performance_by_campaign(self, request, *args, **kwargs):
+        project = self.get_object()
+        query_params = CTWAPerformanceByCampaignQueryParamsSerializer(
+            data=request.query_params
+        )
+        query_params.is_valid(raise_exception=True)
+
+        limit = query_params.validated_data["limit"]
+        offset = query_params.validated_data["offset"]
+
+        try:
+            data = CTWADashboardService().get_performance_by_campaign(
+                project_uuid=str(project.uuid),
+                start_date=query_params.validated_data["start_date"],
+                end_date=query_params.validated_data["end_date"],
+                limit=limit,
+                offset=offset,
+            )
+        except Exception as error:
+            logger.exception(f"Error retrieving CTWA performance by campaign: {error}")
+            return Response(
+                {"detail": "Failed to retrieve CTWA performance by campaign"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        count = data.get("count", 0)
+        next_offset = offset + limit
+        previous_offset = max(offset - limit, 0)
+
+        return Response(
+            {
+                "count": count,
+                "next": self._ctwa_limit_offset_url(request, query_params, next_offset)
+                if next_offset < count
+                else None,
+                "previous": self._ctwa_limit_offset_url(
+                    request, query_params, previous_offset
+                )
+                if offset > 0
+                else None,
+                "currency": data.get("currency"),
+                "results": CTWACampaignPerformanceSerializer(
+                    data.get("results", []), many=True
+                ).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _ctwa_limit_offset_url(self, request, query_params, offset):
+        params = {
+            "start_date": query_params.validated_data["start_date"].isoformat(),
+            "end_date": query_params.validated_data["end_date"].isoformat(),
+            "limit": query_params.validated_data["limit"],
+            "offset": offset,
+        }
+        return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
 
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")
     def verify_project_indexer(self, request, source_slug=None, *args, **kwargs):
