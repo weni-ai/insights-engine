@@ -125,6 +125,9 @@ class DashboardViewSet(
             check_dashboards_marketing_messages_status_for_project.delay(project_uuid)
 
     def _maybe_enqueue_ctwa_dashboard_check(self, project: Project):
+        if not settings.ENABLE_CTWA_DASHBOARD_AUTO_CREATION:
+            return
+
         if Dashboard.objects.filter(
             project=project, name=CTWA_DASHBOARD_NAME
         ).exists():

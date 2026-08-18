@@ -1,4 +1,5 @@
 import uuid
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -257,6 +258,15 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
 
     @with_project_auth
     @patch("insights.dashboards.api.v1.viewsets.check_and_create_ctwa_dashboard")
+    def test_list_does_not_enqueue_ctwa_dashboard_check_when_disabled(self, mock_task):
+        response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_task.delay.assert_not_called()
+
+    @with_project_auth
+    @override_settings(ENABLE_CTWA_DASHBOARD_AUTO_CREATION=True)
+    @patch("insights.dashboards.api.v1.viewsets.check_and_create_ctwa_dashboard")
     def test_list_enqueues_ctwa_dashboard_check_when_missing(self, mock_task):
         response = self.list({"project": str(self.project.uuid)})
 
@@ -264,6 +274,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         mock_task.delay.assert_called_once_with(str(self.project.uuid))
 
     @with_project_auth
+    @override_settings(ENABLE_CTWA_DASHBOARD_AUTO_CREATION=True)
     @patch("insights.dashboards.api.v1.viewsets.check_and_create_ctwa_dashboard")
     def test_list_does_not_enqueue_ctwa_dashboard_check_when_exists(self, mock_task):
         Dashboard.objects.create(
