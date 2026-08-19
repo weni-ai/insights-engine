@@ -29,13 +29,13 @@ FLOWS_CAMPAIGNS_PAYLOAD = {
 }
 
 
+@override_settings(FLOWS_URL="https://flows.weni.ai")
 class TestFlowsCampaignClient(TestCase):
     def setUp(self):
         self.client = FlowsCampaignClient(
             project_uuid="cec2f6a2-885f-49ed-914d-329762aeb8e5"
         )
 
-    @override_settings(FLOWS_URL="https://flows.weni.ai")
     @patch("insights.sources.meta.campaign.clients.requests.get")
     @patch.object(FlowsCampaignClient, "headers", {"Authorization": "Bearer token"})
     def test_list_campaigns_maps_headline_and_source_id(self, mock_get):
@@ -63,7 +63,6 @@ class TestFlowsCampaignClient(TestCase):
             [{"name": "Our new product", "uuid": "12345678901"}],
         )
 
-    @override_settings(FLOWS_URL="https://flows.weni.ai")
     @patch("insights.sources.meta.campaign.clients.requests.get")
     @patch.object(FlowsCampaignClient, "headers", {"Authorization": "Bearer token"})
     def test_list_campaigns_uses_source_id_when_headline_is_empty(self, mock_get):
@@ -86,7 +85,6 @@ class TestFlowsCampaignClient(TestCase):
         self.assertEqual(data["results"][0]["name"], "999")
         self.assertEqual(data["results"][0]["uuid"], "999")
 
-    @override_settings(FLOWS_URL="https://flows.weni.ai")
     @patch("insights.sources.meta.campaign.clients.requests.get")
     @patch.object(FlowsCampaignClient, "headers", {"Authorization": "Bearer token"})
     def test_list_campaigns_converts_page_to_limit_offset(self, mock_get):
