@@ -257,6 +257,7 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertNotIn(str(dashboard_3.uuid), response_dashboards)
 
     @with_project_auth
+    @override_settings(ENABLE_CTWA_DASHBOARD_AUTO_CREATION=False)
     @patch("insights.dashboards.api.v1.viewsets.check_and_create_ctwa_dashboard")
     def test_list_does_not_enqueue_ctwa_dashboard_check_when_disabled(self, mock_task):
         response = self.list({"project": str(self.project.uuid)})
@@ -265,7 +266,6 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         mock_task.delay.assert_not_called()
 
     @with_project_auth
-    @override_settings(ENABLE_CTWA_DASHBOARD_AUTO_CREATION=True)
     @patch("insights.dashboards.api.v1.viewsets.check_and_create_ctwa_dashboard")
     def test_list_enqueues_ctwa_dashboard_check_when_missing(self, mock_task):
         response = self.list({"project": str(self.project.uuid)})
@@ -274,7 +274,6 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         mock_task.delay.assert_called_once_with(str(self.project.uuid))
 
     @with_project_auth
-    @override_settings(ENABLE_CTWA_DASHBOARD_AUTO_CREATION=True)
     @patch("insights.dashboards.api.v1.viewsets.check_and_create_ctwa_dashboard")
     def test_list_does_not_enqueue_ctwa_dashboard_check_when_exists(self, mock_task):
         Dashboard.objects.create(
@@ -287,6 +286,35 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_task.delay.assert_not_called()
+
+    @with_project_auth
+    def test_list_hides_ctwa_dashboard_by_default(self):
+        dashboard = Dashboard.objects.create(
+            project=self.project,
+            name=CTWA_DASHBOARD_NAME,
+            description="Click to WhatsApp dashboard",
+        )
+
+        response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_dashboards = {d["uuid"] for d in response.data["results"]}
+        self.assertNotIn(str(dashboard.uuid), response_dashboards)
+
+    @with_project_auth
+    @override_settings(SHOW_CTWA_DASHBOARD_IN_LIST=True)
+    def test_list_shows_ctwa_dashboard_when_enabled(self):
+        dashboard = Dashboard.objects.create(
+            project=self.project,
+            name=CTWA_DASHBOARD_NAME,
+            description="Click to WhatsApp dashboard",
+        )
+
+        response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_dashboards = {d["uuid"] for d in response.data["results"]}
+        self.assertIn(str(dashboard.uuid), response_dashboards)
 
     @with_project_auth
     def test_list_dashboards_includes_is_indexer_active_false(self):

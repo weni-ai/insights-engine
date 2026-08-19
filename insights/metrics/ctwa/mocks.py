@@ -44,11 +44,6 @@ MOCK_CAMPAIGNS_PERFORMANCE = [
     },
 ]
 
-MOCK_CAMPAIGNS = [
-    {"name": campaign["campaign"], "uuid": campaign["uuid"]}
-    for campaign in MOCK_CAMPAIGNS_PERFORMANCE
-]
-
 
 def filter_campaigns(campaign_uuid: str | None = None) -> list[dict]:
     if not campaign_uuid:

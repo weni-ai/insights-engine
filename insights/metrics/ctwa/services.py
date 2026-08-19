@@ -7,7 +7,7 @@ class CTWADashboardService:
 
     Summary, conversions and performance by campaign are expected to come
     from Datalake and are mocked until the events query is available.
-    Campaign filter uses the same UUIDs returned by the campaign source.
+    Campaign filter uses the same source ids returned by the campaign source.
     """
 
     def __init__(self, datalake_service: CTWADatalakeService | None = None):

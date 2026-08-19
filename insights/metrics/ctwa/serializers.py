@@ -15,7 +15,7 @@ class CTWADateRangeQueryParamsSerializer(serializers.Serializer):
 
 
 class CTWADataQueryParamsSerializer(CTWADateRangeQueryParamsSerializer):
-    campaign = serializers.UUIDField(required=False)
+    campaign = serializers.CharField(required=False)
 
 
 class CTWAPerformanceByCampaignQueryParamsSerializer(

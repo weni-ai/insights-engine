@@ -216,29 +216,50 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @with_project_auth
-    def test_list_meta_campaigns(self):
+    @patch("insights.projects.viewsets.MetaCampaignQueryExecutor.execute")
+    def test_list_meta_campaigns(self, mock_execute):
+        mock_execute.return_value = {
+            "count": 1,
+            "results": [{"name": "Our new product", "uuid": "12345678901"}],
+        }
+
         response = self.get_meta_campaigns(self.project.uuid)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 5)
+        self.assertEqual(response.data["count"], 1)
         self.assertIsNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
-        self.assertEqual(len(response.data["results"]), 5)
-        self.assertEqual(
-            set(response.data["results"][0].keys()),
-            {"name", "uuid"},
-        )
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["name"], "Our new product")
+        self.assertEqual(response.data["results"][0]["uuid"], "12345678901")
 
     @with_project_auth
-    def test_list_meta_campaigns_search(self):
+    @patch("insights.projects.viewsets.MetaCampaignQueryExecutor.execute")
+    def test_list_meta_campaigns_search(self, mock_execute):
+        mock_execute.return_value = {
+            "count": 1,
+            "results": [{"name": "Black friday", "uuid": "e5f67890-1234-5678-efab-345678901234"}],
+        }
+
         response = self.get_meta_campaigns(self.project.uuid, {"search": "black"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["name"], "Black friday")
+        mock_execute.assert_called_once()
+        self.assertEqual(mock_execute.call_args.kwargs["filters"]["search"], "black")
 
     @with_project_auth
-    def test_list_meta_campaigns_pagination(self):
+    @patch("insights.projects.viewsets.MetaCampaignQueryExecutor.execute")
+    def test_list_meta_campaigns_pagination(self, mock_execute):
+        mock_execute.return_value = {
+            "count": 5,
+            "results": [
+                {"name": "Campaign 1", "uuid": "1"},
+                {"name": "Campaign 2", "uuid": "2"},
+            ],
+        }
+
         response = self.get_meta_campaigns(
             self.project.uuid, {"page": 1, "page_size": 2}
         )
@@ -250,6 +271,13 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertIsNone(response.data["previous"])
         self.assertIn("page=2", response.data["next"])
 
+        mock_execute.return_value = {
+            "count": 5,
+            "results": [
+                {"name": "Campaign 3", "uuid": "3"},
+                {"name": "Campaign 4", "uuid": "4"},
+            ],
+        }
         next_page = self.get_meta_campaigns(
             self.project.uuid, {"page": 2, "page_size": 2}
         )
