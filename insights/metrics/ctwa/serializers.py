@@ -21,6 +21,7 @@ class CTWADataQueryParamsSerializer(CTWADateRangeQueryParamsSerializer):
 class CTWAPerformanceByCampaignQueryParamsSerializer(
     CTWADateRangeQueryParamsSerializer
 ):
+    campaign = serializers.CharField(required=False)
     limit = serializers.IntegerField(
         required=False, default=10, min_value=1, max_value=100
     )

@@ -382,6 +382,28 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertIn("offset=2", response.data["next"])
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
+    def test_ctwa_performance_by_campaign_filters_by_campaign(self):
+        response = self.get_ctwa_performance_by_campaign(
+            self.project.uuid,
+            {
+                "start_date": "2026-08-06",
+                "end_date": "2026-08-12",
+                "campaign": "120250777996740371",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(
+            response.data["results"][0]["campaign"], "120250777996740371"
+        )
+
+    @with_project_auth
     def test_retrieve_source_data_exception_handling(self):
         url = reverse(
             "project-retrieve-source-data",

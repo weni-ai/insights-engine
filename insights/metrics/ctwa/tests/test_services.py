@@ -168,3 +168,16 @@ class TestCTWADashboardService(TestCase):
         self.assertEqual(len(data["results"]), 2)
         self.assertEqual(data["results"][0]["campaign"], "weekend")
         self.assertNotIn("uuid", data["results"][0])
+
+    def test_get_performance_by_campaign_filters_by_campaign_source(self):
+        data = self.service.get_performance_by_campaign(
+            project_uuid="123e4567-e89b-12d3-a456-426614174000",
+            start_date="2026-08-06",
+            end_date="2026-08-12",
+            campaign="120250777996740371",
+        )
+
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(len(data["results"]), 1)
+        self.assertEqual(data["results"][0]["campaign"], "120250777996740371")
+        self.assertEqual(data["results"][0]["conversations"], 3200)

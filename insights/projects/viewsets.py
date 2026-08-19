@@ -241,6 +241,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 end_date=query_params.validated_data["end_date"],
                 limit=limit,
                 offset=offset,
+                campaign=query_params.validated_data.get("campaign"),
             )
         except Exception as error:
             logger.exception(f"Error retrieving CTWA performance by campaign: {error}")
@@ -279,6 +280,9 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             "limit": query_params.validated_data["limit"],
             "offset": offset,
         }
+        campaign = query_params.validated_data.get("campaign")
+        if campaign:
+            params["campaign"] = campaign
         return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
 
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")
