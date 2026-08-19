@@ -9,6 +9,11 @@ import requests
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
+from insights.metrics.ctwa.integrations.datalake.services import CTWADatalakeService
+from insights.metrics.ctwa.tests.test_services import (
+    _fake_ctwa_by_campaign,
+    _fake_totals,
+)
 from insights.projects.models import Project, ProjectAuth
 from insights.authentication.authentication import StaticTokenAuthentication
 from insights.authentication.permissions import IsServiceAuthentication
@@ -287,6 +292,13 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertIn("page=1", next_page.data["previous"])
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
+    @patch.object(
+        CTWADatalakeService, "_default_conversations_totals", _fake_totals
+    )
     def test_ctwa_data(self):
         response = self.get_ctwa_data(
             self.project.uuid,
@@ -309,6 +321,10 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertIn("end_date", response.data)
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
     def test_ctwa_conversions(self):
         response = self.get_ctwa_conversions(
             self.project.uuid,
@@ -322,13 +338,20 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.data["conversations_converted"]["total"], 2880)
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
+    @patch.object(
+        CTWADatalakeService, "_default_conversations_totals", _fake_totals
+    )
     def test_ctwa_data_filters_by_campaign(self):
         response = self.get_ctwa_data(
             self.project.uuid,
             {
                 "start_date": "2026-08-06",
                 "end_date": "2026-08-12",
-                "campaign": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "campaign": "120250777996740371",
             },
         )
 
@@ -337,6 +360,10 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.data["attributed_revenue"]["value"], 509600)
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
     def test_ctwa_performance_by_campaign(self):
         response = self.get_ctwa_performance_by_campaign(
             self.project.uuid,
@@ -348,7 +375,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.data["currency"], "USD")
         self.assertEqual(len(response.data["results"]), 2)
         self.assertEqual(
-            response.data["results"][0]["campaign"], "Contractor Bulk Pricing"
+            response.data["results"][0]["campaign"], "weekend"
         )
         self.assertIsNotNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
