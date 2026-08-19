@@ -184,8 +184,9 @@ class CTWADatalakeService:
         end_date,
         limit: int = 10,
         offset: int = 0,
+        campaign: str | None = None,
     ) -> dict:
-        rows = self._fetch_rows(project_uuid, start_date, end_date)
+        rows = self._fetch_rows(project_uuid, start_date, end_date, campaign)
         by_campaign: dict[str, dict] = {}
         for row in rows:
             source = _campaign_source(row)

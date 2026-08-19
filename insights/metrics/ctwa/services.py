@@ -74,6 +74,7 @@ class CTWADashboardService:
         end_date,
         limit: int = 10,
         offset: int = 0,
+        campaign: str | None = None,
     ) -> dict:
         return self.datalake_service.get_performance_by_campaign(
             project_uuid=project_uuid,
@@ -81,6 +82,7 @@ class CTWADashboardService:
             end_date=end_date,
             limit=limit,
             offset=offset,
+            campaign=campaign,
         )
 
     def _percentage(self, value: int, total: int) -> float:

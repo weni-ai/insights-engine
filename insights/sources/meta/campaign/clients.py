@@ -25,6 +25,7 @@ class FlowsCampaignClient(InternalAuthentication):
             "project_uuid": self.project_uuid,
             "limit": page_size,
             "offset": (page - 1) * page_size,
+            "after": settings.CTWA_CAMPAIGNS_AFTER,
         }
         if search:
             params["search"] = search

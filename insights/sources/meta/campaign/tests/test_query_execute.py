@@ -29,7 +29,10 @@ FLOWS_CAMPAIGNS_PAYLOAD = {
 }
 
 
-@override_settings(FLOWS_URL="https://flows.weni.ai")
+@override_settings(
+    FLOWS_URL="https://flows.weni.ai",
+    CTWA_CAMPAIGNS_AFTER="2026-08-19T00:00:00-03:00",
+)
 class TestFlowsCampaignClient(TestCase):
     def setUp(self):
         self.client = FlowsCampaignClient(
@@ -52,6 +55,7 @@ class TestFlowsCampaignClient(TestCase):
                 "project_uuid": "cec2f6a2-885f-49ed-914d-329762aeb8e5",
                 "limit": 10,
                 "offset": 0,
+                "after": "2026-08-19T00:00:00-03:00",
                 "search": "product",
             },
             timeout=60,
@@ -99,6 +103,10 @@ class TestFlowsCampaignClient(TestCase):
             10,
         )
         self.assertEqual(mock_get.call_args.kwargs["params"]["offset"], 10)
+        self.assertEqual(
+            mock_get.call_args.kwargs["params"]["after"],
+            "2026-08-19T00:00:00-03:00",
+        )
 
 
 class TestMetaCampaignQueryExecutor(TestCase):
