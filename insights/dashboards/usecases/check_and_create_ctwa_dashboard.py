@@ -28,8 +28,8 @@ class CheckAndCreateCTWADashboardUseCase:
 
     def _has_campaigns(self, project_uuid: str) -> bool:
         campaigns = self.campaign_client_class(project_uuid).list_campaigns(
-            page=1,
-            page_size=1,
+            limit=1,
+            offset=0,
         )
         if campaigns.get("count"):
             return True

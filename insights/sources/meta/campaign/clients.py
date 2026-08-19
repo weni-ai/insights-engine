@@ -18,13 +18,13 @@ class FlowsCampaignClient(InternalAuthentication):
     def list_campaigns(
         self,
         search: str | None = None,
-        page: int = 1,
-        page_size: int = 10,
+        limit: int = 10,
+        offset: int = 0,
     ) -> dict:
         params = {
             "project_uuid": self.project_uuid,
-            "limit": page_size,
-            "offset": (page - 1) * page_size,
+            "limit": limit,
+            "offset": offset,
             "after": settings.CTWA_CAMPAIGNS_AFTER,
         }
         if search:

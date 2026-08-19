@@ -1,6 +1,5 @@
 import logging
-from math import ceil
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
@@ -17,6 +16,7 @@ from insights.authentication.permissions import (
 from insights.authentication.services.project_auth import is_project_viewer
 from insights.core.urls.proxy_pagination import (
     get_cursor_based_pagination_urls,
+    get_limit_offset_pagination_urls,
 )
 from insights.human_support.clients.chats import ChatsClient
 from insights.metrics.ctwa.serializers import (
@@ -133,39 +133,19 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        page = query_params.validated_data["page"]
-        page_size = query_params.validated_data["page_size"]
-        count = source_data.get("count", 0)
-        total_pages = ceil(count / page_size) if page_size and count else 0
-        search = query_params.validated_data.get("search")
+        pagination_urls = get_limit_offset_pagination_urls(request, source_data)
 
         return Response(
             {
-                "count": count,
-                "next": self._meta_campaign_page_url(
-                    request, page + 1, page_size, search
-                )
-                if page < total_pages
-                else None,
-                "previous": self._meta_campaign_page_url(
-                    request, page - 1, page_size, search
-                )
-                if page > 1
-                else None,
+                "count": source_data.get("count", 0),
+                "next": pagination_urls.next_url,
+                "previous": pagination_urls.previous_url,
                 "results": MetaCampaignSerializer(
                     source_data.get("results", []), many=True
                 ).data,
             },
             status=status.HTTP_200_OK,
         )
-
-    def _meta_campaign_page_url(self, request, page, page_size, search):
-        parsed = urlparse(request.build_absolute_uri())
-        endpoint = f"https://{parsed.netloc}{request.path}"
-        params = {"page": page, "page_size": page_size}
-        if search:
-            params["search"] = search
-        return f"{endpoint}?{urlencode(params)}"
 
     @action(
         detail=True,
