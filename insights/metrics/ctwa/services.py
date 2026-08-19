@@ -5,9 +5,10 @@ class CTWADashboardService:
     """
     CTWA dashboard metrics.
 
-    Summary, conversions and performance by campaign are expected to come
-    from Datalake and are mocked until the events query is available.
-    Campaign filter uses the same source ids returned by the campaign source.
+    Summary, conversions and performance by campaign come from Datalake
+    (weni-ctwa-by-campaign). Organic conversations are conversational totals
+    minus CTWA started. Currency is a default until a dedicated endpoint exists.
+    Campaign filter uses campaign_source (same id as the Flows campaign list).
     """
 
     def __init__(self, datalake_service: CTWADatalakeService | None = None):
