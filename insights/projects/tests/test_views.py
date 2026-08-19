@@ -274,7 +274,9 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(len(response.data["results"]), 2)
         self.assertIsNotNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
+        self.assertTrue(response.data["next"].startswith("https://"))
         self.assertIn("page=2", response.data["next"])
+        self.assertIn("page_size=2", response.data["next"])
 
         mock_execute.return_value = {
             "count": 5,
@@ -289,6 +291,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(next_page.status_code, status.HTTP_200_OK)
         self.assertEqual(len(next_page.data["results"]), 2)
         self.assertIsNotNone(next_page.data["previous"])
+        self.assertTrue(next_page.data["previous"].startswith("https://"))
         self.assertIn("page=1", next_page.data["previous"])
 
     @with_project_auth

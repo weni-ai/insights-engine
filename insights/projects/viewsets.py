@@ -1,6 +1,6 @@
 import logging
 from math import ceil
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import requests
 from django.conf import settings
@@ -160,10 +160,12 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         )
 
     def _meta_campaign_page_url(self, request, page, page_size, search):
+        parsed = urlparse(request.build_absolute_uri())
+        endpoint = f"https://{parsed.netloc}{request.path}"
         params = {"page": page, "page_size": page_size}
         if search:
             params["search"] = search
-        return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
+        return f"{endpoint}?{urlencode(params)}"
 
     @action(
         detail=True,
