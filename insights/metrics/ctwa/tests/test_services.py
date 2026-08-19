@@ -132,6 +132,28 @@ class TestCTWADashboardService(TestCase):
         self.assertEqual(data["conversations_qualified"]["percentage"], 0)
         self.assertEqual(data["conversations_converted"]["percentage"], 0)
 
+    def test_fetch_rows_sends_inclusive_datetime_bounds(self):
+        captured = {}
+
+        def capture_client(**params):
+            captured.update(params)
+            return {"values": SAMPLE_ROWS}
+
+        service = CTWADatalakeService(
+            ctwa_by_campaign_client=capture_client,
+            conversations_totals_getter=_fake_totals,
+        )
+        service.get_performance_by_campaign(
+            project_uuid="123e4567-e89b-12d3-a456-426614174000",
+            start_date="2026-08-18",
+            end_date="2026-08-19",
+        )
+
+        self.assertEqual(captured["dt_start"], "2026-08-18 00:00:00")
+        self.assertEqual(captured["dt_end"], "2026-08-19 23:59:59")
+        self.assertNotIn("date_start", captured)
+        self.assertNotIn("date_end", captured)
+
     def test_get_performance_by_campaign_paginates(self):
         data = self.service.get_performance_by_campaign(
             project_uuid="123e4567-e89b-12d3-a456-426614174000",
