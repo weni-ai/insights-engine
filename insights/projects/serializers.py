@@ -40,4 +40,4 @@ class MetaCampaignQueryParamsSerializer(serializers.Serializer):
 
 class MetaCampaignSerializer(serializers.Serializer):
     name = serializers.CharField()
-    uuid = serializers.UUIDField()
+    uuid = serializers.CharField()

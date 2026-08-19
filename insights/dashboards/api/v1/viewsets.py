@@ -109,6 +109,12 @@ class DashboardViewSet(
             )
         queryset = queryset.order_by("created_on")
 
+        if (
+            not settings.SHOW_CTWA_DASHBOARD_IN_LIST
+            and getattr(self, "action", None) == "list"
+        ):
+            queryset = queryset.exclude(name=CTWA_DASHBOARD_NAME)
+
         return queryset
 
     def _check_marketing_messages_status(self, project_uuid: UUID):
