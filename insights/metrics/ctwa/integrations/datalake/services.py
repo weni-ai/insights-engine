@@ -10,41 +10,12 @@ from insights.metrics.ctwa.integrations.datalake.dataclass import (
 )
 
 
-DT_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-
-def _parse_datetime(value) -> datetime:
+def _to_date_str(value) -> str:
     if isinstance(value, datetime):
-        return value
+        return value.date().isoformat()
     if isinstance(value, date):
-        return datetime.combine(value, time.min)
-    text = str(value).strip().replace(" ", "T")
-    if "T" in text:
-        return datetime.fromisoformat(text[:19])
-    return datetime.combine(date.fromisoformat(text[:10]), time.min)
-
-
-def _has_clock_time(value, parsed: datetime) -> bool:
-    if isinstance(value, date) and not isinstance(value, datetime):
-        return False
-    if isinstance(value, datetime):
-        return parsed.time() != time.min
-    text = str(value).strip()
-    return "T" in text or " " in text
-
-
-def _to_dt_start(value) -> str:
-    parsed = _parse_datetime(value)
-    if not _has_clock_time(value, parsed):
-        parsed = datetime.combine(parsed.date(), time.min)
-    return parsed.strftime(DT_FORMAT)
-
-
-def _to_dt_end(value) -> str:
-    parsed = _parse_datetime(value)
-    if not _has_clock_time(value, parsed):
-        parsed = datetime.combine(parsed.date(), time(23, 59, 59))
-    return parsed.strftime(DT_FORMAT)
+        return value.isoformat()
+    return str(value)[:10]
 
 
 def _to_datetime(value) -> datetime:
@@ -122,8 +93,8 @@ class CTWADatalakeService:
     ) -> list[dict]:
         params = {
             "project": str(project_uuid),
-            "dt_start": _to_dt_start(start_date),
-            "dt_end": _to_dt_end(end_date),
+            "dt_start": f"{_to_date_str(start_date)} 00:00:00",
+            "dt_end": f"{_to_date_str(end_date)} 23:59:59",
         }
         if campaign:
             params["campaign_source"] = str(campaign)
