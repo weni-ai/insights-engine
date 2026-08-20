@@ -10,12 +10,27 @@ from insights.metrics.ctwa.integrations.datalake.dataclass import (
 )
 
 
-def _to_date_str(value) -> str:
+def _to_date(value) -> date:
     if isinstance(value, datetime):
-        return value.date().isoformat()
+        return value.date()
     if isinstance(value, date):
-        return value.isoformat()
-    return str(value)[:10]
+        return value
+    return date.fromisoformat(str(value)[:10])
+
+
+def _to_date_str(value) -> str:
+    return _to_date(value).isoformat()
+
+
+def _clamp_ctwa_range(start_date, end_date) -> tuple[date, date] | None:
+    start = _to_date(start_date)
+    end = _to_date(end_date)
+    floor = _to_date(settings.CTWA_CAMPAIGNS_AFTER)
+    if start < floor:
+        start = floor
+    if start > end:
+        return None
+    return start, end
 
 
 def _to_datetime(value) -> datetime:
@@ -142,6 +157,11 @@ class CTWADatalakeService:
         end_date,
         campaign: str | None = None,
     ) -> CTWASummaryData:
+        date_range = _clamp_ctwa_range(start_date, end_date)
+        if date_range is None:
+            return CTWASummaryData(currency=settings.CTWA_DEFAULT_CURRENCY)
+
+        start_date, end_date = date_range
         rows = self._fetch_rows(project_uuid, start_date, end_date, campaign)
         totals = self._aggregate_rows(rows)
         organic_rows = rows
@@ -168,6 +188,11 @@ class CTWADatalakeService:
         end_date,
         campaign: str | None = None,
     ) -> CTWAConversionsData:
+        date_range = _clamp_ctwa_range(start_date, end_date)
+        if date_range is None:
+            return CTWAConversionsData()
+
+        start_date, end_date = date_range
         totals = self._aggregate_rows(
             self._fetch_rows(project_uuid, start_date, end_date, campaign)
         )
@@ -186,6 +211,15 @@ class CTWADatalakeService:
         offset: int = 0,
         campaign: str | None = None,
     ) -> dict:
+        date_range = _clamp_ctwa_range(start_date, end_date)
+        if date_range is None:
+            return {
+                "currency": settings.CTWA_DEFAULT_CURRENCY,
+                "count": 0,
+                "results": [],
+            }
+
+        start_date, end_date = date_range
         rows = self._fetch_rows(project_uuid, start_date, end_date, campaign)
         by_campaign: dict[str, dict] = {}
         for row in rows:

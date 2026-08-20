@@ -82,8 +82,8 @@ class TestCTWADashboardService(TestCase):
     def test_get_data_aggregates_all_campaigns(self):
         data = self.service.get_data(
             project_uuid="123e4567-e89b-12d3-a456-426614174000",
-            start_date="2026-08-06",
-            end_date="2026-08-12",
+            start_date="2026-08-20",
+            end_date="2026-08-26",
         )
 
         self.assertEqual(data["ctwa_conversations"], 19400)
@@ -95,8 +95,8 @@ class TestCTWADashboardService(TestCase):
     def test_get_data_filters_by_campaign_source(self):
         data = self.service.get_data(
             project_uuid="123e4567-e89b-12d3-a456-426614174000",
-            start_date="2026-08-06",
-            end_date="2026-08-12",
+            start_date="2026-08-20",
+            end_date="2026-08-26",
             campaign="120250777996740371",
         )
 
@@ -107,8 +107,8 @@ class TestCTWADashboardService(TestCase):
     def test_get_conversions_maps_datalake_counts_to_funnel(self):
         data = self.service.get_conversions(
             project_uuid="123e4567-e89b-12d3-a456-426614174000",
-            start_date="2026-08-06",
-            end_date="2026-08-12",
+            start_date="2026-08-20",
+            end_date="2026-08-26",
         )
 
         self.assertEqual(data["conversations_started"]["total"], 19400)
@@ -124,8 +124,8 @@ class TestCTWADashboardService(TestCase):
         )
         data = service.get_conversions(
             project_uuid="123e4567-e89b-12d3-a456-426614174000",
-            start_date="2026-08-06",
-            end_date="2026-08-12",
+            start_date="2026-08-20",
+            end_date="2026-08-26",
         )
 
         self.assertEqual(data["conversations_started"]["percentage"], 100)
@@ -149,16 +149,87 @@ class TestCTWADashboardService(TestCase):
             end_date="2026-08-19",
         )
 
-        self.assertEqual(captured["dt_start"], "2026-08-18 00:00:00")
+        self.assertEqual(captured["dt_start"], "2026-08-19 00:00:00")
         self.assertEqual(captured["dt_end"], "2026-08-19 23:59:59")
         self.assertNotIn("date_start", captured)
         self.assertNotIn("date_end", captured)
 
-    def test_get_performance_by_campaign_paginates(self):
-        data = self.service.get_performance_by_campaign(
+    def test_clamps_start_date_to_ctwa_floor(self):
+        captured = {}
+        totals_dates = {}
+
+        def capture_client(**params):
+            captured.update(params)
+            return {"values": SAMPLE_ROWS}
+
+        def capture_totals(**kwargs):
+            totals_dates.update(kwargs)
+            return _fake_totals()
+
+        service = CTWADatalakeService(
+            ctwa_by_campaign_client=capture_client,
+            conversations_totals_getter=capture_totals,
+        )
+        service.get_summary_data(
+            project_uuid="123e4567-e89b-12d3-a456-426614174000",
+            start_date="2026-08-13",
+            end_date="2026-08-21",
+        )
+
+        self.assertEqual(captured["dt_start"], "2026-08-19 00:00:00")
+        self.assertEqual(captured["dt_end"], "2026-08-21 23:59:59")
+        self.assertEqual(
+            totals_dates["start_date"].date().isoformat(), "2026-08-19"
+        )
+        self.assertEqual(
+            totals_dates["end_date"].date().isoformat(), "2026-08-21"
+        )
+
+    def test_does_not_clamp_start_date_after_floor(self):
+        captured = {}
+
+        def capture_client(**params):
+            captured.update(params)
+            return {"values": SAMPLE_ROWS}
+
+        service = CTWADatalakeService(
+            ctwa_by_campaign_client=capture_client,
+            conversations_totals_getter=_fake_totals,
+        )
+        service.get_performance_by_campaign(
+            project_uuid="123e4567-e89b-12d3-a456-426614174000",
+            start_date="2026-08-21",
+            end_date="2026-08-28",
+        )
+
+        self.assertEqual(captured["dt_start"], "2026-08-21 00:00:00")
+        self.assertEqual(captured["dt_end"], "2026-08-28 23:59:59")
+
+    def test_returns_empty_when_range_ends_before_floor(self):
+        calls = []
+
+        def capture_client(**params):
+            calls.append(params)
+            return {"values": SAMPLE_ROWS}
+
+        data = CTWADatalakeService(
+            ctwa_by_campaign_client=capture_client,
+            conversations_totals_getter=_fake_totals,
+        ).get_summary_data(
             project_uuid="123e4567-e89b-12d3-a456-426614174000",
             start_date="2026-08-06",
             end_date="2026-08-12",
+        )
+
+        self.assertEqual(calls, [])
+        self.assertEqual(data.ctwa_conversations, 0)
+        self.assertEqual(data.organic_conversations, 0)
+
+    def test_get_performance_by_campaign_paginates(self):
+        data = self.service.get_performance_by_campaign(
+            project_uuid="123e4567-e89b-12d3-a456-426614174000",
+            start_date="2026-08-20",
+            end_date="2026-08-26",
             limit=2,
             offset=0,
         )
@@ -172,8 +243,8 @@ class TestCTWADashboardService(TestCase):
     def test_get_performance_by_campaign_filters_by_campaign_source(self):
         data = self.service.get_performance_by_campaign(
             project_uuid="123e4567-e89b-12d3-a456-426614174000",
-            start_date="2026-08-06",
-            end_date="2026-08-12",
+            start_date="2026-08-20",
+            end_date="2026-08-26",
             campaign="120250777996740371",
         )
 
