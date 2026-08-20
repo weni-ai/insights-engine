@@ -113,7 +113,7 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_ctwa_data_as_anonymous_user(self):
         response = self.get_ctwa_data(
             str(uuid.uuid4()),
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -121,7 +121,7 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_ctwa_conversions_as_anonymous_user(self):
         response = self.get_ctwa_conversions(
             str(uuid.uuid4()),
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -129,7 +129,7 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_ctwa_performance_by_campaign_as_anonymous_user(self):
         response = self.get_ctwa_performance_by_campaign(
             str(uuid.uuid4()),
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -313,7 +313,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
     def test_ctwa_data(self):
         response = self.get_ctwa_data(
             self.project.uuid,
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -339,7 +339,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
     def test_ctwa_conversions(self):
         response = self.get_ctwa_conversions(
             self.project.uuid,
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -360,8 +360,8 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         response = self.get_ctwa_data(
             self.project.uuid,
             {
-                "start_date": "2026-08-06",
-                "end_date": "2026-08-12",
+                "start_date": "2026-08-20",
+                "end_date": "2026-08-26",
                 "campaign": "120250777996740371",
             },
         )
@@ -378,7 +378,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
     def test_ctwa_performance_by_campaign(self):
         response = self.get_ctwa_performance_by_campaign(
             self.project.uuid,
-            {"start_date": "2026-08-06", "end_date": "2026-08-12", "limit": 2},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26", "limit": 2},
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -401,8 +401,8 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         response = self.get_ctwa_performance_by_campaign(
             self.project.uuid,
             {
-                "start_date": "2026-08-06",
-                "end_date": "2026-08-12",
+                "start_date": "2026-08-20",
+                "end_date": "2026-08-26",
                 "campaign": "120250777996740371",
             },
         )
