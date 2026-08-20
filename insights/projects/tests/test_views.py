@@ -259,6 +259,8 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
     def test_list_meta_campaigns_pagination(self, mock_execute):
         mock_execute.return_value = {
             "count": 5,
+            "next": "https://flows.weni.ai/api/v2/internals/ctwa_referral_sources?limit=2&offset=2",
+            "previous": None,
             "results": [
                 {"name": "Campaign 1", "uuid": "1"},
                 {"name": "Campaign 2", "uuid": "2"},
@@ -266,7 +268,7 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         }
 
         response = self.get_meta_campaigns(
-            self.project.uuid, {"page": 1, "page_size": 2}
+            self.project.uuid, {"limit": 2, "offset": 0}
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -275,24 +277,30 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertIsNotNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
         self.assertTrue(response.data["next"].startswith("https://"))
-        self.assertIn("page=2", response.data["next"])
-        self.assertIn("page_size=2", response.data["next"])
+        self.assertIn("limit=2", response.data["next"])
+        self.assertIn("offset=2", response.data["next"])
+        mock_execute.assert_called()
+        self.assertEqual(mock_execute.call_args.kwargs["filters"]["limit"], 2)
+        self.assertEqual(mock_execute.call_args.kwargs["filters"]["offset"], 0)
 
         mock_execute.return_value = {
             "count": 5,
+            "next": "https://flows.weni.ai/api/v2/internals/ctwa_referral_sources?limit=2&offset=4",
+            "previous": "https://flows.weni.ai/api/v2/internals/ctwa_referral_sources?limit=2&offset=0",
             "results": [
                 {"name": "Campaign 3", "uuid": "3"},
                 {"name": "Campaign 4", "uuid": "4"},
             ],
         }
         next_page = self.get_meta_campaigns(
-            self.project.uuid, {"page": 2, "page_size": 2}
+            self.project.uuid, {"limit": 2, "offset": 2}
         )
         self.assertEqual(next_page.status_code, status.HTTP_200_OK)
         self.assertEqual(len(next_page.data["results"]), 2)
         self.assertIsNotNone(next_page.data["previous"])
         self.assertTrue(next_page.data["previous"].startswith("https://"))
-        self.assertIn("page=1", next_page.data["previous"])
+        self.assertIn("limit=2", next_page.data["previous"])
+        self.assertIn("offset=0", next_page.data["previous"])
 
     @with_project_auth
     @patch(

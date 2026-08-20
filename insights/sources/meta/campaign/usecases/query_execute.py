@@ -17,6 +17,6 @@ class QueryExecutor(BaseQueryExecutor):
         client = FlowsCampaignClient(project_uuid=project_uuid)
         return client.list_campaigns(
             search=filters.get("search"),
-            page=filters.get("page", 1),
-            page_size=filters.get("page_size", 10),
+            limit=filters.get("limit", 10),
+            offset=filters.get("offset", 0),
         )

@@ -46,7 +46,7 @@ class TestFlowsCampaignClient(TestCase):
         response.json.return_value = FLOWS_CAMPAIGNS_PAYLOAD
         mock_get.return_value = response
 
-        data = self.client.list_campaigns(search="product", page=1, page_size=10)
+        data = self.client.list_campaigns(search="product", limit=10, offset=0)
 
         mock_get.assert_called_once_with(
             url="https://flows.weni.ai/api/v2/internals/ctwa_referral_sources",
@@ -91,17 +91,14 @@ class TestFlowsCampaignClient(TestCase):
 
     @patch("insights.sources.meta.campaign.clients.requests.get")
     @patch.object(FlowsCampaignClient, "headers", {"Authorization": "Bearer token"})
-    def test_list_campaigns_converts_page_to_limit_offset(self, mock_get):
+    def test_list_campaigns_forwards_limit_offset(self, mock_get):
         response = MagicMock()
         response.json.return_value = {"count": 1229, "results": []}
         mock_get.return_value = response
 
-        self.client.list_campaigns(page=2, page_size=10)
+        self.client.list_campaigns(limit=5, offset=10)
 
-        self.assertEqual(
-            mock_get.call_args.kwargs["params"]["limit"],
-            10,
-        )
+        self.assertEqual(mock_get.call_args.kwargs["params"]["limit"], 5)
         self.assertEqual(mock_get.call_args.kwargs["params"]["offset"], 10)
         self.assertEqual(
             mock_get.call_args.kwargs["params"]["after"],
@@ -123,8 +120,8 @@ class TestMetaCampaignQueryExecutor(TestCase):
             filters={
                 "project": "cec2f6a2-885f-49ed-914d-329762aeb8e5",
                 "search": "product",
-                "page": 1,
-                "page_size": 10,
+                "limit": 10,
+                "offset": 0,
             }
         )
 
@@ -133,7 +130,7 @@ class TestMetaCampaignQueryExecutor(TestCase):
         )
         mock_client.list_campaigns.assert_called_once_with(
             search="product",
-            page=1,
-            page_size=10,
+            limit=10,
+            offset=0,
         )
         self.assertEqual(data["results"][0]["name"], "Our new product")
