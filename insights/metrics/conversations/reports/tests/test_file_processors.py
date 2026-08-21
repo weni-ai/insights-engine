@@ -157,6 +157,46 @@ class TestXLSXFileProcessor(TestCase):
             "Test (1) (1)",
         )
 
+    def test_ensure_unique_worksheet_name_replaces_invalid_excel_characters(self):
+        used_names = set()
+        result = self.processor._ensure_unique_worksheet_name(
+            "Assunto/tópico da conversa inferido a partir do diálogo.",
+            used_names,
+        )
+
+        self.assertEqual(result, "Assunto-tópico da conversa infe")
+        self.assertEqual(len(result), 31)
+        self.assertNotRegex(result, r"[\[\]:*?/\\]")
+
+    def test_ensure_unique_worksheet_name_with_only_invalid_characters(self):
+        used_names = set()
+        result = self.processor._ensure_unique_worksheet_name("/*?:[]\\", used_names)
+
+        self.assertEqual(result, "Sheet")
+
+    def test_process_xlsx_with_slash_in_worksheet_name(self):
+        worksheets = [
+            ConversationsReportWorksheet(
+                name="Assunto/tópico da conversa inferido a partir do diálogo.",
+                data=[{"col1": "val1"}],
+            ),
+        ]
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.XLSX,
+            requested_by=self.user,
+        )
+
+        files = self.processor.process(report=report, worksheets=worksheets)
+
+        self.assertEqual(len(files), 1)
+        self.assertTrue(files[0].name.endswith(".xlsx"))
+        self.assertTrue(files[0].content)
+
 
 class TestGetFileProcessor(TestCase):
     def test_get_file_processor_with_invalid_format(self):
