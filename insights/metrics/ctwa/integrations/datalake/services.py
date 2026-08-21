@@ -41,6 +41,10 @@ def _to_datetime(value) -> datetime:
     return datetime.fromisoformat(str(value))
 
 
+def _to_end_of_day(value) -> datetime:
+    return datetime.combine(_to_date(value), time(23, 59, 59))
+
+
 def _extract_rows(result) -> list[dict]:
     if not result:
         return []
@@ -96,7 +100,7 @@ class CTWADatalakeService:
         return DatalakeConversationsMetricsService().get_conversations_totals(
             project_uuid=UUID(str(project_uuid)),
             start_date=_to_datetime(start_date),
-            end_date=_to_datetime(end_date),
+            end_date=_to_end_of_day(end_date),
         )
 
     def _fetch_rows(
@@ -143,7 +147,7 @@ class CTWADatalakeService:
         totals = self.conversations_totals_getter(
             project_uuid=project_uuid,
             start_date=_to_datetime(start_date),
-            end_date=_to_datetime(end_date),
+            end_date=_to_end_of_day(end_date),
         )
         total = getattr(
             getattr(totals, "total_conversations", None), "value", 0

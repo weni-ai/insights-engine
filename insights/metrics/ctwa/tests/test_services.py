@@ -181,9 +181,11 @@ class TestCTWADashboardService(TestCase):
         self.assertEqual(
             totals_dates["start_date"].date().isoformat(), "2026-08-19"
         )
+        self.assertEqual(totals_dates["start_date"].time().isoformat(), "00:00:00")
         self.assertEqual(
             totals_dates["end_date"].date().isoformat(), "2026-08-21"
         )
+        self.assertEqual(totals_dates["end_date"].time().isoformat(), "23:59:59")
 
     def test_does_not_clamp_start_date_after_floor(self):
         captured = {}
