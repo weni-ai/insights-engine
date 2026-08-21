@@ -18,6 +18,8 @@ from insights.core.urls.proxy_pagination import (
     get_cursor_based_pagination_urls,
     get_limit_offset_pagination_urls,
 )
+from insights.dashboards.models import CTWA_DASHBOARD_NAME, Dashboard
+from insights.dashboards.tasks import check_and_create_ctwa_dashboard
 from insights.human_support.clients.chats import ChatsClient
 from insights.metrics.ctwa.serializers import (
     CTWACampaignPerformanceSerializer,
@@ -430,6 +432,27 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             )
 
         return Response(serialized_source, status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="verify_ctwa",
+    )
+    def verify_ctwa(self, request, *args, **kwargs):
+        project = self.get_object()
+        exists = Dashboard.objects.filter(
+            project=project, name=CTWA_DASHBOARD_NAME
+        ).exists()
+
+        queued = False
+        if not exists and settings.ENABLE_CTWA_DASHBOARD_AUTO_CREATION:
+            check_and_create_ctwa_dashboard.delay(str(project.uuid))
+            queued = True
+
+        return Response(
+            {"exists": exists, "queued": queued},
+            status=status.HTTP_200_OK,
+        )
 
     @action(
         detail=True,

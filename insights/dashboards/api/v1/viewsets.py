@@ -21,7 +21,6 @@ from insights.dashboards.models import (
     CTWA_DASHBOARD_NAME,
     Dashboard,
 )
-from insights.dashboards.tasks import check_and_create_ctwa_dashboard
 from insights.dashboards.serializers import (
     DashboardEditSerializer,
     DashboardIsDefaultSerializer,
@@ -130,17 +129,6 @@ class DashboardViewSet(
         if should_check_marketing_messages_status:
             check_dashboards_marketing_messages_status_for_project.delay(project_uuid)
 
-    def _maybe_enqueue_ctwa_dashboard_check(self, project: Project):
-        if not settings.ENABLE_CTWA_DASHBOARD_AUTO_CREATION:
-            return
-
-        if Dashboard.objects.filter(
-            project=project, name=CTWA_DASHBOARD_NAME
-        ).exists():
-            return
-
-        check_and_create_ctwa_dashboard.delay(str(project.uuid))
-
     def list(self, request, *args, **kwargs):
         project = None
 
@@ -160,7 +148,6 @@ class DashboardViewSet(
                 handle_project_created_with_inline_agent_switch.delay(project_uuid)
 
             self._check_marketing_messages_status(project_uuid)
-            self._maybe_enqueue_ctwa_dashboard_check(project)
 
         response = super().list(request, *args, **kwargs)
 
