@@ -9,6 +9,7 @@ import requests
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
+from insights.dashboards.models import CTWA_DASHBOARD_NAME, Dashboard
 from insights.metrics.ctwa.integrations.datalake.services import CTWADatalakeService
 from insights.metrics.ctwa.tests.test_services import (
     _fake_ctwa_by_campaign,
@@ -56,6 +57,11 @@ class BaseProjectViewSetTestCase(APITestCase):
         url = reverse("project-ctwa-performance-by-campaign", kwargs={"pk": uuid})
 
         return self.client.get(url, query_params)
+
+    def get_verify_ctwa(self, uuid: str) -> Response:
+        url = reverse("project-verify-ctwa", kwargs={"pk": uuid})
+
+        return self.client.get(url)
 
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
@@ -131,6 +137,11 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
             str(uuid.uuid4()),
             {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_verify_ctwa_as_anonymous_user(self):
+        response = self.get_verify_ctwa(str(uuid.uuid4()))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -727,6 +738,42 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
                 response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             self.assertEqual(response.data["detail"], "Failed to retrieve source data")
+
+    @with_project_auth
+    @patch("insights.projects.viewsets.check_and_create_ctwa_dashboard")
+    def test_verify_ctwa_enqueues_when_dashboard_is_missing(self, mock_task):
+        response = self.get_verify_ctwa(self.project.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"exists": False, "queued": True})
+        mock_task.delay.assert_called_once_with(str(self.project.uuid))
+
+    @with_project_auth
+    @patch("insights.projects.viewsets.check_and_create_ctwa_dashboard")
+    def test_verify_ctwa_does_not_enqueue_when_dashboard_exists(self, mock_task):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CTWA_DASHBOARD_NAME,
+            description="Click to WhatsApp dashboard",
+        )
+
+        response = self.get_verify_ctwa(self.project.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"exists": True, "queued": False})
+        mock_task.delay.assert_not_called()
+
+    @with_project_auth
+    @override_settings(ENABLE_CTWA_DASHBOARD_AUTO_CREATION=False)
+    @patch("insights.projects.viewsets.check_and_create_ctwa_dashboard")
+    def test_verify_ctwa_does_not_enqueue_when_auto_creation_is_disabled(
+        self, mock_task
+    ):
+        response = self.get_verify_ctwa(self.project.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"exists": False, "queued": False})
+        mock_task.delay.assert_not_called()
 
     @with_project_auth
     def test_verify_csat(self):
