@@ -33,16 +33,22 @@ def _clamp_ctwa_range(start_date, end_date) -> tuple[date, date] | None:
     return start, end
 
 
-def _to_datetime(value) -> datetime:
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, date):
-        return datetime.combine(value, time.min)
-    return datetime.fromisoformat(str(value))
-
-
 def _to_end_of_day(value) -> datetime:
     return datetime.combine(_to_date(value), time(23, 59, 59))
+
+
+def _to_project_conversation_datetimes(project_uuid, start_date, end_date):
+    from insights.metrics.conversations.validators import ConversationsDatesValidator
+    from insights.projects.models import Project
+
+    start = datetime.combine(_to_date(start_date), time.min)
+    end = datetime.combine(_to_date(end_date), time.min)
+    try:
+        project = Project.objects.get(uuid=project_uuid)
+    except Project.DoesNotExist:
+        return start, _to_end_of_day(end_date)
+
+    return ConversationsDatesValidator(project, start, end).validate()
 
 
 def _extract_rows(result) -> list[dict]:
@@ -99,8 +105,8 @@ class CTWADatalakeService:
 
         return DatalakeConversationsMetricsService().get_conversations_totals(
             project_uuid=UUID(str(project_uuid)),
-            start_date=_to_datetime(start_date),
-            end_date=_to_end_of_day(end_date),
+            start_date=start_date,
+            end_date=end_date,
         )
 
     def _fetch_rows(
@@ -144,10 +150,13 @@ class CTWADatalakeService:
     def _organic_conversations(
         self, project_uuid: str, start_date, end_date, ctwa_conversations: int
     ) -> int:
+        start_date, end_date = _to_project_conversation_datetimes(
+            project_uuid, start_date, end_date
+        )
         totals = self.conversations_totals_getter(
             project_uuid=project_uuid,
-            start_date=_to_datetime(start_date),
-            end_date=_to_end_of_day(end_date),
+            start_date=start_date,
+            end_date=end_date,
         )
         total = getattr(
             getattr(totals, "total_conversations", None), "value", 0

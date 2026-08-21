@@ -1,3 +1,6 @@
+from datetime import datetime
+
+import pytz
 from django.test import TestCase
 
 from insights.metrics.conversations.dataclass import (
@@ -7,6 +10,7 @@ from insights.metrics.conversations.dataclass import (
 from insights.metrics.ctwa.integrations.datalake.dataclass import CTWAConversionsData
 from insights.metrics.ctwa.integrations.datalake.services import CTWADatalakeService
 from insights.metrics.ctwa.services import CTWADashboardService
+from insights.projects.models import Project
 
 
 SAMPLE_ROWS = [
@@ -217,6 +221,37 @@ class TestCTWADashboardService(TestCase):
             totals_dates["end_date"].date().isoformat(), "2026-08-21"
         )
         self.assertEqual(totals_dates["end_date"].time().isoformat(), "23:59:59")
+
+    def test_organic_totals_use_project_timezone(self):
+        project = Project.objects.create(timezone="America/Sao_Paulo")
+        totals_dates = {}
+
+        def capture_totals(**kwargs):
+            totals_dates.update(kwargs)
+            return _fake_totals()
+
+        CTWADatalakeService(
+            ctwa_by_campaign_client=_fake_ctwa_by_campaign,
+            conversations_totals_getter=capture_totals,
+        ).get_summary_data(
+            project_uuid=str(project.uuid),
+            start_date="2026-08-19",
+            end_date="2026-08-20",
+        )
+
+        tz = pytz.timezone("America/Sao_Paulo")
+        expected_start = (
+            tz.localize(datetime(2026, 8, 19, 0, 0, 0))
+            .astimezone(pytz.UTC)
+            .replace(tzinfo=None)
+        )
+        expected_end = (
+            tz.localize(datetime(2026, 8, 20, 23, 59, 59))
+            .astimezone(pytz.UTC)
+            .replace(tzinfo=None)
+        )
+        self.assertEqual(totals_dates["start_date"], expected_start)
+        self.assertEqual(totals_dates["end_date"], expected_end)
 
     def test_does_not_clamp_start_date_after_floor(self):
         captured = {}
