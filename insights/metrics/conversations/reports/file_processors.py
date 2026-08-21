@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import io
 import csv
 import logging
+import re
 import xlsxwriter
 import tempfile
 import os
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 CSV_FILE_NAME_MAX_LENGTH = 31
 XLSX_FILE_NAME_MAX_LENGTH = 31
 XLSX_WORKSHEET_NAME_MAX_LENGTH = 31
+INVALID_XLSX_WORKSHEET_NAME_CHARS = re.compile(r"[\[\]:*?/\\]")
 
 
 class FileProcessor(ABC):
@@ -116,6 +118,18 @@ class XLSXFileProcessor(FileProcessor):
             ConversationsReportFile(name=f"{file_name}.xlsx", content=output.getvalue())
         ]
 
+    def _sanitize_worksheet_name(self, name: str) -> str:
+        """
+        Make a worksheet name valid for Excel.
+
+        Excel rejects names with []:*?/\\, longer than 31 chars, or that
+        start/end with an apostrophe.
+        """
+        sanitized = INVALID_XLSX_WORKSHEET_NAME_CHARS.sub("-", name or "")
+        sanitized = re.sub(r"\s+", " ", sanitized).strip(" -'")
+        sanitized = sanitized[:XLSX_WORKSHEET_NAME_MAX_LENGTH].strip(" -'")
+        return sanitized or "Sheet"
+
     def _ensure_unique_worksheet_name(self, name: str, used_names: set[str]) -> str:
         """
         Ensure worksheet name is unique by appending a number if needed.
@@ -128,7 +142,7 @@ class XLSXFileProcessor(FileProcessor):
             A unique worksheet name
         """
 
-        name = name[:XLSX_WORKSHEET_NAME_MAX_LENGTH]
+        name = self._sanitize_worksheet_name(name)
 
         if name not in used_names:
             used_names.add(name)
