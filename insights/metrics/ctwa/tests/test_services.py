@@ -65,6 +65,36 @@ def _fake_totals(*args, **kwargs):
     )
 
 
+class FakeCampaignClient:
+    def __init__(self, project_uuid):
+        self.project_uuid = project_uuid
+
+    def list_campaigns(self, search=None, limit=10, offset=0):
+        return {
+            "count": 2,
+            "results": [
+                {
+                    "name": "Compre no Whats Natura",
+                    "uuid": "120250777996740371",
+                    "headline": "Compre no Whats Natura",
+                },
+                {
+                    "name": "Weekend sale",
+                    "uuid": "weekend",
+                    "headline": "Weekend sale",
+                },
+            ],
+        }
+
+
+class FailingCampaignClient:
+    def __init__(self, project_uuid):
+        self.project_uuid = project_uuid
+
+    def list_campaigns(self, search=None, limit=10, offset=0):
+        raise Exception("flows down")
+
+
 class EmptyConversionsDatalakeService:
     def get_conversions_data(self, **kwargs):
         return CTWAConversionsData()
@@ -76,7 +106,8 @@ class TestCTWADashboardService(TestCase):
             datalake_service=CTWADatalakeService(
                 ctwa_by_campaign_client=_fake_ctwa_by_campaign,
                 conversations_totals_getter=_fake_totals,
-            )
+            ),
+            campaign_client_class=FakeCampaignClient,
         )
 
     def test_get_data_aggregates_all_campaigns(self):
@@ -238,6 +269,10 @@ class TestCTWADashboardService(TestCase):
         self.assertEqual(data["currency"], "USD")
         self.assertEqual(len(data["results"]), 2)
         self.assertEqual(data["results"][0]["campaign"], "weekend")
+        self.assertEqual(
+            data["results"][0]["label"],
+            {"headline": "Weekend sale", "id": "weekend"},
+        )
         self.assertNotIn("uuid", data["results"][0])
 
     def test_get_performance_by_campaign_filters_by_campaign_source(self):
@@ -251,4 +286,33 @@ class TestCTWADashboardService(TestCase):
         self.assertEqual(data["count"], 1)
         self.assertEqual(len(data["results"]), 1)
         self.assertEqual(data["results"][0]["campaign"], "120250777996740371")
+        self.assertEqual(
+            data["results"][0]["label"],
+            {
+                "headline": "Compre no Whats Natura",
+                "id": "120250777996740371",
+            },
+        )
         self.assertEqual(data["results"][0]["conversations"], 3200)
+
+    def test_get_performance_by_campaign_keeps_id_when_flows_fails(self):
+        service = CTWADashboardService(
+            datalake_service=CTWADatalakeService(
+                ctwa_by_campaign_client=_fake_ctwa_by_campaign,
+                conversations_totals_getter=_fake_totals,
+            ),
+            campaign_client_class=FailingCampaignClient,
+        )
+        data = service.get_performance_by_campaign(
+            project_uuid="123e4567-e89b-12d3-a456-426614174000",
+            start_date="2026-08-20",
+            end_date="2026-08-26",
+            campaign="120250777996740371",
+        )
+
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["results"][0]["campaign"], "120250777996740371")
+        self.assertEqual(
+            data["results"][0]["label"],
+            {"headline": "", "id": "120250777996740371"},
+        )

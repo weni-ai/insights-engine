@@ -51,8 +51,14 @@ class CTWAConversionsSerializer(serializers.Serializer):
     conversations_converted = CTWAFunnelStepSerializer()
 
 
+class CTWACampaignLabelSerializer(serializers.Serializer):
+    headline = serializers.CharField(allow_blank=True)
+    id = serializers.CharField()
+
+
 class CTWACampaignPerformanceSerializer(serializers.Serializer):
     campaign = serializers.CharField()
+    label = CTWACampaignLabelSerializer()
     conversations = serializers.IntegerField()
     qualified = serializers.IntegerField()
     conversions = serializers.IntegerField()

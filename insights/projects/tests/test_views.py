@@ -11,6 +11,7 @@ from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.metrics.ctwa.integrations.datalake.services import CTWADatalakeService
 from insights.metrics.ctwa.tests.test_services import (
+    FakeCampaignClient,
     _fake_ctwa_by_campaign,
     _fake_totals,
 )
@@ -372,6 +373,10 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
 
     @with_project_auth
     @patch(
+        "insights.metrics.ctwa.services.FlowsCampaignClient",
+        FakeCampaignClient,
+    )
+    @patch(
         "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
         _fake_ctwa_by_campaign,
     )
@@ -388,11 +393,19 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(
             response.data["results"][0]["campaign"], "weekend"
         )
+        self.assertEqual(
+            response.data["results"][0]["label"],
+            {"headline": "Weekend sale", "id": "weekend"},
+        )
         self.assertIsNotNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
         self.assertIn("offset=2", response.data["next"])
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.services.FlowsCampaignClient",
+        FakeCampaignClient,
+    )
     @patch(
         "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
         _fake_ctwa_by_campaign,
@@ -412,6 +425,13 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(
             response.data["results"][0]["campaign"], "120250777996740371"
+        )
+        self.assertEqual(
+            response.data["results"][0]["label"],
+            {
+                "headline": "Compre no Whats Natura",
+                "id": "120250777996740371",
+            },
         )
 
     @with_project_auth
