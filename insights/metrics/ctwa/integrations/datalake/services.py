@@ -112,8 +112,8 @@ class CTWADatalakeService:
     ) -> list[dict]:
         params = {
             "project": str(project_uuid),
-            "dt_start": f"{_to_date_str(start_date)} 00:00:00",
-            "dt_end": f"{_to_date_str(end_date)} 23:59:59",
+            "date_start": f"{_to_date_str(start_date)}T00:00:00",
+            "date_end": f"{_to_date_str(end_date)}T23:59:59",
         }
         if campaign:
             params["campaign_source"] = str(campaign)

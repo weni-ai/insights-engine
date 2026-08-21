@@ -180,10 +180,10 @@ class TestCTWADashboardService(TestCase):
             end_date="2026-08-19",
         )
 
-        self.assertEqual(captured["dt_start"], "2026-08-19 00:00:00")
-        self.assertEqual(captured["dt_end"], "2026-08-19 23:59:59")
-        self.assertNotIn("date_start", captured)
-        self.assertNotIn("date_end", captured)
+        self.assertEqual(captured["date_start"], "2026-08-19T00:00:00")
+        self.assertEqual(captured["date_end"], "2026-08-19T23:59:59")
+        self.assertNotIn("dt_start", captured)
+        self.assertNotIn("dt_end", captured)
 
     def test_clamps_start_date_to_ctwa_floor(self):
         captured = {}
@@ -207,8 +207,8 @@ class TestCTWADashboardService(TestCase):
             end_date="2026-08-21",
         )
 
-        self.assertEqual(captured["dt_start"], "2026-08-19 00:00:00")
-        self.assertEqual(captured["dt_end"], "2026-08-21 23:59:59")
+        self.assertEqual(captured["date_start"], "2026-08-19T00:00:00")
+        self.assertEqual(captured["date_end"], "2026-08-21T23:59:59")
         self.assertEqual(
             totals_dates["start_date"].date().isoformat(), "2026-08-19"
         )
@@ -235,8 +235,8 @@ class TestCTWADashboardService(TestCase):
             end_date="2026-08-28",
         )
 
-        self.assertEqual(captured["dt_start"], "2026-08-21 00:00:00")
-        self.assertEqual(captured["dt_end"], "2026-08-28 23:59:59")
+        self.assertEqual(captured["date_start"], "2026-08-21T00:00:00")
+        self.assertEqual(captured["date_end"], "2026-08-28T23:59:59")
 
     def test_returns_empty_when_range_ends_before_floor(self):
         calls = []
