@@ -53,7 +53,9 @@ class FlowsCampaignClient(InternalAuthentication):
     def _parse_campaign(self, item: dict) -> dict:
         source_id = item.get("source_id")
         campaign_id = str(source_id) if source_id is not None else str(item.get("id", ""))
+        headline = item.get("headline") or ""
         return {
-            "name": item.get("headline") or source_id or "",
+            "name": headline or source_id or "",
             "uuid": campaign_id,
+            "headline": headline,
         }

@@ -64,7 +64,13 @@ class TestFlowsCampaignClient(TestCase):
         self.assertEqual(data["count"], 1)
         self.assertEqual(
             data["results"],
-            [{"name": "Our new product", "uuid": "12345678901"}],
+            [
+                {
+                    "name": "Our new product",
+                    "uuid": "12345678901",
+                    "headline": "Our new product",
+                }
+            ],
         )
 
     @patch("insights.sources.meta.campaign.clients.requests.get")
@@ -88,6 +94,7 @@ class TestFlowsCampaignClient(TestCase):
 
         self.assertEqual(data["results"][0]["name"], "999")
         self.assertEqual(data["results"][0]["uuid"], "999")
+        self.assertEqual(data["results"][0]["headline"], "")
 
     @patch("insights.sources.meta.campaign.clients.requests.get")
     @patch.object(FlowsCampaignClient, "headers", {"Authorization": "Bearer token"})
