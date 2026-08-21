@@ -22,10 +22,10 @@ class CTWADashboardService:
     def __init__(
         self,
         datalake_service: CTWADatalakeService | None = None,
-        campaign_client_class=FlowsCampaignClient,
+        campaign_client_class=None,
     ):
         self.datalake_service = datalake_service or CTWADatalakeService()
-        self.campaign_client_class = campaign_client_class
+        self.campaign_client_class = campaign_client_class or FlowsCampaignClient
 
     def get_data(
         self,
