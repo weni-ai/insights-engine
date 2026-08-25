@@ -21,6 +21,8 @@ from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
 
 logger = logging.getLogger(__name__)
 
+CENTS_PER_UNIT = 100
+
 
 class OrderValuesByPeriodUseCase:
     def to_utc_range(
@@ -127,7 +129,7 @@ class OrderValuesByPeriodUseCase:
         return {
             "currency": currency,
             "results": [
-                {key.isoformat(): {"value": round(totals[key] / 100, 2)}}
+                {key.isoformat(): {"value": round(totals[key] / CENTS_PER_UNIT, 2)}}
                 for key in period_keys
             ],
         }
