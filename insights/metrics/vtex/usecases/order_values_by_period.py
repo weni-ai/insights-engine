@@ -1,7 +1,9 @@
 import logging
 from datetime import date, datetime, timezone
+from json import JSONDecodeError
 from zoneinfo import ZoneInfo
 
+import requests
 from dateutil.parser import parse as date_parser
 from rest_framework import status
 from sentry_sdk import capture_exception
@@ -13,6 +15,7 @@ from insights.metrics.vtex.date_utils import (
 )
 from insights.metrics.vtex.services.orders_service import OrdersService
 from insights.projects.models import Project
+from insights.sources.orders.exceptions import VTEXOrdersAPIError
 from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
 
 
@@ -80,7 +83,7 @@ class OrderValuesByPeriodUseCase:
                     "or are invalid for this project"
                 ),
             }
-        except Exception as e:
+        except (JSONDecodeError, requests.RequestException, VTEXOrdersAPIError) as e:
             event_id = capture_exception(e)
             logger.error(
                 "[OrderValuesByPeriodUseCase] Error getting order values by period: %s",

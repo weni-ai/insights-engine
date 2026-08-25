@@ -12,6 +12,7 @@ from insights.metrics.vtex.usecases.order_values_by_period import (
 )
 from insights.metrics.vtex.usecases.utm_source_metrics import UTMSourceMetricsUseCase
 from insights.projects.models import Project
+from insights.sources.orders.exceptions import VTEXOrdersAPIError
 from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
 
 
@@ -281,12 +282,12 @@ class TestOrderValuesByPeriodUseCaseExecute(TestCase):
         )
 
     @patch("insights.metrics.vtex.usecases.order_values_by_period.capture_exception")
-    def test_returns_500_and_event_id_on_unexpected_error(
+    def test_returns_500_and_event_id_on_vtex_api_error(
         self, mock_capture_exception, mock_orders_service_cls
     ):
         mock_capture_exception.return_value = "test-event-id"
         mock_orders_service_cls.return_value.get_orders_from_utm_source.side_effect = (
-            RuntimeError("upstream failure")
+            VTEXOrdersAPIError("upstream failure")
         )
 
         status_code, body = self.use_case.execute(

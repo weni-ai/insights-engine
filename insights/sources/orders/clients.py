@@ -321,7 +321,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         vtex_max_pages = settings.VTEX_ORDERS_API_MAX_PAGES
         processed_pages = 0
 
-        for _ in range(1, ((max_page // vtex_max_pages) + 2)):
+        while processed_pages < max_page:
             page_qty = min(vtex_max_pages, (max_page - processed_pages))
 
             metrics = self.get_pages(query_filters, page_qty, metrics)
@@ -382,7 +382,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         vtex_max_pages = settings.VTEX_ORDERS_API_MAX_PAGES
         processed_pages = 0
 
-        for _ in range(1, ((max_page // vtex_max_pages) + 2)):
+        while processed_pages < max_page:
             page_qty = min(vtex_max_pages, (max_page - processed_pages))
 
             metrics = self.get_pages(query_filters, page_qty, metrics)
