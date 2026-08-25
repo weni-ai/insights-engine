@@ -77,6 +77,12 @@ class TestHumanSupportDashboardService(TestCase):
         result = self.service._expand_all_tokens({"tags": ["__all__"]})
         self.assertEqual(result["tags"], ["t-1", "t-2"])
 
+    def test_expand_all_tokens_channels(self):
+        from insights.sources.channels.enums import Channel
+
+        result = self.service._expand_all_tokens({"channels": "__all__"})
+        self.assertEqual(result["channels"], list(Channel.values))
+
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_attendance_status(self, mock_rooms):
         mock_rooms.execute.return_value = {"value": 5}
@@ -674,6 +680,11 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["agent"], "agent-uuid")
         self.assertEqual(result["project"], str(self.project.uuid))
 
+    def test_get_analysis_status_finished_filters_channels(self):
+        normalized = {"channels": ["whatsapp", "email"]}
+        result = self.service._get_analysis_status_finished_filters(normalized)
+        self.assertEqual(result["channel__in"], ["whatsapp", "email"])
+
     def test_get_analysis_status_metrics_filters(self):
         normalized = {
             "sectors": ["s1"],
@@ -710,6 +721,13 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertIn("queue__in", call_filters)
         self.assertIn("tags__in", call_filters)
 
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_attendance_status_with_channels_filter(self, mock_rooms):
+        mock_rooms.execute.return_value = {"value": 3}
+        self.service.get_attendance_status(filters={"channels": ["whatsapp"]})
+        call_filters = mock_rooms.execute.call_args[0][0]
+        self.assertEqual(call_filters["channel__in"], ["whatsapp"])
+
     @patch("insights.human_support.services.ChatsTimeMetricsClient")
     def test_get_time_metrics_with_scalar_sector_filter(self, mock_client_class):
         mock_client = MagicMock()
@@ -735,6 +753,13 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertIn("sector__in", call_filters)
         self.assertIn("queue__in", call_filters)
         self.assertIn("tags__in", call_filters)
+
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_peaks_with_channels_filter(self, mock_rooms):
+        mock_rooms.execute.return_value = {"results": []}
+        self.service.get_peaks_in_human_service(filters={"channels": ["whatsapp"]})
+        call_filters = mock_rooms.execute.call_args[1]["filters"]
+        self.assertEqual(call_filters["channel__in"], ["whatsapp"])
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_analysis_peaks_with_dates_and_filters(self, mock_rooms):
@@ -1019,6 +1044,12 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["sector__in"], ["s1"])
         self.assertEqual(result["queue__in"], ["q1", "q2"])
         self.assertEqual(result["tags__in"], ["t1"])
+
+    def test_build_volume_by_queue_base_filters_channels(self):
+        result = self.service._build_volume_by_queue_base_filters(
+            {"channels": ["whatsapp"]}
+        )
+        self.assertEqual(result["channel__in"], ["whatsapp"])
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_volume_by_queue_waiting(self, mock_rooms):
