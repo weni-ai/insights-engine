@@ -84,13 +84,12 @@ class TestRoomSQLQueryBuilder(TestCase):
     def test_group_by_channel_count(self):
         self.builder.add_filter(self.strategy, "user_id", "eq", 123)
         query, params = self.builder.group_by_channel_count(limit=10)
-        self.assertIn("r.urn ~ '^[a-zA-Z][a-zA-Z0-9_+-]*:'", query)
-        self.assertIn("LOWER(SPLIT_PART(r.urn, ':', 1))", query)
         self.assertIn("AS channel_name", query)
         self.assertIn("AS rooms_volume", query)
         self.assertIn("LIMIT 10;", query)
         self.assertIn("whatsapp:%", query)
-        self.assertNotIn("THEN SPLIT_PART", query)
+        self.assertIn("ELSE 'others'", query)
+        self.assertNotIn("SPLIT_PART", query)
         self.assertEqual(params, [123])
 
     def test_group_by_channel_count_clamps_invalid_limit(self):

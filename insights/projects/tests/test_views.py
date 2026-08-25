@@ -64,6 +64,13 @@ class BaseProjectViewSetTestCase(APITestCase):
 
         return self.client.get(url)
 
+    def search_channels(self, uuid: str, query_params: dict = None) -> Response:
+        url = reverse(
+            "project-retrieve-source-data",
+            kwargs={"pk": uuid, "source_slug": "channels"},
+        )
+        return self.client.get(url, query_params)
+
 
 class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_project_as_anonymous_user(self):
@@ -143,6 +150,11 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
 
     def test_cannot_verify_ctwa_as_anonymous_user(self):
         response = self.get_verify_ctwa(str(uuid.uuid4()))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_search_channels_as_anonymous_user(self):
+        response = self.search_channels(str(uuid.uuid4()))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -231,6 +243,34 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             )
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @with_project_auth
+    def test_search_channels_default_page(self):
+        from insights.sources.channels.enums import Channel
+
+        response = self.search_channels(str(self.project.uuid))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], len(Channel))
+        self.assertIsNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+        self.assertEqual(
+            response.data["results"][0],
+            {"uuid": Channel.INSTAGRAM, "name": Channel.INSTAGRAM.label},
+        )
+
+    @with_project_auth
+    def test_search_channels_paginates_and_filters(self):
+        from insights.sources.channels.enums import Channel
+
+        response = self.search_channels(
+            str(self.project.uuid), {"limit": 2, "offset": 0, "search": "whats"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["uuid"], Channel.WHATSAPP)
+        self.assertIsNone(response.data["next"])
 
     @with_project_auth
     @patch("insights.projects.viewsets.MetaCampaignQueryExecutor.execute")

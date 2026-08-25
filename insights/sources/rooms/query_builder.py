@@ -1,3 +1,6 @@
+from insights.sources.channels.enums import Channel
+
+
 class RoomSQLQueryBuilder:
     def __init__(self):
         self.joins = dict()
@@ -179,17 +182,7 @@ class RoomSQLQueryBuilder:
 
         query = f"""
             SELECT
-                CASE
-                    WHEN r.urn LIKE 'whatsapp:%%' THEN 'whatsapp'
-                    WHEN r.urn LIKE 'telegram:%%' THEN 'telegram'
-                    WHEN r.urn LIKE 'instagram:%%' THEN 'instagram'
-                    WHEN r.urn LIKE 'webchat:%%' THEN 'webchat'
-                    WHEN r.urn LIKE 'facebook:%%' THEN 'facebook'
-                    WHEN r.urn LIKE 'twitter:%%' THEN 'twitter'
-                    WHEN r.urn LIKE 'email:%%' THEN 'email'
-                    WHEN r.urn ~ '^[a-zA-Z][a-zA-Z0-9_+-]*:' THEN LOWER(SPLIT_PART(r.urn, ':', 1))
-                    ELSE 'unknown'
-                END AS channel_name,
+                {Channel.urn_case_sql()} AS channel_name,
                 COUNT(*) AS rooms_volume
             FROM public.rooms_room AS r
             {self.join_clause}
