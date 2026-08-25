@@ -125,3 +125,14 @@ class OrdersService:
         except Exception as error:
             logger.exception(f"[OrdersService] Error retrieving VTEX metrics: {error}")
             raise error
+
+    def get_orders_from_utm_source(self, utm_source, filters: dict) -> dict:
+        filters["utm_source"] = (utm_source,)
+
+        start_date = filters.pop("start_date")
+        end_date = filters.pop("end_date")
+
+        filters["ended_at__gte"] = str(start_date)
+        filters["ended_at__lte"] = str(end_date)
+
+        return self._get_client().list_orders(filters)
