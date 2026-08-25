@@ -122,6 +122,11 @@ class BaseTestInternalVTEXOrdersView(APITestCase):
 
         return self.client.get(url, data=query_params)
 
+    def get_sum_from_utm_source(self, query_params: dict) -> Response:
+        url = "/v1/metrics/vtex/internal/orders/sum_from_utm_source/"
+
+        return self.client.get(url, data=query_params)
+
 
 class TestInternalVTEXOrdersViewAsUnauthenticatedUser(BaseTestInternalVTEXOrdersView):
     def test_cannot_get_metrics_from_utm_source_when_unauthenticated(self):
@@ -241,3 +246,115 @@ class TestInternalVTEXOrdersViewWithInternalAuthentication(
         self.assertIn("revenue", response.data)
         self.assertEqual(response.data["revenue"]["value"], 50.21)
         self.assertIn("orders_placed", response.data)
+
+
+class TestInternalVTEXOrdersSumViewAsUnauthenticatedUser(BaseTestInternalVTEXOrdersView):
+    def test_cannot_get_sum_from_utm_source_when_unauthenticated(self):
+        response = self.get_sum_from_utm_source({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+@override_settings(JWT_SECRET_KEY=JWT_PRIVATE_KEY_PEM)
+@override_settings(JWT_PUBLIC_KEY=JWT_PUBLIC_KEY_PEM)
+class TestInternalVTEXOrdersSumViewWithJWTAuthentication(BaseTestInternalVTEXOrdersView):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        token = JWTService().generate_jwt_token(self.project.uuid)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+    def test_cannot_get_sum_from_utm_source_without_required_fields(self):
+        response = self.get_sum_from_utm_source({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["utm_source"][0].code, "required")
+        self.assertEqual(response.data["start_date"][0].code, "required")
+        self.assertEqual(response.data["end_date"][0].code, "required")
+        self.assertEqual(response.data["granularity"][0].code, "required")
+
+    def test_cannot_get_sum_from_utm_source_with_invalid_granularity(self):
+        query_params = {
+            "utm_source": "weniabandonedcart",
+            "start_date": "2026-08-01",
+            "end_date": "2026-08-30",
+            "granularity": "month",
+            "project_uuid": self.project.uuid,
+        }
+        response = self.get_sum_from_utm_source(query_params)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["granularity"][0].code, "invalid_choice")
+
+    @patch(
+        "insights.metrics.vtex.usecases.order_values_by_period.OrdersService.get_orders_from_utm_source"
+    )
+    def test_get_sum_from_utm_source(self, mock_get_orders_from_utm_source):
+        mock_get_orders_from_utm_source.return_value = {
+            "currency_code": "BRL",
+            "orders": [
+                {
+                    "authorized_date": "2026-08-01T12:00:00.000Z",
+                    "total_value": 52010,
+                    "currency_code": "BRL",
+                }
+            ],
+        }
+
+        query_params = {
+            "utm_source": "weniabandonedcart",
+            "start_date": "2026-08-01",
+            "end_date": "2026-08-01",
+            "granularity": "day",
+            "project_uuid": self.project.uuid,
+        }
+        response = self.get_sum_from_utm_source(query_params)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["currency"], "BRL")
+        self.assertEqual(
+            response.data["results"],
+            [{"2026-08-01": {"value": 520.1}}],
+        )
+
+
+class TestInternalVTEXOrdersSumViewWithInternalAuthentication(
+    BaseTestInternalVTEXOrdersView
+):
+    def setUp(self):
+        self.project = Project.objects.create(name="Test Project")
+        self.user = User.objects.create(email="test@test.com")
+        self.client.force_authenticate(self.user)
+
+    def test_cannot_get_sum_from_utm_source_without_permission(self):
+        response = self.get_sum_from_utm_source({})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_internal_auth
+    @patch(
+        "insights.metrics.vtex.usecases.order_values_by_period.OrdersService.get_orders_from_utm_source"
+    )
+    def test_can_get_sum_from_utm_source_with_internal_authentication(
+        self, mock_get_orders_from_utm_source
+    ):
+        mock_get_orders_from_utm_source.return_value = {
+            "currency_code": None,
+            "orders": [],
+        }
+
+        query_params = {
+            "utm_source": "weniabandonedcart",
+            "start_date": "2026-08-01",
+            "end_date": "2026-08-01",
+            "granularity": "day",
+            "project_uuid": self.project.uuid,
+        }
+        response = self.get_sum_from_utm_source(query_params)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data["currency"])
+        self.assertEqual(
+            response.data["results"],
+            [{"2026-08-01": {"value": 0.0}}],
+        )

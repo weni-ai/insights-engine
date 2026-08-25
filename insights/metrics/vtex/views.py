@@ -17,7 +17,11 @@ from insights.authentication.weni_auth import (
 )
 from insights.metrics.vtex.serializers import (
     InternalVTEXOrdersRequestSerializer,
+    InternalVTEXOrdersSumRequestSerializer,
     UTMSourceMetricsQueryParamsSerializer,
+)
+from insights.metrics.vtex.usecases.order_values_by_period import (
+    OrderValuesByPeriodUseCase,
 )
 from insights.metrics.vtex.usecases.utm_source_metrics import UTMSourceMetricsUseCase
 from insights.projects.models import Project
@@ -71,6 +75,28 @@ class InternalVTEXOrdersViewSet(WeniAuthViewMixin, viewsets.ViewSet):
             validated["utm_source"],
             validated["start_date"],
             validated["end_date"],
+        )
+
+        return Response(response_data, status=status_code)
+
+    @action(methods=["get"], detail=False)
+    def sum_from_utm_source(self, request: Request) -> Response:
+        serializer = InternalVTEXOrdersSumRequestSerializer(
+            data=query_params_with_auth_project_uuid(request)
+        )
+        serializer.is_valid(raise_exception=True)
+
+        project = get_object_or_404(Project, uuid=self.auth.project_uuid)
+
+        validated = serializer.validated_data
+        use_case = OrderValuesByPeriodUseCase()
+        status_code, response_data = use_case.execute(
+            project,
+            validated["utm_source"],
+            validated["start_date"],
+            validated["end_date"],
+            validated["granularity"],
+            validated["week_starts_on"],
         )
 
         return Response(response_data, status=status_code)

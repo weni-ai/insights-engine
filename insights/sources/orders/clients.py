@@ -248,6 +248,13 @@ class VtexOrdersRestClient(VtexAuthentication):
 
                             authorized_date = result["authorizedDate"]
                             metrics.processed_orders.add(result["orderId"])
+                            metrics.orders.append(
+                                {
+                                    "authorized_date": authorized_date,
+                                    "total_value": result["totalValue"],
+                                    "currency_code": result["currencyCode"],
+                                }
+                            )
 
                             if (
                                 metrics.last_authorized_date is None
@@ -350,3 +357,43 @@ class VtexOrdersRestClient(VtexAuthentication):
         )
 
         return result_data
+
+    def list_orders(self, query_filters: dict) -> dict:
+        if not query_filters.get("utm_source", None):
+            return {"error": "utm_source field is mandatory"}
+
+        query_filters = self.handle_query_filters(query_filters)
+
+        response = self.get_orders_list(query_filters.copy(), 1)
+        data = response.json()
+
+        if "list" not in data:
+            raise VTEXOrdersAPIError(
+                f"VTEX API error listing orders: status={response.status_code}, "
+                f"response={response.text}"
+            )
+
+        pages = data["paging"]["pages"] if "paging" in data else 1
+
+        metrics = VTEXOrdersBaseMetrics()
+
+        max_page = min(pages, settings.VTEX_ORDERS_MAX_PAGES_CLIENT_DEFINED)
+
+        vtex_max_pages = settings.VTEX_ORDERS_API_MAX_PAGES
+        processed_pages = 0
+
+        for _ in range(1, ((max_page // vtex_max_pages) + 2)):
+            page_qty = min(vtex_max_pages, (max_page - processed_pages))
+
+            metrics = self.get_pages(query_filters, page_qty, metrics)
+            processed_pages += page_qty
+
+            if metrics.last_authorized_date is not None:
+                query_filters["ended_at__lte"] = self.parse_datetime(
+                    metrics.last_authorized_date
+                ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        return {
+            "orders": metrics.orders,
+            "currency_code": metrics.currency_code or None,
+        }
