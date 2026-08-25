@@ -6,6 +6,10 @@ import django_filters as filters
 import pytz
 
 
+class CharInFilter(filters.BaseInFilter, filters.CharFilter):
+    pass
+
+
 class UUIDInFilter(filters.BaseInFilter, filters.UUIDFilter):
     def filter(self, qs, value):
         if value:
@@ -21,6 +25,7 @@ class HumanSupportFilterSet(filters.FilterSet):
     sectors = UUIDInFilter(required=False)
     queues = UUIDInFilter(required=False)
     tags = UUIDInFilter(required=False)
+    channels = CharInFilter(required=False)
     page_size = filters.NumberFilter(required=False)
     cursor = filters.CharFilter(required=False)
     start_date = filters.DateFilter(required=False)
@@ -37,6 +42,7 @@ class HumanSupportFilterSet(filters.FilterSet):
             "sectors",
             "queues",
             "tags",
+            "channels",
             "page_size",
             "cursor",
             "start_date",

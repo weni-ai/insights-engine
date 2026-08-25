@@ -21,3 +21,12 @@ def test_urn_case_sql_maps_known_schemes_and_falls_back_to_others():
     assert f"THEN '{Channel.EMAIL}'" in sql
     assert f"ELSE '{Channel.OTHERS}'" in sql
     assert "SPLIT_PART" not in sql
+
+
+def test_valid_values_keeps_only_enum_members():
+    assert Channel.valid_values(["whatsapp", "nope", "email"]) == [
+        "whatsapp",
+        "email",
+    ]
+    assert Channel.valid_values("facebook") == ["facebook"]
+    assert Channel.valid_values(None) == []
