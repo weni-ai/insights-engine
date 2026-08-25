@@ -122,8 +122,8 @@ class BaseTestInternalVTEXOrdersView(APITestCase):
 
         return self.client.get(url, data=query_params)
 
-    def get_sum_from_utm_source(self, query_params: dict) -> Response:
-        url = "/v1/metrics/vtex/internal/orders/sum_from_utm_source/"
+    def get_aggregated(self, query_params: dict) -> Response:
+        url = "/v1/metrics/vtex/internal/orders/aggregated/"
 
         return self.client.get(url, data=query_params)
 
@@ -249,8 +249,8 @@ class TestInternalVTEXOrdersViewWithInternalAuthentication(
 
 
 class TestInternalVTEXOrdersSumViewAsUnauthenticatedUser(BaseTestInternalVTEXOrdersView):
-    def test_cannot_get_sum_from_utm_source_when_unauthenticated(self):
-        response = self.get_sum_from_utm_source({})
+    def test_cannot_get_aggregated_when_unauthenticated(self):
+        response = self.get_aggregated({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -264,8 +264,8 @@ class TestInternalVTEXOrdersSumViewWithJWTAuthentication(BaseTestInternalVTEXOrd
 
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
-    def test_cannot_get_sum_from_utm_source_without_required_fields(self):
-        response = self.get_sum_from_utm_source({})
+    def test_cannot_get_aggregated_without_required_fields(self):
+        response = self.get_aggregated({})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["utm_source"][0].code, "required")
@@ -273,7 +273,7 @@ class TestInternalVTEXOrdersSumViewWithJWTAuthentication(BaseTestInternalVTEXOrd
         self.assertEqual(response.data["end_date"][0].code, "required")
         self.assertEqual(response.data["granularity"][0].code, "required")
 
-    def test_cannot_get_sum_from_utm_source_with_invalid_granularity(self):
+    def test_cannot_get_aggregated_with_invalid_granularity(self):
         query_params = {
             "utm_source": "weniabandonedcart",
             "start_date": "2026-08-01",
@@ -281,7 +281,7 @@ class TestInternalVTEXOrdersSumViewWithJWTAuthentication(BaseTestInternalVTEXOrd
             "granularity": "month",
             "project_uuid": self.project.uuid,
         }
-        response = self.get_sum_from_utm_source(query_params)
+        response = self.get_aggregated(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["granularity"][0].code, "invalid_choice")
@@ -289,7 +289,7 @@ class TestInternalVTEXOrdersSumViewWithJWTAuthentication(BaseTestInternalVTEXOrd
     @patch(
         "insights.metrics.vtex.usecases.order_values_by_period.OrdersService.get_orders_from_utm_source"
     )
-    def test_get_sum_from_utm_source(self, mock_get_orders_from_utm_source):
+    def test_get_aggregated(self, mock_get_orders_from_utm_source):
         mock_get_orders_from_utm_source.return_value = {
             "currency_code": "BRL",
             "orders": [
@@ -308,7 +308,7 @@ class TestInternalVTEXOrdersSumViewWithJWTAuthentication(BaseTestInternalVTEXOrd
             "granularity": "day",
             "project_uuid": self.project.uuid,
         }
-        response = self.get_sum_from_utm_source(query_params)
+        response = self.get_aggregated(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["currency"], "BRL")
@@ -326,8 +326,8 @@ class TestInternalVTEXOrdersSumViewWithInternalAuthentication(
         self.user = User.objects.create(email="test@test.com")
         self.client.force_authenticate(self.user)
 
-    def test_cannot_get_sum_from_utm_source_without_permission(self):
-        response = self.get_sum_from_utm_source({})
+    def test_cannot_get_aggregated_without_permission(self):
+        response = self.get_aggregated({})
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -335,7 +335,7 @@ class TestInternalVTEXOrdersSumViewWithInternalAuthentication(
     @patch(
         "insights.metrics.vtex.usecases.order_values_by_period.OrdersService.get_orders_from_utm_source"
     )
-    def test_can_get_sum_from_utm_source_with_internal_authentication(
+    def test_can_get_aggregated_with_internal_authentication(
         self, mock_get_orders_from_utm_source
     ):
         mock_get_orders_from_utm_source.return_value = {
@@ -350,7 +350,7 @@ class TestInternalVTEXOrdersSumViewWithInternalAuthentication(
             "granularity": "day",
             "project_uuid": self.project.uuid,
         }
-        response = self.get_sum_from_utm_source(query_params)
+        response = self.get_aggregated(query_params)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data["currency"])

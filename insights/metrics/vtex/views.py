@@ -80,7 +80,7 @@ class InternalVTEXOrdersViewSet(WeniAuthViewMixin, viewsets.ViewSet):
         return Response(response_data, status=status_code)
 
     @action(methods=["get"], detail=False)
-    def sum_from_utm_source(self, request: Request) -> Response:
+    def aggregated(self, request: Request) -> Response:
         serializer = InternalVTEXOrdersSumRequestSerializer(
             data=query_params_with_auth_project_uuid(request)
         )
