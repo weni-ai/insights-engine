@@ -404,6 +404,18 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result, {"results": []})
         mock_chats.csat_score_by_agents.assert_called_once()
 
+    def test_csat_score_by_agents_forwards_channels(self):
+        mock_chats = MagicMock()
+        mock_chats.csat_score_by_agents.return_value = {"results": []}
+        service = HumanSupportDashboardService(
+            project=self.project, chats_client=mock_chats
+        )
+        service.csat_score_by_agents(
+            user_request="test", filters={"channels": ["whatsapp"]}
+        )
+        call_params = mock_chats.csat_score_by_agents.call_args[1]["params"]
+        self.assertEqual(call_params["channels"], ["whatsapp"])
+
     @patch("insights.human_support.services.CustomStatusRESTClient")
     def test_get_analysis_detailed_monitoring_status(self, mock_client_class):
         mock_client = MagicMock()
@@ -555,6 +567,16 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["5"]["value"], 10)
         self.assertEqual(result["3"]["value"], 0)
 
+    def test_get_csat_ratings_forwards_channels(self):
+        mock_chats = MagicMock()
+        mock_chats.csat_ratings.return_value = {"csat_ratings": []}
+        service = HumanSupportDashboardService(
+            project=self.project, chats_client=mock_chats
+        )
+        service.get_csat_ratings(filters={"channels": ["whatsapp"]})
+        call_params = mock_chats.csat_ratings.call_args[1]["params"]
+        self.assertEqual(call_params["channels"], ["whatsapp"])
+
     def test_get_attendance_status_with_sectors_queues_tags_as_lists(self):
         with patch("insights.human_support.services.RoomsQueryExecutor") as mock_rooms:
             mock_rooms.execute.return_value = {"value": 0}
@@ -700,6 +722,12 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertIn("start_date", result)
         self.assertIn("end_date", result)
 
+    def test_get_analysis_status_metrics_filters_channels(self):
+        result = self.service._get_analysis_status_metrics_filters(
+            {"channels": ["whatsapp", "instagram"]}
+        )
+        self.assertEqual(result["channels"], ["whatsapp", "instagram"])
+
     def test_project_without_timezone_uses_utc(self):
         project_utc = Project.objects.create(name="No TZ Project", timezone=None)
         service = HumanSupportDashboardService(project=project_utc)
@@ -741,6 +769,15 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertIn("sector", call_params)
         self.assertIn("queue", call_params)
         self.assertIn("tag", call_params)
+
+    @patch("insights.human_support.services.ChatsTimeMetricsClient")
+    def test_get_time_metrics_with_channels_filter(self, mock_client_class):
+        mock_client = MagicMock()
+        mock_client.retrieve_time_metrics.return_value = {}
+        mock_client_class.return_value = mock_client
+        self.service.get_time_metrics(filters={"channels": ["whatsapp", "email"]})
+        call_params = mock_client.retrieve_time_metrics.call_args[1]["params"]
+        self.assertEqual(call_params["channels"], ["whatsapp", "email"])
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_peaks_with_scalar_filters(self, mock_rooms):
@@ -803,6 +840,20 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(call_filters["urn"], "tel:+5511")
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_detailed_monitoring_on_going_with_channels_filter(self, mock_rooms):
+        mock_rooms.execute.return_value = {
+            "results": [],
+            "next": None,
+            "previous": None,
+            "count": 0,
+        }
+        self.service.get_detailed_monitoring_on_going(
+            filters={"channels": ["whatsapp"]}
+        )
+        call_filters = mock_rooms.execute.call_args[0][0]
+        self.assertEqual(call_filters["channel__in"], ["whatsapp"])
+
+    @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_detailed_monitoring_awaiting_with_filters(self, mock_rooms):
         mock_rooms.execute.return_value = {
             "results": [],
@@ -825,6 +876,20 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(call_filters["limit"], 10)
         self.assertEqual(call_filters["offset"], 5)
         self.assertEqual(call_filters["ordering"], "-queue_time")
+
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_detailed_monitoring_awaiting_with_channels_filter(self, mock_rooms):
+        mock_rooms.execute.return_value = {
+            "results": [],
+            "next": None,
+            "previous": None,
+            "count": 0,
+        }
+        self.service.get_detailed_monitoring_awaiting(
+            filters={"channels": ["instagram"]}
+        )
+        call_filters = mock_rooms.execute.call_args[0][0]
+        self.assertEqual(call_filters["channel__in"], ["instagram"])
 
     def test_get_detailed_monitoring_agents_filters_with_dates_and_lists(self):
         from datetime import datetime as dt
@@ -859,6 +924,12 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(params["limit"], 10)
         self.assertEqual(params["offset"], 5)
         self.assertEqual(params["ordering"], "-first_name")
+
+    def test_get_detailed_monitoring_agents_filters_channels(self):
+        params = self.service._get_detailed_monitoring_agents_filters(
+            {"channels": ["whatsapp", "email"]}
+        )
+        self.assertEqual(params["channels"], ["whatsapp", "email"])
 
     @patch("insights.human_support.services.ChatsRESTClient")
     def test_get_detailed_monitoring_agents_v2(self, mock_client_class):
@@ -990,6 +1061,14 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["ordering"], "-user_full_name")
         self.assertEqual(result["limit"], 20)
         self.assertEqual(result["offset"], 5)
+
+    def test_params_for_finished_rooms_list_with_channels(self):
+        result = self.service._params_for_finished_rooms_list(
+            {"channels": ["whatsapp", "email"]},
+            filters=None,
+        )
+        self.assertEqual(result["channel__in"], ["whatsapp", "email"])
+        self.assertEqual(result["channels"], ["whatsapp", "email"])
 
     def test_format_finished_room_v2_item_without_agent(self):
         room = {

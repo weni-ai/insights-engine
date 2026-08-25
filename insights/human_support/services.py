@@ -124,6 +124,21 @@ class HumanSupportDashboardService:
 
         return base
 
+    def _validated_channels(self, normalized: dict) -> list[str]:
+        return Channel.valid_values(normalized.get("channels"))
+
+    def _apply_sql_channel_filter(self, params: dict, normalized: dict) -> dict:
+        channels = self._validated_channels(normalized)
+        if channels:
+            params["channel__in"] = channels
+        return params
+
+    def _apply_chats_channel_param(self, params: dict, normalized: dict) -> dict:
+        channels = self._validated_channels(normalized)
+        if channels:
+            params["channels"] = channels
+        return params
+
     def get_attendance_status(self, filters: dict | None = None) -> Dict[str, int]:
 
         normalized = self._normalize_filters(filters)
@@ -189,6 +204,7 @@ class HumanSupportDashboardService:
             "sectors": ("sector", list),
             "queues": ("queue", list),
             "tags": ("tag", list),
+            "channels": ("channels", list),
         }
 
         for filter_key, filter_value in time_metrics_filters_mapping.items():
@@ -199,6 +215,11 @@ class HumanSupportDashboardService:
 
             if param_type == list and not isinstance(value, list):
                 value = [value]
+
+            if filter_key == "channels":
+                value = Channel.valid_values(value)
+                if not value:
+                    continue
 
             params[param] = value
 
@@ -340,6 +361,8 @@ class HumanSupportDashboardService:
         if normalized.get("urn"):
             params["urn"] = str(normalized["urn"])
 
+        self._apply_sql_channel_filter(params, normalized)
+
         if filters:
             limit = filters.get("limit")
             if limit is not None:
@@ -431,6 +454,8 @@ class HumanSupportDashboardService:
         if normalized.get("urn"):
             params["urn"] = str(normalized["urn"])
 
+        self._apply_sql_channel_filter(params, normalized)
+
         if filters:
             if filters.get("limit") is not None:
                 params["limit"] = filters.get("limit")
@@ -483,6 +508,7 @@ class HumanSupportDashboardService:
             "sectors": ("sector", normalized),
             "queues": ("queue", normalized),
             "tags": ("tag", normalized),
+            "channels": ("channels", normalized),
             "agent": ("agent", normalized),
             "status": ("status", filters),
             "custom_status": ("custom_status", filters),
@@ -493,7 +519,14 @@ class HumanSupportDashboardService:
             "offset": ("offset", filters),
         }
 
-        list_filters = {"sectors", "queues", "tags", "status", "custom_status"}
+        list_filters = {
+            "sectors",
+            "queues",
+            "tags",
+            "channels",
+            "status",
+            "custom_status",
+        }
         date_filters = {"start_date", "end_date"}
 
         params: dict = {}
@@ -741,6 +774,8 @@ class HumanSupportDashboardService:
                 datetime.combine(today, datetime.max.time())
             )
 
+        self._apply_chats_channel_param(normalized_filters, normalized_filters)
+
         return self.chats_client.csat_score_by_agents(params=normalized_filters)
 
     def _get_analysis_detailed_monitoring_status_filters(
@@ -834,6 +869,9 @@ class HumanSupportDashboardService:
 
         if normalized.get("ticket_id"):
             params["protocol"] = str(normalized["ticket_id"])
+
+        self._apply_sql_channel_filter(params, normalized)
+        self._apply_chats_channel_param(params, normalized)
 
         if filters:
             if filters.get("limit") is not None:
@@ -1014,6 +1052,7 @@ class HumanSupportDashboardService:
             "sectors": ("sector", list),
             "queues": ("queue", list),
             "tags": ("tag", list),
+            "channels": ("channels", list),
         }
 
         for filter_key, filter_value in metrics_filters_mapping.items():
@@ -1024,6 +1063,11 @@ class HumanSupportDashboardService:
 
             if param_type == list and not isinstance(value, list):
                 value = [value]
+
+            if filter_key == "channels":
+                value = Channel.valid_values(value)
+                if not value:
+                    continue
 
             metrics_params[param] = value
 
@@ -1095,6 +1139,7 @@ class HumanSupportDashboardService:
             "sectors": "sectors",
             "queues": "queues",
             "tags": "tags",
+            "channels": "channels",
             "start_date": "start_date",
             "end_date": "end_date",
             "agent_email": "agent",
@@ -1124,8 +1169,13 @@ class HumanSupportDashboardService:
 
         for filter_key, filter_value in filters_mapping.items():
             value = normalized_filters.get(filter_key)
-            if value:
-                params[filter_value] = value
+            if not value:
+                continue
+            if filter_key == "channels":
+                value = Channel.valid_values(value)
+                if not value:
+                    continue
+            params[filter_value] = value
 
         ratings_from_chats = self.chats_client.csat_ratings(params=params)
         ratings_data = {
