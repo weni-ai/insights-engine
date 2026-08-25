@@ -1407,3 +1407,77 @@ class HumanSupportDashboardService:
         )
 
         return result
+
+    def get_volume_by_channel(self, filters: dict | None = None) -> dict:
+        """
+        Returns the volume (number of rooms) by channel.
+        Used for real-time monitoring (today's data).
+
+        Parameters:
+            filters: {
+                "chip_name": "waiting" | "ongoing",
+                "limit": int (default 10),
+                "sectors": list[uuid] | uuid,
+                "queues": list[uuid] | uuid,
+                "tags": list[uuid] | uuid,
+            }
+        """
+        normalized = self._normalize_filters(filters)
+
+        base = self._build_volume_by_queue_base_filters(normalized)
+
+        chip_name = filters.get("chip_name") if filters else None
+        limit = filters.get("limit", 10) if filters else 10
+
+        if chip_name == "waiting":
+            base["is_active"] = True
+            base["user_id__isnull"] = True
+        elif chip_name == "ongoing":
+            base["is_active"] = True
+            base["user_id__isnull"] = False
+
+        result = RoomsQueryExecutor.execute(
+            filters=base,
+            operation="group_by_channel_count",
+            parser=lambda x: x,
+            project=self.project,
+            query_kwargs={"limit": limit},
+        )
+
+        return result
+
+    def get_analysis_volume_by_channel(self, filters: dict | None = None) -> dict:
+        """
+        Returns the volume (number of closed rooms) by channel for a date range.
+        """
+        normalized = self._normalize_filters(filters)
+
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+
+        if normalized.get("start_date") and normalized.get("end_date"):
+            start_datetime = normalized["start_date"].isoformat()
+            end_datetime = normalized["end_date"].isoformat()
+        else:
+            today = dj_timezone.now().date()
+            start_datetime = project_tz.localize(
+                datetime.combine(today, datetime.min.time())
+            ).isoformat()
+            end_datetime = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base = self._build_volume_by_queue_base_filters(normalized)
+        limit = filters.get("limit", 10) if filters else 10
+
+        base["is_active"] = False
+        base["ended_at__gte"] = start_datetime
+        base["ended_at__lte"] = end_datetime
+
+        result = RoomsQueryExecutor.execute(
+            filters=base,
+            operation="group_by_channel_count",
+            parser=lambda x: x,
+            project=self.project,
+            query_kwargs={"limit": limit},
+        )
+
+        return result

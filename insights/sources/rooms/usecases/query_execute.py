@@ -172,6 +172,20 @@ class QueryExecutor(BaseQueryExecutor):
                 "count": total_tags,
                 "results": results,
             }
+        elif operation == "group_by_channel_count":
+            results = [
+                {
+                    "channel_name": row["channel_name"],
+                    "rooms_volume": row["rooms_volume"],
+                }
+                for row in query_results
+            ]
+            paginated_results = {
+                "next": None,
+                "previous": None,
+                "count": len(results),
+                "results": results,
+            }
         else:
             paginated_results = {
                 "next": None,

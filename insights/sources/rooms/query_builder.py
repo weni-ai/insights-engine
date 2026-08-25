@@ -150,3 +150,52 @@ class RoomSQLQueryBuilder:
             ORDER BY value DESC, tag_name ASC;
         """
         return query, self.params
+
+    def group_by_channel_count(self, limit: int = 10, *args, **kwargs):
+        """
+        Groups rooms by channel derived from the URN scheme.
+        Returns: channel_name, rooms_volume
+        Sorted by rooms_volume DESC
+        """
+        if not self.is_valid:
+            self.build_query()
+
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError):
+            limit = 10
+        limit = max(1, min(limit, 100))
+
+        where_parts = [
+            clause
+            for clause in (
+                self.where_clause,
+                "r.urn IS NOT NULL",
+                "r.urn != ''",
+            )
+            if clause
+        ]
+        where_sql = " AND ".join(where_parts)
+
+        query = f"""
+            SELECT
+                CASE
+                    WHEN r.urn LIKE 'whatsapp:%%' THEN 'whatsapp'
+                    WHEN r.urn LIKE 'telegram:%%' THEN 'telegram'
+                    WHEN r.urn LIKE 'instagram:%%' THEN 'instagram'
+                    WHEN r.urn LIKE 'webchat:%%' THEN 'webchat'
+                    WHEN r.urn LIKE 'facebook:%%' THEN 'facebook'
+                    WHEN r.urn LIKE 'twitter:%%' THEN 'twitter'
+                    WHEN r.urn LIKE 'email:%%' THEN 'email'
+                    WHEN r.urn ~ '^[a-zA-Z][a-zA-Z0-9_+-]*:' THEN LOWER(SPLIT_PART(r.urn, ':', 1))
+                    ELSE 'unknown'
+                END AS channel_name,
+                COUNT(*) AS rooms_volume
+            FROM public.rooms_room AS r
+            {self.join_clause}
+            WHERE {where_sql}
+            GROUP BY channel_name
+            ORDER BY rooms_volume DESC
+            LIMIT {limit};
+        """
+        return query, self.params
