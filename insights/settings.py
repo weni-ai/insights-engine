@@ -75,7 +75,6 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_spectacular",
     "weni.feature_flags",
-    "weni_commons",
     "weni.eda.django.eda_app",
 ]
 
@@ -95,9 +94,7 @@ MIDDLEWARE = [
     "insights.core.middleware.InternalErrorHandlerMiddleware",
 ]
 
-CSRF_TRUSTED_ORIGINS = env.list(
-    "CSRF_TRUSTED_ORIGINS", default=["https://insights-engine.stg.cloud.weni.ai"]
-)
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
@@ -307,9 +304,6 @@ OIDC_CACHE_TOKEN = env.bool(
 OIDC_CACHE_TTL = env.int(
     "OIDC_CACHE_TTL", default=600
 )  # Time-to-live for cached user tokens (default: 600 seconds).
-OIDC_TIMEOUT = env.int(
-    "OIDC_TIMEOUT", default=10
-)  # Timeout in seconds for HTTP requests to the OIDC provider (Keycloak).
 
 # CORS CONFIG
 CORS_ORIGIN_ALLOW_ALL = True
@@ -338,8 +332,11 @@ EDA_CONSUMERS_HANDLES = {
     "edaconsume_amq": "insights.event_driven.handle_amq.handle_amq_consumers",
 }
 
+
 if USE_EDA:
-    EDA_CONNECTION_BACKEND = "weni.eda.backends.pyamqp_backend.PyAMQPConnectionBackend"
+    # RabbitMQ (edaconsume) uses the Insights backend via EventDrivenAPP.
+    # Amazon MQ (edaconsume_amq) forces the Weni EDA backend in the command.
+    EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"
     _command = sys.argv[1] if len(sys.argv) > 1 else None
     EDA_CONSUMERS_HANDLE = EDA_CONSUMERS_HANDLES.get(
         _command, EDA_CONSUMERS_HANDLES["edaconsume"]
@@ -378,8 +375,6 @@ INTEGRATIONS_URL = env("INTEGRATIONS_URL", default="")
 RETAIL_URL = env("RETAIL_URL", default="")
 BILLING_URL = env("BILLING_URL", default="")
 
-COMMERCE_USE_STUB_RESPONSES = env.bool("COMMERCE_USE_STUB_RESPONSES", default=True)
-
 REDIS_URL = env.str("CHANNEL_LAYERS_REDIS", default="redis://localhost:6379/1")
 STATIC_API_TOKEN = env.str("STATIC_API_TOKEN", default="")
 # channels
@@ -417,21 +412,6 @@ PROJECT_TOKENS_VTEX = json.loads(os.getenv("PROJECT_TOKENS_VTEX", "{}"))
 
 WHATSAPP_API_ACCESS_TOKEN = env.str("WHATSAPP_API_ACCESS_TOKEN", default="")
 
-# TEMPORARY, this should be used only in the development and staging environments
-WHATSAPP_ABANDONED_CART_TEMPLATE_ID = env.str(
-    "WHATSAPP_ABANDONED_CART_TEMPLATE_ID", default=""
-)
-WHATSAPP_ABANDONED_CART_WABA_ID = env.str("WHATSAPP_ABANDONED_CART_WABA_ID", default="")
-VTEX_ORDERS_CREDENTIALS = env.str("VTEX_ORDERS_CREDENTIALS", default="")
-WHATSAPP_ABANDONED_CART_UTM_SOURCE = env.str(
-    "WHATSAPP_ABANDONED_CART_UTM_SOURCE", default=""
-)
-
-# Temporary: just for testing purposes
-TEMP_TEST_TEMPLATES_DASH_PROJECT_UUID = env.str(
-    "TEMP_TEST_TEMPLATES_DASH_PROJECT_UUID", default=""
-)
-PROJECT_WABAS_MOCK = env.str("PROJECT_WABAS_MOCK", default="")
 WEBHOOK_URL = env.str(
     "WEBHOOK_URL", default="https://webhook.weni.ai/webhook/project/update"
 )
@@ -503,16 +483,12 @@ GROWTHBOOK_LONG_CACHE_TTL = env.int(
     "GROWTHBOOK_LONG_CACHE_TTL", default=60 * 60 * 24 * 30
 )
 GROWTHBOOK_WEBHOOK_SECRET = env.str("GROWTHBOOK_WEBHOOK_SECRET", default="")
-FEATURE_FLAGS_USE_SCHEDULED_UPDATES = env.bool(
-    "FEATURE_FLAGS_USE_SCHEDULED_UPDATES", default=False
-)
 
 # Conversations Report
 # In seconds
 CONVERSATIONS_REPORT_PRESIGNED_URL_EXPIRATION_TIME = env.int(
     "CONVERSATIONS_REPORT_PRESIGNED_URL_EXPIRATION_TIME", default=60 * 60 * 24
 )
-
 CONVERSATIONS_REPORT_EVENTS_LIMIT_PER_PAGE = env.int(
     "CONVERSATIONS_REPORT_EVENTS_LIMIT_PER_PAGE", default=1000
 )
@@ -579,14 +555,6 @@ CONVERSATIONS_REPORT_AGENTS_TOOLS_URN_LIST_FEATURE_FLAG_KEY = env.str(
     default="insightsConversationsReportAgentsToolsUrnList",
 )
 
-
-# Staging Mock Dashboards
-STG_MOCK_META_WABA_IDS = env.list("STG_MOCK_META_WABA_IDS", default=[])
-STG_MOCK_CONVERSATIONS_PROJECT_UUIDS = env.list(
-    "STG_MOCK_CONVERSATIONS_PROJECT_UUIDS", default=[]
-)
-STG_MOCK_CUSTOM_FLOWRUNS = env.list("STG_MOCK_CUSTOM_FLOWRUNS", default=[])
-
 # Sales Funnel
 SALES_FUNNEL_EVENTS_START_DATE = env.str(
     "SALES_FUNNEL_EVENTS_START_DATE", default="2025-01-01T00:00:00-03:00"
@@ -594,8 +562,22 @@ SALES_FUNNEL_EVENTS_START_DATE = env.str(
 SALES_FUNNEL_CHECK_COOLDOWN_TTL = env.int("SALES_FUNNEL_CHECK_COOLDOWN_TTL", default=30)
 
 # CTWA dashboard creation check against Flows campaigns
+ENABLE_CTWA_DASHBOARD_AUTO_CREATION = env.bool(
+    "ENABLE_CTWA_DASHBOARD_AUTO_CREATION", default=True
+)
+SHOW_CTWA_DASHBOARD_IN_LIST = env.bool("SHOW_CTWA_DASHBOARD_IN_LIST", default=False)
 CTWA_DASHBOARD_CHECK_COOLDOWN_TTL = env.int(
     "CTWA_DASHBOARD_CHECK_COOLDOWN_TTL", default=15 * 60
+)
+CTWA_DEFAULT_CURRENCY = env.str("CTWA_DEFAULT_CURRENCY", default="USD")
+CTWA_CAMPAIGNS_AFTER = env.str(
+    "CTWA_CAMPAIGNS_AFTER", default="2026-08-19T00:00:00-03:00"
+)
+CTWA_BY_CAMPAIGN_METRIC_NAME = env.str(
+    "CTWA_BY_CAMPAIGN_METRIC_NAME", default="weni-ctwa-by-campaign"
+)
+os.environ.setdefault(
+    "CTWA_BY_CAMPAIGN_METRIC_NAME", CTWA_BY_CAMPAIGN_METRIC_NAME
 )
 
 # Feature flags
@@ -662,15 +644,6 @@ DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY = env.str(
     "DATA_SOURCE_SERVICE_FEATURE_FLAG_KEY", default="insightsDataSourceService"
 )
 
-# Crosstab parallel fetching
-CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY = env.str(
-    "CROSSTAB_PARALLEL_FETCHING_FEATURE_FLAG_KEY",
-    default="insightsCrosstabParallelFetching",
-)
-
-# External project authorization service
-PROJECT_AUTH_API_BASE_URL = env.str("PROJECT_AUTH_API_BASE_URL", default="")
-PROJECT_AUTH_API_TIMEOUT = env.int("PROJECT_AUTH_API_TIMEOUT", default=3)
 # Contacts worksheet detailed list
 CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY = env.str(
     "CONTACTS_WORKSHEET_DETAILED_LIST_FEATURE_FLAG_KEY",

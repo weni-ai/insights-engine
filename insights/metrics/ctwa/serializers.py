@@ -15,12 +15,13 @@ class CTWADateRangeQueryParamsSerializer(serializers.Serializer):
 
 
 class CTWADataQueryParamsSerializer(CTWADateRangeQueryParamsSerializer):
-    campaign = serializers.UUIDField(required=False)
+    campaign = serializers.CharField(required=False)
 
 
 class CTWAPerformanceByCampaignQueryParamsSerializer(
     CTWADateRangeQueryParamsSerializer
 ):
+    campaign = serializers.CharField(required=False)
     limit = serializers.IntegerField(
         required=False, default=10, min_value=1, max_value=100
     )
@@ -50,8 +51,14 @@ class CTWAConversionsSerializer(serializers.Serializer):
     conversations_converted = CTWAFunnelStepSerializer()
 
 
+class CTWACampaignLabelSerializer(serializers.Serializer):
+    headline = serializers.CharField(allow_blank=True)
+    id = serializers.CharField()
+
+
 class CTWACampaignPerformanceSerializer(serializers.Serializer):
     campaign = serializers.CharField()
+    label = CTWACampaignLabelSerializer()
     conversations = serializers.IntegerField()
     qualified = serializers.IntegerField()
     conversions = serializers.IntegerField()

@@ -14,6 +14,7 @@ from insights.human_support.clients.chats_time_metrics import (
 from insights.human_support.filters import HumanSupportFilterSet
 from insights.projects.models import Project
 from insights.sources.agents.clients import AgentsRESTClient
+from insights.sources.channels.enums import Channel
 from insights.sources.chats.clients import ChatsRESTClient
 from insights.sources.custom_status.client import CustomStatusRESTClient
 from insights.sources.rooms.usecases.query_execute import (
@@ -31,10 +32,9 @@ class HumanSupportDashboardService:
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
-        Expande '__all__' em sectors/queues/tags para listas de UUIDs do projeto.
+        Expande '__all__' em sectors/queues/tags/channels.
         """
         filters = dict(incoming_filters or {})
-        project_uuid = str(self.project.uuid)
 
         def is_all(value):
             return value == "__all__" or (
@@ -49,6 +49,9 @@ class HumanSupportDashboardService:
 
         if is_all(filters.get("tags")):
             filters.pop("tags", None)
+
+        if is_all(filters.get("channels")):
+            filters["channels"] = list(Channel.values)
         return filters
 
     def _normalize_filters(self, incoming_filters: dict | None) -> dict:
@@ -95,6 +98,47 @@ class HumanSupportDashboardService:
 
         return updated_link
 
+    def _apply_rooms_dimension_filters(self, base: dict, normalized: dict) -> dict:
+        dimension_filters_mapping = {
+            "sectors": ("sector__in", list),
+            "queues": ("queue__in", list),
+            "tags": ("tags__in", list),
+            "channels": ("channel__in", list),
+        }
+
+        for filter_key, filter_value in dimension_filters_mapping.items():
+            if not (value := normalized.get(filter_key)):
+                continue
+
+            param, param_type = filter_value
+
+            if param_type == list and not isinstance(value, list):
+                value = [value]
+
+            if filter_key == "channels":
+                value = Channel.valid_values(value)
+                if not value:
+                    continue
+
+            base[param] = value
+
+        return base
+
+    def _validated_channels(self, normalized: dict) -> list[str]:
+        return Channel.valid_values(normalized.get("channels"))
+
+    def _apply_sql_channel_filter(self, params: dict, normalized: dict) -> dict:
+        channels = self._validated_channels(normalized)
+        if channels:
+            params["channel__in"] = channels
+        return params
+
+    def _apply_chats_channel_param(self, params: dict, normalized: dict) -> dict:
+        channels = self._validated_channels(normalized)
+        if channels:
+            params["channels"] = channels
+        return params
+
     def get_attendance_status(self, filters: dict | None = None) -> Dict[str, int]:
 
         normalized = self._normalize_filters(filters)
@@ -116,18 +160,7 @@ class HumanSupportDashboardService:
         base: dict = {
             "project": str(self.project.uuid),
         }
-        if normalized.get("sectors"):
-            if not isinstance(normalized["sectors"], list):
-                normalized["sectors"] = [normalized["sectors"]]
-            base["sector__in"] = normalized["sectors"]
-        if normalized.get("queues"):
-            if not isinstance(normalized["queues"], list):
-                normalized["queues"] = [normalized["queues"]]
-            base["queue__in"] = normalized["queues"]
-        if normalized.get("tags"):
-            if not isinstance(normalized["tags"], list):
-                normalized["tags"] = [normalized["tags"]]
-            base["tags__in"] = normalized["tags"]
+        self._apply_rooms_dimension_filters(base, normalized)
 
         is_waiting = (
             RoomsQueryExecutor.execute(
@@ -177,6 +210,7 @@ class HumanSupportDashboardService:
             "sectors": ("sector", list),
             "queues": ("queue", list),
             "tags": ("tag", list),
+            "channels": ("channels", list),
         }
 
         for filter_key, filter_value in time_metrics_filters_mapping.items():
@@ -187,6 +221,11 @@ class HumanSupportDashboardService:
 
             if param_type == list and not isinstance(value, list):
                 value = [value]
+
+            if filter_key == "channels":
+                value = Channel.valid_values(value)
+                if not value:
+                    continue
 
             params[param] = value
 
@@ -247,22 +286,10 @@ class HumanSupportDashboardService:
             "created_on__gte": start_of_day,
         }
 
-        # Add end_date filter if provided
         if request_params.get("end_date"):
             rooms_filters["created_on__lte"] = request_params["end_date"].isoformat()
 
-        if "sectors" in request_params:
-            if not isinstance(request_params["sectors"], list):
-                request_params["sectors"] = [request_params["sectors"]]
-            rooms_filters["sector__in"] = request_params["sectors"]
-        if "queues" in request_params:
-            if not isinstance(request_params["queues"], list):
-                request_params["queues"] = [request_params["queues"]]
-            rooms_filters["queue__in"] = request_params["queues"]
-        if "tags" in request_params:
-            if not isinstance(request_params["tags"], list):
-                request_params["tags"] = [request_params["tags"]]
-            rooms_filters["tags__in"] = request_params["tags"]
+        self._apply_rooms_dimension_filters(rooms_filters, request_params)
 
         result = RoomsQueryExecutor.execute(
             filters=rooms_filters,
@@ -303,18 +330,7 @@ class HumanSupportDashboardService:
             "created_on__gte": start_datetime,
             "created_on__lte": end_datetime,
         }
-        if "sectors" in request_params:
-            if not isinstance(request_params["sectors"], list):
-                request_params["sectors"] = [request_params["sectors"]]
-            rooms_filters["sector__in"] = request_params["sectors"]
-        if "queues" in request_params:
-            if not isinstance(request_params["queues"], list):
-                request_params["queues"] = [request_params["queues"]]
-            rooms_filters["queue__in"] = request_params["queues"]
-        if "tags" in request_params:
-            if not isinstance(request_params["tags"], list):
-                request_params["tags"] = [request_params["tags"]]
-            rooms_filters["tags__in"] = request_params["tags"]
+        self._apply_rooms_dimension_filters(rooms_filters, request_params)
 
         print("[get_analysis_peaks_in_human_service] rooms_filters", rooms_filters)
 
@@ -372,6 +388,8 @@ class HumanSupportDashboardService:
 
         if normalized.get("urn"):
             params["urn"] = str(normalized["urn"])
+
+        self._apply_sql_channel_filter(params, normalized)
 
         if filters:
             limit = filters.get("limit")
@@ -466,6 +484,8 @@ class HumanSupportDashboardService:
         if normalized.get("urn"):
             params["urn"] = str(normalized["urn"])
 
+        self._apply_sql_channel_filter(params, normalized)
+
         if filters:
             if filters.get("limit") is not None:
                 params["limit"] = filters.get("limit")
@@ -518,6 +538,7 @@ class HumanSupportDashboardService:
             "sectors": ("sector", normalized),
             "queues": ("queue", normalized),
             "tags": ("tag", normalized),
+            "channels": ("channels", normalized),
             "agent": ("agent", normalized),
             "status": ("status", filters),
             "custom_status": ("custom_status", filters),
@@ -528,7 +549,14 @@ class HumanSupportDashboardService:
             "offset": ("offset", filters),
         }
 
-        list_filters = {"sectors", "queues", "tags", "status", "custom_status"}
+        list_filters = {
+            "sectors",
+            "queues",
+            "tags",
+            "channels",
+            "status",
+            "custom_status",
+        }
         date_filters = {"start_date", "end_date"}
 
         params: dict = {}
@@ -776,6 +804,8 @@ class HumanSupportDashboardService:
                 datetime.combine(today, datetime.max.time())
             )
 
+        self._apply_chats_channel_param(normalized_filters, normalized_filters)
+
         return self.chats_client.csat_score_by_agents(params=normalized_filters)
 
     def _get_analysis_detailed_monitoring_status_filters(
@@ -874,6 +904,9 @@ class HumanSupportDashboardService:
 
         if normalized.get("ticket_id"):
             params["protocol"] = str(normalized["ticket_id"])
+
+        self._apply_sql_channel_filter(params, normalized)
+        self._apply_chats_channel_param(params, normalized)
 
         if filters:
             if filters.get("limit") is not None:
@@ -1042,25 +1075,9 @@ class HumanSupportDashboardService:
         base: dict = {
             "project": str(self.project.uuid),
         }
-
-        finished_filters_mapping = {
-            "sectors": ("sector__in", list),
-            "queues": ("queue__in", list),
-            "tags": ("tags__in", list),
-            "agent": ("agent", str),
-        }
-
-        for filter_key, filter_value in finished_filters_mapping.items():
-            if not (value := normalized.get(filter_key)):
-                continue
-
-            param, param_type = filter_value
-
-            if param_type == list and not isinstance(value, list):
-                value = [value]
-
-            base[param] = value
-
+        self._apply_rooms_dimension_filters(base, normalized)
+        if agent := normalized.get("agent"):
+            base["agent"] = agent
         return base
 
     def _get_analysis_status_metrics_filters(self, normalized: dict) -> dict:
@@ -1070,6 +1087,7 @@ class HumanSupportDashboardService:
             "sectors": ("sector", list),
             "queues": ("queue", list),
             "tags": ("tag", list),
+            "channels": ("channels", list),
         }
 
         for filter_key, filter_value in metrics_filters_mapping.items():
@@ -1080,6 +1098,11 @@ class HumanSupportDashboardService:
 
             if param_type == list and not isinstance(value, list):
                 value = [value]
+
+            if filter_key == "channels":
+                value = Channel.valid_values(value)
+                if not value:
+                    continue
 
             metrics_params[param] = value
 
@@ -1492,6 +1515,7 @@ class HumanSupportDashboardService:
             "sectors": "sectors",
             "queues": "queues",
             "tags": "tags",
+            "channels": "channels",
             "start_date": "start_date",
             "end_date": "end_date",
             "agent_email": "agent",
@@ -1521,8 +1545,13 @@ class HumanSupportDashboardService:
 
         for filter_key, filter_value in filters_mapping.items():
             value = normalized_filters.get(filter_key)
-            if value:
-                params[filter_value] = value
+            if not value:
+                continue
+            if filter_key == "channels":
+                value = Channel.valid_values(value)
+                if not value:
+                    continue
+            params[filter_value] = value
 
         ratings_from_chats = self.chats_client.csat_ratings(params=params)
         ratings_data = {
@@ -1548,24 +1577,7 @@ class HumanSupportDashboardService:
             "project": str(self.project.uuid),
         }
 
-        volume_filters_mapping = {
-            "sectors": ("sector__in", list),
-            "queues": ("queue__in", list),
-            "tags": ("tags__in", list),
-        }
-
-        for filter_key, filter_value in volume_filters_mapping.items():
-            if not (value := normalized.get(filter_key)):
-                continue
-
-            param, param_type = filter_value
-
-            if param_type == list and not isinstance(value, list):
-                value = [value]
-
-            base[param] = value
-
-        return base
+        return self._apply_rooms_dimension_filters(base, normalized)
 
     def get_volume_by_queue(self, filters: dict | None = None) -> dict:
         """
@@ -1689,24 +1701,7 @@ class HumanSupportDashboardService:
             "project": str(self.project.uuid),
         }
 
-        volume_filters_mapping = {
-            "sectors": ("sector__in", list),
-            "queues": ("queue__in", list),
-            "tags": ("tags__in", list),
-        }
-
-        for filter_key, filter_value in volume_filters_mapping.items():
-            if not (value := normalized.get(filter_key)):
-                continue
-
-            param, param_type = filter_value
-
-            if param_type == list and not isinstance(value, list):
-                value = [value]
-
-            base[param] = value
-
-        return base
+        return self._apply_rooms_dimension_filters(base, normalized)
 
     def get_volume_by_tag(self, filters: dict | None = None) -> dict:
         normalized = self._normalize_filters(filters)
@@ -1779,6 +1774,80 @@ class HumanSupportDashboardService:
         result = RoomsQueryExecutor.execute(
             filters=base,
             operation="group_by_tag_count",
+            parser=lambda x: x,
+            project=self.project,
+            query_kwargs={"limit": limit},
+        )
+
+        return result
+
+    def get_volume_by_channel(self, filters: dict | None = None) -> dict:
+        """
+        Returns the volume (number of rooms) by channel.
+        Used for real-time monitoring (today's data).
+
+        Parameters:
+            filters: {
+                "chip_name": "waiting" | "ongoing",
+                "limit": int (default 10),
+                "sectors": list[uuid] | uuid,
+                "queues": list[uuid] | uuid,
+                "tags": list[uuid] | uuid,
+            }
+        """
+        normalized = self._normalize_filters(filters)
+
+        base = self._build_volume_by_queue_base_filters(normalized)
+
+        chip_name = filters.get("chip_name") if filters else None
+        limit = filters.get("limit", 10) if filters else 10
+
+        if chip_name == "waiting":
+            base["is_active"] = True
+            base["user_id__isnull"] = True
+        elif chip_name == "ongoing":
+            base["is_active"] = True
+            base["user_id__isnull"] = False
+
+        result = RoomsQueryExecutor.execute(
+            filters=base,
+            operation="group_by_channel_count",
+            parser=lambda x: x,
+            project=self.project,
+            query_kwargs={"limit": limit},
+        )
+
+        return result
+
+    def get_analysis_volume_by_channel(self, filters: dict | None = None) -> dict:
+        """
+        Returns the volume (number of closed rooms) by channel for a date range.
+        """
+        normalized = self._normalize_filters(filters)
+
+        tzname = self.project.timezone or "UTC"
+        project_tz = pytz.timezone(tzname)
+
+        if normalized.get("start_date") and normalized.get("end_date"):
+            start_datetime = normalized["start_date"].isoformat()
+            end_datetime = normalized["end_date"].isoformat()
+        else:
+            today = dj_timezone.now().date()
+            start_datetime = project_tz.localize(
+                datetime.combine(today, datetime.min.time())
+            ).isoformat()
+            end_datetime = dj_timezone.now().astimezone(project_tz).isoformat()
+
+        base = self._build_volume_by_queue_base_filters(normalized)
+        limit = filters.get("limit", 10) if filters else 10
+
+        base["is_active"] = False
+        base["ended_at__gte"] = start_datetime
+        base["ended_at__lte"] = end_datetime
+
+        result = RoomsQueryExecutor.execute(
+            filters=base,
+            operation="group_by_channel_count",
             parser=lambda x: x,
             project=self.project,
             query_kwargs={"limit": limit},

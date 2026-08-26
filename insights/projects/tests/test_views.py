@@ -12,14 +12,21 @@ from insights.authentication.tests.decorators import (
     with_internal_auth,
     with_project_auth,
 )
+from insights.dashboards.models import CTWA_DASHBOARD_NAME, Dashboard
+from insights.metrics.ctwa.integrations.datalake.services import CTWADatalakeService
+from insights.metrics.ctwa.tests.test_services import (
+    FakeCampaignClient,
+    _fake_ctwa_by_campaign,
+    _fake_totals,
+)
 from insights.projects.models import Project, ProjectAuth
 from insights.authentication.authentication import StaticTokenAuthentication
 from insights.authentication.permissions import IsServiceAuthentication
 
 
 class BaseProjectViewSetTestCase(APITestCase):
-    def get_project(self, project_uuid: str) -> Response:
-        url = reverse("project-detail", kwargs={"pk": project_uuid})
+    def get_project(self, uuid: str) -> Response:
+        url = reverse("project-detail", kwargs={"pk": uuid})
 
         return self.client.get(url)
 
@@ -57,6 +64,18 @@ class BaseProjectViewSetTestCase(APITestCase):
     ) -> Response:
         url = reverse("project-ctwa-performance-by-campaign", kwargs={"pk": uuid})
 
+        return self.client.get(url, query_params)
+
+    def get_verify_ctwa(self, uuid: str) -> Response:
+        url = reverse("project-verify-ctwa", kwargs={"pk": uuid})
+
+        return self.client.get(url)
+
+    def search_channels(self, uuid: str, query_params: dict = None) -> Response:
+        url = reverse(
+            "project-retrieve-source-data",
+            kwargs={"pk": uuid, "source_slug": "channels"},
+        )
         return self.client.get(url, query_params)
 
 
@@ -123,7 +142,7 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_ctwa_data_as_anonymous_user(self):
         response = self.get_ctwa_data(
             str(uuid.uuid4()),
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -131,7 +150,7 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_ctwa_conversions_as_anonymous_user(self):
         response = self.get_ctwa_conversions(
             str(uuid.uuid4()),
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -139,8 +158,18 @@ class TestProjectViewSetAsAnonymousUser(BaseProjectViewSetTestCase):
     def test_cannot_get_ctwa_performance_by_campaign_as_anonymous_user(self):
         response = self.get_ctwa_performance_by_campaign(
             str(uuid.uuid4()),
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_verify_ctwa_as_anonymous_user(self):
+        response = self.get_verify_ctwa(str(uuid.uuid4()))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_search_channels_as_anonymous_user(self):
+        response = self.search_channels(str(uuid.uuid4()))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -231,31 +260,82 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @with_project_auth
-    def test_list_meta_campaigns(self):
-        response = self.get_meta_campaigns(self.project.uuid)
+    def test_search_channels_default_page(self):
+        from insights.sources.channels.enums import Channel
+
+        response = self.search_channels(str(self.project.uuid))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 5)
+        self.assertEqual(response.data["count"], len(Channel))
         self.assertIsNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
-        self.assertEqual(len(response.data["results"]), 5)
         self.assertEqual(
-            set(response.data["results"][0].keys()),
-            {"name", "uuid"},
+            response.data["results"][0],
+            {"uuid": Channel.INSTAGRAM, "name": Channel.INSTAGRAM.label},
         )
 
     @with_project_auth
-    def test_list_meta_campaigns_search(self):
+    def test_search_channels_paginates_and_filters(self):
+        from insights.sources.channels.enums import Channel
+
+        response = self.search_channels(
+            str(self.project.uuid), {"limit": 2, "offset": 0, "search": "whats"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["uuid"], Channel.WHATSAPP)
+        self.assertIsNone(response.data["next"])
+
+    @with_project_auth
+    @patch("insights.projects.viewsets.MetaCampaignQueryExecutor.execute")
+    def test_list_meta_campaigns(self, mock_execute):
+        mock_execute.return_value = {
+            "count": 1,
+            "results": [{"name": "Our new product", "uuid": "12345678901"}],
+        }
+
+        response = self.get_meta_campaigns(self.project.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertIsNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["name"], "Our new product")
+        self.assertEqual(response.data["results"][0]["uuid"], "12345678901")
+
+    @with_project_auth
+    @patch("insights.projects.viewsets.MetaCampaignQueryExecutor.execute")
+    def test_list_meta_campaigns_search(self, mock_execute):
+        mock_execute.return_value = {
+            "count": 1,
+            "results": [{"name": "Black friday", "uuid": "e5f67890-1234-5678-efab-345678901234"}],
+        }
+
         response = self.get_meta_campaigns(self.project.uuid, {"search": "black"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["name"], "Black friday")
+        mock_execute.assert_called_once()
+        self.assertEqual(mock_execute.call_args.kwargs["filters"]["search"], "black")
 
     @with_project_auth
-    def test_list_meta_campaigns_pagination(self):
+    @patch("insights.projects.viewsets.MetaCampaignQueryExecutor.execute")
+    def test_list_meta_campaigns_pagination(self, mock_execute):
+        mock_execute.return_value = {
+            "count": 5,
+            "next": "https://flows.weni.ai/api/v2/internals/ctwa_referral_sources?limit=2&offset=2",
+            "previous": None,
+            "results": [
+                {"name": "Campaign 1", "uuid": "1"},
+                {"name": "Campaign 2", "uuid": "2"},
+            ],
+        }
+
         response = self.get_meta_campaigns(
-            self.project.uuid, {"page": 1, "page_size": 2}
+            self.project.uuid, {"limit": 2, "offset": 0}
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -263,21 +343,44 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(len(response.data["results"]), 2)
         self.assertIsNotNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
-        self.assertIn("page=2", response.data["next"])
+        self.assertTrue(response.data["next"].startswith("https://"))
+        self.assertIn("limit=2", response.data["next"])
+        self.assertIn("offset=2", response.data["next"])
+        mock_execute.assert_called()
+        self.assertEqual(mock_execute.call_args.kwargs["filters"]["limit"], 2)
+        self.assertEqual(mock_execute.call_args.kwargs["filters"]["offset"], 0)
 
+        mock_execute.return_value = {
+            "count": 5,
+            "next": "https://flows.weni.ai/api/v2/internals/ctwa_referral_sources?limit=2&offset=4",
+            "previous": "https://flows.weni.ai/api/v2/internals/ctwa_referral_sources?limit=2&offset=0",
+            "results": [
+                {"name": "Campaign 3", "uuid": "3"},
+                {"name": "Campaign 4", "uuid": "4"},
+            ],
+        }
         next_page = self.get_meta_campaigns(
-            self.project.uuid, {"page": 2, "page_size": 2}
+            self.project.uuid, {"limit": 2, "offset": 2}
         )
         self.assertEqual(next_page.status_code, status.HTTP_200_OK)
         self.assertEqual(len(next_page.data["results"]), 2)
         self.assertIsNotNone(next_page.data["previous"])
-        self.assertIn("page=1", next_page.data["previous"])
+        self.assertTrue(next_page.data["previous"].startswith("https://"))
+        self.assertIn("limit=2", next_page.data["previous"])
+        self.assertIn("offset=0", next_page.data["previous"])
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
+    @patch.object(
+        CTWADatalakeService, "_default_conversations_totals", _fake_totals
+    )
     def test_ctwa_data(self):
         response = self.get_ctwa_data(
             self.project.uuid,
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -296,10 +399,14 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertIn("end_date", response.data)
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
     def test_ctwa_conversions(self):
         response = self.get_ctwa_conversions(
             self.project.uuid,
-            {"start_date": "2026-08-06", "end_date": "2026-08-12"},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -309,13 +416,20 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.data["conversations_converted"]["total"], 2880)
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
+    @patch.object(
+        CTWADatalakeService, "_default_conversations_totals", _fake_totals
+    )
     def test_ctwa_data_filters_by_campaign(self):
         response = self.get_ctwa_data(
             self.project.uuid,
             {
-                "start_date": "2026-08-06",
-                "end_date": "2026-08-12",
-                "campaign": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "start_date": "2026-08-20",
+                "end_date": "2026-08-26",
+                "campaign": "120250777996740371",
             },
         )
 
@@ -324,10 +438,18 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.data["attributed_revenue"]["value"], 509600)
 
     @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.services.FlowsCampaignClient",
+        FakeCampaignClient,
+    )
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
     def test_ctwa_performance_by_campaign(self):
         response = self.get_ctwa_performance_by_campaign(
             self.project.uuid,
-            {"start_date": "2026-08-06", "end_date": "2026-08-12", "limit": 2},
+            {"start_date": "2026-08-20", "end_date": "2026-08-26", "limit": 2},
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -335,11 +457,48 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertEqual(response.data["currency"], "USD")
         self.assertEqual(len(response.data["results"]), 2)
         self.assertEqual(
-            response.data["results"][0]["campaign"], "Contractor Bulk Pricing"
+            response.data["results"][0]["campaign"], "weekend"
+        )
+        self.assertEqual(
+            response.data["results"][0]["label"],
+            {"headline": "Weekend sale", "id": "weekend"},
         )
         self.assertIsNotNone(response.data["next"])
         self.assertIsNone(response.data["previous"])
         self.assertIn("offset=2", response.data["next"])
+
+    @with_project_auth
+    @patch(
+        "insights.metrics.ctwa.services.FlowsCampaignClient",
+        FakeCampaignClient,
+    )
+    @patch(
+        "insights.metrics.ctwa.integrations.datalake.services.get_ctwa_by_campaign",
+        _fake_ctwa_by_campaign,
+    )
+    def test_ctwa_performance_by_campaign_filters_by_campaign(self):
+        response = self.get_ctwa_performance_by_campaign(
+            self.project.uuid,
+            {
+                "start_date": "2026-08-20",
+                "end_date": "2026-08-26",
+                "campaign": "120250777996740371",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(
+            response.data["results"][0]["campaign"], "120250777996740371"
+        )
+        self.assertEqual(
+            response.data["results"][0]["label"],
+            {
+                "headline": "Compre no Whats Natura",
+                "id": "120250777996740371",
+            },
+        )
 
     @with_project_auth
     def test_retrieve_source_data_exception_handling(self):
@@ -572,18 +731,6 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
         self.assertTrue(self.project.config["is_secondary"])
         self.assertEqual(self.project.config["main_project"], str(main_project.uuid))
 
-    @with_project_auth
-    def test_verify_csat(self):
-        url = reverse("project-verify-csat", kwargs={"pk": self.project.uuid})
-
-        with patch("insights.projects.viewsets.ChatsRESTClient") as mock_chats_client:
-            mock_chats_client.return_value.get_project.return_value = {
-                "is_csat_enabled": True,
-            }
-            response = self.client.get(url)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.data, True)
-
     def test_get_contacts_without_permission(self):
         response = self.get_contacts(str(self.project.uuid), {"ordering": "name"})
 
@@ -691,6 +838,54 @@ class TestProjectViewSetAsAuthenticatedUser(BaseProjectViewSetTestCase):
                 response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             self.assertEqual(response.data["detail"], "Failed to retrieve source data")
+
+    @with_project_auth
+    @patch("insights.projects.viewsets.check_and_create_ctwa_dashboard")
+    def test_verify_ctwa_enqueues_when_dashboard_is_missing(self, mock_task):
+        response = self.get_verify_ctwa(self.project.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"exists": False, "queued": True})
+        mock_task.delay.assert_called_once_with(str(self.project.uuid))
+
+    @with_project_auth
+    @patch("insights.projects.viewsets.check_and_create_ctwa_dashboard")
+    def test_verify_ctwa_does_not_enqueue_when_dashboard_exists(self, mock_task):
+        Dashboard.objects.create(
+            project=self.project,
+            name=CTWA_DASHBOARD_NAME,
+            description="Click to WhatsApp dashboard",
+        )
+
+        response = self.get_verify_ctwa(self.project.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"exists": True, "queued": False})
+        mock_task.delay.assert_not_called()
+
+    @with_project_auth
+    @override_settings(ENABLE_CTWA_DASHBOARD_AUTO_CREATION=False)
+    @patch("insights.projects.viewsets.check_and_create_ctwa_dashboard")
+    def test_verify_ctwa_does_not_enqueue_when_auto_creation_is_disabled(
+        self, mock_task
+    ):
+        response = self.get_verify_ctwa(self.project.uuid)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"exists": False, "queued": False})
+        mock_task.delay.assert_not_called()
+
+    @with_project_auth
+    def test_verify_csat(self):
+        url = reverse("project-verify-csat", kwargs={"pk": self.project.uuid})
+
+        with patch("insights.projects.viewsets.ChatsRESTClient") as mock_chats_client:
+            mock_chats_client.return_value.get_project.return_value = {
+                "is_csat_enabled": True,
+            }
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.data, True)
 
     @with_project_auth
     def test_verify_viewer_returns_false_for_local_admin(self):

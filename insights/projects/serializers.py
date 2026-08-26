@@ -40,12 +40,25 @@ class TicketIDSerializer(serializers.Serializer):
 
 class MetaCampaignQueryParamsSerializer(serializers.Serializer):
     search = serializers.CharField(required=False)
-    page = serializers.IntegerField(required=False, default=1, min_value=1)
-    page_size = serializers.IntegerField(
+    limit = serializers.IntegerField(
         required=False, default=10, min_value=1, max_value=100
     )
+    offset = serializers.IntegerField(required=False, default=0, min_value=0)
 
 
 class MetaCampaignSerializer(serializers.Serializer):
     name = serializers.CharField()
-    uuid = serializers.UUIDField()
+    uuid = serializers.CharField()
+
+
+class ListChannelsQueryParamsSerializer(serializers.Serializer):
+    search = serializers.CharField(required=False)
+    limit = serializers.IntegerField(
+        required=False, default=20, min_value=1, max_value=100
+    )
+    offset = serializers.IntegerField(required=False, default=0, min_value=0)
+
+
+class ChannelSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    uuid = serializers.CharField()

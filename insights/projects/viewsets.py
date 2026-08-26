@@ -1,5 +1,4 @@
 import logging
-from math import ceil
 from urllib.parse import urlencode
 
 import requests
@@ -18,13 +17,16 @@ from insights.authentication.permissions import (
 from insights.authentication.services.project_auth import is_project_viewer
 from insights.core.urls.proxy_pagination import (
     get_cursor_based_pagination_urls,
+    get_limit_offset_pagination_urls,
 )
+from insights.dashboards.models import CTWA_DASHBOARD_NAME, Dashboard
+from insights.dashboards.tasks import check_and_create_ctwa_dashboard
 from insights.human_support.clients.chats import ChatsClient
 from insights.metrics.ctwa.serializers import (
+    CTWACampaignPerformanceSerializer,
     CTWAConversionsSerializer,
     CTWADataQueryParamsSerializer,
     CTWADataSerializer,
-    CTWACampaignPerformanceSerializer,
     CTWAPerformanceByCampaignQueryParamsSerializer,
 )
 from insights.metrics.ctwa.services import CTWADashboardService
@@ -33,13 +35,18 @@ from insights.projects.models import Project, ProjectAuth
 from insights.projects.services.indexer_activation import is_project_indexer_active
 from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import (
-    SetProjectAsSecondarySerializer,
+    ChannelSerializer,
+    ListChannelsQueryParamsSerializer,
     ListContactsQueryParamsSerializer,
     ListTicketIDsQueryParamsSerializer,
     MetaCampaignQueryParamsSerializer,
     MetaCampaignSerializer,
     ProjectSerializer,
+    SetProjectAsSecondarySerializer,
     TicketIDSerializer,
+)
+from insights.sources.channels.usecases.query_execute import (
+    QueryExecutor as ChannelQueryExecutor,
 )
 from insights.shared.viewsets import get_source
 from insights.sources.agents.usecases.query_execute import (
@@ -72,6 +79,8 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             return self.search_ticket_ids(request, *args, **kwargs)
         elif source_slug == "custom_status":
             return self.search_custom_status_types(request, *args, **kwargs)
+        elif source_slug == "channels":
+            return self.search_channels(request, *args, **kwargs)
 
         SourceQuery = get_source(slug=source_slug)
         query_kwargs = {}
@@ -149,37 +158,19 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        page = query_params.validated_data["page"]
-        page_size = query_params.validated_data["page_size"]
-        count = source_data.get("count", 0)
-        total_pages = ceil(count / page_size) if page_size and count else 0
-        search = query_params.validated_data.get("search")
+        pagination_urls = get_limit_offset_pagination_urls(request, source_data)
 
         return Response(
             {
-                "count": count,
-                "next": self._meta_campaign_page_url(
-                    request, page + 1, page_size, search
-                )
-                if page < total_pages
-                else None,
-                "previous": self._meta_campaign_page_url(
-                    request, page - 1, page_size, search
-                )
-                if page > 1
-                else None,
+                "count": source_data.get("count", 0),
+                "next": pagination_urls.next_url,
+                "previous": pagination_urls.previous_url,
                 "results": MetaCampaignSerializer(
                     source_data.get("results", []), many=True
                 ).data,
             },
             status=status.HTTP_200_OK,
         )
-
-    def _meta_campaign_page_url(self, request, page, page_size, search):
-        params = {"page": page, "page_size": page_size}
-        if search:
-            params["search"] = search
-        return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
 
     @action(
         detail=True,
@@ -257,6 +248,7 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
                 end_date=query_params.validated_data["end_date"],
                 limit=limit,
                 offset=offset,
+                campaign=query_params.validated_data.get("campaign"),
             )
         except Exception as error:
             logger.exception(f"Error retrieving CTWA performance by campaign: {error}")
@@ -295,6 +287,9 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             "limit": query_params.validated_data["limit"],
             "offset": offset,
         }
+        campaign = query_params.validated_data.get("campaign")
+        if campaign:
+            params["campaign"] = campaign
         return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
 
     @action(detail=True, methods=["get"], url_path="verify_project_indexer")
@@ -458,6 +453,56 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     @action(
         detail=True,
         methods=["get"],
+        url_path="filters/channels",
+    )
+    def search_channels(self, request, *args, **kwargs):
+        self.get_object()
+        query_params = ListChannelsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        data = ChannelQueryExecutor.execute(
+            filters=query_params.validated_data,
+            operation="list",
+            parser=parse_dict_to_json,
+        )
+
+        limit = data["limit"]
+        offset = data["offset"]
+        count = data["count"]
+        next_offset = offset + limit
+        previous_offset = max(offset - limit, 0)
+
+        return Response(
+            {
+                "count": count,
+                "next": self._channels_limit_offset_url(
+                    request, query_params, next_offset
+                )
+                if next_offset < count
+                else None,
+                "previous": self._channels_limit_offset_url(
+                    request, query_params, previous_offset
+                )
+                if offset > 0
+                else None,
+                "results": ChannelSerializer(data.get("results", []), many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _channels_limit_offset_url(self, request, query_params, offset):
+        params = {
+            "limit": query_params.validated_data["limit"],
+            "offset": offset,
+        }
+        search = query_params.validated_data.get("search")
+        if search:
+            params["search"] = search
+        return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
+
+    @action(
+        detail=True,
+        methods=["get"],
         url_path="filters/project_managers",
     )
     def search_project_managers(self, request, *args, **kwargs):
@@ -485,6 +530,27 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             )
 
         return Response(serialized_source, status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="verify_ctwa",
+    )
+    def verify_ctwa(self, request, *args, **kwargs):
+        project = self.get_object()
+        exists = Dashboard.objects.filter(
+            project=project, name=CTWA_DASHBOARD_NAME
+        ).exists()
+
+        queued = False
+        if not exists and settings.ENABLE_CTWA_DASHBOARD_AUTO_CREATION:
+            check_and_create_ctwa_dashboard.delay(str(project.uuid))
+            queued = True
+
+        return Response(
+            {"exists": exists, "queued": queued},
+            status=status.HTTP_200_OK,
+        )
 
     @action(
         detail=True,

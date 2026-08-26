@@ -92,9 +92,12 @@ class DashboardListAPIView(generics.ListAPIView):
     filterset_class = DashboardFilter
 
     def get_queryset(self):
-        return get_dashboard_queryset_for_request(
+        queryset = get_dashboard_queryset_for_request(
             self.request, dashboard_pk=self.kwargs.get("pk")
         )
+        if not settings.SHOW_CTWA_DASHBOARD_IN_LIST:
+            queryset = queryset.exclude(name=CTWA_DASHBOARD_NAME)
+        return queryset
 
     def list(self, request, *args, **kwargs):
         project = None
@@ -157,6 +160,7 @@ class DashboardViewSet(mixins.UpdateModelMixin, viewsets.GenericViewSet):
             "monitoring_peaks_in_human_service",
             "monitoring_queue_volume",
             "monitoring_tags_volume",
+            "monitoring_channel_metrics",
             "monitoring_csat_totals",
             "monitoring_queue_volume",
             "monitoring_tags_volume",
@@ -165,6 +169,7 @@ class DashboardViewSet(mixins.UpdateModelMixin, viewsets.GenericViewSet):
             "analysis_peaks_in_human_service",
             "analysis_queue_volume",
             "analysis_tags_volume",
+            "analysis_channel_metrics",
         ]:
             return [
                 IsAuthenticated(),
@@ -629,6 +634,30 @@ class DashboardViewSet(mixins.UpdateModelMixin, viewsets.GenericViewSet):
         service = HumanSupportDashboardService(project=dashboard.project)
         filters = get_filters_from_query_params(request.query_params)
         data = service.get_analysis_volume_by_tag(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/channel_metrics",
+    )
+    def monitoring_channel_metrics(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_volume_by_channel(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/channel_metrics",
+    )
+    def analysis_channel_metrics(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_analysis_volume_by_channel(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
     @action(

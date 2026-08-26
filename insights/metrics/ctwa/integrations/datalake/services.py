@@ -1,22 +1,167 @@
+from datetime import date, datetime, time
+from uuid import UUID
+
+from django.conf import settings
+from weni_datalake_sdk.clients.redshift.ctwa import get_ctwa_by_campaign
+
 from insights.metrics.ctwa.integrations.datalake.dataclass import (
     CTWAConversionsData,
     CTWASummaryData,
 )
-from insights.metrics.ctwa.mocks import (
-    MOCK_CURRENCY,
-    MOCK_ORGANIC_CONVERSATIONS,
-    aggregate_campaigns,
-    filter_campaigns,
-)
+
+
+def _to_date(value) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value)[:10])
+
+
+def _to_date_str(value) -> str:
+    return _to_date(value).isoformat()
+
+
+def _clamp_ctwa_range(start_date, end_date) -> tuple[date, date] | None:
+    start = _to_date(start_date)
+    end = _to_date(end_date)
+    floor = _to_date(settings.CTWA_CAMPAIGNS_AFTER)
+    if start < floor:
+        start = floor
+    if start > end:
+        return None
+    return start, end
+
+
+def _to_end_of_day(value) -> datetime:
+    return datetime.combine(_to_date(value), time(23, 59, 59))
+
+
+def _to_project_conversation_datetimes(project_uuid, start_date, end_date):
+    from insights.metrics.conversations.validators import ConversationsDatesValidator
+    from insights.projects.models import Project
+
+    start = datetime.combine(_to_date(start_date), time.min)
+    end = datetime.combine(_to_date(end_date), time.min)
+    try:
+        project = Project.objects.get(uuid=project_uuid)
+    except Project.DoesNotExist:
+        return start, _to_end_of_day(end_date)
+
+    return ConversationsDatesValidator(project, start, end).validate()
+
+
+def _extract_rows(result) -> list[dict]:
+    if not result:
+        return []
+    if isinstance(result, dict):
+        return result.get("values") or result.get("data") or []
+    if isinstance(result, list):
+        return result
+    return []
+
+
+def _as_int(row: dict, *keys) -> int:
+    for key in keys:
+        value = row.get(key)
+        if value is not None and value != "":
+            return int(float(value))
+    return 0
+
+
+def _as_float(row: dict, *keys) -> float:
+    for key in keys:
+        value = row.get(key)
+        if value is not None and value != "":
+            return float(value)
+    return 0.0
+
+
+def _campaign_source(row: dict) -> str:
+    return str(row.get("campaign_source") or row.get("source_id") or "")
 
 
 class CTWADatalakeService:
     """
-    CTWA metrics from Datalake.
-
-    The real events query is not available yet; methods currently return
-    mocked data derived from the shared campaign list.
+    CTWA metrics from Datalake (weni-ctwa-by-campaign).
     """
+
+    def __init__(
+        self,
+        ctwa_by_campaign_client=None,
+        conversations_totals_getter=None,
+    ):
+        self.ctwa_by_campaign_client = (
+            ctwa_by_campaign_client or get_ctwa_by_campaign
+        )
+        self.conversations_totals_getter = (
+            conversations_totals_getter or self._default_conversations_totals
+        )
+
+    def _default_conversations_totals(self, project_uuid, start_date, end_date):
+        from insights.metrics.conversations.integrations.datalake.services import (
+            DatalakeConversationsMetricsService,
+        )
+
+        return DatalakeConversationsMetricsService().get_conversations_totals(
+            project_uuid=UUID(str(project_uuid)),
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def _fetch_rows(
+        self,
+        project_uuid: str,
+        start_date,
+        end_date,
+        campaign: str | None = None,
+    ) -> list[dict]:
+        params = {
+            "project": str(project_uuid),
+            "date_start": f"{_to_date_str(start_date)}T00:00:00",
+            "date_end": f"{_to_date_str(end_date)}T23:59:59",
+        }
+        if campaign:
+            params["campaign_source"] = str(campaign)
+
+        result = self.ctwa_by_campaign_client(**params)
+        return _extract_rows(result)
+
+    def _aggregate_rows(self, rows: list[dict]) -> dict:
+        started = sum(
+            _as_int(row, "conversation_started", "conversations") for row in rows
+        )
+        qualified = sum(
+            _as_int(row, "lead_qualified", "qualified") for row in rows
+        )
+        converted = sum(
+            _as_int(row, "purchase_completed", "conversions") for row in rows
+        )
+        revenue = sum(_as_float(row, "order_value", "revenue") for row in rows)
+        avg = round(revenue / converted) if converted else 0
+        return {
+            "started": started,
+            "qualified": qualified,
+            "converted": converted,
+            "revenue": revenue,
+            "avg": avg,
+        }
+
+    def _organic_conversations(
+        self, project_uuid: str, start_date, end_date, ctwa_conversations: int
+    ) -> int:
+        start_date, end_date = _to_project_conversation_datetimes(
+            project_uuid, start_date, end_date
+        )
+        totals = self.conversations_totals_getter(
+            project_uuid=project_uuid,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        total = getattr(
+            getattr(totals, "total_conversations", None), "value", 0
+        ) or 0
+        return max(int(total) - ctwa_conversations, 0)
 
     def get_summary_data(
         self,
@@ -25,13 +170,28 @@ class CTWADatalakeService:
         end_date,
         campaign: str | None = None,
     ) -> CTWASummaryData:
-        totals = aggregate_campaigns(campaign)
+        date_range = _clamp_ctwa_range(start_date, end_date)
+        if date_range is None:
+            return CTWASummaryData(currency=settings.CTWA_DEFAULT_CURRENCY)
+
+        start_date, end_date = date_range
+        rows = self._fetch_rows(project_uuid, start_date, end_date, campaign)
+        totals = self._aggregate_rows(rows)
+        organic_rows = rows
+        if campaign:
+            organic_rows = self._fetch_rows(
+                project_uuid, start_date, end_date, campaign=None
+            )
+        organic_ctwa = self._aggregate_rows(organic_rows)["started"]
+
         return CTWASummaryData(
-            currency=MOCK_CURRENCY,
+            currency=settings.CTWA_DEFAULT_CURRENCY,
             attributed_revenue=totals["revenue"],
             avg_order_value=totals["avg"],
-            ctwa_conversations=totals["conversations"],
-            organic_conversations=MOCK_ORGANIC_CONVERSATIONS,
+            ctwa_conversations=totals["started"],
+            organic_conversations=self._organic_conversations(
+                project_uuid, start_date, end_date, organic_ctwa
+            ),
         )
 
     def get_conversions_data(
@@ -41,11 +201,18 @@ class CTWADatalakeService:
         end_date,
         campaign: str | None = None,
     ) -> CTWAConversionsData:
-        totals = aggregate_campaigns(campaign)
+        date_range = _clamp_ctwa_range(start_date, end_date)
+        if date_range is None:
+            return CTWAConversionsData()
+
+        start_date, end_date = date_range
+        totals = self._aggregate_rows(
+            self._fetch_rows(project_uuid, start_date, end_date, campaign)
+        )
         return CTWAConversionsData(
-            conversations_started=totals["conversations"],
+            conversations_started=totals["started"],
             conversations_qualified=totals["qualified"],
-            conversations_converted=totals["conversions"],
+            conversations_converted=totals["converted"],
         )
 
     def get_performance_by_campaign(
@@ -55,20 +222,50 @@ class CTWADatalakeService:
         end_date,
         limit: int = 10,
         offset: int = 0,
+        campaign: str | None = None,
     ) -> dict:
-        rows = filter_campaigns()
-        page = rows[offset : offset + limit]
-        return {
-            "currency": MOCK_CURRENCY,
-            "count": len(rows),
-            "results": [
-                {
-                    "campaign": row["campaign"],
-                    "conversations": row["conversations"],
-                    "qualified": row["qualified"],
-                    "conversions": row["conversions"],
-                    "revenue": row["revenue"],
+        date_range = _clamp_ctwa_range(start_date, end_date)
+        if date_range is None:
+            return {
+                "currency": settings.CTWA_DEFAULT_CURRENCY,
+                "count": 0,
+                "results": [],
+            }
+
+        start_date, end_date = date_range
+        rows = self._fetch_rows(project_uuid, start_date, end_date, campaign)
+        by_campaign: dict[str, dict] = {}
+        for row in rows:
+            source = _campaign_source(row)
+            if source not in by_campaign:
+                by_campaign[source] = {
+                    "campaign": source,
+                    "conversations": 0,
+                    "qualified": 0,
+                    "conversions": 0,
+                    "revenue": 0.0,
                 }
-                for row in page
-            ],
+            by_campaign[source]["conversations"] += _as_int(
+                row, "conversation_started", "conversations"
+            )
+            by_campaign[source]["qualified"] += _as_int(
+                row, "lead_qualified", "qualified"
+            )
+            by_campaign[source]["conversions"] += _as_int(
+                row, "purchase_completed", "conversions"
+            )
+            by_campaign[source]["revenue"] += _as_float(
+                row, "order_value", "revenue"
+            )
+
+        ranked = sorted(
+            by_campaign.values(),
+            key=lambda item: item["conversations"],
+            reverse=True,
+        )
+        page = ranked[offset : offset + limit]
+        return {
+            "currency": settings.CTWA_DEFAULT_CURRENCY,
+            "count": len(ranked),
+            "results": page,
         }

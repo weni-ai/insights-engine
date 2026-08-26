@@ -49,9 +49,22 @@ class TestGetDashFilters(TestCase):
                 "depends_on": {"filter": "sector", "search_param": "sector_id"},
                 "placeholder": "filter.tags.placeholder",
             },
+            "channels": {
+                "type": "select",
+                "label": "filter.channels.label",
+                "field": "uuid",
+                "source": "channels",
+                "placeholder": "filter.channels.placeholder",
+            },
         }
         result = get_dash_filters(dash)
         self.assertEqual(result, expected_filters)
+
+    def test_get_dash_filters_human_support_v2(self):
+        dash = Dashboard(name="human_support_dashboard.title")
+        result = get_dash_filters(dash)
+        self.assertEqual(result["channels"]["source"], "channels")
+        self.assertEqual(result["channels"]["field"], "uuid")
 
     def test_get_dash_filters_whatsapp_integration(self):
         dash = Dashboard(

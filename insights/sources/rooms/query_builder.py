@@ -1,3 +1,6 @@
+from insights.sources.channels.enums import Channel
+
+
 class RoomSQLQueryBuilder:
     def __init__(self):
         self.joins = dict()
@@ -148,5 +151,44 @@ class RoomSQLQueryBuilder:
             WHERE {self.where_clause}
             GROUP BY sec.uuid, sec.name, stg.uuid, stg.name, stg.is_deleted, sec.is_deleted
             ORDER BY value DESC, tag_name ASC;
+        """
+        return query, self.params
+
+    def group_by_channel_count(self, limit: int = 10, *args, **kwargs):
+        """
+        Groups rooms by channel derived from the URN scheme.
+        Returns: channel_name, rooms_volume
+        Sorted by rooms_volume DESC
+        """
+        if not self.is_valid:
+            self.build_query()
+
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError):
+            limit = 10
+        limit = max(1, min(limit, 100))
+
+        where_parts = [
+            clause
+            for clause in (
+                self.where_clause,
+                "r.urn IS NOT NULL",
+                "r.urn != ''",
+            )
+            if clause
+        ]
+        where_sql = " AND ".join(where_parts)
+
+        query = f"""
+            SELECT
+                {Channel.urn_case_sql()} AS channel_name,
+                COUNT(*) AS rooms_volume
+            FROM public.rooms_room AS r
+            {self.join_clause}
+            WHERE {where_sql}
+            GROUP BY channel_name
+            ORDER BY rooms_volume DESC
+            LIMIT {limit};
         """
         return query, self.params

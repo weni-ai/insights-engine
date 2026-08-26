@@ -1,55 +1,61 @@
 from uuid import UUID
 
+import requests
 from django.conf import settings
 
-from insights.internals.base import InternalJWTAuthentication
-from insights.metrics.ctwa.mocks import MOCK_CAMPAIGNS
+from insights.internals.base import InternalAuthentication
 
 
-class FlowsCampaignClient(InternalJWTAuthentication):
+class FlowsCampaignClient(InternalAuthentication):
     """
-    Client for Meta/CTWA campaigns stored in Flows.
-
-    The Flows API is not available yet; ``list_campaigns`` currently returns
-    mocked paginated data. Replace ``_mock_list_campaigns`` with a real HTTP
-    call when the endpoint is ready.
+    Client for CTWA referral sources stored in Flows.
     """
-
-    project_uuid_field = "project_uuid"
 
     def __init__(self, project_uuid: str | UUID) -> None:
         self.project_uuid = str(project_uuid)
-        self.url = f"{settings.FLOWS_URL}/api/v2/internals/campaigns.json"
+        self.url = f"{settings.FLOWS_URL}/api/v2/internals/ctwa_referral_sources"
 
     def list_campaigns(
         self,
         search: str | None = None,
-        page: int = 1,
-        page_size: int = 10,
+        limit: int = 10,
+        offset: int = 0,
     ) -> dict:
-        return self._mock_list_campaigns(
-            search=search, page=page, page_size=page_size
-        )
-
-    def _mock_list_campaigns(
-        self,
-        search: str | None = None,
-        page: int = 1,
-        page_size: int = 10,
-    ) -> dict:
-        results = MOCK_CAMPAIGNS
+        params = {
+            "project_uuid": self.project_uuid,
+            "limit": limit,
+            "offset": offset,
+            "after": settings.CTWA_CAMPAIGNS_AFTER,
+        }
         if search:
-            search_normalized = search.casefold()
-            results = [
-                campaign
-                for campaign in results
-                if search_normalized in campaign["name"].casefold()
-            ]
+            params["search"] = search
 
-        start = (page - 1) * page_size
-        end = start + page_size
+        response = requests.get(
+            url=self.url,
+            headers=self.headers,
+            params=params,
+            timeout=60,
+        )
+        response.raise_for_status()
+        return self._parse_payload(response.json())
 
+    def _parse_payload(self, payload: dict) -> dict:
+        results = [
+            self._parse_campaign(item) for item in payload.get("results", [])
+        ]
         return {
-            "count": len(results),
-            "results": results[start:end],
+            "count": payload.get("count", len(results)),
+            "next": payload.get("next"),
+            "previous": payload.get("previous"),
+            "results": results,
+        }
+
+    def _parse_campaign(self, item: dict) -> dict:
+        source_id = item.get("source_id")
+        campaign_id = str(source_id) if source_id is not None else str(item.get("id", ""))
+        headline = item.get("headline") or ""
+        return {
+            "name": headline or source_id or "",
+            "uuid": campaign_id,
+            "headline": headline,
         }
