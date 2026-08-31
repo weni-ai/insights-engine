@@ -839,6 +839,12 @@ class HumanSupportDashboardService:
             params["protocol"] = str(normalized["ticket_id"])
 
         if filters:
+            tag_name = filters.get("tag_name")
+            if tag_name not in (None, ""):
+                params["tag_name"] = tag_name
+            sector = filters.get("sector")
+            if sector not in (None, ""):
+                params["sector"] = sector
             if filters.get("limit") is not None:
                 params["limit"] = filters.get("limit")
             if filters.get("offset") is not None:

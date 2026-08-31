@@ -966,6 +966,71 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["limit"], 20)
         self.assertEqual(result["offset"], 5)
 
+    def test_params_for_finished_rooms_list_forwards_tag_name_and_sector(self):
+        sector_uuid = str(uuid4())
+        result = self.service._params_for_finished_rooms_list(
+            normalized={},
+            filters={
+                "tag_name": "Cancelamento - NC",
+                "sector": sector_uuid,
+            },
+        )
+        self.assertEqual(result["tag_name"], "Cancelamento - NC")
+        self.assertEqual(result["sector"], sector_uuid)
+        self.assertNotIn("tags", result)
+
+    def test_params_for_finished_rooms_list_omits_empty_tag_name(self):
+        result = self.service._params_for_finished_rooms_list(
+            normalized={},
+            filters={"tag_name": ""},
+        )
+        self.assertNotIn("tag_name", result)
+        self.assertNotIn("sector", result)
+
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_finished_rooms_forwards_tag_name_and_sector(self, mock_rooms):
+        mock_rooms.execute.return_value = {
+            "results": [],
+            "next": None,
+            "previous": None,
+            "count": 0,
+        }
+        sector_uuid = str(uuid4())
+        self.service.get_finished_rooms(
+            filters={
+                "tag_name": "Cancelamento - NC",
+                "sector": sector_uuid,
+            }
+        )
+        call_args = mock_rooms.execute.call_args[0][0]
+        self.assertEqual(call_args["tag_name"], "Cancelamento - NC")
+        self.assertEqual(call_args["sector"], sector_uuid)
+        self.assertEqual(call_args["is_active"], False)
+
+    def test_get_finished_rooms_v2_forwards_tag_name_and_sector(self):
+        mock_chats = MagicMock()
+        mock_chats.get_internal_rooms_v2.return_value = {
+            "count": 0,
+            "next": None,
+            "previous": None,
+            "results": [],
+        }
+        service = HumanSupportDashboardService(
+            project=self.project, chats_client=mock_chats
+        )
+        sector_uuid = str(uuid4())
+        service.get_finished_rooms_v2(
+            filters={
+                "tag_name": "Cancelamento - NC",
+                "sector": sector_uuid,
+            }
+        )
+        call_params = mock_chats.get_internal_rooms_v2.call_args[0][0]
+        self.assertEqual(call_params["tag_name"], "Cancelamento - NC")
+        self.assertEqual(call_params["sector"], sector_uuid)
+        self.assertEqual(call_params["project"], str(self.project.uuid))
+        self.assertEqual(call_params["is_active"], False)
+
     def test_format_finished_room_v2_item_without_agent(self):
         room = {
             "agent": None,
