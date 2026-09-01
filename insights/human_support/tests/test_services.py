@@ -154,6 +154,7 @@ class TestHumanSupportDashboardService(TestCase):
                     "contact": "C1",
                     "link": "https://link/1",
                     "pending_response": True,
+                    "channel_name": "instagram",
                     "goals_metrics": {
                         "first_response_time": {"exceeded": True},
                         "duration": {"exceeded": True},
@@ -172,6 +173,7 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["results"][0]["duration"], 120)
         self.assertEqual(result["results"][0]["link"], "https://link/1")
         self.assertTrue(result["results"][0]["pending_response"])
+        self.assertEqual(result["results"][0]["channel_name"], "instagram")
         self.assertEqual(
             result["results"][0]["goals_metrics"],
             {
@@ -203,6 +205,7 @@ class TestHumanSupportDashboardService(TestCase):
         }
         result = self.service.get_detailed_monitoring_on_going(filters={})
         self.assertEqual(result["results"][0]["goals_metrics"], {})
+        self.assertEqual(result["results"][0]["channel_name"], "others")
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_detailed_monitoring_on_going_with_filters_and_ordering(
@@ -249,6 +252,7 @@ class TestHumanSupportDashboardService(TestCase):
                     "sector": "S1",
                     "queue": "Q1",
                     "link": "https://link/a",
+                    "channel_name": "whatsapp",
                     "goals_metrics": {
                         "awaiting_time": {"exceeded": False},
                         "first_response_time": {"exceeded": True},
@@ -264,6 +268,7 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["results"][0]["awaiting_time"], 30)
         self.assertEqual(result["results"][0]["contact"], "Contact A")
+        self.assertEqual(result["results"][0]["channel_name"], "whatsapp")
         self.assertEqual(
             result["results"][0]["goals_metrics"],
             {"awaiting_time": {"exceeded": False}},
@@ -289,6 +294,7 @@ class TestHumanSupportDashboardService(TestCase):
         }
         result = self.service.get_detailed_monitoring_awaiting()
         self.assertEqual(result["results"][0]["goals_metrics"], {})
+        self.assertEqual(result["results"][0]["channel_name"], "others")
 
     @patch("insights.human_support.services.AgentsRESTClient")
     def test_get_detailed_monitoring_agents(self, mock_client_class):
@@ -451,6 +457,7 @@ class TestHumanSupportDashboardService(TestCase):
                     "ended_at": "2025-02-06T12:00:00",
                     "csat_rating": 5,
                     "link": "https://link/1",
+                    "channel_name": "email",
                 },
             ],
             "next": None,
@@ -461,6 +468,7 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["results"][0]["ticket_id"], "TICKET-001")
         self.assertEqual(result["results"][0]["csat_rating"], 5)
+        self.assertEqual(result["results"][0]["channel_name"], "email")
 
     def test_get_finished_rooms_v2(self):
         mock_chats = MagicMock()
@@ -486,6 +494,7 @@ class TestHumanSupportDashboardService(TestCase):
                     "csat_rating": 5,
                     "link": {"url": "chats:closed-chats/uuid", "type": "internal"},
                     "automatic_closed": True,
+                    "channel_name": "facebook",
                 },
             ],
         }
@@ -503,6 +512,7 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertEqual(row["sector"]["name"], "S1")
         self.assertEqual(row["awaiting_time"], 10)
         self.assertTrue(row["automatic_closed"])
+        self.assertEqual(row["channel_name"], "facebook")
         mock_chats.get_internal_rooms_v2.assert_called_once()
         call_params = mock_chats.get_internal_rooms_v2.call_args[0][0]
         self.assertEqual(call_params["project"], str(self.project.uuid))
