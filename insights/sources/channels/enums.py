@@ -11,6 +11,15 @@ class Channel(TextChoices):
     OTHERS = "others", "Others"
 
     @classmethod
+    def valid_values(cls, values) -> list[str]:
+        if values is None:
+            return []
+        if not isinstance(values, list):
+            values = [values]
+        allowed = set(cls.values)
+        return [value for value in values if value in allowed]
+
+    @classmethod
     def urn_case_sql(cls, column: str = "r.urn") -> str:
         return f"""
             CASE
