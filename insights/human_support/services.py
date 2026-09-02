@@ -414,6 +414,7 @@ class HumanSupportDashboardService:
                     "goals_metrics": self._filter_goals_metrics(
                         room, ("first_response_time", "duration")
                     ),
+                    "channel_name": self._room_channel_name(room),
                 }
             )
 
@@ -428,6 +429,10 @@ class HumanSupportDashboardService:
     def _filter_goals_metrics(room: dict, allowed_keys: tuple[str, ...]) -> dict:
         room_goals = room.get("goals_metrics") or {}
         return {key: value for key, value in room_goals.items() if key in allowed_keys}
+
+    @staticmethod
+    def _room_channel_name(room: dict) -> str:
+        return room.get("channel_name") or Channel.OTHERS
 
     def get_detailed_monitoring_awaiting(self, filters: dict | None = None) -> dict:
         """
@@ -492,6 +497,7 @@ class HumanSupportDashboardService:
                     "goals_metrics": self._filter_goals_metrics(
                         room, ("awaiting_time",)
                     ),
+                    "channel_name": self._room_channel_name(room),
                 }
             )
         return {
@@ -972,6 +978,7 @@ class HumanSupportDashboardService:
             "csat_rating": room.get("csat_rating"),
             "link": room.get("link"),
             "automatic_closed": room.get("automatic_closed"),
+            "channel_name": self._room_channel_name(room),
         }
 
     def get_finished_rooms(self, filters: dict | None = None) -> dict:
@@ -1002,6 +1009,7 @@ class HumanSupportDashboardService:
                     "ended_at": room.get("ended_at"),
                     "csat_rating": room.get("csat_rating"),
                     "link": room.get("link"),
+                    "channel_name": self._room_channel_name(room),
                 }
             )
 
