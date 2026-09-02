@@ -34,12 +34,17 @@ from insights.projects.models import Project, ProjectAuth
 from insights.projects.services.indexer_activation import is_project_indexer_active
 from insights.projects.parsers import parse_dict_to_json
 from insights.projects.serializers import (
+    ChannelSerializer,
+    ListChannelsQueryParamsSerializer,
     ListContactsQueryParamsSerializer,
     ListTicketIDsQueryParamsSerializer,
     MetaCampaignQueryParamsSerializer,
     MetaCampaignSerializer,
     ProjectSerializer,
     TicketIDSerializer,
+)
+from insights.sources.channels.usecases.query_execute import (
+    QueryExecutor as ChannelQueryExecutor,
 )
 from insights.shared.viewsets import get_source
 from insights.sources.agents.usecases.query_execute import (
@@ -72,6 +77,8 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             return self.search_ticket_ids(request, *args, **kwargs)
         elif source_slug == "custom_status":
             return self.search_custom_status_types(request, *args, **kwargs)
+        elif source_slug == "channels":
+            return self.search_channels(request, *args, **kwargs)
 
         SourceQuery = get_source(slug=source_slug)
         query_kwargs = {}
@@ -401,6 +408,56 @@ class ProjectViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         client = CustomStatusRESTClient(project)
         results = client.list_custom_status_types()
         return Response(results, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="filters/channels",
+    )
+    def search_channels(self, request, *args, **kwargs):
+        self.get_object()
+        query_params = ListChannelsQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        data = ChannelQueryExecutor.execute(
+            filters=query_params.validated_data,
+            operation="list",
+            parser=parse_dict_to_json,
+        )
+
+        limit = data["limit"]
+        offset = data["offset"]
+        count = data["count"]
+        next_offset = offset + limit
+        previous_offset = max(offset - limit, 0)
+
+        return Response(
+            {
+                "count": count,
+                "next": self._channels_limit_offset_url(
+                    request, query_params, next_offset
+                )
+                if next_offset < count
+                else None,
+                "previous": self._channels_limit_offset_url(
+                    request, query_params, previous_offset
+                )
+                if offset > 0
+                else None,
+                "results": ChannelSerializer(data.get("results", []), many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _channels_limit_offset_url(self, request, query_params, offset):
+        params = {
+            "limit": query_params.validated_data["limit"],
+            "offset": offset,
+        }
+        search = query_params.validated_data.get("search")
+        if search:
+            params["search"] = search
+        return request.build_absolute_uri(f"{request.path}?{urlencode(params)}")
 
     @action(
         detail=True,
