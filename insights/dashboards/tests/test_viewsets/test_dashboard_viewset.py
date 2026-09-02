@@ -99,6 +99,18 @@ class BaseTestDashboardViewSet(APITestCase):
 
         return self.client.get(url, data)
 
+    def monitoring_channel_metrics(self, dashboard_uuid: str, data: dict) -> Response:
+        url = reverse(
+            "dashboard-monitoring-channel-metrics", kwargs={"pk": dashboard_uuid}
+        )
+        return self.client.get(url, data)
+
+    def analysis_channel_metrics(self, dashboard_uuid: str, data: dict) -> Response:
+        url = reverse(
+            "dashboard-analysis-channel-metrics", kwargs={"pk": dashboard_uuid}
+        )
+        return self.client.get(url, data)
+
 
 class TestDashboardViewSetAsAnonymousUser(BaseTestDashboardViewSet):
     def test_cannot_list_dashboards_when_unauthenticated(self):
@@ -969,3 +981,53 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
                 },
             },
         )
+
+    @with_project_auth
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
+    def test_get_monitoring_channel_metrics(self, MockHumanSupportDashboardService):
+        payload = {
+            "next": None,
+            "previous": None,
+            "count": 2,
+            "results": [
+                {"channel_name": "whatsapp", "rooms_volume": 10},
+                {"channel_name": "facebook", "rooms_volume": 5},
+            ],
+        }
+        mock_service_instance = MockHumanSupportDashboardService.return_value
+        mock_service_instance.get_volume_by_channel.return_value = payload
+
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        response = self.monitoring_channel_metrics(
+            str(dashboard.uuid), {"chip_name": "waiting"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, payload)
+        mock_service_instance.get_volume_by_channel.assert_called_once()
+
+    @with_project_auth
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
+    def test_get_analysis_channel_metrics(self, MockHumanSupportDashboardService):
+        payload = {
+            "next": None,
+            "previous": None,
+            "count": 1,
+            "results": [{"channel_name": "whatsapp", "rooms_volume": 10}],
+        }
+        mock_service_instance = MockHumanSupportDashboardService.return_value
+        mock_service_instance.get_analysis_volume_by_channel.return_value = payload
+
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        response = self.analysis_channel_metrics(
+            str(dashboard.uuid),
+            {"start_date": "2025-11-01", "end_date": "2025-11-30"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, payload)
+        mock_service_instance.get_analysis_volume_by_channel.assert_called_once()

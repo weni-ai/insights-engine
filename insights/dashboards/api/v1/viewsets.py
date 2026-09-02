@@ -72,12 +72,14 @@ class DashboardViewSet(
             "monitoring_peaks_in_human_service",
             "monitoring_queue_volume",
             "monitoring_tags_volume",
+            "monitoring_channel_metrics",
             "monitoring_csat_totals",
             "finished",
             "analysis_finished_rooms_status",
             "analysis_peaks_in_human_service",
             "analysis_queue_volume",
             "analysis_tags_volume",
+            "analysis_channel_metrics",
         ]:
             return [
                 IsAuthenticated(),
@@ -595,6 +597,30 @@ class DashboardViewSet(
         service = HumanSupportDashboardService(project=dashboard.project)
         filters = get_filters_from_query_params(request.query_params)
         data = service.get_analysis_volume_by_tag(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="monitoring/channel_metrics",
+    )
+    def monitoring_channel_metrics(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_volume_by_channel(filters=filters)
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analysis/channel_metrics",
+    )
+    def analysis_channel_metrics(self, request, pk=None):
+        dashboard = self.get_object()
+        service = HumanSupportDashboardService(project=dashboard.project)
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_analysis_volume_by_channel(filters=filters)
         return Response(data, status=status.HTTP_200_OK)
 
     @action(

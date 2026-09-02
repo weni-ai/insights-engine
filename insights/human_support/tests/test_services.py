@@ -1191,6 +1191,49 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertIn("created_on__gte", call_kwargs["filters"])
         self.assertNotIn("is_active", call_kwargs["filters"])
 
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_volume_by_channel_waiting(self, mock_rooms):
+        mock_rooms.execute.return_value = {"results": [], "count": 0}
+        self.service.get_volume_by_channel(
+            filters={"chip_name": "waiting", "limit": 10}
+        )
+        call_kwargs = mock_rooms.execute.call_args[1]
+        self.assertTrue(call_kwargs["filters"]["is_active"])
+        self.assertTrue(call_kwargs["filters"]["user_id__isnull"])
+        self.assertEqual(call_kwargs["operation"], "group_by_channel_count")
+        self.assertEqual(call_kwargs["query_kwargs"]["limit"], 10)
+
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_volume_by_channel_ongoing(self, mock_rooms):
+        mock_rooms.execute.return_value = {"results": [], "count": 0}
+        self.service.get_volume_by_channel(filters={"chip_name": "ongoing"})
+        call_kwargs = mock_rooms.execute.call_args[1]
+        self.assertTrue(call_kwargs["filters"]["is_active"])
+        self.assertFalse(call_kwargs["filters"]["user_id__isnull"])
+        self.assertEqual(call_kwargs["operation"], "group_by_channel_count")
+
+    @patch("insights.human_support.services.RoomsQueryExecutor")
+    def test_get_analysis_volume_by_channel_always_closed(self, mock_rooms):
+        mock_rooms.execute.return_value = {"results": [], "count": 0}
+        from datetime import datetime as dt
+        import pytz
+
+        self.service.get_analysis_volume_by_channel(
+            filters={
+                "chip_name": "ongoing",
+                "start_date": pytz.UTC.localize(dt(2025, 3, 1)),
+                "end_date": pytz.UTC.localize(dt(2025, 3, 31)),
+                "limit": 10,
+            }
+        )
+        call_kwargs = mock_rooms.execute.call_args[1]
+        self.assertFalse(call_kwargs["filters"]["is_active"])
+        self.assertIn("ended_at__gte", call_kwargs["filters"])
+        self.assertIn("ended_at__lte", call_kwargs["filters"])
+        self.assertNotIn("user_id__isnull", call_kwargs["filters"])
+        self.assertEqual(call_kwargs["operation"], "group_by_channel_count")
+        self.assertEqual(call_kwargs["query_kwargs"]["limit"], 10)
+
     def test_get_csat_ratings_skips_invalid_rating(self):
         mock_chats = MagicMock()
         mock_chats.csat_ratings.return_value = {
