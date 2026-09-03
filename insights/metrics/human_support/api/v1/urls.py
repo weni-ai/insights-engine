@@ -7,6 +7,7 @@ from insights.metrics.human_support.api.v1.views import (
     DetailedMonitoringAgentsTotalsView,
     DetailedMonitoringStatusView,
     AnalysisDetailedMonitoringStatusView,
+    TotalRevenueView,
 )
 
 urlpatterns = [
@@ -33,5 +34,9 @@ urlpatterns = [
     path(
         "analysis/detailed-monitoring/status/",
         AnalysisDetailedMonitoringStatusView.as_view(),
+    ),
+    path(
+        "sales/total-revenue/",
+        TotalRevenueView.as_view(),
     ),
 ]
