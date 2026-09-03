@@ -124,3 +124,21 @@ class AnalysisDetailedMonitoringStatusView(APIView):
         data = service.get_analysis_detailed_monitoring_status(filters=filters)
 
         return Response(data, status=200)
+
+
+class TotalRevenueView(APIView):
+    permission_classes = [IsAuthenticated, ProjectAuthQueryParamPermission]
+    feature_flag_key = "human-support-assisted-sales"
+
+    def get(self, request, *args, **kwargs):
+        project_uuid = request.query_params.get("project_uuid")
+        if not project_uuid:
+            return Response({"detail": "project_uuid is required"}, status=400)
+
+        project = get_object_or_404(Project, uuid=project_uuid)
+        service = HumanSupportDashboardService(project=project)
+
+        filters = get_filters_from_query_params(request.query_params)
+        data = service.get_total_revenue(filters=filters)
+
+        return Response(data, status=200)
