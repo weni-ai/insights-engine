@@ -1,9 +1,12 @@
 from datetime import date
-from uuid import uuid4
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
+import pytz
 from django.test import TestCase
+from django.utils import timezone as dj_timezone
 
+from insights.human_support.revenue import RevenueData
 from insights.human_support.services import HumanSupportDashboardService
 from insights.projects.models import Project
 
@@ -940,6 +943,7 @@ class TestHumanSupportDashboardService(TestCase):
 
     def test_get_detailed_monitoring_agents_filters_with_dates_and_lists(self):
         from datetime import datetime as dt
+
         import pytz
 
         start = pytz.UTC.localize(dt(2025, 3, 1))
@@ -1023,6 +1027,7 @@ class TestHumanSupportDashboardService(TestCase):
         }
         mock_client_class.return_value = mock_client
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_detailed_monitoring_status_v2(
@@ -1062,6 +1067,7 @@ class TestHumanSupportDashboardService(TestCase):
             "count": 0,
         }
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_detailed_monitoring_status(
@@ -1080,6 +1086,7 @@ class TestHumanSupportDashboardService(TestCase):
 
     def test_params_for_finished_rooms_list_with_agent_contact_ticket(self):
         from datetime import datetime as dt
+
         import pytz
 
         start = pytz.UTC.localize(dt(2025, 3, 1))
@@ -1207,6 +1214,7 @@ class TestHumanSupportDashboardService(TestCase):
     def test_get_analysis_volume_by_queue_waiting_with_dates(self, mock_rooms):
         mock_rooms.execute.return_value = {"results": [], "count": 0}
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_analysis_volume_by_queue(
@@ -1225,6 +1233,7 @@ class TestHumanSupportDashboardService(TestCase):
     def test_get_analysis_volume_by_queue_ongoing(self, mock_rooms):
         mock_rooms.execute.return_value = {"results": [], "count": 0}
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_analysis_volume_by_queue(
@@ -1242,6 +1251,7 @@ class TestHumanSupportDashboardService(TestCase):
     def test_get_analysis_volume_by_queue_closed(self, mock_rooms):
         mock_rooms.execute.return_value = {"results": [], "count": 0}
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_analysis_volume_by_queue(
@@ -1259,6 +1269,7 @@ class TestHumanSupportDashboardService(TestCase):
     def test_get_analysis_volume_by_queue_no_chip(self, mock_rooms):
         mock_rooms.execute.return_value = {"results": [], "count": 0}
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_analysis_volume_by_queue(
@@ -1302,6 +1313,7 @@ class TestHumanSupportDashboardService(TestCase):
     def test_get_analysis_volume_by_tag_ongoing_with_dates(self, mock_rooms):
         mock_rooms.execute.return_value = {"results": [], "count": 0}
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_analysis_volume_by_tag(
@@ -1319,6 +1331,7 @@ class TestHumanSupportDashboardService(TestCase):
     def test_get_analysis_volume_by_tag_closed_with_dates(self, mock_rooms):
         mock_rooms.execute.return_value = {"results": [], "count": 0}
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_analysis_volume_by_tag(
@@ -1336,6 +1349,7 @@ class TestHumanSupportDashboardService(TestCase):
     def test_get_analysis_volume_by_tag_no_chip(self, mock_rooms):
         mock_rooms.execute.return_value = {"results": [], "count": 0}
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_analysis_volume_by_tag(
@@ -1373,6 +1387,7 @@ class TestHumanSupportDashboardService(TestCase):
     def test_get_analysis_volume_by_channel_always_closed(self, mock_rooms):
         mock_rooms.execute.return_value = {"results": [], "count": 0}
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_analysis_volume_by_channel(
@@ -1419,6 +1434,7 @@ class TestHumanSupportDashboardService(TestCase):
         }
         mock_time_class.return_value = mock_time
         from datetime import datetime as dt
+
         import pytz
 
         result = self.service.get_analysis_status(
@@ -1441,6 +1457,7 @@ class TestHumanSupportDashboardService(TestCase):
             "count": 0,
         }
         from datetime import datetime as dt
+
         import pytz
 
         self.service.get_analysis_detailed_monitoring_status(
@@ -1487,3 +1504,160 @@ class TestHumanSupportDashboardService(TestCase):
         )
         self.assertEqual(result["count"], 1)
         self.assertEqual(result["results"][0]["agent"], "a1")
+
+
+class FakeRevenueSource:
+    def __init__(self, values):
+        self.values = list(values)
+        self.calls = []
+
+    def get_revenue(self, params):
+        self.calls.append(params)
+        return self.values.pop(0)
+
+
+class TestHumanSupportDashboardServiceTotalRevenue(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+            timezone="America/Sao_Paulo",
+        )
+
+    def _service(self, values=None):
+        source = FakeRevenueSource(
+            values
+            if values is not None
+            else [RevenueData(total=0.0), RevenueData(total=0.0)]
+        )
+        service = HumanSupportDashboardService(
+            project=self.project, revenue_source=source
+        )
+        return service, source
+
+    def test_returns_zeroed_card_without_a_revenue_source(self):
+        service = HumanSupportDashboardService(project=self.project)
+
+        result = service.get_total_revenue()
+
+        self.assertEqual(
+            result,
+            {
+                "value": 0.0,
+                "previous_value": 0.0,
+                "currency_code": "",
+                "increase_percentage": 0.0,
+            },
+        )
+
+    def test_compares_current_period_against_comparison_period(self):
+        service, _ = self._service(
+            [
+                RevenueData(total=428450.0, currency_code="USD"),
+                RevenueData(total=362480.0, currency_code="USD"),
+            ]
+        )
+
+        result = service.get_total_revenue(
+            filters={
+                "start_date": "2025-04-01",
+                "end_date": "2025-04-30",
+                "comparison_start_date": "2025-03-01",
+                "comparison_end_date": "2025-03-31",
+            }
+        )
+
+        self.assertEqual(result["value"], 428450.0)
+        self.assertEqual(result["previous_value"], 362480.0)
+        self.assertEqual(result["currency_code"], "USD")
+        self.assertEqual(result["increase_percentage"], 18.2)
+
+    def test_uses_comparison_dates_sent_by_the_request(self):
+        service, source = self._service()
+
+        service.get_total_revenue(
+            filters={
+                "start_date": "2025-04-01",
+                "end_date": "2025-04-30",
+                "comparison_start_date": "2025-01-01",
+                "comparison_end_date": "2025-01-31",
+            }
+        )
+
+        comparison_params = source.calls[1]
+        self.assertTrue(comparison_params["start_date"].startswith("2025-01-01"))
+        self.assertTrue(comparison_params["end_date"].startswith("2025-01-31"))
+
+    def test_falls_back_to_the_preceding_period_of_same_length(self):
+        service, source = self._service()
+
+        service.get_total_revenue(
+            filters={"start_date": "2025-04-01", "end_date": "2025-04-30"}
+        )
+
+        comparison_params = source.calls[1]
+        self.assertTrue(comparison_params["start_date"].startswith("2025-03-02"))
+        self.assertTrue(comparison_params["end_date"].startswith("2025-03-31"))
+
+    def test_forwards_dimension_filters_to_the_source(self):
+        service, source = self._service()
+        sector_uuid = str(uuid4())
+        queue_uuid = str(uuid4())
+        tag_uuid = str(uuid4())
+
+        service.get_total_revenue(
+            filters={
+                "sectors": [sector_uuid],
+                "queues": [queue_uuid],
+                "tags": [tag_uuid],
+                "agent": "agent@example.com",
+            }
+        )
+
+        params = source.calls[0]
+        self.assertEqual(params["project"], str(self.project.uuid))
+        self.assertEqual(params["sector"], [sector_uuid])
+        self.assertEqual(params["queue"], [queue_uuid])
+        self.assertEqual(params["tag"], [tag_uuid])
+        self.assertEqual(params["agent"], "agent@example.com")
+
+    def test_uses_the_same_filters_on_both_periods(self):
+        service, source = self._service()
+        sector_uuid = str(uuid4())
+
+        service.get_total_revenue(
+            filters={
+                "sectors": [sector_uuid],
+                "start_date": "2025-04-01",
+                "end_date": "2025-04-30",
+                "comparison_start_date": "2025-03-01",
+                "comparison_end_date": "2025-03-31",
+            }
+        )
+
+        current_params, comparison_params = source.calls
+        self.assertEqual(current_params["sector"], comparison_params["sector"])
+        self.assertNotEqual(
+            current_params["start_date"], comparison_params["start_date"]
+        )
+
+    def test_defaults_to_the_current_day_without_dates(self):
+        service, source = self._service()
+
+        service.get_total_revenue()
+
+        today = dj_timezone.now().astimezone(pytz.timezone("America/Sao_Paulo")).date()
+        self.assertTrue(source.calls[0]["start_date"].startswith(str(today)))
+
+    def test_increase_percentage_when_there_is_no_previous_revenue(self):
+        service, _ = self._service([RevenueData(total=1000.0), RevenueData(total=0.0)])
+
+        result = service.get_total_revenue()
+
+        self.assertEqual(result["increase_percentage"], 100.0)
+
+    def test_increase_percentage_is_negative_when_revenue_drops(self):
+        service, _ = self._service([RevenueData(total=50.0), RevenueData(total=200.0)])
+
+        result = service.get_total_revenue()
+
+        self.assertEqual(result["increase_percentage"], -75.0)
