@@ -1555,6 +1555,8 @@ class HumanSupportDashboardService:
                 value = Channel.valid_values(value)
                 if not value:
                     continue
+            else:
+                value = [str(item) for item in value]
 
             params[param] = value
 
