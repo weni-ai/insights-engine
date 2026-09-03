@@ -136,7 +136,9 @@ class HumanSupportDashboardService:
     def _apply_chats_channel_param(self, params: dict, normalized: dict) -> dict:
         channels = self._validated_channels(normalized)
         if channels:
-            params["channels"] = channels
+            # Chats parses this filter with a CSV widget, which keeps only the
+            # last value when the param is repeated in the query string.
+            params["channels"] = ",".join(channels)
         return params
 
     def get_attendance_status(self, filters: dict | None = None) -> Dict[str, int]:
@@ -362,6 +364,7 @@ class HumanSupportDashboardService:
             params["urn"] = str(normalized["urn"])
 
         self._apply_sql_channel_filter(params, normalized)
+        self._apply_chats_channel_param(params, normalized)
 
         if filters:
             limit = filters.get("limit")
@@ -460,6 +463,7 @@ class HumanSupportDashboardService:
             params["urn"] = str(normalized["urn"])
 
         self._apply_sql_channel_filter(params, normalized)
+        self._apply_chats_channel_param(params, normalized)
 
         if filters:
             if filters.get("limit") is not None:
