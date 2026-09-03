@@ -30,6 +30,8 @@ class HumanSupportFilterSet(filters.FilterSet):
     cursor = filters.CharFilter(required=False)
     start_date = filters.DateFilter(required=False)
     end_date = filters.DateFilter(required=False)
+    comparison_start_date = filters.DateFilter(required=False)
+    comparison_end_date = filters.DateFilter(required=False)
     agent = filters.CharFilter(required=False)
     agent_email = filters.CharFilter(required=False)
     contact = filters.CharFilter(required=False)
@@ -47,6 +49,8 @@ class HumanSupportFilterSet(filters.FilterSet):
             "cursor",
             "start_date",
             "end_date",
+            "comparison_start_date",
+            "comparison_end_date",
             "agent",
             "agent_email",
             "contact",
@@ -54,32 +58,35 @@ class HumanSupportFilterSet(filters.FilterSet):
             "ticket_id",
         ]
 
+    DATE_RANGE_FIELDS = (
+        ("start_date", "end_date"),
+        ("comparison_start_date", "comparison_end_date"),
+    )
+
+    def _localize_date_bound(self, timezone, field, day_time):
+        value = self.form.cleaned_data.get(field)
+        if not value:
+            return
+
+        if isinstance(value, datetime):
+            if value.tzinfo is not None:
+                value = value.replace(tzinfo=None)
+            value = value.date()
+
+        self.form.cleaned_data[field] = timezone.localize(
+            datetime.combine(value, day_time)
+        )
+
     def apply_project_timezone(self, project):
         """
-        Apply project timezone to start_date and end_date
-        - start_date: set time to 00:00:00
-        - end_date: set time to 23:59:59
+        Apply project timezone to the date range filters
+        - start bound: set time to 00:00:00
+        - end bound: set time to 23:59:59
         """
         timezone = pytz.timezone(project.timezone) if project.timezone else pytz.UTC
 
-        if self.form.cleaned_data.get("start_date"):
-            start_date = self.form.cleaned_data["start_date"]
-            if isinstance(start_date, datetime):
-                if start_date.tzinfo is not None:
-                    start_date = start_date.replace(tzinfo=None)
-                start_date = start_date.date()
-
-            start_datetime = datetime.combine(start_date, time.min)
-            self.form.cleaned_data["start_date"] = timezone.localize(start_datetime)
-
-        if self.form.cleaned_data.get("end_date"):
-            end_date = self.form.cleaned_data["end_date"]
-            if isinstance(end_date, datetime):
-                if end_date.tzinfo is not None:
-                    end_date = end_date.replace(tzinfo=None)
-                end_date = end_date.date()
-
-            end_datetime = datetime.combine(end_date, time(23, 59, 59))
-            self.form.cleaned_data["end_date"] = timezone.localize(end_datetime)
+        for start_field, end_field in self.DATE_RANGE_FIELDS:
+            self._localize_date_bound(timezone, start_field, time.min)
+            self._localize_date_bound(timezone, end_field, time(23, 59, 59))
 
         return self.form.cleaned_data
