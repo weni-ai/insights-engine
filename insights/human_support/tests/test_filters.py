@@ -20,7 +20,10 @@ class TestHumanSupportFilterSetAverageOrderValue(TestCase):
             queryset=Project.objects.none(),
         )
         self.assertTrue(filterset.form.is_valid(), filterset.form.errors)
-        return filterset.apply_project_timezone(self.project)
+        cleaned = filterset.apply_project_timezone(self.project)
+        return {
+            key: value for key, value in cleaned.items() if value not in (None, [], "")
+        }
 
     def test_covers_dashboard_and_comparison_filters_without_widget_params(self):
         sector_uuid = str(uuid4())
