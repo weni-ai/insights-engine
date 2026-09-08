@@ -6,6 +6,7 @@ import pytz
 from django.test import TestCase
 from django.utils import timezone as dj_timezone
 
+from insights.human_support.average_order_value import AverageOrderValueData
 from insights.human_support.revenue import RevenueData
 from insights.human_support.services import HumanSupportDashboardService
 from insights.projects.models import Project
@@ -1659,5 +1660,174 @@ class TestHumanSupportDashboardServiceTotalRevenue(TestCase):
         service, _ = self._service([RevenueData(total=50.0), RevenueData(total=200.0)])
 
         result = service.get_total_revenue()
+
+        self.assertEqual(result["increase_percentage"], -75.0)
+
+
+class FakeAverageOrderValueSource:
+    def __init__(self, values):
+        self.values = list(values)
+        self.calls = []
+
+    def get_average_order_value(self, params):
+        self.calls.append(params)
+        return self.values.pop(0)
+
+
+class TestHumanSupportDashboardServiceAverageOrderValue(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+            timezone="America/Sao_Paulo",
+        )
+
+    def _service(self, values=None):
+        source = FakeAverageOrderValueSource(
+            values
+            if values is not None
+            else [
+                AverageOrderValueData(value=0.0),
+                AverageOrderValueData(value=0.0),
+            ]
+        )
+        service = HumanSupportDashboardService(
+            project=self.project, average_order_value_source=source
+        )
+        return service, source
+
+    def test_returns_zeroed_card_without_a_source(self):
+        service = HumanSupportDashboardService(project=self.project)
+
+        result = service.get_average_order_value()
+
+        self.assertEqual(
+            result,
+            {
+                "value": 0.0,
+                "previous_value": 0.0,
+                "currency_code": "",
+                "increase_percentage": 0.0,
+            },
+        )
+
+    def test_compares_current_period_against_comparison_period(self):
+        service, _ = self._service(
+            [
+                AverageOrderValueData(value=150.0, currency_code="USD"),
+                AverageOrderValueData(value=100.0, currency_code="USD"),
+            ]
+        )
+
+        result = service.get_average_order_value(
+            filters={
+                "start_date": "2025-04-01",
+                "end_date": "2025-04-30",
+                "comparison_start_date": "2025-03-01",
+                "comparison_end_date": "2025-03-31",
+            }
+        )
+
+        self.assertEqual(result["value"], 150.0)
+        self.assertEqual(result["previous_value"], 100.0)
+        self.assertEqual(result["currency_code"], "USD")
+        self.assertEqual(result["increase_percentage"], 50.0)
+
+    def test_uses_comparison_dates_sent_by_the_request(self):
+        service, source = self._service()
+
+        service.get_average_order_value(
+            filters={
+                "start_date": "2025-04-01",
+                "end_date": "2025-04-30",
+                "comparison_start_date": "2025-01-01",
+                "comparison_end_date": "2025-01-31",
+            }
+        )
+
+        comparison_params = source.calls[1]
+        self.assertTrue(comparison_params["start_date"].startswith("2025-01-01"))
+        self.assertTrue(comparison_params["end_date"].startswith("2025-01-31"))
+
+    def test_falls_back_to_the_preceding_period_of_same_length(self):
+        service, source = self._service()
+
+        service.get_average_order_value(
+            filters={"start_date": "2025-04-01", "end_date": "2025-04-30"}
+        )
+
+        comparison_params = source.calls[1]
+        self.assertTrue(comparison_params["start_date"].startswith("2025-03-02"))
+        self.assertTrue(comparison_params["end_date"].startswith("2025-03-31"))
+
+    def test_forwards_dimension_filters_to_the_source(self):
+        service, source = self._service()
+        sector_uuid = str(uuid4())
+        queue_uuid = str(uuid4())
+        tag_uuid = str(uuid4())
+
+        service.get_average_order_value(
+            filters={
+                "sectors": [sector_uuid],
+                "queues": [queue_uuid],
+                "tags": [tag_uuid],
+                "channels": ["whatsapp"],
+                "agent": "agent@example.com",
+            }
+        )
+
+        params = source.calls[0]
+        self.assertEqual(params["project"], str(self.project.uuid))
+        self.assertEqual(params["sector"], [sector_uuid])
+        self.assertEqual(params["queue"], [queue_uuid])
+        self.assertEqual(params["tag"], [tag_uuid])
+        self.assertEqual(params["channels"], ["whatsapp"])
+        self.assertEqual(params["agent"], "agent@example.com")
+        self.assertTrue(all(isinstance(item, str) for item in params["sector"]))
+        self.assertTrue(all(isinstance(item, str) for item in params["queue"]))
+        self.assertTrue(all(isinstance(item, str) for item in params["tag"]))
+
+    def test_uses_the_same_filters_on_both_periods(self):
+        service, source = self._service()
+        sector_uuid = str(uuid4())
+
+        service.get_average_order_value(
+            filters={
+                "sectors": [sector_uuid],
+                "start_date": "2025-04-01",
+                "end_date": "2025-04-30",
+                "comparison_start_date": "2025-03-01",
+                "comparison_end_date": "2025-03-31",
+            }
+        )
+
+        current_params, comparison_params = source.calls
+        self.assertEqual(current_params["sector"], comparison_params["sector"])
+        self.assertNotEqual(
+            current_params["start_date"], comparison_params["start_date"]
+        )
+
+    def test_defaults_to_the_current_day_without_dates(self):
+        service, source = self._service()
+
+        service.get_average_order_value()
+
+        today = dj_timezone.now().astimezone(pytz.timezone("America/Sao_Paulo")).date()
+        self.assertTrue(source.calls[0]["start_date"].startswith(str(today)))
+
+    def test_increase_percentage_when_there_is_no_previous_value(self):
+        service, _ = self._service(
+            [AverageOrderValueData(value=1000.0), AverageOrderValueData(value=0.0)]
+        )
+
+        result = service.get_average_order_value()
+
+        self.assertEqual(result["increase_percentage"], 100.0)
+
+    def test_increase_percentage_is_negative_when_value_drops(self):
+        service, _ = self._service(
+            [AverageOrderValueData(value=50.0), AverageOrderValueData(value=200.0)]
+        )
+
+        result = service.get_average_order_value()
 
         self.assertEqual(result["increase_percentage"], -75.0)

@@ -6,6 +6,10 @@ from typing import Dict
 import pytz
 from django.utils import timezone as dj_timezone
 
+from insights.human_support.average_order_value import (
+    AverageOrderValueSource,
+    NullAverageOrderValueSource,
+)
 from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_raw_data import ChatsRawDataClient
 from insights.human_support.clients.chats_time_metrics import (
@@ -42,11 +46,15 @@ class HumanSupportDashboardService:
         project: Project,
         chats_client: ChatsClient | None = None,
         revenue_source: RevenueSource | None = None,
+        average_order_value_source: AverageOrderValueSource | None = None,
     ) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
         self.chats_client = chats_client or ChatsClient(project)
         self.revenue_source = revenue_source or NullRevenueSource()
+        self.average_order_value_source = (
+            average_order_value_source or NullAverageOrderValueSource()
+        )
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
@@ -1622,5 +1630,65 @@ class HumanSupportDashboardService:
             "currency_code": current.currency_code,
             "increase_percentage": calculate_increase_percentage(
                 previous.total, current.total
+            ),
+        }
+
+    def get_average_order_value(self, filters: dict | None = None) -> dict:
+        """
+        Returns the average order value of human support rooms in the period,
+        along with the value of the comparison period and the variation
+        between them.
+
+        Parameters:
+            filters: {
+                "start_date": date,
+                "end_date": date,
+                "comparison_start_date": date,
+                "comparison_end_date": date,
+                "sectors": list[uuid] | uuid,
+                "queues": list[uuid] | uuid,
+                "tags": list[uuid] | uuid,
+                "channels": list[str] | str,
+                "agent": str,
+            }
+
+        Returns:
+            {
+                "value": float,
+                "previous_value": float,
+                "currency_code": str,
+                "increase_percentage": float,
+            }
+        """
+        normalized = self._normalize_filters(filters)
+
+        start_date, end_date = self._resolve_revenue_period(normalized)
+        comparison_start, comparison_end = self._resolve_comparison_period(
+            normalized, start_date, end_date
+        )
+
+        base = self._build_revenue_filters(normalized)
+
+        current = self.average_order_value_source.get_average_order_value(
+            {
+                **base,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+            }
+        )
+        previous = self.average_order_value_source.get_average_order_value(
+            {
+                **base,
+                "start_date": comparison_start.isoformat(),
+                "end_date": comparison_end.isoformat(),
+            }
+        )
+
+        return {
+            "value": current.value,
+            "previous_value": previous.value,
+            "currency_code": current.currency_code,
+            "increase_percentage": calculate_increase_percentage(
+                previous.value, current.value
             ),
         }
