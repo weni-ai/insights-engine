@@ -7,7 +7,6 @@ from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
 from insights.projects.models import Project
 
-
 SERVICE_PATH = "insights.human_support.services.HumanSupportDashboardService"
 
 
@@ -427,3 +426,121 @@ class TestTotalRevenueViewV2(BaseHumanSupportViewTest):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, TOTAL_REVENUE_RESPONSE)
         mock_service_method.assert_called_once()
+
+
+AVERAGE_ORDER_VALUE_RESPONSE = {
+    "value": 150.0,
+    "previous_value": 100.0,
+    "currency_code": "USD",
+    "increase_percentage": 50.0,
+}
+
+
+class TestAverageOrderValueViewAsAnonymous(APITestCase):
+    def test_returns_401_when_unauthenticated(self):
+        url = "/v1/metrics/human-support/sales/average-order-value/"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestAverageOrderValueView(BaseHumanSupportViewTest):
+    URL = "/v1/metrics/human-support/sales/average-order-value/"
+
+    def test_returns_400_without_project_uuid(self):
+        response = self.client.get(self.URL)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_returns_403_without_project_auth(self):
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_average_order_value")
+    def test_returns_200_with_valid_request(self, mock_service_method):
+        mock_service_method.return_value = AVERAGE_ORDER_VALUE_RESPONSE
+
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, AVERAGE_ORDER_VALUE_RESPONSE)
+        mock_service_method.assert_called_once()
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_average_order_value")
+    def test_forwards_period_and_comparison_filters(self, mock_service_method):
+        mock_service_method.return_value = AVERAGE_ORDER_VALUE_RESPONSE
+
+        self.client.get(
+            self.URL,
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2025-04-01",
+                "end_date": "2025-04-30",
+                "comparison_start_date": "2025-03-01",
+                "comparison_end_date": "2025-03-31",
+            },
+        )
+
+        filters = mock_service_method.call_args[1]["filters"]
+        self.assertEqual(filters["start_date"], "2025-04-01")
+        self.assertEqual(filters["end_date"], "2025-04-30")
+        self.assertEqual(filters["comparison_start_date"], "2025-03-01")
+        self.assertEqual(filters["comparison_end_date"], "2025-03-31")
+
+
+class TestAverageOrderValueViewV2AsAnonymous(APITestCase):
+    def test_returns_401_when_unauthenticated(self):
+        url = "/v2/metrics/human-support/sales/average-order-value/"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestAverageOrderValueViewV2(BaseHumanSupportViewTest):
+    URL = "/v2/metrics/human-support/sales/average-order-value/"
+
+    def test_returns_400_without_project_uuid(self):
+        response = self.client.get(self.URL)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_returns_403_without_project_auth(self):
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_average_order_value")
+    def test_returns_200_with_valid_request(self, mock_service_method):
+        mock_service_method.return_value = AVERAGE_ORDER_VALUE_RESPONSE
+
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, AVERAGE_ORDER_VALUE_RESPONSE)
+        mock_service_method.assert_called_once()
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_average_order_value")
+    def test_forwards_period_and_comparison_filters(self, mock_service_method):
+        mock_service_method.return_value = AVERAGE_ORDER_VALUE_RESPONSE
+
+        self.client.get(
+            self.URL,
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2025-04-01",
+                "end_date": "2025-04-30",
+                "comparison_start_date": "2025-03-01",
+                "comparison_end_date": "2025-03-31",
+            },
+        )
+
+        filters = mock_service_method.call_args[1]["filters"]
+        self.assertEqual(filters["start_date"], "2025-04-01")
+        self.assertEqual(filters["end_date"], "2025-04-30")
+        self.assertEqual(filters["comparison_start_date"], "2025-03-01")
+        self.assertEqual(filters["comparison_end_date"], "2025-03-31")

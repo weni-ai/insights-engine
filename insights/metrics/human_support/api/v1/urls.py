@@ -1,12 +1,13 @@
 from django.urls import path
 
 from insights.metrics.human_support.api.v1.views import (
-    DetailedMonitoringOnGoingView,
-    DetailedMonitoringAwaitingView,
-    DetailedMonitoringAgentsView,
-    DetailedMonitoringAgentsTotalsView,
-    DetailedMonitoringStatusView,
     AnalysisDetailedMonitoringStatusView,
+    AverageOrderValueView,
+    DetailedMonitoringAgentsTotalsView,
+    DetailedMonitoringAgentsView,
+    DetailedMonitoringAwaitingView,
+    DetailedMonitoringOnGoingView,
+    DetailedMonitoringStatusView,
     TotalRevenueView,
 )
 
@@ -38,5 +39,9 @@ urlpatterns = [
     path(
         "sales/total-revenue/",
         TotalRevenueView.as_view(),
+    ),
+    path(
+        "sales/average-order-value/",
+        AverageOrderValueView.as_view(),
     ),
 ]
