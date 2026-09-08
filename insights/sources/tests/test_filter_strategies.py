@@ -39,14 +39,42 @@ class PostgreSQLFilterStrategyTests(TestCase):
         self.assertEqual(params, value)
 
     def test_channel_in_operation(self):
-        from insights.sources.channels.enums import Channel
-
         query, params = self.strategy.apply(
             "urn", "channel_in", ["whatsapp", "email"], "r"
         )
-        self.assertIn("IN (%s, %s)", query)
-        self.assertEqual(params, ["whatsapp", "email"])
-        self.assertIn(Channel.urn_case_sql("r.urn").strip(), query.strip())
+        self.assertEqual(
+            query,
+            "(r.urn LIKE (%s) OR r.urn LIKE (%s) OR r.urn LIKE (%s))",
+        )
+        self.assertEqual(params, ["whatsapp:%", "email:%", "mailto:%"])
+        self.assertNotIn("CASE", query)
+        self.assertNotIn("IN (", query)
+
+    def test_channel_in_operation_single_channel(self):
+        query, params = self.strategy.apply("urn", "channel_in", ["whatsapp"], "r")
+        self.assertEqual(query, "r.urn LIKE (%s)")
+        self.assertEqual(params, ["whatsapp:%"])
+
+    def test_channel_in_operation_others(self):
+        query, params = self.strategy.apply("urn", "channel_in", ["others"], "r")
+        self.assertTrue(query.startswith("(NOT ("))
+        self.assertIn("r.urn LIKE (%s)", query)
+        self.assertIn("OR r.urn IS NULL)", query)
+        self.assertNotIn("CASE", query)
+        self.assertEqual(
+            params,
+            [
+                "instagram:%",
+                "facebook:%",
+                "whatsapp:%",
+                "teams:%",
+                "msteams:%",
+                "email:%",
+                "mailto:%",
+                "ext:%",
+                "shopping_assistant:%",
+            ],
+        )
 
     def test_channel_in_operation_invalid_values(self):
         query, params = self.strategy.apply("urn", "channel_in", ["not-a-channel"], "r")

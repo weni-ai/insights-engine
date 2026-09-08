@@ -12,12 +12,7 @@ class PostgreSQLFilterStrategy:
         elif operation == "channel_in":
             from insights.sources.channels.enums import Channel
 
-            channels = Channel.valid_values(value)
-            if not channels:
-                return "FALSE", None
-            placeholders = ", ".join(["%s"] * len(channels))
-            case_sql = Channel.urn_case_sql(f"{table_alias}.{field}")
-            return f"{case_sql} IN ({placeholders})", channels
+            return Channel.urn_prefix_filter_sql(f"{table_alias}.{field}", value)
         elif operation == "icontains":
             return f"LOWER({table_alias}.{field}) LIKE (%s)", [f"%{value.lower()}%"]
         elif operation == "isnull":
