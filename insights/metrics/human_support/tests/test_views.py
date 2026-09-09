@@ -652,3 +652,124 @@ class TestSalesFunnelViewV2(BaseHumanSupportViewTest):
         filters = mock_service_method.call_args[1]["filters"]
         self.assertEqual(filters["start_date"], "2026-08-01")
         self.assertEqual(filters["end_date"], "2026-08-07")
+
+
+CHANNEL_REVENUE_SALE_RESPONSE = {
+    "metric": "sale",
+    "currency_code": "",
+    "count": 6,
+    "results": [
+        {"channel": "whatsapp", "value": 620, "percentage": 21.75},
+        {"channel": "teams", "value": 510, "percentage": 17.89},
+        {"channel": "email", "value": 460, "percentage": 16.14},
+        {"channel": "instagram", "value": 390, "percentage": 13.68},
+        {"channel": "facebook", "value": 330, "percentage": 11.58},
+        {"channel": "others", "value": 330, "percentage": 11.58},
+    ],
+}
+
+
+class TestChannelRevenueSaleViewAsAnonymous(APITestCase):
+    def test_returns_401_when_unauthenticated(self):
+        url = "/v1/metrics/human-support/sales/channel-revenue/"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestChannelRevenueSaleView(BaseHumanSupportViewTest):
+    URL = "/v1/metrics/human-support/sales/channel-revenue/"
+
+    def test_returns_400_without_project_uuid(self):
+        response = self.client.get(self.URL)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_returns_403_without_project_auth(self):
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_channel_revenue_sale")
+    def test_returns_200_with_valid_request(self, mock_service_method):
+        mock_service_method.return_value = CHANNEL_REVENUE_SALE_RESPONSE
+
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, CHANNEL_REVENUE_SALE_RESPONSE)
+        mock_service_method.assert_called_once()
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_channel_revenue_sale")
+    def test_forwards_period_and_metric_filters(self, mock_service_method):
+        mock_service_method.return_value = CHANNEL_REVENUE_SALE_RESPONSE
+
+        self.client.get(
+            self.URL,
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+                "metric": "revenue",
+            },
+        )
+
+        filters = mock_service_method.call_args[1]["filters"]
+        self.assertEqual(filters["start_date"], "2026-08-01")
+        self.assertEqual(filters["end_date"], "2026-08-07")
+        self.assertEqual(filters["metric"], "revenue")
+
+
+class TestChannelRevenueSaleViewV2AsAnonymous(APITestCase):
+    def test_returns_401_when_unauthenticated(self):
+        url = "/v2/metrics/human-support/sales/channel-revenue/"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestChannelRevenueSaleViewV2(BaseHumanSupportViewTest):
+    URL = "/v2/metrics/human-support/sales/channel-revenue/"
+
+    def test_returns_400_without_project_uuid(self):
+        response = self.client.get(self.URL)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_returns_403_without_project_auth(self):
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_channel_revenue_sale")
+    def test_returns_200_with_valid_request(self, mock_service_method):
+        mock_service_method.return_value = CHANNEL_REVENUE_SALE_RESPONSE
+
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, CHANNEL_REVENUE_SALE_RESPONSE)
+        mock_service_method.assert_called_once()
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_channel_revenue_sale")
+    def test_forwards_period_and_metric_filters(self, mock_service_method):
+        mock_service_method.return_value = CHANNEL_REVENUE_SALE_RESPONSE
+
+        self.client.get(
+            self.URL,
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+                "metric": "sale",
+            },
+        )
+
+        filters = mock_service_method.call_args[1]["filters"]
+        self.assertEqual(filters["start_date"], "2026-08-01")
+        self.assertEqual(filters["end_date"], "2026-08-07")
+        self.assertEqual(filters["metric"], "sale")
