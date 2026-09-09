@@ -1966,6 +1966,7 @@ DESIGN_SALE_ROWS = [
     ChannelRevenueSaleRow(channel="instagram", value=390),
     ChannelRevenueSaleRow(channel="facebook", value=330),
     ChannelRevenueSaleRow(channel="others", value=330),
+    ChannelRevenueSaleRow(channel="shopping_assistant", value=210),
 ]
 
 
@@ -2014,7 +2015,7 @@ class TestHumanSupportDashboardServiceChannelRevenueSale(TestCase):
         )
 
         self.assertEqual(result["metric"], "sale")
-        self.assertEqual(result["count"], 6)
+        self.assertEqual(result["count"], 7)
         self.assertEqual(
             result["results"],
             [
@@ -2024,6 +2025,11 @@ class TestHumanSupportDashboardServiceChannelRevenueSale(TestCase):
                 {"channel": "instagram", "value": 390, "percentage": 13.68},
                 {"channel": "facebook", "value": 330, "percentage": 11.58},
                 {"channel": "others", "value": 330, "percentage": 11.58},
+                {
+                    "channel": "shopping_assistant",
+                    "value": 210,
+                    "percentage": 7.37,
+                },
             ],
         )
 
