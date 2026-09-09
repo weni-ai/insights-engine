@@ -21,6 +21,11 @@ from insights.human_support.revenue import (
     RevenueSource,
     calculate_increase_percentage,
 )
+from insights.human_support.sales_funnel import (
+    NullSalesFunnelSource,
+    SalesFunnelSource,
+    calculate_conversion_percentage,
+)
 from insights.projects.models import Project
 from insights.sources.agents.clients import AgentsRESTClient
 from insights.sources.channels.enums import Channel
@@ -47,6 +52,7 @@ class HumanSupportDashboardService:
         chats_client: ChatsClient | None = None,
         revenue_source: RevenueSource | None = None,
         average_order_value_source: AverageOrderValueSource | None = None,
+        sales_funnel_source: SalesFunnelSource | None = None,
     ) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
@@ -55,6 +61,7 @@ class HumanSupportDashboardService:
         self.average_order_value_source = (
             average_order_value_source or NullAverageOrderValueSource()
         )
+        self.sales_funnel_source = sales_funnel_source or NullSalesFunnelSource()
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
@@ -1691,4 +1698,52 @@ class HumanSupportDashboardService:
             "increase_percentage": calculate_increase_percentage(
                 previous.value, current.value
             ),
+        }
+
+    def get_sales_funnel(self, filters: dict | None = None) -> dict:
+        """
+        Returns the sales funnel of human support rooms in the period.
+
+        Parameters:
+            filters: {
+                "start_date": date,
+                "end_date": date,
+                "sectors": list[uuid] | uuid,
+                "queues": list[uuid] | uuid,
+                "tags": list[uuid] | uuid,
+                "channels": list[str] | str,
+                "agent": str,
+            }
+
+        Returns:
+            {
+                "leads_captured": {"full_value": int, "value": float},
+                "purchases_made": {"full_value": int, "value": float},
+            }
+        """
+        normalized = self._normalize_filters(filters)
+
+        start_date, end_date = self._resolve_revenue_period(normalized)
+        base = self._build_revenue_filters(normalized)
+
+        data = self.sales_funnel_source.get_sales_funnel(
+            {
+                **base,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+            }
+        )
+
+        leads_count = data.leads_count
+        purchases_count = data.purchases_count
+
+        return {
+            "leads_captured": {
+                "full_value": leads_count,
+                "value": 100.0 if leads_count else 0.0,
+            },
+            "purchases_made": {
+                "full_value": purchases_count,
+                "value": calculate_conversion_percentage(leads_count, purchases_count),
+            },
         }

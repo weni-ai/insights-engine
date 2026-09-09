@@ -8,6 +8,7 @@ from django.utils import timezone as dj_timezone
 
 from insights.human_support.average_order_value import AverageOrderValueData
 from insights.human_support.revenue import RevenueData
+from insights.human_support.sales_funnel import SalesFunnelData
 from insights.human_support.services import HumanSupportDashboardService
 from insights.projects.models import Project
 
@@ -1831,3 +1832,114 @@ class TestHumanSupportDashboardServiceAverageOrderValue(TestCase):
         result = service.get_average_order_value()
 
         self.assertEqual(result["increase_percentage"], -75.0)
+
+
+class FakeSalesFunnelSource:
+    def __init__(self, values):
+        self.values = list(values)
+        self.calls = []
+
+    def get_sales_funnel(self, params):
+        self.calls.append(params)
+        return self.values.pop(0)
+
+
+class TestHumanSupportDashboardServiceSalesFunnel(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+            timezone="America/Sao_Paulo",
+        )
+
+    def _service(self, values=None):
+        source = FakeSalesFunnelSource(
+            values if values is not None else [SalesFunnelData()]
+        )
+        service = HumanSupportDashboardService(
+            project=self.project, sales_funnel_source=source
+        )
+        return service, source
+
+    def test_returns_zeroed_card_without_a_source(self):
+        service = HumanSupportDashboardService(project=self.project)
+
+        result = service.get_sales_funnel()
+
+        self.assertEqual(
+            result,
+            {
+                "leads_captured": {"full_value": 0, "value": 0.0},
+                "purchases_made": {"full_value": 0, "value": 0.0},
+            },
+        )
+
+    def test_returns_leads_and_conversion_from_the_period(self):
+        service, _ = self._service(
+            [SalesFunnelData(leads_count=45000, purchases_count=4250)]
+        )
+
+        result = service.get_sales_funnel(
+            filters={"start_date": "2026-08-01", "end_date": "2026-08-07"}
+        )
+
+        self.assertEqual(
+            result,
+            {
+                "leads_captured": {"full_value": 45000, "value": 100.0},
+                "purchases_made": {"full_value": 4250, "value": 9.44},
+            },
+        )
+
+    def test_uses_the_period_sent_by_the_request(self):
+        service, source = self._service()
+
+        service.get_sales_funnel(
+            filters={"start_date": "2026-08-01", "end_date": "2026-08-07"}
+        )
+
+        params = source.calls[0]
+        self.assertTrue(params["start_date"].startswith("2026-08-01"))
+        self.assertTrue(params["end_date"].startswith("2026-08-07"))
+
+    def test_forwards_dimension_filters_to_the_source(self):
+        service, source = self._service()
+        sector_uuid = str(uuid4())
+        queue_uuid = str(uuid4())
+        tag_uuid = str(uuid4())
+
+        service.get_sales_funnel(
+            filters={
+                "sectors": [sector_uuid],
+                "queues": [queue_uuid],
+                "tags": [tag_uuid],
+                "channels": ["whatsapp"],
+                "agent": "agent@example.com",
+            }
+        )
+
+        params = source.calls[0]
+        self.assertEqual(params["project"], str(self.project.uuid))
+        self.assertEqual(params["sector"], [sector_uuid])
+        self.assertEqual(params["queue"], [queue_uuid])
+        self.assertEqual(params["tag"], [tag_uuid])
+        self.assertEqual(params["channels"], ["whatsapp"])
+        self.assertEqual(params["agent"], "agent@example.com")
+        self.assertTrue(all(isinstance(item, str) for item in params["sector"]))
+        self.assertTrue(all(isinstance(item, str) for item in params["queue"]))
+        self.assertTrue(all(isinstance(item, str) for item in params["tag"]))
+
+    def test_defaults_to_the_current_day_without_dates(self):
+        service, source = self._service()
+
+        service.get_sales_funnel()
+
+        today = dj_timezone.now().astimezone(pytz.timezone("America/Sao_Paulo")).date()
+        self.assertTrue(source.calls[0]["start_date"].startswith(str(today)))
+
+    def test_conversion_is_zero_when_there_are_no_leads(self):
+        service, _ = self._service([SalesFunnelData(leads_count=0, purchases_count=10)])
+
+        result = service.get_sales_funnel()
+
+        self.assertEqual(result["leads_captured"]["value"], 0.0)
+        self.assertEqual(result["purchases_made"]["value"], 0.0)
