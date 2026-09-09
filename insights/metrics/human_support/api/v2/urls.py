@@ -5,6 +5,7 @@ from insights.metrics.human_support.api.v2.views import (
     AverageOrderValueViewV2,
     DetailedMonitoringAgentsViewV2,
     DetailedMonitoringStatusViewV2,
+    SalesFunnelViewV2,
     TotalRevenueViewV2,
 )
 
@@ -28,5 +29,9 @@ urlpatterns = [
     path(
         "sales/average-order-value/",
         AverageOrderValueViewV2.as_view(),
+    ),
+    path(
+        "sales/sales-funnel/",
+        SalesFunnelViewV2.as_view(),
     ),
 ]

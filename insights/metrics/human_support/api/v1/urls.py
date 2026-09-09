@@ -8,6 +8,7 @@ from insights.metrics.human_support.api.v1.views import (
     DetailedMonitoringAwaitingView,
     DetailedMonitoringOnGoingView,
     DetailedMonitoringStatusView,
+    SalesFunnelView,
     TotalRevenueView,
 )
 
@@ -43,5 +44,9 @@ urlpatterns = [
     path(
         "sales/average-order-value/",
         AverageOrderValueView.as_view(),
+    ),
+    path(
+        "sales/sales-funnel/",
+        SalesFunnelView.as_view(),
     ),
 ]
