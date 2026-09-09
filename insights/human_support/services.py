@@ -10,6 +10,11 @@ from insights.human_support.average_order_value import (
     AverageOrderValueSource,
     NullAverageOrderValueSource,
 )
+from insights.human_support.channel_revenue import (
+    ChannelRevenueSaleSource,
+    NullChannelRevenueSaleSource,
+    calculate_share_percentage,
+)
 from insights.human_support.clients.chats import ChatsClient
 from insights.human_support.clients.chats_raw_data import ChatsRawDataClient
 from insights.human_support.clients.chats_time_metrics import (
@@ -53,6 +58,7 @@ class HumanSupportDashboardService:
         revenue_source: RevenueSource | None = None,
         average_order_value_source: AverageOrderValueSource | None = None,
         sales_funnel_source: SalesFunnelSource | None = None,
+        channel_revenue_sale_source: ChannelRevenueSaleSource | None = None,
     ) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
@@ -62,6 +68,9 @@ class HumanSupportDashboardService:
             average_order_value_source or NullAverageOrderValueSource()
         )
         self.sales_funnel_source = sales_funnel_source or NullSalesFunnelSource()
+        self.channel_revenue_sale_source = (
+            channel_revenue_sale_source or NullChannelRevenueSaleSource()
+        )
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
         """
@@ -1746,4 +1755,60 @@ class HumanSupportDashboardService:
                 "full_value": purchases_count,
                 "value": calculate_conversion_percentage(leads_count, purchases_count),
             },
+        }
+
+    def get_channel_revenue_sale(self, filters: dict | None = None) -> dict:
+        """
+        Returns revenue or sales volume of human support rooms by channel.
+
+        Parameters:
+            filters: {
+                "start_date": date,
+                "end_date": date,
+                "sectors": list[uuid] | uuid,
+                "queues": list[uuid] | uuid,
+                "tags": list[uuid] | uuid,
+                "channels": list[str] | str,
+                "agent": str,
+                "metric": "revenue" | "sale",
+            }
+
+        Returns:
+            {
+                "metric": "revenue" | "sale",
+                "currency_code": str,
+                "count": int,
+                "results": [{"channel": str, "value": float, "percentage": float}],
+            }
+        """
+        normalized = self._normalize_filters(filters)
+
+        start_date, end_date = self._resolve_revenue_period(normalized)
+        base = self._build_revenue_filters(normalized)
+        metric = normalized.get("metric") or "sale"
+
+        data = self.channel_revenue_sale_source.get_channel_revenue_sale(
+            {
+                **base,
+                "metric": metric,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+            }
+        )
+
+        total = sum(row.value for row in data.rows)
+        results = [
+            {
+                "channel": row.channel,
+                "value": row.value,
+                "percentage": calculate_share_percentage(total, row.value),
+            }
+            for row in data.rows
+        ]
+
+        return {
+            "metric": data.metric or metric,
+            "currency_code": data.currency_code,
+            "count": len(results),
+            "results": results,
         }

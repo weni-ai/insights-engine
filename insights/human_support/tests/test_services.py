@@ -7,6 +7,10 @@ from django.test import TestCase
 from django.utils import timezone as dj_timezone
 
 from insights.human_support.average_order_value import AverageOrderValueData
+from insights.human_support.channel_revenue import (
+    ChannelRevenueSaleData,
+    ChannelRevenueSaleRow,
+)
 from insights.human_support.revenue import RevenueData
 from insights.human_support.sales_funnel import SalesFunnelData
 from insights.human_support.services import HumanSupportDashboardService
@@ -1943,3 +1947,187 @@ class TestHumanSupportDashboardServiceSalesFunnel(TestCase):
 
         self.assertEqual(result["leads_captured"]["value"], 0.0)
         self.assertEqual(result["purchases_made"]["value"], 0.0)
+
+
+class FakeChannelRevenueSaleSource:
+    def __init__(self, values):
+        self.values = list(values)
+        self.calls = []
+
+    def get_channel_revenue_sale(self, params):
+        self.calls.append(params)
+        return self.values.pop(0)
+
+
+DESIGN_SALE_ROWS = [
+    ChannelRevenueSaleRow(channel="whatsapp", value=620),
+    ChannelRevenueSaleRow(channel="teams", value=510),
+    ChannelRevenueSaleRow(channel="email", value=460),
+    ChannelRevenueSaleRow(channel="instagram", value=390),
+    ChannelRevenueSaleRow(channel="facebook", value=330),
+    ChannelRevenueSaleRow(channel="others", value=330),
+]
+
+
+class TestHumanSupportDashboardServiceChannelRevenueSale(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+            timezone="America/Sao_Paulo",
+        )
+
+    def _service(self, values=None):
+        source = FakeChannelRevenueSaleSource(
+            values if values is not None else [ChannelRevenueSaleData()]
+        )
+        service = HumanSupportDashboardService(
+            project=self.project, channel_revenue_sale_source=source
+        )
+        return service, source
+
+    def test_returns_empty_card_without_a_source(self):
+        service = HumanSupportDashboardService(project=self.project)
+
+        result = service.get_channel_revenue_sale()
+
+        self.assertEqual(
+            result,
+            {
+                "metric": "sale",
+                "currency_code": "",
+                "count": 0,
+                "results": [],
+            },
+        )
+
+    def test_returns_sale_share_from_the_design(self):
+        service, _ = self._service(
+            [ChannelRevenueSaleData(metric="sale", rows=DESIGN_SALE_ROWS)]
+        )
+
+        result = service.get_channel_revenue_sale(
+            filters={
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+                "metric": "sale",
+            }
+        )
+
+        self.assertEqual(result["metric"], "sale")
+        self.assertEqual(result["count"], 6)
+        self.assertEqual(
+            result["results"],
+            [
+                {"channel": "whatsapp", "value": 620, "percentage": 21.75},
+                {"channel": "teams", "value": 510, "percentage": 17.89},
+                {"channel": "email", "value": 460, "percentage": 16.14},
+                {"channel": "instagram", "value": 390, "percentage": 13.68},
+                {"channel": "facebook", "value": 330, "percentage": 11.58},
+                {"channel": "others", "value": 330, "percentage": 11.58},
+            ],
+        )
+
+    def test_keeps_others_as_a_channel_row(self):
+        service, _ = self._service(
+            [
+                ChannelRevenueSaleData(
+                    metric="sale",
+                    rows=[ChannelRevenueSaleRow(channel="others", value=330)],
+                )
+            ]
+        )
+
+        result = service.get_channel_revenue_sale(filters={"metric": "sale"})
+
+        self.assertEqual(result["results"][0]["channel"], "others")
+        self.assertEqual(result["results"][0]["percentage"], 100.0)
+
+    def test_returns_revenue_with_currency(self):
+        service, source = self._service(
+            [
+                ChannelRevenueSaleData(
+                    metric="revenue",
+                    currency_code="USD",
+                    rows=[
+                        ChannelRevenueSaleRow(channel="whatsapp", value=1000.0),
+                        ChannelRevenueSaleRow(channel="others", value=250.0),
+                    ],
+                )
+            ]
+        )
+
+        result = service.get_channel_revenue_sale(filters={"metric": "revenue"})
+
+        self.assertEqual(source.calls[0]["metric"], "revenue")
+        self.assertEqual(result["metric"], "revenue")
+        self.assertEqual(result["currency_code"], "USD")
+        self.assertEqual(
+            result["results"],
+            [
+                {"channel": "whatsapp", "value": 1000.0, "percentage": 80.0},
+                {"channel": "others", "value": 250.0, "percentage": 20.0},
+            ],
+        )
+
+    def test_defaults_metric_to_sale(self):
+        service, source = self._service()
+
+        service.get_channel_revenue_sale()
+
+        self.assertEqual(source.calls[0]["metric"], "sale")
+
+    def test_uses_the_period_sent_by_the_request(self):
+        service, source = self._service()
+
+        service.get_channel_revenue_sale(
+            filters={"start_date": "2026-08-01", "end_date": "2026-08-07"}
+        )
+
+        params = source.calls[0]
+        self.assertTrue(params["start_date"].startswith("2026-08-01"))
+        self.assertTrue(params["end_date"].startswith("2026-08-07"))
+
+    def test_forwards_dimension_filters_to_the_source(self):
+        service, source = self._service()
+        sector_uuid = str(uuid4())
+        queue_uuid = str(uuid4())
+        tag_uuid = str(uuid4())
+
+        service.get_channel_revenue_sale(
+            filters={
+                "sectors": [sector_uuid],
+                "queues": [queue_uuid],
+                "tags": [tag_uuid],
+                "channels": ["whatsapp", "others"],
+                "agent": "agent@example.com",
+            }
+        )
+
+        params = source.calls[0]
+        self.assertEqual(params["project"], str(self.project.uuid))
+        self.assertEqual(params["sector"], [sector_uuid])
+        self.assertEqual(params["queue"], [queue_uuid])
+        self.assertEqual(params["tag"], [tag_uuid])
+        self.assertEqual(params["channels"], ["whatsapp", "others"])
+        self.assertEqual(params["agent"], "agent@example.com")
+
+    def test_defaults_to_the_current_day_without_dates(self):
+        service, source = self._service()
+
+        service.get_channel_revenue_sale()
+
+        today = dj_timezone.now().astimezone(pytz.timezone("America/Sao_Paulo")).date()
+        self.assertTrue(source.calls[0]["start_date"].startswith(str(today)))
+
+    def test_percentage_is_zero_when_there_is_no_volume(self):
+        service, _ = self._service(
+            [
+                ChannelRevenueSaleData(
+                    rows=[ChannelRevenueSaleRow(channel="whatsapp", value=0)]
+                )
+            ]
+        )
+
+        result = service.get_channel_revenue_sale()
+
+        self.assertEqual(result["results"][0]["percentage"], 0.0)
