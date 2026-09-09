@@ -138,3 +138,60 @@ class TestHumanSupportFilterSetSalesFunnel(HumanSupportFilterSetTestCase):
         self.assertEqual(str(end.tzinfo), "America/Sao_Paulo")
         self.assertEqual((start.hour, start.minute, start.second), (0, 0, 0))
         self.assertEqual((end.hour, end.minute, end.second), (23, 59, 59))
+
+
+class TestHumanSupportFilterSetChannelRevenueSale(HumanSupportFilterSetTestCase):
+    def test_covers_dashboard_filters_and_metric_without_widget_params(self):
+        sector_uuid = str(uuid4())
+        queue_uuid = str(uuid4())
+        tag_uuid = str(uuid4())
+
+        result = self._cleaned(
+            {
+                "sectors": [sector_uuid],
+                "queues": [queue_uuid],
+                "tags": [tag_uuid],
+                "channels": ["whatsapp", "others"],
+                "agent": "agent@example.com",
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+                "metric": "sale",
+            }
+        )
+
+        self.assertEqual([str(value) for value in result["sectors"]], [sector_uuid])
+        self.assertEqual([str(value) for value in result["queues"]], [queue_uuid])
+        self.assertEqual([str(value) for value in result["tags"]], [tag_uuid])
+        self.assertEqual(result["channels"], ["whatsapp", "others"])
+        self.assertEqual(result["agent"], "agent@example.com")
+        self.assertEqual(result["start_date"].date(), date(2026, 8, 1))
+        self.assertEqual(result["end_date"].date(), date(2026, 8, 7))
+        self.assertEqual(result["metric"], "sale")
+        self.assertNotIn("comparison_start_date", result)
+        self.assertNotIn("comparison_end_date", result)
+
+    def test_accepts_revenue_metric(self):
+        result = self._cleaned({"metric": "revenue"})
+
+        self.assertEqual(result["metric"], "revenue")
+
+    def test_does_not_require_metric(self):
+        result = self._cleaned({"start_date": "2026-08-01", "end_date": "2026-08-07"})
+
+        self.assertNotIn("metric", result)
+
+    def test_localizes_period_dates_in_project_timezone(self):
+        result = self._cleaned(
+            {
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+            }
+        )
+
+        start = result["start_date"]
+        end = result["end_date"]
+
+        self.assertEqual(str(start.tzinfo), "America/Sao_Paulo")
+        self.assertEqual(str(end.tzinfo), "America/Sao_Paulo")
+        self.assertEqual((start.hour, start.minute, start.second), (0, 0, 0))
+        self.assertEqual((end.hour, end.minute, end.second), (23, 59, 59))

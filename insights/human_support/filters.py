@@ -37,6 +37,13 @@ class HumanSupportFilterSet(filters.FilterSet):
     contact = filters.CharFilter(required=False)
     urn = filters.CharFilter(required=False)
     ticket_id = filters.CharFilter(required=False)
+    metric = filters.ChoiceFilter(
+        required=False,
+        choices=(
+            ("revenue", "Revenue"),
+            ("sale", "Sale"),
+        ),
+    )
 
     class Meta:
         fields = [
@@ -56,6 +63,7 @@ class HumanSupportFilterSet(filters.FilterSet):
             "contact",
             "urn",
             "ticket_id",
+            "metric",
         ]
 
     DATE_RANGE_FIELDS = (
