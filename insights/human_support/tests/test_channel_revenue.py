@@ -34,8 +34,8 @@ class TestCalculateSharePercentage(SimpleTestCase):
         self.assertEqual(calculate_share_percentage(0, 620), 0.0)
 
     def test_returns_share_from_the_design(self):
-        self.assertEqual(calculate_share_percentage(2640, 620), 21.75)
-        self.assertEqual(calculate_share_percentage(2640, 330), 11.58)
+        self.assertEqual(calculate_share_percentage(2850, 620), 21.75)
+        self.assertEqual(calculate_share_percentage(2850, 330), 11.58)
 
     def test_others_is_a_channel(self):
         self.assertEqual(Channel.OTHERS, "others")
