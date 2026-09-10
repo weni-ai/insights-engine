@@ -20,6 +20,22 @@ class UUIDInFilter(filters.BaseInFilter, filters.UUIDFilter):
         return super(filters.BaseInFilter, self).filter(qs, value)
 
 
+PERFORMANCE_ORDERING_FIELDS = (
+    "representative",
+    "conversations",
+    "sales",
+    "conversion",
+    "revenue",
+    "average_order_value",
+    "trend",
+)
+PERFORMANCE_ORDERING_CHOICES = tuple(
+    (value, value)
+    for field in PERFORMANCE_ORDERING_FIELDS
+    for value in (field, f"-{field}")
+)
+
+
 class HumanSupportFilterSet(filters.FilterSet):
     project_uuid = filters.UUIDFilter(required=False)
     sectors = UUIDInFilter(required=False)
@@ -44,6 +60,10 @@ class HumanSupportFilterSet(filters.FilterSet):
             ("sale", "Sale"),
         ),
     )
+    ordering = filters.ChoiceFilter(
+        required=False,
+        choices=PERFORMANCE_ORDERING_CHOICES,
+    )
 
     class Meta:
         fields = [
@@ -64,6 +84,7 @@ class HumanSupportFilterSet(filters.FilterSet):
             "urn",
             "ticket_id",
             "metric",
+            "ordering",
         ]
 
     DATE_RANGE_FIELDS = (
