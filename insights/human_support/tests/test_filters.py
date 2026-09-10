@@ -195,3 +195,70 @@ class TestHumanSupportFilterSetChannelRevenueSale(HumanSupportFilterSetTestCase)
         self.assertEqual(str(end.tzinfo), "America/Sao_Paulo")
         self.assertEqual((start.hour, start.minute, start.second), (0, 0, 0))
         self.assertEqual((end.hour, end.minute, end.second), (23, 59, 59))
+
+
+class TestHumanSupportFilterSetPerformanceByRepresentative(
+    HumanSupportFilterSetTestCase
+):
+    def test_covers_dashboard_comparison_and_ordering_filters(self):
+        sector_uuid = str(uuid4())
+        queue_uuid = str(uuid4())
+        tag_uuid = str(uuid4())
+
+        result = self._cleaned(
+            {
+                "sectors": [sector_uuid],
+                "queues": [queue_uuid],
+                "tags": [tag_uuid],
+                "channels": ["whatsapp"],
+                "agent": "emma@example.com",
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+                "comparison_start_date": "2026-07-25",
+                "comparison_end_date": "2026-07-31",
+                "ordering": "-revenue",
+                "page_size": 10,
+            }
+        )
+
+        self.assertEqual([str(value) for value in result["sectors"]], [sector_uuid])
+        self.assertEqual([str(value) for value in result["queues"]], [queue_uuid])
+        self.assertEqual([str(value) for value in result["tags"]], [tag_uuid])
+        self.assertEqual(result["channels"], ["whatsapp"])
+        self.assertEqual(result["agent"], "emma@example.com")
+        self.assertEqual(result["start_date"].date(), date(2026, 8, 1))
+        self.assertEqual(result["end_date"].date(), date(2026, 8, 7))
+        self.assertEqual(result["comparison_start_date"].date(), date(2026, 7, 25))
+        self.assertEqual(result["comparison_end_date"].date(), date(2026, 7, 31))
+        self.assertEqual(result["ordering"], "-revenue")
+        self.assertEqual(result["page_size"], 10)
+
+    def test_localizes_period_and_comparison_dates(self):
+        result = self._cleaned(
+            {
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+                "comparison_start_date": "2026-07-25",
+                "comparison_end_date": "2026-07-31",
+            }
+        )
+
+        start = result["start_date"]
+        end = result["end_date"]
+        comparison_start = result["comparison_start_date"]
+        comparison_end = result["comparison_end_date"]
+
+        self.assertEqual(str(start.tzinfo), "America/Sao_Paulo")
+        self.assertEqual(str(end.tzinfo), "America/Sao_Paulo")
+        self.assertEqual(str(comparison_start.tzinfo), "America/Sao_Paulo")
+        self.assertEqual(str(comparison_end.tzinfo), "America/Sao_Paulo")
+        self.assertEqual((start.hour, start.minute, start.second), (0, 0, 0))
+        self.assertEqual((end.hour, end.minute, end.second), (23, 59, 59))
+        self.assertEqual(
+            (comparison_start.hour, comparison_start.minute, comparison_start.second),
+            (0, 0, 0),
+        )
+        self.assertEqual(
+            (comparison_end.hour, comparison_end.minute, comparison_end.second),
+            (23, 59, 59),
+        )
