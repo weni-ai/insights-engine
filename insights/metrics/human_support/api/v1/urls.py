@@ -9,6 +9,7 @@ from insights.metrics.human_support.api.v1.views import (
     DetailedMonitoringAwaitingView,
     DetailedMonitoringOnGoingView,
     DetailedMonitoringStatusView,
+    PerformanceByRepresentativeView,
     SalesFunnelView,
     TotalRevenueView,
 )
@@ -53,5 +54,9 @@ urlpatterns = [
     path(
         "sales/channel-revenue/",
         ChannelRevenueSaleView.as_view(),
+    ),
+    path(
+        "sales/performance-by-representative/",
+        PerformanceByRepresentativeView.as_view(),
     ),
 ]
