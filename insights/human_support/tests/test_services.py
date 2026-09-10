@@ -11,7 +11,14 @@ from insights.human_support.channel_revenue import (
     ChannelRevenueSaleData,
     ChannelRevenueSaleRow,
 )
-from insights.human_support.revenue import RevenueData
+from insights.human_support.performance import (
+    RepresentativePerformanceData,
+    RepresentativePerformanceRow,
+)
+from insights.human_support.revenue import (
+    RevenueData,
+    calculate_increase_percentage,
+)
 from insights.human_support.sales_funnel import SalesFunnelData
 from insights.human_support.services import HumanSupportDashboardService
 from insights.projects.models import Project
@@ -2137,3 +2144,237 @@ class TestHumanSupportDashboardServiceChannelRevenueSale(TestCase):
         result = service.get_channel_revenue_sale()
 
         self.assertEqual(result["results"][0]["percentage"], 0.0)
+
+
+class FakeRepresentativePerformanceSource:
+    def __init__(self, values):
+        self.values = list(values)
+        self.calls = []
+
+    def get_performance_by_representative(self, params):
+        self.calls.append(params)
+        return self.values.pop(0)
+
+
+DESIGN_CURRENT_ROWS = [
+    RepresentativePerformanceRow(
+        representative="Emma Wilson",
+        conversations=612,
+        sales=254,
+        revenue=72340,
+    ),
+    RepresentativePerformanceRow(
+        representative="Lucas Moreira",
+        conversations=574,
+        sales=218,
+        revenue=64120,
+    ),
+    RepresentativePerformanceRow(
+        representative="Sofia Almeida",
+        conversations=498,
+        sales=176,
+        revenue=58910,
+    ),
+    RepresentativePerformanceRow(
+        representative="Daniel Okafor",
+        conversations=531,
+        sales=168,
+        revenue=51470,
+    ),
+]
+
+DESIGN_PREVIOUS_ROWS = [
+    RepresentativePerformanceRow(representative="Emma Wilson", revenue=64359.43),
+    RepresentativePerformanceRow(representative="Lucas Moreira", revenue=59315.45),
+    RepresentativePerformanceRow(representative="Sofia Almeida", revenue=56319.31),
+    RepresentativePerformanceRow(representative="Daniel Okafor", revenue=52681.68),
+]
+
+
+class TestHumanSupportDashboardServicePerformanceByRepresentative(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(
+            name="Test Project",
+            timezone="America/Sao_Paulo",
+        )
+
+    def _service(self, values=None):
+        source = FakeRepresentativePerformanceSource(
+            values
+            if values is not None
+            else [
+                RepresentativePerformanceData(),
+                RepresentativePerformanceData(),
+            ]
+        )
+        service = HumanSupportDashboardService(
+            project=self.project, representative_performance_source=source
+        )
+        return service, source
+
+    def test_returns_empty_table_without_a_source(self):
+        service = HumanSupportDashboardService(project=self.project)
+
+        result = service.get_performance_by_representative()
+
+        self.assertEqual(
+            result,
+            {
+                "currency_code": "",
+                "count": 0,
+                "next": None,
+                "previous": None,
+                "results": [],
+            },
+        )
+
+    def test_returns_rows_from_the_design(self):
+        service, _ = self._service(
+            [
+                RepresentativePerformanceData(
+                    currency_code="USD", rows=DESIGN_CURRENT_ROWS
+                ),
+                RepresentativePerformanceData(rows=DESIGN_PREVIOUS_ROWS),
+            ]
+        )
+
+        result = service.get_performance_by_representative(
+            filters={"start_date": "2026-08-01", "end_date": "2026-08-07"}
+        )
+
+        emma = result["results"][0]
+        self.assertEqual(result["currency_code"], "USD")
+        self.assertEqual(result["count"], 4)
+        self.assertEqual(emma["representative"], "Emma Wilson")
+        self.assertEqual(emma["conversations"], 612)
+        self.assertEqual(emma["sales"], 254)
+        self.assertEqual(emma["conversion"], 41.5)
+        self.assertEqual(emma["revenue"], 72340)
+        self.assertEqual(emma["average_order_value"], 285.0)
+        self.assertEqual(
+            emma["trend"],
+            calculate_increase_percentage(64359.43, 72340),
+        )
+        self.assertEqual(result["results"][3]["conversion"], 31.64)
+        self.assertEqual(result["results"][3]["average_order_value"], 306.0)
+
+    def test_uses_comparison_dates_sent_by_the_request(self):
+        service, source = self._service()
+
+        service.get_performance_by_representative(
+            filters={
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+                "comparison_start_date": "2026-07-25",
+                "comparison_end_date": "2026-07-31",
+            }
+        )
+
+        comparison_params = source.calls[1]
+        self.assertTrue(comparison_params["start_date"].startswith("2026-07-25"))
+        self.assertTrue(comparison_params["end_date"].startswith("2026-07-31"))
+
+    def test_falls_back_to_the_preceding_period_of_same_length(self):
+        service, source = self._service()
+
+        service.get_performance_by_representative(
+            filters={"start_date": "2026-08-01", "end_date": "2026-08-07"}
+        )
+
+        comparison_params = source.calls[1]
+        self.assertTrue(comparison_params["start_date"].startswith("2026-07-25"))
+        self.assertTrue(comparison_params["end_date"].startswith("2026-07-31"))
+
+    def test_forwards_dimension_filters_to_both_periods(self):
+        service, source = self._service()
+        sector_uuid = str(uuid4())
+        queue_uuid = str(uuid4())
+        tag_uuid = str(uuid4())
+
+        service.get_performance_by_representative(
+            filters={
+                "sectors": [sector_uuid],
+                "queues": [queue_uuid],
+                "tags": [tag_uuid],
+                "channels": ["whatsapp"],
+                "agent": "emma@example.com",
+            }
+        )
+
+        current_params, comparison_params = source.calls
+        for params in (current_params, comparison_params):
+            self.assertEqual(params["project"], str(self.project.uuid))
+            self.assertEqual(params["sector"], [sector_uuid])
+            self.assertEqual(params["queue"], [queue_uuid])
+            self.assertEqual(params["tag"], [tag_uuid])
+            self.assertEqual(params["channels"], ["whatsapp"])
+            self.assertEqual(params["agent"], "emma@example.com")
+        self.assertNotEqual(
+            current_params["start_date"], comparison_params["start_date"]
+        )
+
+    def test_orders_results_by_requested_field(self):
+        service, _ = self._service(
+            [
+                RepresentativePerformanceData(rows=DESIGN_CURRENT_ROWS),
+                RepresentativePerformanceData(rows=DESIGN_PREVIOUS_ROWS),
+            ]
+        )
+
+        result = service.get_performance_by_representative(
+            filters={"ordering": "-sales"}
+        )
+
+        self.assertEqual(
+            [row["representative"] for row in result["results"]],
+            ["Emma Wilson", "Lucas Moreira", "Sofia Almeida", "Daniel Okafor"],
+        )
+
+        service, _ = self._service(
+            [
+                RepresentativePerformanceData(rows=DESIGN_CURRENT_ROWS),
+                RepresentativePerformanceData(rows=DESIGN_PREVIOUS_ROWS),
+            ]
+        )
+        result = service.get_performance_by_representative(
+            filters={"ordering": "sales"}
+        )
+
+        self.assertEqual(result["results"][0]["representative"], "Daniel Okafor")
+
+    def test_limits_results_with_page_size(self):
+        service, _ = self._service(
+            [
+                RepresentativePerformanceData(rows=DESIGN_CURRENT_ROWS),
+                RepresentativePerformanceData(),
+                RepresentativePerformanceData(rows=DESIGN_CURRENT_ROWS),
+                RepresentativePerformanceData(),
+            ]
+        )
+
+        result = service.get_performance_by_representative(filters={"page_size": 2})
+
+        self.assertEqual(result["count"], 4)
+        self.assertEqual(len(result["results"]), 2)
+
+    def test_conversion_is_zero_without_conversations(self):
+        service, _ = self._service(
+            [
+                RepresentativePerformanceData(
+                    rows=[
+                        RepresentativePerformanceRow(
+                            representative="Emma Wilson",
+                            conversations=0,
+                            sales=10,
+                            revenue=100,
+                        )
+                    ]
+                ),
+                RepresentativePerformanceData(),
+            ]
+        )
+
+        result = service.get_performance_by_representative()
+
+        self.assertEqual(result["results"][0]["conversion"], 0.0)
+        self.assertEqual(result["results"][0]["average_order_value"], 10.0)
