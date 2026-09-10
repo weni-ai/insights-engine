@@ -773,3 +773,140 @@ class TestChannelRevenueSaleViewV2(BaseHumanSupportViewTest):
         self.assertEqual(filters["start_date"], "2026-08-01")
         self.assertEqual(filters["end_date"], "2026-08-07")
         self.assertEqual(filters["metric"], "sale")
+
+
+PERFORMANCE_BY_REPRESENTATIVE_RESPONSE = {
+    "currency_code": "USD",
+    "count": 1,
+    "next": None,
+    "previous": None,
+    "results": [
+        {
+            "representative": "Emma Wilson",
+            "conversations": 612,
+            "sales": 254,
+            "conversion": 41.5,
+            "revenue": 72340.0,
+            "average_order_value": 285.0,
+            "trend": 12.4,
+        }
+    ],
+}
+
+
+class TestPerformanceByRepresentativeViewAsAnonymous(APITestCase):
+    def test_returns_401_when_unauthenticated(self):
+        url = "/v1/metrics/human-support/sales/performance-by-representative/"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestPerformanceByRepresentativeView(BaseHumanSupportViewTest):
+    URL = "/v1/metrics/human-support/sales/performance-by-representative/"
+
+    def test_returns_400_without_project_uuid(self):
+        response = self.client.get(self.URL)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_returns_403_without_project_auth(self):
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_performance_by_representative")
+    def test_returns_200_with_valid_request(self, mock_service_method):
+        mock_service_method.return_value = PERFORMANCE_BY_REPRESENTATIVE_RESPONSE
+
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, PERFORMANCE_BY_REPRESENTATIVE_RESPONSE)
+        mock_service_method.assert_called_once()
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_performance_by_representative")
+    def test_forwards_filters_that_affect_the_table(self, mock_service_method):
+        mock_service_method.return_value = PERFORMANCE_BY_REPRESENTATIVE_RESPONSE
+
+        self.client.get(
+            self.URL,
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+                "comparison_start_date": "2026-07-25",
+                "comparison_end_date": "2026-07-31",
+                "agent": "emma@example.com",
+                "ordering": "-revenue",
+            },
+        )
+
+        filters = mock_service_method.call_args[1]["filters"]
+        self.assertEqual(filters["start_date"], "2026-08-01")
+        self.assertEqual(filters["end_date"], "2026-08-07")
+        self.assertEqual(filters["comparison_start_date"], "2026-07-25")
+        self.assertEqual(filters["comparison_end_date"], "2026-07-31")
+        self.assertEqual(filters["agent"], "emma@example.com")
+        self.assertEqual(filters["ordering"], "-revenue")
+
+
+class TestPerformanceByRepresentativeViewV2AsAnonymous(APITestCase):
+    def test_returns_401_when_unauthenticated(self):
+        url = "/v2/metrics/human-support/sales/performance-by-representative/"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestPerformanceByRepresentativeViewV2(BaseHumanSupportViewTest):
+    URL = "/v2/metrics/human-support/sales/performance-by-representative/"
+
+    def test_returns_400_without_project_uuid(self):
+        response = self.client.get(self.URL)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_returns_403_without_project_auth(self):
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_performance_by_representative")
+    def test_returns_200_with_valid_request(self, mock_service_method):
+        mock_service_method.return_value = PERFORMANCE_BY_REPRESENTATIVE_RESPONSE
+
+        response = self.client.get(self.URL, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, PERFORMANCE_BY_REPRESENTATIVE_RESPONSE)
+        mock_service_method.assert_called_once()
+
+    @with_project_auth
+    @patch(f"{SERVICE_PATH}.get_performance_by_representative")
+    def test_forwards_filters_that_affect_the_table(self, mock_service_method):
+        mock_service_method.return_value = PERFORMANCE_BY_REPRESENTATIVE_RESPONSE
+
+        self.client.get(
+            self.URL,
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+                "comparison_start_date": "2026-07-25",
+                "comparison_end_date": "2026-07-31",
+                "agent": "emma@example.com",
+                "ordering": "-revenue",
+            },
+        )
+
+        filters = mock_service_method.call_args[1]["filters"]
+        self.assertEqual(filters["start_date"], "2026-08-01")
+        self.assertEqual(filters["end_date"], "2026-08-07")
+        self.assertEqual(filters["comparison_start_date"], "2026-07-25")
+        self.assertEqual(filters["comparison_end_date"], "2026-07-31")
+        self.assertEqual(filters["agent"], "emma@example.com")
+        self.assertEqual(filters["ordering"], "-revenue")
