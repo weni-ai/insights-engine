@@ -21,6 +21,11 @@ from insights.human_support.clients.chats_time_metrics import (
     ChatsTimeMetricsClient,
 )
 from insights.human_support.filters import HumanSupportFilterSet
+from insights.human_support.performance import (
+    NullRepresentativePerformanceSource,
+    RepresentativePerformanceSource,
+    calculate_average_order_value,
+)
 from insights.human_support.revenue import (
     NullRevenueSource,
     RevenueSource,
@@ -59,6 +64,9 @@ class HumanSupportDashboardService:
         average_order_value_source: AverageOrderValueSource | None = None,
         sales_funnel_source: SalesFunnelSource | None = None,
         channel_revenue_sale_source: ChannelRevenueSaleSource | None = None,
+        representative_performance_source: (
+            RepresentativePerformanceSource | None
+        ) = None,
     ) -> None:
         self.project = project
         self.client = ChatsRawDataClient(project)
@@ -70,6 +78,9 @@ class HumanSupportDashboardService:
         self.sales_funnel_source = sales_funnel_source or NullSalesFunnelSource()
         self.channel_revenue_sale_source = (
             channel_revenue_sale_source or NullChannelRevenueSaleSource()
+        )
+        self.representative_performance_source = (
+            representative_performance_source or NullRepresentativePerformanceSource()
         )
 
     def _expand_all_tokens(self, incoming_filters: dict | None) -> dict:
@@ -1810,5 +1821,124 @@ class HumanSupportDashboardService:
             "metric": data.metric or metric,
             "currency_code": data.currency_code,
             "count": len(results),
+            "results": results,
+        }
+
+    @staticmethod
+    def _sort_performance_results(results: list[dict], ordering: str | None) -> list:
+        if not ordering:
+            return results
+
+        reverse = ordering.startswith("-")
+        field = ordering.lstrip("-")
+
+        def sort_key(row: dict):
+            value = row.get(field)
+            if value is None:
+                return "" if field == "representative" else 0
+            return value
+
+        return sorted(results, key=sort_key, reverse=reverse)
+
+    def get_performance_by_representative(self, filters: dict | None = None) -> dict:
+        """
+        Returns assisted-sales performance of human support rooms by representative.
+
+        Parameters:
+            filters: {
+                "start_date": date,
+                "end_date": date,
+                "comparison_start_date": date,
+                "comparison_end_date": date,
+                "sectors": list[uuid] | uuid,
+                "queues": list[uuid] | uuid,
+                "tags": list[uuid] | uuid,
+                "channels": list[str] | str,
+                "agent": str,
+                "ordering": str,
+                "page_size": int,
+            }
+
+        Returns:
+            {
+                "currency_code": str,
+                "count": int,
+                "next": None,
+                "previous": None,
+                "results": [
+                    {
+                        "representative": str,
+                        "conversations": int,
+                        "sales": int,
+                        "conversion": float,
+                        "revenue": float,
+                        "average_order_value": float,
+                        "trend": float,
+                    }
+                ],
+            }
+        """
+        normalized = self._normalize_filters(filters)
+
+        start_date, end_date = self._resolve_revenue_period(normalized)
+        comparison_start, comparison_end = self._resolve_comparison_period(
+            normalized, start_date, end_date
+        )
+        base = self._build_revenue_filters(normalized)
+
+        current = (
+            self.representative_performance_source.get_performance_by_representative(
+                {
+                    **base,
+                    "start_date": start_date.isoformat(),
+                    "end_date": end_date.isoformat(),
+                }
+            )
+        )
+        previous = (
+            self.representative_performance_source.get_performance_by_representative(
+                {
+                    **base,
+                    "start_date": comparison_start.isoformat(),
+                    "end_date": comparison_end.isoformat(),
+                }
+            )
+        )
+
+        previous_revenue = {row.representative: row.revenue for row in previous.rows}
+
+        results = []
+        for row in current.rows:
+            results.append(
+                {
+                    "representative": row.representative,
+                    "conversations": row.conversations,
+                    "sales": row.sales,
+                    "conversion": calculate_conversion_percentage(
+                        row.conversations, row.sales
+                    ),
+                    "revenue": row.revenue,
+                    "average_order_value": calculate_average_order_value(
+                        row.revenue, row.sales
+                    ),
+                    "trend": calculate_increase_percentage(
+                        previous_revenue.get(row.representative, 0),
+                        row.revenue,
+                    ),
+                }
+            )
+
+        results = self._sort_performance_results(results, normalized.get("ordering"))
+        count = len(results)
+
+        page_size = normalized.get("page_size")
+        if page_size:
+            results = results[: int(page_size)]
+
+        return {
+            "currency_code": current.currency_code,
+            "count": count,
+            "next": None,
+            "previous": None,
             "results": results,
         }
