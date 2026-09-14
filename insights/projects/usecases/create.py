@@ -37,6 +37,16 @@ class ProjectsUseCase:
         else:
             config = None
 
+        is_live_desk_copilot = bool(project_dto.is_live_desk_copilot)
+        uuid_live_desk_project = (
+            project_dto.uuid_live_desk_project if is_live_desk_copilot else None
+        )
+        if is_live_desk_copilot and not uuid_live_desk_project:
+            raise Exception(
+                "'uuid_live_desk_project' cannot be empty when "
+                "'is_live_desk_copilot' is True!"
+            )
+
         project = Project.objects.create(
             uuid=project_dto.uuid,
             name=project_dto.name,
@@ -47,6 +57,8 @@ class ProjectsUseCase:
             org_uuid=project_dto.org_uuid,
             is_nexus_multi_agents_active=project_dto.inline_agent_switch or False,
             config=config,
+            is_live_desk_copilot=is_live_desk_copilot,
+            uuid_live_desk_project=uuid_live_desk_project,
         )
         CreateHumanService().create_dashboard(project)
         create_conversation_dashboard.delay(project.uuid)

@@ -73,6 +73,8 @@ class OldProjectConsumer(InsightsEDAConsumer):
                 vtex_account=_normalize_vtex_account(body.get("vtex_account")),
                 org_uuid=org_uuid,
                 inline_agent_switch=get_inline_agent_switch(body),
+                is_live_desk_copilot=body.get("is_live_desk_copilot", False),
+                uuid_live_desk_project=body.get("uuid_live_desk_project"),
             )
 
             authorizations = body.get("authorizations", [])
@@ -131,6 +133,8 @@ class WeniEDAProjectConsumer(WeniEDAConsumer):
             vtex_account=_normalize_vtex_account(data.get("vtex_account")),
             org_uuid=org_uuid,
             inline_agent_switch=get_inline_agent_switch(data),
+            is_live_desk_copilot=data.get("is_live_desk_copilot", False),
+            uuid_live_desk_project=data.get("uuid_live_desk_project"),
         )
 
         authorizations = data.get("authorizations", [])
