@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "drf_spectacular",
     "weni.feature_flags",
+    "weni.eda.django.eda_app",
 ]
 
 if ADMIN_ENABLED is True:
@@ -333,6 +334,8 @@ EDA_CONSUMERS_HANDLES = {
 
 
 if USE_EDA:
+    # RabbitMQ (edaconsume) uses the Insights backend via EventDrivenAPP.
+    # Amazon MQ (edaconsume_amq) forces the Weni EDA backend in the command.
     EDA_CONNECTION_BACKEND = "insights.event_driven.backends.PyAMQPConnectionBackend"
     _command = sys.argv[1] if len(sys.argv) > 1 else None
     EDA_CONSUMERS_HANDLE = EDA_CONSUMERS_HANDLES.get(
@@ -350,7 +353,7 @@ if USE_EDA:
     FLOWS_QUEUE_EXCHANGE = env("FLOWS_QUEUE_EXCHANGE", default="queues.topic")
 
 # Amazon MQ
-AMQ_BROKER_HOST = env.str("AMQ_BROKER_HOST", default="localhost:5672")
+AMQ_BROKER_HOST = env.str("AMQ_BROKER_HOST", default="localhost")
 AMQ_BROKER_PORT = env.int("AMQ_BROKER_PORT", default=5671)
 AMQ_BROKER_USER = env.str("AMQ_BROKER_USER", default="guest")
 AMQ_BROKER_PASSWORD = env.str("AMQ_BROKER_PASSWORD", default="guest")
@@ -557,6 +560,25 @@ SALES_FUNNEL_EVENTS_START_DATE = env.str(
     "SALES_FUNNEL_EVENTS_START_DATE", default="2025-01-01T00:00:00-03:00"
 )
 SALES_FUNNEL_CHECK_COOLDOWN_TTL = env.int("SALES_FUNNEL_CHECK_COOLDOWN_TTL", default=30)
+
+# CTWA dashboard creation check against Flows campaigns
+ENABLE_CTWA_DASHBOARD_AUTO_CREATION = env.bool(
+    "ENABLE_CTWA_DASHBOARD_AUTO_CREATION", default=True
+)
+SHOW_CTWA_DASHBOARD_IN_LIST = env.bool("SHOW_CTWA_DASHBOARD_IN_LIST", default=False)
+CTWA_DASHBOARD_CHECK_COOLDOWN_TTL = env.int(
+    "CTWA_DASHBOARD_CHECK_COOLDOWN_TTL", default=15 * 60
+)
+CTWA_DEFAULT_CURRENCY = env.str("CTWA_DEFAULT_CURRENCY", default="USD")
+CTWA_CAMPAIGNS_AFTER = env.str(
+    "CTWA_CAMPAIGNS_AFTER", default="2026-08-19T00:00:00-03:00"
+)
+CTWA_BY_CAMPAIGN_METRIC_NAME = env.str(
+    "CTWA_BY_CAMPAIGN_METRIC_NAME", default="weni-ctwa-by-campaign"
+)
+os.environ.setdefault(
+    "CTWA_BY_CAMPAIGN_METRIC_NAME", CTWA_BY_CAMPAIGN_METRIC_NAME
+)
 
 # Feature flags
 INSIGHTS_SHOW_HUMAN_SUPPORT_DASHBOARD_V1_FEATURE_FLAG_KEY = env.str(

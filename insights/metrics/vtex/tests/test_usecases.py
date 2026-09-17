@@ -6,8 +6,13 @@ from django.test import TestCase
 from rest_framework import status
 
 from insights.metrics.vtex.date_utils import END_OF_DAY_TIME, to_utc_range
+from insights.metrics.vtex.enums import OrdersSumGranularity, WeekStartsOn
+from insights.metrics.vtex.usecases.order_values_by_period import (
+    OrderValuesByPeriodUseCase,
+)
 from insights.metrics.vtex.usecases.utm_source_metrics import UTMSourceMetricsUseCase
 from insights.projects.models import Project
+from insights.sources.orders.exceptions import VTEXOrdersAPIError
 from insights.sources.vtexcredentials.exceptions import VtexCredentialsNotFound
 
 
@@ -131,5 +136,170 @@ class TestUTMSourceMetricsUseCaseExecute(TestCase):
 
         self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(body["error"], "Failed to get metrics from UTM source")
+        self.assertEqual(body["event_id"], "test-event-id")
+        mock_capture_exception.assert_called_once()
+
+
+@patch("insights.metrics.vtex.usecases.order_values_by_period.OrdersService")
+class TestOrderValuesByPeriodUseCaseExecute(TestCase):
+    def setUp(self):
+        self.use_case = OrderValuesByPeriodUseCase()
+        self.project = Project.objects.create(
+            name="Test Project",
+            timezone="UTC",
+        )
+
+    def test_returns_grouped_values_by_day_with_zero_fill(
+        self, mock_orders_service_cls
+    ):
+        mock_orders_service_cls.return_value.get_orders_from_utm_source.return_value = {
+            "currency_code": "BRL",
+            "orders": [
+                {
+                    "authorized_date": "2026-08-01T12:00:00.000Z",
+                    "total_value": 20000,
+                    "currency_code": "BRL",
+                },
+                {
+                    "authorized_date": "2026-08-01T18:00:00.000Z",
+                    "total_value": 10000,
+                    "currency_code": "BRL",
+                },
+                {
+                    "authorized_date": "2026-08-10T10:00:00.000Z",
+                    "total_value": 52010,
+                    "currency_code": "BRL",
+                },
+            ],
+        }
+
+        status_code, body = self.use_case.execute(
+            self.project,
+            "weniabandonedcart",
+            date(2026, 8, 1),
+            date(2026, 8, 3),
+            OrdersSumGranularity.DAY,
+            WeekStartsOn.SUNDAY,
+        )
+
+        self.assertEqual(status_code, status.HTTP_200_OK)
+        self.assertEqual(body["currency"], "BRL")
+        self.assertEqual(
+            body["results"],
+            [
+                {"2026-08-01": {"value": 300.0}},
+                {"2026-08-02": {"value": 0.0}},
+                {"2026-08-03": {"value": 0.0}},
+            ],
+        )
+
+    def test_returns_grouped_values_by_week_using_week_start(
+        self, mock_orders_service_cls
+    ):
+        mock_orders_service_cls.return_value.get_orders_from_utm_source.return_value = {
+            "currency_code": "BRL",
+            "orders": [
+                {
+                    "authorized_date": "2026-08-01T12:00:00.000Z",
+                    "total_value": 30000,
+                    "currency_code": "BRL",
+                },
+                {
+                    "authorized_date": "2026-08-10T10:00:00.000Z",
+                    "total_value": 52010,
+                    "currency_code": "BRL",
+                },
+            ],
+        }
+
+        status_code, body = self.use_case.execute(
+            self.project,
+            "weniabandonedcart",
+            date(2026, 8, 1),
+            date(2026, 8, 14),
+            OrdersSumGranularity.WEEK,
+            WeekStartsOn.SUNDAY,
+        )
+
+        self.assertEqual(status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            body["results"],
+            [
+                {"2026-07-26": {"value": 300.0}},
+                {"2026-08-02": {"value": 0.0}},
+                {"2026-08-09": {"value": 520.1}},
+            ],
+        )
+
+    def test_returns_null_currency_and_zeros_when_there_are_no_orders(
+        self, mock_orders_service_cls
+    ):
+        mock_orders_service_cls.return_value.get_orders_from_utm_source.return_value = {
+            "currency_code": None,
+            "orders": [],
+        }
+
+        status_code, body = self.use_case.execute(
+            self.project,
+            "weniabandonedcart",
+            date(2026, 8, 1),
+            date(2026, 8, 2),
+            OrdersSumGranularity.DAY,
+            WeekStartsOn.SUNDAY,
+        )
+
+        self.assertEqual(status_code, status.HTTP_200_OK)
+        self.assertIsNone(body["currency"])
+        self.assertEqual(
+            body["results"],
+            [
+                {"2026-08-01": {"value": 0.0}},
+                {"2026-08-02": {"value": 0.0}},
+            ],
+        )
+
+    def test_returns_401_when_vtex_credentials_not_found(self, mock_orders_service_cls):
+        mock_orders_service_cls.return_value.get_orders_from_utm_source.side_effect = (
+            VtexCredentialsNotFound()
+        )
+
+        status_code, body = self.use_case.execute(
+            self.project,
+            "weniabandonedcart",
+            date(2026, 8, 1),
+            date(2026, 8, 2),
+            OrdersSumGranularity.DAY,
+            WeekStartsOn.SUNDAY,
+        )
+
+        self.assertEqual(status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(
+            body["error"],
+            (
+                "Unauthorized because VTEX credentials are not configured "
+                "or are invalid for this project"
+            ),
+        )
+
+    @patch("insights.metrics.vtex.usecases.order_values_by_period.capture_exception")
+    def test_returns_500_and_event_id_on_vtex_api_error(
+        self, mock_capture_exception, mock_orders_service_cls
+    ):
+        mock_capture_exception.return_value = "test-event-id"
+        mock_orders_service_cls.return_value.get_orders_from_utm_source.side_effect = (
+            VTEXOrdersAPIError("upstream failure")
+        )
+
+        status_code, body = self.use_case.execute(
+            self.project,
+            "weniabandonedcart",
+            date(2026, 8, 1),
+            date(2026, 8, 2),
+            OrdersSumGranularity.DAY,
+            WeekStartsOn.SUNDAY,
+        )
+
+        self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(body["error"], "Failed to get order values by period")
         self.assertEqual(body["event_id"], "test-event-id")
         mock_capture_exception.assert_called_once()

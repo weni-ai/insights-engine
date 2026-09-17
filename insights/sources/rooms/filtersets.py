@@ -69,6 +69,11 @@ class RoomFilterSet:
         source_field="protocol",
         table_alias="r",
     )
+    channel = GenericSQLFilter(
+        source_field="urn",
+        table_alias="r",
+        default_operation="channel_in",
+    )
 
     def get_field(self, field_name):
         try:

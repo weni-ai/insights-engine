@@ -4,6 +4,7 @@ from datetime import date
 
 from sentry_sdk import capture_exception
 
+from insights.metrics.meta.exception import MetaAPIError
 from insights.metrics.meta.usecases.get_project_wabas import GetProjectWabasUseCase
 from insights.metrics.meta.usecases.get_templates_from_prefix import (
     GetTemplatesFromPrefixUseCase,
@@ -129,7 +130,7 @@ class GetTemplatesAndOrdersMetrics:
                 limits=limits,
                 require_templates=require_templates,
             )
-        except TemplatesNotFoundError:
+        except (TemplatesNotFoundError, MetaAPIError):
             raise
         except Exception as error:
             capture_exception(error)

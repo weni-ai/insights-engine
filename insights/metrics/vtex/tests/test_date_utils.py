@@ -3,7 +3,14 @@ from zoneinfo import ZoneInfo
 
 from django.test import TestCase
 
-from insights.metrics.vtex.date_utils import END_OF_DAY_TIME, to_utc_range
+from insights.metrics.vtex.date_utils import (
+    END_OF_DAY_TIME,
+    iter_period_keys,
+    period_key_for,
+    to_utc_range,
+    week_start,
+)
+from insights.metrics.vtex.enums import OrdersSumGranularity, WeekStartsOn
 from insights.projects.models import Project
 
 
@@ -41,3 +48,82 @@ class TestToUtcRange(TestCase):
             end,
             datetime.combine(end_date, END_OF_DAY_TIME, tzinfo=timezone.utc),
         )
+
+
+class TestWeekStart(TestCase):
+    def test_sunday_week_start_for_saturday(self):
+        self.assertEqual(
+            week_start(date(2026, 8, 1), WeekStartsOn.SUNDAY),
+            date(2026, 7, 26),
+        )
+
+    def test_monday_week_start_for_saturday(self):
+        self.assertEqual(
+            week_start(date(2026, 8, 1), WeekStartsOn.MONDAY),
+            date(2026, 7, 27),
+        )
+
+    def test_week_start_on_the_same_weekday_is_unchanged(self):
+        self.assertEqual(
+            week_start(date(2026, 7, 26), WeekStartsOn.SUNDAY),
+            date(2026, 7, 26),
+        )
+
+
+class TestPeriodKeyFor(TestCase):
+    def test_day_granularity_returns_the_same_date(self):
+        self.assertEqual(
+            period_key_for(
+                date(2026, 8, 1),
+                OrdersSumGranularity.DAY,
+                WeekStartsOn.SUNDAY,
+            ),
+            date(2026, 8, 1),
+        )
+
+    def test_week_granularity_uses_week_start_before_the_date(self):
+        self.assertEqual(
+            period_key_for(
+                date(2026, 8, 1),
+                OrdersSumGranularity.WEEK,
+                WeekStartsOn.SUNDAY,
+            ),
+            date(2026, 7, 26),
+        )
+
+
+class TestIterPeriodKeys(TestCase):
+    def test_day_iteration_is_inclusive(self):
+        keys = iter_period_keys(
+            date(2026, 8, 1),
+            date(2026, 8, 3),
+            OrdersSumGranularity.DAY,
+            WeekStartsOn.SUNDAY,
+        )
+        self.assertEqual(
+            keys,
+            [date(2026, 8, 1), date(2026, 8, 2), date(2026, 8, 3)],
+        )
+
+    def test_week_iteration_includes_week_starting_before_start_date(self):
+        keys = iter_period_keys(
+            date(2026, 8, 1),
+            date(2026, 8, 14),
+            OrdersSumGranularity.WEEK,
+            WeekStartsOn.SUNDAY,
+        )
+        self.assertEqual(
+            keys,
+            [date(2026, 7, 26), date(2026, 8, 2), date(2026, 8, 9)],
+        )
+
+    def test_zero_fill_key_list_covers_the_full_range(self):
+        keys = iter_period_keys(
+            date(2026, 8, 1),
+            date(2026, 8, 30),
+            OrdersSumGranularity.DAY,
+            WeekStartsOn.SUNDAY,
+        )
+        self.assertEqual(keys[0], date(2026, 8, 1))
+        self.assertEqual(keys[-1], date(2026, 8, 30))
+        self.assertEqual(len(keys), 30)

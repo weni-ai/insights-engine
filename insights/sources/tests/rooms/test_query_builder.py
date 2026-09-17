@@ -80,3 +80,29 @@ class TestRoomSQLQueryBuilder(TestCase):
         expected_query = "SELECT (ROUND(COALESCE(AVG(mr.duration), 0), 2)) AS value FROM public.rooms_room as r INNER JOIN public.dashboard_roommetrics AS mr ON mr.room_id=r.uuid  WHERE r.user_id = (%s);"
         self.assertEqual(query, expected_query)
         self.assertEqual(params, [123])
+
+    def test_group_by_channel_count(self):
+        self.builder.add_filter(self.strategy, "user_id", "eq", 123)
+        query, params = self.builder.group_by_channel_count(limit=10)
+        self.assertIn("AS channel_name", query)
+        self.assertIn("AS rooms_volume", query)
+        self.assertIn("LIMIT 10;", query)
+        self.assertIn("whatsapp:%", query)
+        self.assertIn("ELSE 'others'", query)
+        self.assertNotIn("SPLIT_PART", query)
+        self.assertEqual(params, [123])
+
+    def test_group_by_channel_count_clamps_invalid_limit(self):
+        self.builder.add_filter(self.strategy, "user_id", "eq", 123)
+        query, _ = self.builder.group_by_channel_count(limit=-5)
+        self.assertIn("LIMIT 1;", query)
+        query, _ = self.builder.group_by_channel_count(limit="not-a-number")
+        self.assertIn("LIMIT 10;", query)
+        query, _ = self.builder.group_by_channel_count(limit=1000)
+        self.assertIn("LIMIT 100;", query)
+
+    def test_group_by_channel_count_without_filters(self):
+        query, params = self.builder.group_by_channel_count()
+        self.assertIn("WHERE r.urn IS NOT NULL", query)
+        self.assertNotIn("WHERE  AND", query)
+        self.assertEqual(params, [])

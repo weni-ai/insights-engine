@@ -38,6 +38,21 @@ class PostgreSQLFilterStrategyTests(TestCase):
         self.assertEqual(query, f"{self.table_alias}.{field} IN (%s, %s, %s)")
         self.assertEqual(params, value)
 
+    def test_channel_in_operation(self):
+        from insights.sources.channels.enums import Channel
+
+        query, params = self.strategy.apply(
+            "urn", "channel_in", ["whatsapp", "email"], "r"
+        )
+        self.assertIn("IN (%s, %s)", query)
+        self.assertEqual(params, ["whatsapp", "email"])
+        self.assertIn(Channel.urn_case_sql("r.urn").strip(), query.strip())
+
+    def test_channel_in_operation_invalid_values(self):
+        query, params = self.strategy.apply("urn", "channel_in", ["not-a-channel"], "r")
+        self.assertEqual(query, "FALSE")
+        self.assertIsNone(params)
+
     def test_icontains_operation(self):
         field = "name"
         value = "test"

@@ -15,3 +15,4 @@ class VTEXOrdersBaseMetrics:
     currency_code: str = ""
     last_authorized_date: Optional[str] = None
     processed_orders: set = field(default_factory=set)
+    orders: list[dict] = field(default_factory=list)

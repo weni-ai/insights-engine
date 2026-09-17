@@ -9,6 +9,15 @@ class PostgreSQLFilterStrategy:
         elif operation == "in":
             placeholders = ", ".join(["%s"] * len(value))
             return f"{table_alias}.{field} IN ({placeholders})", list(value)
+        elif operation == "channel_in":
+            from insights.sources.channels.enums import Channel
+
+            channels = Channel.valid_values(value)
+            if not channels:
+                return "FALSE", None
+            placeholders = ", ".join(["%s"] * len(channels))
+            case_sql = Channel.urn_case_sql(f"{table_alias}.{field}")
+            return f"{case_sql} IN ({placeholders})", channels
         elif operation == "icontains":
             return f"LOWER({table_alias}.{field}) LIKE (%s)", [f"%{value.lower()}%"]
         elif operation == "isnull":

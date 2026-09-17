@@ -1,4 +1,6 @@
 import uuid
+from unittest.mock import patch
+
 from rest_framework.test import APITestCase
 from rest_framework.response import Response
 from rest_framework import status
@@ -40,6 +42,16 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
 
         self.user = User.objects.create_user(email="test@test.com")
         self.client.force_authenticate(user=self.user)
+        self.widgets_migration_patcher = patch(
+            "insights.metrics.meta.tasks.migrate_widgets_waba_config.apply_async"
+        )
+        self.widgets_migration_patcher.start()
+        self.addCleanup(self.widgets_migration_patcher.stop)
+        self.favorites_migration_patcher = patch(
+            "insights.metrics.meta.tasks.move_favorite_templates.delay"
+        )
+        self.favorites_migration_patcher.start()
+        self.addCleanup(self.favorites_migration_patcher.stop)
 
     def test_cannot_receive_integration_data_when_not_internal_user(self):
         response = self.receive_integration_data({})
@@ -136,14 +148,17 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
         self.assertTrue(new_dashboard.config["is_mm_lite_active"])
 
     @with_internal_auth
-    def test_receive_integration_with_old_waba_id_saves_migration_data(self):
+    @patch("insights.metrics.meta.tasks.move_favorite_templates.delay")
+    def test_receive_integration_with_old_waba_id_saves_migration_data(
+        self, mock_delay
+    ):
         project = Project.objects.create()
         old_waba_id = "old_waba_123"
         old_phone = {
             "id": "111111111111111",
             "display_phone_number": "+55 11 11111 1111",
         }
-        Dashboard.objects.create(
+        old_dashboard = Dashboard.objects.create(
             project=project,
             config={
                 "is_whatsapp_integration": True,
@@ -177,6 +192,9 @@ class TestWhatsAppIntegrationWebhookAsAuthenticatedUser(
         self.assertIn("migrated_at", dashboard.config["migration_data"])
         self.assertFalse(
             Dashboard.objects.filter(config__waba_id=old_waba_id).exists()
+        )
+        mock_delay.assert_called_once_with(
+            str(old_dashboard.uuid), str(dashboard.uuid)
         )
 
     @with_internal_auth

@@ -1,4 +1,5 @@
 import uuid
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -7,7 +8,7 @@ from unittest.mock import patch
 
 from insights.authentication.authentication import User
 from insights.authentication.tests.decorators import with_project_auth
-from insights.dashboards.models import Dashboard
+from insights.dashboards.models import CTWA_DASHBOARD_NAME, Dashboard
 from insights.projects.models import Project, ProjectAuth
 from insights.widgets.models import Widget, Report
 
@@ -96,6 +97,18 @@ class BaseTestDashboardViewSet(APITestCase):
     def analysis_csat_totals(self, dashboard_uuid: str, data: dict) -> Response:
         url = reverse("dashboard-analysis-csat-totals", kwargs={"pk": dashboard_uuid})
 
+        return self.client.get(url, data)
+
+    def monitoring_channel_metrics(self, dashboard_uuid: str, data: dict) -> Response:
+        url = reverse(
+            "dashboard-monitoring-channel-metrics", kwargs={"pk": dashboard_uuid}
+        )
+        return self.client.get(url, data)
+
+    def analysis_channel_metrics(self, dashboard_uuid: str, data: dict) -> Response:
+        url = reverse(
+            "dashboard-analysis-channel-metrics", kwargs={"pk": dashboard_uuid}
+        )
         return self.client.get(url, data)
 
 
@@ -254,6 +267,43 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertIn(str(dashboard_1.uuid), response_dashboards)
         self.assertNotIn(str(dashboard_2.uuid), response_dashboards)
         self.assertNotIn(str(dashboard_3.uuid), response_dashboards)
+
+    @with_project_auth
+    @patch("insights.dashboards.tasks.check_and_create_ctwa_dashboard")
+    def test_list_does_not_enqueue_ctwa_dashboard_check(self, mock_task):
+        response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_task.delay.assert_not_called()
+
+    @with_project_auth
+    def test_list_hides_ctwa_dashboard_by_default(self):
+        dashboard = Dashboard.objects.create(
+            project=self.project,
+            name=CTWA_DASHBOARD_NAME,
+            description="Click to WhatsApp dashboard",
+        )
+
+        response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_dashboards = {d["uuid"] for d in response.data["results"]}
+        self.assertNotIn(str(dashboard.uuid), response_dashboards)
+
+    @with_project_auth
+    @override_settings(SHOW_CTWA_DASHBOARD_IN_LIST=True)
+    def test_list_shows_ctwa_dashboard_when_enabled(self):
+        dashboard = Dashboard.objects.create(
+            project=self.project,
+            name=CTWA_DASHBOARD_NAME,
+            description="Click to WhatsApp dashboard",
+        )
+
+        response = self.list({"project": str(self.project.uuid)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_dashboards = {d["uuid"] for d in response.data["results"]}
+        self.assertIn(str(dashboard.uuid), response_dashboards)
 
     @with_project_auth
     def test_list_dashboards_includes_is_indexer_active_false(self):
@@ -931,3 +981,53 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
                 },
             },
         )
+
+    @with_project_auth
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
+    def test_get_monitoring_channel_metrics(self, MockHumanSupportDashboardService):
+        payload = {
+            "next": None,
+            "previous": None,
+            "count": 2,
+            "results": [
+                {"channel_name": "whatsapp", "rooms_volume": 10},
+                {"channel_name": "facebook", "rooms_volume": 5},
+            ],
+        }
+        mock_service_instance = MockHumanSupportDashboardService.return_value
+        mock_service_instance.get_volume_by_channel.return_value = payload
+
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        response = self.monitoring_channel_metrics(
+            str(dashboard.uuid), {"chip_name": "waiting"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, payload)
+        mock_service_instance.get_volume_by_channel.assert_called_once()
+
+    @with_project_auth
+    @patch("insights.dashboards.api.v1.viewsets.HumanSupportDashboardService")
+    def test_get_analysis_channel_metrics(self, MockHumanSupportDashboardService):
+        payload = {
+            "next": None,
+            "previous": None,
+            "count": 1,
+            "results": [{"channel_name": "whatsapp", "rooms_volume": 10}],
+        }
+        mock_service_instance = MockHumanSupportDashboardService.return_value
+        mock_service_instance.get_analysis_volume_by_channel.return_value = payload
+
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        response = self.analysis_channel_metrics(
+            str(dashboard.uuid),
+            {"start_date": "2025-11-01", "end_date": "2025-11-30"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, payload)
+        mock_service_instance.get_analysis_volume_by_channel.assert_called_once()
