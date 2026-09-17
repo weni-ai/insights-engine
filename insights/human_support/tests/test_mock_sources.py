@@ -19,7 +19,6 @@ from insights.human_support.mock.sources import (
     MockSalesFunnelSource,
     PREVIOUS_AVERAGE_ORDER_VALUE,
     PREVIOUS_REVENUE,
-    SALES_FUNNEL,
 )
 from insights.human_support.sales_funnel import SalesFunnelData
 from insights.projects.models import Project
