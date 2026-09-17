@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "weni.feature_flags",
     "weni.eda.django.eda_app",
+    "weni_commons",
 ]
 
 if ADMIN_ENABLED is True:
@@ -658,3 +659,9 @@ WHATSAPP_TEMPLATE_IDS_PER_REQUEST = env.int(
 # External project authorization service
 PROJECT_AUTH_API_BASE_URL = env.str("PROJECT_AUTH_API_BASE_URL", default="")
 PROJECT_AUTH_API_TIMEOUT = env.int("PROJECT_AUTH_API_TIMEOUT", default=3)
+
+# Kong API Gateway (weni-commons)
+KONG_ADMIN_URL = env.str("KONG_ADMIN_URL", default="http://localhost:8001")
+KONG_SERVICE = env.str("KONG_SERVICE", default="insights-service")
+KONG_SERVICE_URL = env.str("KONG_SERVICE_URL", default="")
+KONG_URL_PREFIX = env.str("KONG_URL_PREFIX", default="/insights")

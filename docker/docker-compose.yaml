@@ -31,6 +31,10 @@ services:
       - DEBUG=${DEBUG:-true}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
       - DEFAULT_DATABASE=${DEFAULT_DATABASE:-postgres://insights:insights@postgres:5432/insights}
+      - KONG_ADMIN_URL=${KONG_ADMIN_URL:-http://localhost:8001}
+      - KONG_SERVICE=${KONG_SERVICE:-insights-service}
+      - KONG_SERVICE_URL=${KONG_SERVICE_URL:-}
+      - KONG_URL_PREFIX=${KONG_URL_PREFIX:-/insights}
   rabbitmq:
     image: rabbitmq:3.9.7-management
     ports:
