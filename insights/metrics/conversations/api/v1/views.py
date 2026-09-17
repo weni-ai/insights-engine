@@ -1,14 +1,15 @@
-from typing import TYPE_CHECKING
 import logging
+from typing import TYPE_CHECKING
 
+from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.viewsets import GenericViewSet
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
-
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 from weni_commons.auth import WeniAuthViewMixin
+from weni_commons.kong import api_gateway_expose
 
 from insights.authentication.permissions import (
     HasInternalAuthenticationPermission,
@@ -19,16 +20,15 @@ from insights.authentication.weni_auth import (
     query_params_with_auth_project_uuid,
     weni_authentication_classes,
 )
-from insights.metrics.conversations.api.permissions import WidgetQueryParamPermission
-from insights.metrics.conversations.api.decorators import force_use_real_service
+from insights.metrics.conversations.api.decorators import (
+    force_use_real_service,
+)
 from insights.metrics.conversations.api.mixins import (
+    ConversationsMetricsResponseMixin,
     ConversationsMetricsServiceResolverMixin,
 )
-from insights.metrics.conversations.usecases.get_absolute_numbers_widget import (
-    GetAbsoluteNumbersWidgetUseCase,
-)
-from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import (
-    GetProjectAiCsatMetricsUseCase,
+from insights.metrics.conversations.api.permissions import (
+    WidgetQueryParamPermission,
 )
 from insights.metrics.conversations.api.v1.serializers import (
     AbsoluteNumbersQueryParamsSerializer,
@@ -51,6 +51,7 @@ from insights.metrics.conversations.api.v1.serializers import (
     GetTopicsQueryParamsSerializer,
     InternalCsatMetricsQueryParamsSerializer,
     NpsMetricsQueryParamsSerializer,
+    NpsMetricsSerializer,
     SalesFunnelMetricsQueryParamsSerializer,
     SalesFunnelMetricsSerializer,
     SearchTermsMetricsQueryParamsSerializer,
@@ -58,23 +59,26 @@ from insights.metrics.conversations.api.v1.serializers import (
     ToolResultQueryParamsSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
     TopicsDistributionMetricsSerializer,
-    NpsMetricsSerializer,
 )
-from insights.metrics.conversations.services import (
-    ConversationsMetricsService,
+from insights.metrics.conversations.services import ConversationsMetricsService
+from insights.metrics.conversations.usecases.get_absolute_numbers_widget import (
+    GetAbsoluteNumbersWidgetUseCase,
+)
+from insights.metrics.conversations.usecases.get_project_ai_csat_metrics import (
+    GetProjectAiCsatMetricsUseCase,
 )
 from insights.projects.models import Project, ProjectAuth
 from insights.widgets.permissions import CanViewWidgetQueryParamPermission
-from insights.metrics.conversations.api.mixins import ConversationsMetricsResponseMixin
-
 
 logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
     from uuid import UUID
-    from insights.users.models import User
+
     from rest_framework.request import Request
+
+    from insights.users.models import User
 
 
 class ConversationsMetricsViewSet(
@@ -344,6 +348,11 @@ class ConversationsMetricsViewSet(
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @api_gateway_expose(
+        alias="v1/metrics/conversations/totals",
+        methods=["GET"],
+        service=settings.KONG_SERVICE,
+    )
     @action(
         detail=False,
         methods=["get"],
