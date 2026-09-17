@@ -74,7 +74,7 @@ class OldProjectConsumer(InsightsEDAConsumer):
                 org_uuid=org_uuid,
                 inline_agent_switch=get_inline_agent_switch(body),
                 is_live_desk_copilot=body.get("is_live_desk_copilot", False),
-                uuid_live_desk_project=body.get("uuid_live_desk_project"),
+                parent_project_uuid=body.get("parent_project_uuid"),
             )
 
             authorizations = body.get("authorizations", [])
@@ -134,7 +134,7 @@ class WeniEDAProjectConsumer(WeniEDAConsumer):
             org_uuid=org_uuid,
             inline_agent_switch=get_inline_agent_switch(data),
             is_live_desk_copilot=data.get("is_live_desk_copilot", False),
-            uuid_live_desk_project=data.get("uuid_live_desk_project"),
+            parent_project_uuid=data.get("parent_project_uuid"),
         )
 
         authorizations = data.get("authorizations", [])

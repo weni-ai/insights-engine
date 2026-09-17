@@ -63,7 +63,7 @@ class TestOldProjectConsumer(TestCase):
         mock_projects_uc.return_value.create_project.assert_called_once()
         dto = mock_projects_uc.return_value.create_project.call_args[0][0]
         self.assertFalse(dto.is_live_desk_copilot)
-        self.assertIsNone(dto.uuid_live_desk_project)
+        self.assertIsNone(dto.parent_project_uuid)
         mock_auth_uc.return_value.bulk_create.assert_called_once_with(
             project=project_uuid,
             authorizations=body["authorizations"],
@@ -133,7 +133,7 @@ class TestOldProjectConsumer(TestCase):
             "name": "Test Project",
             "is_template": False,
             "is_live_desk_copilot": True,
-            "uuid_live_desk_project": live_desk_uuid,
+            "parent_project_uuid": live_desk_uuid,
             "authorizations": [],
         }
         message = self._make_message(body)
@@ -142,7 +142,7 @@ class TestOldProjectConsumer(TestCase):
 
         dto = mock_projects_uc.return_value.create_project.call_args[0][0]
         self.assertTrue(dto.is_live_desk_copilot)
-        self.assertEqual(dto.uuid_live_desk_project, live_desk_uuid)
+        self.assertEqual(dto.parent_project_uuid, live_desk_uuid)
         message.channel.basic_ack.assert_called_once_with(message.delivery_tag)
 
 
@@ -188,7 +188,7 @@ class TestWeniEDAProjectConsumer(TestCase):
         self.assertEqual(dto.uuid, project_uuid)
         self.assertEqual(str(dto.org_uuid), org_uuid)
         self.assertFalse(dto.is_live_desk_copilot)
-        self.assertIsNone(dto.uuid_live_desk_project)
+        self.assertIsNone(dto.parent_project_uuid)
         mock_auth_uc.return_value.bulk_create.assert_called_once_with(
             project=project_uuid,
             authorizations=[],
@@ -211,7 +211,7 @@ class TestWeniEDAProjectConsumer(TestCase):
                 "name": "Test Project",
                 "is_template": False,
                 "is_live_desk_copilot": True,
-                "uuid_live_desk_project": live_desk_uuid,
+                "parent_project_uuid": live_desk_uuid,
                 "authorizations": [],
             },
         )
@@ -223,7 +223,7 @@ class TestWeniEDAProjectConsumer(TestCase):
 
         dto = mock_projects_uc.return_value.create_project.call_args[0][0]
         self.assertTrue(dto.is_live_desk_copilot)
-        self.assertEqual(dto.uuid_live_desk_project, live_desk_uuid)
+        self.assertEqual(dto.parent_project_uuid, live_desk_uuid)
         consumer.ack.assert_called_once()
 
     def test_consume_raises_on_unsupported_event_type(self):

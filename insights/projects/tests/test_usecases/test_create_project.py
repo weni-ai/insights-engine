@@ -23,7 +23,7 @@ class TestCreateProjectUseCase(TestCase):
         self.assertIsNone(project.vtex_account)
         self.assertFalse(project.is_nexus_multi_agents_active)
         self.assertFalse(project.is_live_desk_copilot)
-        self.assertIsNone(project.uuid_live_desk_project)
+        self.assertIsNone(project.parent_project_uuid)
 
     def test_create_project_with_vtex_account(self):
         project_dto = ProjectCreationDTO(
@@ -141,14 +141,14 @@ class TestCreateProjectUseCase(TestCase):
             date_format="DD/MM/YYYY",
             is_template=False,
             is_live_desk_copilot=True,
-            uuid_live_desk_project=str(live_desk_uuid),
+            parent_project_uuid=str(live_desk_uuid),
         )
 
         project = ProjectsUseCase().create_project(project_dto=project_dto)
 
         self.assertTrue(project.is_live_desk_copilot)
         self.assertEqual(
-            str(project.uuid_live_desk_project), str(live_desk_uuid)
+            str(project.parent_project_uuid), str(live_desk_uuid)
         )
 
     def test_create_live_desk_copilot_project_without_uuid(self):
@@ -166,11 +166,11 @@ class TestCreateProjectUseCase(TestCase):
 
         self.assertEqual(
             str(context.exception),
-            "'uuid_live_desk_project' cannot be empty when "
+            "'parent_project_uuid' cannot be empty when "
             "'is_live_desk_copilot' is True!",
         )
 
-    def test_create_project_ignores_uuid_live_desk_when_not_copilot(self):
+    def test_create_project_ignores_parent_project_uuid_when_not_copilot(self):
         project_dto = ProjectCreationDTO(
             uuid=uuid4().hex,
             name="test_name",
@@ -178,10 +178,10 @@ class TestCreateProjectUseCase(TestCase):
             date_format="DD/MM/YYYY",
             is_template=False,
             is_live_desk_copilot=False,
-            uuid_live_desk_project=str(uuid4()),
+            parent_project_uuid=str(uuid4()),
         )
 
         project = ProjectsUseCase().create_project(project_dto=project_dto)
 
         self.assertFalse(project.is_live_desk_copilot)
-        self.assertIsNone(project.uuid_live_desk_project)
+        self.assertIsNone(project.parent_project_uuid)

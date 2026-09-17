@@ -12,7 +12,7 @@ class ProjectCreationDTO:
     org_uuid: str | None = None
     inline_agent_switch: bool = False  # Equivalent to is_nexus_multi_agents_active
     is_live_desk_copilot: bool = False
-    uuid_live_desk_project: str | None = None
+    parent_project_uuid: str | None = None
 
 
 @dataclass

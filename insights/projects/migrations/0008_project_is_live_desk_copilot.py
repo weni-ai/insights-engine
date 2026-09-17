@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="project",
-            name="uuid_live_desk_project",
+            name="parent_project_uuid",
             field=models.UUIDField(blank=True, null=True),
         ),
     ]

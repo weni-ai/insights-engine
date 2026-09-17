@@ -17,4 +17,4 @@ def test_live_desk_copilot_defaults():
     project = Project.objects.create(name="Test Project")
 
     assert project.is_live_desk_copilot is False
-    assert project.uuid_live_desk_project is None
+    assert project.parent_project_uuid is None

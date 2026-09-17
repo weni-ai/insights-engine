@@ -12,11 +12,11 @@ class ProjectSerializer(serializers.ModelSerializer):
             "timezone",
             "is_active",
             "is_live_desk_copilot",
-            "uuid_live_desk_project",
+            "parent_project_uuid",
         ]
         read_only_fields = [
             "is_live_desk_copilot",
-            "uuid_live_desk_project",
+            "parent_project_uuid",
         ]
 
 
