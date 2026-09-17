@@ -10,3 +10,11 @@ def test_create_project():
 
     assert Project.objects.count() == 1
     assert project.name == project_name
+
+
+@pytest.mark.django_db
+def test_live_desk_copilot_defaults():
+    project = Project.objects.create(name="Test Project")
+
+    assert project.is_live_desk_copilot is False
+    assert project.parent_project_uuid is None

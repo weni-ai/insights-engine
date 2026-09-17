@@ -18,6 +18,8 @@ class Project(BaseModel, ConfigurableModel, SoftDeleteModel):
     is_allowed = models.BooleanField(default=False)
     org_uuid = models.UUIDField(null=True, blank=True)
     is_nexus_multi_agents_active = models.BooleanField(default=False)
+    is_live_desk_copilot = models.BooleanField(default=False)
+    parent_project_uuid = models.UUIDField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.uuid} - Project: {self.name}"

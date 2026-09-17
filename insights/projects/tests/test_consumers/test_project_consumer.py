@@ -61,6 +61,9 @@ class TestOldProjectConsumer(TestCase):
         OldProjectConsumer.consume(message)
 
         mock_projects_uc.return_value.create_project.assert_called_once()
+        dto = mock_projects_uc.return_value.create_project.call_args[0][0]
+        self.assertFalse(dto.is_live_desk_copilot)
+        self.assertIsNone(dto.parent_project_uuid)
         mock_auth_uc.return_value.bulk_create.assert_called_once_with(
             project=project_uuid,
             authorizations=body["authorizations"],
@@ -116,6 +119,32 @@ class TestOldProjectConsumer(TestCase):
         )
         message.channel.basic_ack.assert_not_called()
 
+    @patch("insights.projects.consumers.project_consumer.ProjectAuthCreationUseCase")
+    @patch("insights.projects.consumers.project_consumer.ProjectsUseCase")
+    def test_consume_passes_copilot_fields(self, mock_projects_uc, mock_auth_uc):
+        project_uuid = str(uuid4())
+        live_desk_uuid = str(uuid4())
+        mock_project = MagicMock()
+        mock_project.uuid = project_uuid
+        mock_projects_uc.return_value.create_project.return_value = mock_project
+
+        body = {
+            "uuid": project_uuid,
+            "name": "Test Project",
+            "is_template": False,
+            "is_live_desk_copilot": True,
+            "parent_project_uuid": live_desk_uuid,
+            "authorizations": [],
+        }
+        message = self._make_message(body)
+
+        OldProjectConsumer.consume(message)
+
+        dto = mock_projects_uc.return_value.create_project.call_args[0][0]
+        self.assertTrue(dto.is_live_desk_copilot)
+        self.assertEqual(dto.parent_project_uuid, live_desk_uuid)
+        message.channel.basic_ack.assert_called_once_with(message.delivery_tag)
+
 
 class TestWeniEDAProjectConsumer(TestCase):
     def _make_message(self, event_type: str, data: dict) -> MagicMock:
@@ -158,10 +187,43 @@ class TestWeniEDAProjectConsumer(TestCase):
         dto = mock_projects_uc.return_value.create_project.call_args[0][0]
         self.assertEqual(dto.uuid, project_uuid)
         self.assertEqual(str(dto.org_uuid), org_uuid)
+        self.assertFalse(dto.is_live_desk_copilot)
+        self.assertIsNone(dto.parent_project_uuid)
         mock_auth_uc.return_value.bulk_create.assert_called_once_with(
             project=project_uuid,
             authorizations=[],
         )
+        consumer.ack.assert_called_once()
+
+    @patch("insights.projects.consumers.project_consumer.ProjectAuthCreationUseCase")
+    @patch("insights.projects.consumers.project_consumer.ProjectsUseCase")
+    def test_consume_passes_copilot_fields(self, mock_projects_uc, mock_auth_uc):
+        project_uuid = str(uuid4())
+        live_desk_uuid = str(uuid4())
+        mock_project = MagicMock()
+        mock_project.uuid = project_uuid
+        mock_projects_uc.return_value.create_project.return_value = mock_project
+
+        message = self._make_message(
+            EVENT_TYPE_PROJECT_CREATED,
+            {
+                "uuid": project_uuid,
+                "name": "Test Project",
+                "is_template": False,
+                "is_live_desk_copilot": True,
+                "parent_project_uuid": live_desk_uuid,
+                "authorizations": [],
+            },
+        )
+
+        consumer = WeniEDAProjectConsumer()
+        consumer.ack = MagicMock()
+
+        consumer.consume(message)
+
+        dto = mock_projects_uc.return_value.create_project.call_args[0][0]
+        self.assertTrue(dto.is_live_desk_copilot)
+        self.assertEqual(dto.parent_project_uuid, live_desk_uuid)
         consumer.ack.assert_called_once()
 
     def test_consume_raises_on_unsupported_event_type(self):
