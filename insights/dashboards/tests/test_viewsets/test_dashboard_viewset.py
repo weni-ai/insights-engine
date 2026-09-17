@@ -188,6 +188,30 @@ class TestDashboardViewSetAsAnonymousUser(BaseTestDashboardViewSet):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_cannot_get_sales_data_when_unauthenticated(self):
+        url = reverse("dashboard-sales-data", kwargs={"pk": uuid.uuid4()})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_purchases_made_when_unauthenticated(self):
+        url = reverse("dashboard-purchases-made", kwargs={"pk": uuid.uuid4()})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_per_channel_data_when_unauthenticated(self):
+        url = reverse("dashboard-per-channel-data", kwargs={"pk": uuid.uuid4()})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_per_representative_when_unauthenticated(self):
+        url = reverse("dashboard-per-representative", kwargs={"pk": uuid.uuid4()})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
     def setUp(self):
@@ -1031,3 +1055,83 @@ class TestDashboardViewSetAsAuthenticatedUser(BaseTestDashboardViewSet):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, payload)
         mock_service_instance.get_analysis_volume_by_channel.assert_called_once()
+
+    @with_project_auth
+    def test_get_sales_data_returns_mocked_cards(self):
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        url = reverse("dashboard-sales-data", kwargs={"pk": dashboard.uuid})
+        response = self.client.get(
+            url,
+            {
+                "project_uuid": self.project.uuid,
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-07",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["average_order_value"], 284.0)
+        self.assertEqual(response.data["total_revenue"]["value"], 428450.0)
+        self.assertEqual(response.data["total_revenue"]["last_period_value"], 362480.0)
+        self.assertEqual(response.data["total_revenue"]["variation"], 18.2)
+
+    @with_project_auth
+    def test_get_purchases_made_returns_mocked_funnel(self):
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        url = reverse("dashboard-purchases-made", kwargs={"pk": dashboard.uuid})
+        response = self.client.get(url, {"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["leads_captured"]["value"], 45000)
+        self.assertEqual(response.data["leads_captured"]["percentage"], 100.0)
+        self.assertEqual(response.data["purchases_made"]["value"], 4250)
+        self.assertEqual(response.data["purchases_made"]["percentage"], 9.44)
+
+    @with_project_auth
+    def test_get_per_channel_data_paginates_mocked_rows(self):
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        url = reverse("dashboard-per-channel-data", kwargs={"pk": dashboard.uuid})
+        response = self.client.get(
+            url,
+            {
+                "project_uuid": self.project.uuid,
+                "type": "sale",
+                "limit": 2,
+                "offset": 0,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 7)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["results"][0]["channel_name"], "whatsapp")
+        self.assertIsNotNone(response.data["next"])
+
+    @with_project_auth
+    def test_get_per_representative_drops_tags_and_filters_agent(self):
+        dashboard = Dashboard.objects.create(
+            name="Test Dashboard", project=self.project
+        )
+        url = reverse("dashboard-per-representative", kwargs={"pk": dashboard.uuid})
+        response = self.client.get(
+            url,
+            {
+                "project_uuid": self.project.uuid,
+                "agent": "emma@example.com",
+                "tags": str(uuid.uuid4()),
+                "ordering": "-conversions",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        row = response.data["results"][0]
+        self.assertEqual(row["representative"]["email"], "emma@example.com")
+        self.assertIn("conversions", row)
+        self.assertIn("variation_type", row["trend"])
