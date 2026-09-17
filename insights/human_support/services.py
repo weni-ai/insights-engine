@@ -1796,7 +1796,7 @@ class HumanSupportDashboardService:
 
         start_date, end_date = self._resolve_revenue_period(normalized)
         base = self._build_revenue_filters(normalized)
-        metric = normalized.get("metric") or "sale"
+        metric = normalized.get("metric") or normalized.get("type") or "sale"
 
         data = self.channel_revenue_sale_source.get_channel_revenue_sale(
             {
@@ -1928,7 +1928,10 @@ class HumanSupportDashboardService:
                 }
             )
 
-        results = self._sort_performance_results(results, normalized.get("ordering"))
+        ordering = normalized.get("ordering")
+        if ordering:
+            ordering = ordering.replace("conversions", "conversion")
+        results = self._sort_performance_results(results, ordering)
         count = len(results)
 
         page_size = normalized.get("page_size")

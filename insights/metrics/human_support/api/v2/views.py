@@ -10,8 +10,13 @@ from insights.core.filters import get_filters_from_query_params
 from insights.core.urls.proxy_pagination import (
     get_limit_offset_pagination_urls,
 )
+from insights.human_support.mock.service import mocked_human_support_dashboard_service
 from insights.human_support.services import HumanSupportDashboardService
 from insights.projects.models import Project
+
+
+def _sales_service(project: Project) -> HumanSupportDashboardService:
+    return mocked_human_support_dashboard_service(project)
 
 
 class DetailedMonitoringAgentsViewV2(APIView):
@@ -90,7 +95,7 @@ class TotalRevenueViewV2(APIView):
             return Response({"detail": "project_uuid is required"}, status=400)
 
         project = get_object_or_404(Project, uuid=project_uuid)
-        service = HumanSupportDashboardService(project=project)
+        service = _sales_service(project)
 
         filters = get_filters_from_query_params(request.query_params)
         data = service.get_total_revenue(filters=filters)
@@ -108,7 +113,7 @@ class AverageOrderValueViewV2(APIView):
             return Response({"detail": "project_uuid is required"}, status=400)
 
         project = get_object_or_404(Project, uuid=project_uuid)
-        service = HumanSupportDashboardService(project=project)
+        service = _sales_service(project)
 
         filters = get_filters_from_query_params(request.query_params)
         data = service.get_average_order_value(filters=filters)
@@ -126,7 +131,7 @@ class SalesFunnelViewV2(APIView):
             return Response({"detail": "project_uuid is required"}, status=400)
 
         project = get_object_or_404(Project, uuid=project_uuid)
-        service = HumanSupportDashboardService(project=project)
+        service = _sales_service(project)
 
         filters = get_filters_from_query_params(request.query_params)
         data = service.get_sales_funnel(filters=filters)
@@ -144,7 +149,7 @@ class ChannelRevenueSaleViewV2(APIView):
             return Response({"detail": "project_uuid is required"}, status=400)
 
         project = get_object_or_404(Project, uuid=project_uuid)
-        service = HumanSupportDashboardService(project=project)
+        service = _sales_service(project)
 
         filters = get_filters_from_query_params(request.query_params)
         data = service.get_channel_revenue_sale(filters=filters)
@@ -162,7 +167,7 @@ class PerformanceByRepresentativeViewV2(APIView):
             return Response({"detail": "project_uuid is required"}, status=400)
 
         project = get_object_or_404(Project, uuid=project_uuid)
-        service = HumanSupportDashboardService(project=project)
+        service = _sales_service(project)
 
         filters = get_filters_from_query_params(request.query_params)
         data = service.get_performance_by_representative(filters=filters)

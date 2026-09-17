@@ -262,3 +262,15 @@ class TestHumanSupportFilterSetPerformanceByRepresentative(
             (comparison_end.hour, comparison_end.minute, comparison_end.second),
             (23, 59, 59),
         )
+
+    def test_accepts_conversions_ordering_alias(self):
+        result = self._cleaned({"ordering": "-conversions"})
+
+        self.assertEqual(result["ordering"], "-conversions")
+
+
+class TestHumanSupportFilterSetChannelTypeAlias(HumanSupportFilterSetTestCase):
+    def test_accepts_type_as_channel_metric_alias(self):
+        result = self._cleaned({"type": "revenue"})
+
+        self.assertEqual(result["type"], "revenue")

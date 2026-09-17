@@ -8,6 +8,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from weni.feature_flags.shortcuts import is_feature_active_for_attributes
@@ -31,6 +32,13 @@ from insights.dashboards.serializers import (
 from insights.dashboards.usecases import dashboard_filters
 from insights.dashboards.usecases.flows_dashboard_creation import CreateFlowsDashboard
 from insights.dashboards.utils import DefaultPagination
+from insights.human_support.mock.service import (
+    mocked_human_support_dashboard_service,
+    to_per_channel_results,
+    to_per_representative_results,
+    to_purchases_made_payload,
+    to_sales_data_payload,
+)
 from insights.human_support.services import HumanSupportDashboardService
 from insights.metrics.meta.tasks import (
     check_dashboards_marketing_messages_status_for_project,
@@ -80,6 +88,10 @@ class DashboardViewSet(
             "analysis_queue_volume",
             "analysis_tags_volume",
             "analysis_channel_metrics",
+            "sales_data",
+            "purchases_made",
+            "per_channel_data",
+            "per_representative",
         ]:
             return [
                 IsAuthenticated(),
@@ -674,3 +686,66 @@ class DashboardViewSet(
         results = service.get_csat_ratings(filters=filters)
 
         return Response(results, status=status.HTTP_200_OK)
+
+    def _assisted_sales_filters(self, request, *, drop_tags: bool = False) -> dict:
+        filters = get_filters_from_query_params(request.query_params)
+        if drop_tags:
+            filters.pop("tags", None)
+        return filters
+
+    def _paginated_sales_results(self, request, results: list) -> Response:
+        paginator = LimitOffsetPagination()
+        paginated_results = paginator.paginate_queryset(results, request)
+        return paginator.get_paginated_response(paginated_results)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="sales/sales_data",
+    )
+    def sales_data(self, request, pk=None):
+        dashboard = self.get_object()
+        service = mocked_human_support_dashboard_service(dashboard.project)
+        filters = self._assisted_sales_filters(request)
+        return Response(
+            to_sales_data_payload(service, filters),
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="sales/purchases_made",
+    )
+    def purchases_made(self, request, pk=None):
+        dashboard = self.get_object()
+        service = mocked_human_support_dashboard_service(dashboard.project)
+        filters = self._assisted_sales_filters(request)
+        return Response(
+            to_purchases_made_payload(service, filters),
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="sales/per_channel_data",
+    )
+    def per_channel_data(self, request, pk=None):
+        dashboard = self.get_object()
+        service = mocked_human_support_dashboard_service(dashboard.project)
+        filters = self._assisted_sales_filters(request)
+        results = to_per_channel_results(service, filters)
+        return self._paginated_sales_results(request, results)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="sales/per_representative",
+    )
+    def per_representative(self, request, pk=None):
+        dashboard = self.get_object()
+        service = mocked_human_support_dashboard_service(dashboard.project)
+        filters = self._assisted_sales_filters(request, drop_tags=True)
+        results = to_per_representative_results(service, filters)
+        return self._paginated_sales_results(request, results)

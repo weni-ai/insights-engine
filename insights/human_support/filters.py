@@ -25,6 +25,7 @@ PERFORMANCE_ORDERING_FIELDS = (
     "conversations",
     "sales",
     "conversion",
+    "conversions",
     "revenue",
     "average_order_value",
     "trend",
@@ -60,6 +61,13 @@ class HumanSupportFilterSet(filters.FilterSet):
             ("sale", "Sale"),
         ),
     )
+    type = filters.ChoiceFilter(
+        required=False,
+        choices=(
+            ("revenue", "Revenue"),
+            ("sale", "Sale"),
+        ),
+    )
     ordering = filters.ChoiceFilter(
         required=False,
         choices=PERFORMANCE_ORDERING_CHOICES,
@@ -84,6 +92,7 @@ class HumanSupportFilterSet(filters.FilterSet):
             "urn",
             "ticket_id",
             "metric",
+            "type",
             "ordering",
         ]
 
