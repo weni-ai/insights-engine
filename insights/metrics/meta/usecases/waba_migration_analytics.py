@@ -585,6 +585,12 @@ class ConsolidateWabaAnalyticsUseCase:
                             exc_info=True,
                         )
                         continue
+                    logger.exception(
+                        "Unexpected error fetching analytics for waba_id=%s "
+                        "product_type=%s",
+                        period.waba_id,
+                        resolved_product_type,
+                    )
                     raise
 
         if not responses:
