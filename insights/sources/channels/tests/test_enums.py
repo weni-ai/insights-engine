@@ -30,3 +30,28 @@ def test_valid_values_keeps_only_enum_members():
     ]
     assert Channel.valid_values("facebook") == ["facebook"]
     assert Channel.valid_values(None) == []
+
+
+def test_urn_prefix_filter_sql_known_channels():
+    sql, params = Channel.urn_prefix_filter_sql("r.urn", ["whatsapp", "instagram"])
+    assert sql == "(r.urn LIKE (%s) OR r.urn LIKE (%s))"
+    assert params == ["whatsapp:%", "instagram:%"]
+
+
+def test_urn_prefix_filter_sql_teams_and_shopping_assistant():
+    sql, params = Channel.urn_prefix_filter_sql(
+        "r.urn", ["teams", "shopping_assistant"]
+    )
+    assert sql == (
+        "(r.urn LIKE (%s) OR r.urn LIKE (%s) OR r.urn LIKE (%s) OR r.urn LIKE (%s))"
+    )
+    assert params == ["teams:%", "msteams:%", "ext:%", "shopping_assistant:%"]
+
+
+def test_urn_prefix_filter_sql_others_with_known_channel():
+    sql, params = Channel.urn_prefix_filter_sql("r.urn", ["whatsapp", "others"])
+    assert sql.startswith("(r.urn LIKE (%s) OR (NOT (")
+    assert "OR r.urn IS NULL)" in sql
+    assert params[0] == "whatsapp:%"
+    assert "instagram:%" in params
+    assert params.count("whatsapp:%") == 2
