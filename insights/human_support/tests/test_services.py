@@ -41,6 +41,43 @@ class TestHumanSupportDashboardService(TestCase):
         self.assertIn("queues", result)
         self.assertIn("tags", result)
 
+    def test_normalize_filters_localizes_comparison_dates(self):
+        result = self.service._normalize_filters(
+            {
+                "comparison_start_date": "2025-03-01",
+                "comparison_end_date": "2025-03-31",
+            }
+        )
+
+        start = result["comparison_start_date"]
+        end = result["comparison_end_date"]
+
+        self.assertEqual(str(start.tzinfo), "America/Sao_Paulo")
+        self.assertEqual(str(end.tzinfo), "America/Sao_Paulo")
+        self.assertEqual((start.hour, start.minute, start.second), (0, 0, 0))
+        self.assertEqual((end.hour, end.minute, end.second), (23, 59, 59))
+
+    def test_normalize_filters_keeps_both_date_ranges(self):
+        result = self.service._normalize_filters(
+            {
+                "start_date": "2025-04-01",
+                "end_date": "2025-04-30",
+                "comparison_start_date": "2025-03-01",
+                "comparison_end_date": "2025-03-31",
+            }
+        )
+
+        self.assertEqual(result["start_date"].date(), date(2025, 4, 1))
+        self.assertEqual(result["end_date"].date(), date(2025, 4, 30))
+        self.assertEqual(result["comparison_start_date"].date(), date(2025, 3, 1))
+        self.assertEqual(result["comparison_end_date"].date(), date(2025, 3, 31))
+
+    def test_normalize_filters_without_comparison_dates(self):
+        result = self.service._normalize_filters({"start_date": "2025-04-01"})
+
+        self.assertNotIn("comparison_start_date", result)
+        self.assertNotIn("comparison_end_date", result)
+
     @patch("insights.human_support.services.SectorsQueryExecutor")
     @patch("insights.human_support.services.QueuesQueryExecutor")
     @patch("insights.human_support.services.TagsQueryExecutor")
