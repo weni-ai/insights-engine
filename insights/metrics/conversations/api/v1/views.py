@@ -1,7 +1,6 @@
 import logging
 from typing import TYPE_CHECKING
 
-from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -348,11 +347,7 @@ class ConversationsMetricsViewSet(
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @api_gateway_expose(
-        alias="v1/metrics/conversations/totals",
-        methods=["GET"],
-        service=settings.KONG_SERVICE,
-    )
+    @api_gateway_expose(alias="conversation-totals")
     @action(
         detail=False,
         methods=["get"],

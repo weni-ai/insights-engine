@@ -660,8 +660,22 @@ WHATSAPP_TEMPLATE_IDS_PER_REQUEST = env.int(
 PROJECT_AUTH_API_BASE_URL = env.str("PROJECT_AUTH_API_BASE_URL", default="")
 PROJECT_AUTH_API_TIMEOUT = env.int("PROJECT_AUTH_API_TIMEOUT", default=3)
 
-# Kong API Gateway (weni-commons)
+# Kong API Gateway (weni_commons.kong)
 KONG_ADMIN_URL = env.str("KONG_ADMIN_URL", default="http://localhost:8001")
 KONG_SERVICE = env.str("KONG_SERVICE", default="insights-service")
 KONG_SERVICE_URL = env.str("KONG_SERVICE_URL", default="")
 KONG_URL_PREFIX = env.str("KONG_URL_PREFIX", default="/insights")
+
+# Session tokens (weni_commons.auth.SessionTokenAuthentication)
+WENI_SESSION_TOKEN_DYNAMODB_TABLE = env.str(
+    "WENI_SESSION_TOKEN_DYNAMODB_TABLE", default=""
+)
+WENI_SESSION_TOKEN_DYNAMODB_REGION = env.str(
+    "WENI_SESSION_TOKEN_DYNAMODB_REGION", default=""
+)
+WENI_SESSION_TOKEN_MAX_REDIS_TTL = env.int(
+    "WENI_SESSION_TOKEN_MAX_REDIS_TTL", default=3600
+)
+WENI_SESSION_TOKEN_REDIS_ALIAS = env.str(
+    "WENI_SESSION_TOKEN_REDIS_ALIAS", default="default"
+)
