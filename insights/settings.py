@@ -619,6 +619,9 @@ VTEX_INTERNAL_DOMAINS = env.list(
 # VTEX Orders API
 VTEX_ORDERS_API_MAX_WORKERS = env.int("VTEX_ORDERS_API_MAX_WORKERS", default=10)
 VTEX_ORDERS_API_PAGE_SIZE = env.int("VTEX_ORDERS_API_PAGE_SIZE", default=100)
+VTEX_ORDERS_API_USE_F_HOSTNAME = env.bool(
+    "VTEX_ORDERS_API_USE_F_HOSTNAME", default=False
+)
 
 # This is the documented maximum number of pages that can be returned by the VTEX Orders API
 # https://developers.vtex.com/docs/api-reference/orders-api#get-/api/oms/pvt/orders
