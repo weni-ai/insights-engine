@@ -1,3 +1,124 @@
+# 1.40.3
+# Add
+  - VTEX orders filtered by account hostname
+
+# 1.40.2
+# Add
+  - Cloud API and MM Lite template analytics combined when no product type is selected
+
+# 1.40.1
+# Fix
+  - Channel filters on the volume by channel widget
+
+# 1.40.0
+# Add
+  - Volume by channel widget endpoint and service
+  - Channel source and filters, including channel icons
+
+# 1.39.0
+# Add
+  - Order values by period for UTM source metrics, with day and week granularity
+
+# 1.38.3
+# Fix
+  - Invalid Excel characters in conversations report worksheet names
+
+# 1.38.2
+# Add
+  - Update weni-datalake-sdk to 0.10.1
+
+# 1.38.1
+# Fix
+  - CTWA metrics timezone
+
+# 1.38.0
+# Add
+  - Campaign name on the CTWA performance table
+  - CTWA dashboard creation logic
+# Fix
+  - CTWA query start and end dates
+  - End date used for organic CTWA values
+
+# 1.37.9
+# Add
+  - CTWA campaign metrics start date set to 19 August
+
+# 1.37.8
+# Fix
+  - Meta campaign list pagination using limit and offset
+
+# 1.37.7
+# Fix
+  - CTWA campaign filters
+
+# 1.37.6
+# Fix
+  - CTWA campaign event date filter
+
+# 1.37.5
+# Add
+  - CTWA dashboard metrics loaded from the data lake
+# Remove
+  - Mock data from the CTWA dashboard
+
+# 1.37.4
+# Add
+  - Meta campaign list endpoint for CTWA
+
+# 1.37.3
+# Add
+  - Feature flag to disable automatic CTWA dashboard creation
+
+# 1.37.2
+# Add
+  - CTWA campaign source, data cards, sales funnel, and performance table endpoints
+
+# 1.37.1
+# Fix
+  - Meta API errors returned with status 422
+
+# 1.37.0
+# Add
+  - Meta API error handling on skills, templates, and orders metrics endpoints
+
+# 1.36.9
+# Add
+  - Project creation consumer support for the weni-eda event envelope
+  - Update weni-commons to 1.4.1 and weni-eda to 0.3.0
+
+# 1.36.8
+# Fix
+  - Amazon MQ project consumer using the Weni EDA backend and connection params factory
+
+# 1.36.7
+# Add
+  - Async task to move favorite templates when a WABA is migrated
+  - Task to migrate widgets that still reference the previous WABA and template id
+
+# 1.36.6
+# Add
+  - JWT authentication for VTEX IO endpoints
+
+# 1.36.5
+# Fix
+  - Metrics read from the previous WABA during migration
+
+# 1.36.4
+# Add
+  - WABA migration support on the Meta metrics endpoint
+
+# 1.36.3
+# Add
+  - WABA migration for abandoned cart and template orders metrics
+
+# 1.36.2
+# Fix
+  - UTM source and template orders metrics using the project UTC date range
+
+# 1.36.1
+# Fix
+  - Duplicate dashboards created for the same WABA
+
 # 1.36.0
 # Change
   - Project creation consumer to use weni-eda event envelope (event_type/data)
