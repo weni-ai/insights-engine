@@ -18,6 +18,11 @@ from insights.utils import redact_headers
 logger = logging.getLogger(__name__)
 
 
+def account_name_from_domain(domain: str | None) -> str:
+    raw_domain = domain or ""
+    return raw_domain.split("://")[-1].split(".")[0]
+
+
 class VtexOrdersRestClient(VtexAuthentication):
     def __init__(
         self,
@@ -32,6 +37,7 @@ class VtexOrdersRestClient(VtexAuthentication):
         self.internal_token = None
 
         self.base_url = auth_params.get("domain")
+        self.account_name = account_name_from_domain(self.base_url)
 
         if self.use_io_proxy:
             if "https://" not in self.base_url:
@@ -71,6 +77,9 @@ class VtexOrdersRestClient(VtexAuthentication):
             query_params["f_authorizedDate"] = (
                 f"authorizedDate:[{start_date} TO {end_date}]"
             )
+
+        if settings.VTEX_ORDERS_API_USE_F_HOSTNAME and self.account_name:
+            query_params["f_hostname"] = self.account_name
 
         return query_params
 

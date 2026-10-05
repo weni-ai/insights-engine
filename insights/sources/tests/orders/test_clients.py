@@ -3,11 +3,33 @@ from concurrent.futures import Future
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from insights.sources.cache import CacheClient
-from insights.sources.orders.clients import VtexOrdersRestClient
+from insights.sources.orders.clients import (
+    VtexOrdersRestClient,
+    account_name_from_domain,
+)
 from insights.sources.orders.exceptions import VTEXOrdersAPIError
+
+
+class TestAccountNameFromDomain(TestCase):
+    def test_bare_domain(self):
+        self.assertEqual(account_name_from_domain("storename"), "storename")
+
+    def test_dotted_domain(self):
+        self.assertEqual(
+            account_name_from_domain("storename.myvtex.com"), "storename"
+        )
+
+    def test_https_domain(self):
+        self.assertEqual(
+            account_name_from_domain("https://another.myvtex.com"), "another"
+        )
+
+    def test_empty_domain(self):
+        self.assertEqual(account_name_from_domain(None), "")
+        self.assertEqual(account_name_from_domain(""), "")
 
 
 class TestVtexOrdersRestClient(TestCase):
@@ -110,6 +132,54 @@ class TestVtexOrdersRestClient(TestCase):
         self.assertEqual(
             self.client_direct.get_query_params(query_filters, page_number),
             expected_params,
+        )
+        self.assertNotIn(
+            "f_hostname",
+            self.client_direct.get_query_params(query_filters, page_number),
+        )
+
+    @override_settings(VTEX_ORDERS_API_USE_F_HOSTNAME=True)
+    def test_get_query_params_with_f_hostname_bare_domain(self):
+        query_filters = {"utm_source": "test_source"}
+        page_number = 1
+        params = self.client_direct.get_query_params(query_filters, page_number)
+        self.assertEqual(params["f_hostname"], "testenv")
+
+    @override_settings(VTEX_ORDERS_API_USE_F_HOSTNAME=True)
+    def test_get_query_params_with_f_hostname_dotted_domain(self):
+        query_filters = {"utm_source": "test_source"}
+        page_number = 1
+        params = self.client_io_proxy.get_query_params(query_filters, page_number)
+        self.assertEqual(params["f_hostname"], "testenv")
+
+    @override_settings(VTEX_ORDERS_API_USE_F_HOSTNAME=True)
+    def test_get_query_params_with_f_hostname_https_domain(self):
+        client = VtexOrdersRestClient(
+            auth_params={
+                "domain": "https://another.myvtex.com",
+                "internal_token": "internal_token_test",
+            },
+            cache_client=self.mock_cache_client,
+        )
+        params = client.get_query_params({"utm_source": "test_source"}, 1)
+        self.assertEqual(params["f_hostname"], "another")
+
+    @override_settings(VTEX_ORDERS_API_USE_F_HOSTNAME=True)
+    def test_get_request_body_io_proxy_with_f_hostname(self):
+        query_filters = {"utm_source": "test_source_proxy"}
+        page_number = 3
+        expected_body = {
+            "raw_query": {
+                "f_UtmSource": "test_source_proxy",
+                "per_page": 100,
+                "page": page_number,
+                "f_status": "invoiced",
+                "f_hostname": "testenv",
+            }
+        }
+        self.assertEqual(
+            self.client_io_proxy.get_request_body(query_filters, page_number),
+            expected_body,
         )
 
     def test_get_vtex_endpoint_direct(self):
