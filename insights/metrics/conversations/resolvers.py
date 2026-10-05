@@ -54,6 +54,15 @@ class ConversationsMetricsServiceResolver(BaseServiceResolver):
 
             return False
 
+    def _is_truthy_query_param(self, value) -> bool:
+        if value is True:
+            return True
+
+        if isinstance(value, str):
+            return value.strip().lower() in {"true", "1"}
+
+        return False
+
     def _should_use_mock_service(
         self,
         request: Optional[Request] = None,
@@ -66,7 +75,7 @@ class ConversationsMetricsServiceResolver(BaseServiceResolver):
         query_params = request.query_params if request is not None else {}
         use_mock = query_params.get(USE_MOCK_QUERY_PARAM_NAME, False)
 
-        if use_mock is True:
+        if self._is_truthy_query_param(use_mock):
             return True
 
         if settings.CONVERSATIONS_DASHBOARD_FORCE_USE_MOCK_SERVICE:
@@ -75,6 +84,20 @@ class ConversationsMetricsServiceResolver(BaseServiceResolver):
         return (
             self._feature_flag_is_on(request, project_uuid)
             and not force_use_real_service
+        )
+
+    def should_use_mock(
+        self,
+        request: Optional[Request] = None,
+        project_uuid: Optional[UUID] = None,
+    ) -> bool:
+        """
+        Public check for whether the conversations mock service is active.
+        """
+        return self._should_use_mock_service(
+            request=request,
+            project_uuid=project_uuid,
+            force_use_real_service=False,
         )
 
     def resolve(

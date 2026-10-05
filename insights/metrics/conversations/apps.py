@@ -5,3 +5,6 @@ class ConversationsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "insights.metrics.conversations"
     label = "insights_metrics_conversations"
+
+    def ready(self):
+        import insights.metrics.conversations.signals  # noqa: F401

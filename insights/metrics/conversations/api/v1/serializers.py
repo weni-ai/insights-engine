@@ -761,3 +761,19 @@ class ContactsMetricsSerializer(serializers.Serializer):
     unique = UniqueContactsMetricsSerializer()
     returning = ReturningContactsMetricsSerializer()
     avg_conversations_per_contact = AvgConversationsPerContactMetricsSerializer()
+
+
+class ShouldShowMockQueryParamsSerializer(serializers.Serializer):
+    """
+    Serializer for should show mock query params
+    """
+
+    project_uuid = serializers.UUIDField(required=True)
+
+
+class ShouldShowMockSerializer(serializers.Serializer):
+    """
+    Serializer for should show mock response
+    """
+
+    should_show_mock = serializers.BooleanField()

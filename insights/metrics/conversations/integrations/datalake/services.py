@@ -1200,6 +1200,27 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
 
         return True
 
+    def check_if_conversation_classification_data_exists(
+        self, project_uuid: UUID
+    ) -> bool:
+        """
+        Check if conversation classification events exist in Datalake.
+        """
+        events = self.events_client.get_events(
+            event_name=self.event_name,
+            key="conversation_classification",
+            table="conversation_classification",
+            project=project_uuid,
+            date_start=settings.CONVERSATIONS_DASHBOARD_EVENTS_START_DATE,
+            date_end=timezone.now().isoformat(),
+            limit=1,
+        )
+
+        if len(events) == 0 or events == [{}]:
+            return False
+
+        return True
+
     def get_raw_events_data(self, **kwargs) -> list[EventDataType]:
         """
         Get raw events data from Datalake.
