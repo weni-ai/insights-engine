@@ -816,6 +816,9 @@ class ConversationsReportService(BaseConversationsReportService):
                 exc_info=True,
             )
 
+            if not is_error:
+                raise
+
             return None
 
     def request_generation(
