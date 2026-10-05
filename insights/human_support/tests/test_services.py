@@ -396,7 +396,7 @@ class TestHumanSupportDashboardService(TestCase):
             user_request="test", filters={"channels": ["whatsapp"]}
         )
         call_params = mock_chats.csat_score_by_agents.call_args[1]["params"]
-        self.assertEqual(call_params["channels"], ["whatsapp"])
+        self.assertEqual(call_params["channels"], "whatsapp")
 
     @patch("insights.human_support.services.CustomStatusRESTClient")
     def test_get_analysis_detailed_monitoring_status(self, mock_client_class):
@@ -834,10 +834,13 @@ class TestHumanSupportDashboardService(TestCase):
             "count": 0,
         }
         self.service.get_detailed_monitoring_on_going(
-            filters={"channels": ["whatsapp"]}
+            filters={"channels": ["whatsapp", "shopping_assistant"]}
         )
         call_filters = mock_rooms.execute.call_args[0][0]
-        self.assertEqual(call_filters["channel__in"], ["whatsapp"])
+        self.assertEqual(
+            call_filters["channel__in"], ["whatsapp", "shopping_assistant"]
+        )
+        self.assertEqual(call_filters["channels"], "whatsapp,shopping_assistant")
 
     @patch("insights.human_support.services.RoomsQueryExecutor")
     def test_get_detailed_monitoring_awaiting_with_filters(self, mock_rooms):
@@ -872,10 +875,13 @@ class TestHumanSupportDashboardService(TestCase):
             "count": 0,
         }
         self.service.get_detailed_monitoring_awaiting(
-            filters={"channels": ["instagram"]}
+            filters={"channels": ["instagram", "shopping_assistant"]}
         )
         call_filters = mock_rooms.execute.call_args[0][0]
-        self.assertEqual(call_filters["channel__in"], ["instagram"])
+        self.assertEqual(
+            call_filters["channel__in"], ["instagram", "shopping_assistant"]
+        )
+        self.assertEqual(call_filters["channels"], "instagram,shopping_assistant")
 
     def test_get_detailed_monitoring_agents_filters_with_dates_and_lists(self):
         from datetime import datetime as dt
@@ -1052,7 +1058,7 @@ class TestHumanSupportDashboardService(TestCase):
             filters=None,
         )
         self.assertEqual(result["channel__in"], ["whatsapp", "email"])
-        self.assertEqual(result["channels"], ["whatsapp", "email"])
+        self.assertEqual(result["channels"], "whatsapp,email")
 
     def test_format_finished_room_v2_item_without_agent(self):
         room = {
