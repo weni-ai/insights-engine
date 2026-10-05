@@ -1197,6 +1197,83 @@ class TestConversationsReportServiceAdditional(TestCase):
                 self.assertEqual(report.status, ReportStatus.FAILED)
                 self.assertIn("send_email", report.errors)
 
+    def test_generate_with_s3_upload_failure(self):
+        """Test generate method when S3 upload fails."""
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.PENDING,
+        )
+
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
+        ) as mock_get_resolutions:
+            mock_get_resolutions.return_value = ConversationsReportWorksheet(
+                name="Resolutions",
+                data=[{"URN": "123", "Resolution": "Resolved", "Date": "2025-01-01"}],
+            )
+
+            with (
+                patch("django.conf.settings.USE_S3", True),
+                patch(
+                    "insights.metrics.conversations.reports.services.ConversationsReportService._is_streaming_mode_enabled",
+                    return_value=False,
+                ),
+                patch(
+                    "insights.metrics.conversations.reports.services.ConversationsReportService.upload_file_to_s3",
+                    side_effect=Exception("S3 upload failed"),
+                ),
+            ):
+                with self.assertRaises(Exception):
+                    self.service.generate(report)
+
+                report.refresh_from_db()
+                self.assertEqual(report.status, ReportStatus.FAILED)
+                self.assertNotEqual(report.status, ReportStatus.READY)
+                self.assertIn("S3 upload failed", report.errors["send_email"])
+
+    @patch("django.core.mail.EmailMessage.send")
+    def test_generate_with_real_email_send_failure(self, mock_send_email):
+        """Test generate persists a failure from the real send_email path."""
+        mock_send_email.side_effect = Exception("Email send failed")
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={"sections": ["RESOLUTIONS"]},
+            filters={"start": "2025-01-01", "end": "2025-01-02"},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+            status=ReportStatus.PENDING,
+        )
+
+        with patch(
+            "insights.metrics.conversations.reports.services.ConversationsReportService.get_resolutions_worksheet"
+        ) as mock_get_resolutions:
+            mock_get_resolutions.return_value = ConversationsReportWorksheet(
+                name="Resolutions",
+                data=[{"URN": "123", "Resolution": "Resolved", "Date": "2025-01-01"}],
+            )
+
+            with (
+                patch("django.conf.settings.USE_S3", False),
+                patch(
+                    "insights.metrics.conversations.reports.services.ConversationsReportService._is_streaming_mode_enabled",
+                    return_value=False,
+                ),
+            ):
+                with self.assertRaises(Exception):
+                    self.service.generate(report)
+
+                report.refresh_from_db()
+                self.assertEqual(report.status, ReportStatus.FAILED)
+                self.assertNotEqual(report.status, ReportStatus.READY)
+                self.assertIn("Email send failed", report.errors["send_email"])
+
     def test_get_datalake_events_with_cached_data(self):
         """Test get_datalake_events with cached data."""
         report = Report.objects.create(
@@ -2946,7 +3023,7 @@ class TestConversationsReportServiceAdditional(TestCase):
 
     @patch("django.core.mail.EmailMessage.send")
     def test_send_email_exception_handling(self, mock_send_email):
-        """Test send_email exception handling."""
+        """Test send_email re-raises when the report-ready email fails."""
         mock_send_email.side_effect = Exception("Email send failed")
 
         report = Report.objects.create(
@@ -2958,12 +3035,58 @@ class TestConversationsReportServiceAdditional(TestCase):
             requested_by=self.user,
         )
 
-        result = self.service.send_email(
-            report, [ConversationsReportFile(name="test.csv", content=b"content")]
+        with self.assertRaises(Exception) as context:
+            self.service.send_email(
+                report, [ConversationsReportFile(name="test.csv", content=b"content")]
+            )
+
+        self.assertEqual(str(context.exception), "Email send failed")
+        mock_send_email.assert_called_once()
+
+    @patch("django.core.mail.EmailMessage.send")
+    def test_send_email_error_notification_is_swallowed(self, mock_send_email):
+        """Test failure-notification emails stay swallowed."""
+        mock_send_email.side_effect = Exception("Email send failed")
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
         )
+
+        result = self.service.send_email(report, [], is_error=True, event_id="evt-1")
 
         self.assertIsNone(result)
         mock_send_email.assert_called_once()
+
+    @patch(
+        "insights.metrics.conversations.reports.services.ConversationsReportService.upload_file_to_s3"
+    )
+    def test_send_email_s3_upload_failure_propagates(self, mock_upload):
+        """Test send_email re-raises when S3 upload fails."""
+        mock_upload.side_effect = Exception("S3 upload failed")
+
+        report = Report.objects.create(
+            project=self.project,
+            source=self.service.source,
+            source_config={},
+            filters={},
+            format=ReportFormat.CSV,
+            requested_by=self.user,
+        )
+
+        with patch("django.conf.settings.USE_S3", True):
+            with self.assertRaises(Exception) as context:
+                self.service.send_email(
+                    report,
+                    [ConversationsReportFile(name="test.csv", content=b"content")],
+                )
+
+        self.assertEqual(str(context.exception), "S3 upload failed")
+        mock_upload.assert_called_once()
 
     @patch(
         "insights.metrics.conversations.reports.services.ConversationsReportService.get_custom_widget_worksheet"
