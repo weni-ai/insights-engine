@@ -208,6 +208,11 @@ class BaseTestConversationsMetricsViewSet(APITestCase):
 
         return self.client.get(url, query_params, format="json")
 
+    def get_should_show_mock(self, query_params: dict) -> Response:
+        url = reverse("conversations-should-show-mock")
+
+        return self.client.get(url, query_params, format="json")
+
 
 class TestConversationsMetricsViewSetAsAnonymousUser(
     BaseTestConversationsMetricsViewSet
@@ -309,6 +314,11 @@ class TestConversationsMetricsViewSetAsAnonymousUser(
 
     def test_cannot_get_search_terms_metrics_when_unauthenticated(self):
         response = self.get_search_terms_metrics({})
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cannot_get_should_show_mock_when_unauthenticated(self):
+        response = self.get_should_show_mock({})
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -1786,3 +1796,90 @@ class TestInternalConversationsMetricsViewSetWithJWTAuthentication(
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestShouldShowMockView(BaseTestConversationsMetricsViewSet):
+    def setUp(self) -> None:
+        self.user = User.objects.create(email="test@test.com")
+        self.project = Project.objects.create(name="Test Project")
+        self.client.force_authenticate(self.user)
+
+    def test_cannot_get_should_show_mock_without_project_uuid(self):
+        response = self.get_should_show_mock({})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["project_uuid"][0].code, "required")
+
+    def test_cannot_get_should_show_mock_without_permission(self):
+        response = self.get_should_show_mock({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch(
+        "insights.metrics.conversations.resolvers.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    @patch(
+        "insights.metrics.conversations.api.v1.views.ShouldShowConversationsDashboardMockUseCase"
+    )
+    @with_project_auth
+    def test_get_should_show_mock_returns_use_case_result(
+        self, mock_use_case, mock_feature_flag
+    ):
+        mock_use_case.return_value.execute.return_value = True
+
+        response = self.get_should_show_mock({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"should_show_mock": True})
+        mock_use_case.return_value.execute.assert_called_once_with(self.project.uuid)
+
+    @patch(
+        "insights.metrics.conversations.resolvers.is_feature_active_for_attributes",
+        return_value=False,
+    )
+    @patch(
+        "insights.metrics.conversations.api.v1.views.ShouldShowConversationsDashboardMockUseCase"
+    )
+    @with_project_auth
+    def test_get_should_show_mock_returns_false_when_use_mock_param(
+        self, mock_use_case, mock_feature_flag
+    ):
+        response = self.get_should_show_mock(
+            {"project_uuid": self.project.uuid, "use_mock": "true"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"should_show_mock": False})
+        mock_use_case.assert_not_called()
+
+    @override_settings(CONVERSATIONS_DASHBOARD_FORCE_USE_MOCK_SERVICE=True)
+    @patch(
+        "insights.metrics.conversations.api.v1.views.ShouldShowConversationsDashboardMockUseCase"
+    )
+    @with_project_auth
+    def test_get_should_show_mock_returns_false_when_force_setting(
+        self, mock_use_case
+    ):
+        response = self.get_should_show_mock({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"should_show_mock": False})
+        mock_use_case.assert_not_called()
+
+    @patch(
+        "insights.metrics.conversations.resolvers.is_feature_active_for_attributes",
+        return_value=True,
+    )
+    @patch(
+        "insights.metrics.conversations.api.v1.views.ShouldShowConversationsDashboardMockUseCase"
+    )
+    @with_project_auth
+    def test_get_should_show_mock_returns_false_when_feature_flag_on(
+        self, mock_use_case, mock_feature_flag
+    ):
+        response = self.get_should_show_mock({"project_uuid": self.project.uuid})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"should_show_mock": False})
+        mock_use_case.assert_not_called()
