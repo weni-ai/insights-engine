@@ -1150,21 +1150,21 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
     ) -> bool:
         """
         Check if conversation classification events exist in Datalake.
+        Uses the same count query as totals — listing silver events can 500.
         """
-        events = self.events_client.get_events(
+        result = self.events_client.get_events_count(
             event_name=self.event_name,
             key="conversation_classification",
             table="conversation_classification",
             project=project_uuid,
             date_start=settings.CONVERSATIONS_DASHBOARD_EVENTS_START_DATE,
             date_end=timezone.now().isoformat(),
-            limit=1,
         )
 
-        if len(events) == 0 or events == [{}]:
+        if not result or result == [{}]:
             return False
 
-        return True
+        return int(result[0].get("count", 0) or 0) > 0
 
     def get_raw_events_data(self, **kwargs) -> list[EventDataType]:
         """
