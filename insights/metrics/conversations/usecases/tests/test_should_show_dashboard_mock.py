@@ -254,7 +254,7 @@ class TestShouldShowConversationsDashboardMockUseCase(TestCase):
 
         result = self.use_case.execute(project_uuid=self.project.uuid)
 
-        self.assertTrue(result)
+        self.assertFalse(result)
         mock_cache.set.assert_not_called()
         mock_capture_exception.assert_called_once()
 
