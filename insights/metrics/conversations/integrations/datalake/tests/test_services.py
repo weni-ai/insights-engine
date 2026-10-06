@@ -1055,7 +1055,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
     def test_check_if_conversation_classification_data_exists_when_data_does_not_exist(
         self,
     ):
-        self.mock_events_client.get_events.return_value = []
+        self.mock_events_client.get_events_count.return_value = []
         project_uuid = uuid.uuid4()
 
         results = self.service.check_if_conversation_classification_data_exists(
@@ -1063,16 +1063,25 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         )
 
         self.assertFalse(results)
-        self.mock_events_client.get_events.assert_called_once()
-        call_kwargs = self.mock_events_client.get_events.call_args.kwargs
+        self.mock_events_client.get_events_count.assert_called_once()
+        call_kwargs = self.mock_events_client.get_events_count.call_args.kwargs
         self.assertEqual(call_kwargs["event_name"], "weni_nexus_data")
         self.assertEqual(call_kwargs["key"], "conversation_classification")
         self.assertEqual(call_kwargs["table"], "conversation_classification")
         self.assertEqual(call_kwargs["project"], project_uuid)
-        self.assertEqual(call_kwargs["limit"], 1)
 
     def test_check_if_conversation_classification_data_exists_when_empty_payload(self):
-        self.mock_events_client.get_events.return_value = [{}]
+        self.mock_events_client.get_events_count.return_value = [{}]
+        project_uuid = uuid.uuid4()
+
+        results = self.service.check_if_conversation_classification_data_exists(
+            project_uuid
+        )
+
+        self.assertFalse(results)
+
+    def test_check_if_conversation_classification_data_exists_when_count_is_zero(self):
+        self.mock_events_client.get_events_count.return_value = [{"count": 0}]
         project_uuid = uuid.uuid4()
 
         results = self.service.check_if_conversation_classification_data_exists(
@@ -1082,9 +1091,7 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         self.assertFalse(results)
 
     def test_check_if_conversation_classification_data_exists_when_data_exists(self):
-        self.mock_events_client.get_events.return_value = [
-            {"key": "conversation_classification"}
-        ]
+        self.mock_events_client.get_events_count.return_value = [{"count": 17}]
         project_uuid = uuid.uuid4()
 
         results = self.service.check_if_conversation_classification_data_exists(
