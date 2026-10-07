@@ -111,3 +111,8 @@ class MockDatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsSe
 
     def check_if_sales_funnel_data_exists(self, project_uuid: UUID) -> bool:
         return True
+
+    def check_if_conversation_classification_data_exists(
+        self, project_uuid: UUID
+    ) -> bool:
+        return True

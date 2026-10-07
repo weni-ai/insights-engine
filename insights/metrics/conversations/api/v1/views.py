@@ -29,6 +29,9 @@ from insights.metrics.conversations.api.mixins import (
 from insights.metrics.conversations.api.permissions import (
     WidgetQueryParamPermission,
 )
+from insights.metrics.conversations.usecases.should_show_dashboard_mock import (
+    ShouldShowConversationsDashboardMockUseCase,
+)
 from insights.metrics.conversations.api.v1.serializers import (
     AbsoluteNumbersQueryParamsSerializer,
     AbsoluteNumbersSerializer,
@@ -58,6 +61,8 @@ from insights.metrics.conversations.api.v1.serializers import (
     ToolResultQueryParamsSerializer,
     TopicsDistributionMetricsQueryParamsSerializer,
     TopicsDistributionMetricsSerializer,
+    ShouldShowMockQueryParamsSerializer,
+    ShouldShowMockSerializer,
 )
 from insights.metrics.conversations.services import ConversationsMetricsService
 from insights.metrics.conversations.usecases.get_absolute_numbers_widget import (
@@ -470,6 +475,36 @@ class ConversationsMetricsViewSet(
         )
         return Response(
             AvailableWidgetsSerializer(available_widgets).data,
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="should-show-mock",
+        url_name="should-show-mock",
+    )
+    def should_show_mock(self, request: "Request", *args, **kwargs) -> Response:
+        """
+        Return whether the front-end should show the conversational dashboard with mock data.
+        """
+        query_params = ShouldShowMockQueryParamsSerializer(data=request.query_params)
+        query_params.is_valid(raise_exception=True)
+
+        project_uuid = query_params.validated_data["project_uuid"]
+
+        if self.resolver.should_use_mock(request, project_uuid):
+            return Response(
+                ShouldShowMockSerializer({"should_show_mock": False}).data,
+                status=status.HTTP_200_OK,
+            )
+
+        should_show_mock = ShouldShowConversationsDashboardMockUseCase().execute(
+            project_uuid
+        )
+
+        return Response(
+            ShouldShowMockSerializer({"should_show_mock": should_show_mock}).data,
             status=status.HTTP_200_OK,
         )
 

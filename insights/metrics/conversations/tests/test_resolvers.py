@@ -87,6 +87,94 @@ class ConversationsMetricsServiceResolverTests(TestCase):
         self.assertEqual(result, MockConversationsMetricsService)
 
     @patch(f"{RESOLVER_MODULE}.is_feature_active_for_attributes")
+    def test_resolve_with_use_mock_query_param_string_true(
+        self, mock_is_feature_active_for_attributes
+    ):
+        mock_is_feature_active_for_attributes.return_value = False
+        request = self._make_request(query_params={"use_mock": "true"})
+
+        result = self.resolver.resolve(request=request)
+        self.assertEqual(result, MockConversationsMetricsService)
+
+    @patch(f"{RESOLVER_MODULE}.is_feature_active_for_attributes")
+    def test_should_use_mock_with_boolean_true(
+        self, mock_is_feature_active_for_attributes
+    ):
+        mock_is_feature_active_for_attributes.return_value = False
+        request = self._make_request(query_params={"use_mock": True})
+
+        self.assertTrue(self.resolver.should_use_mock(request=request))
+
+    @patch(f"{RESOLVER_MODULE}.is_feature_active_for_attributes")
+    def test_should_use_mock_with_string_true(
+        self, mock_is_feature_active_for_attributes
+    ):
+        mock_is_feature_active_for_attributes.return_value = False
+        request = self._make_request(query_params={"use_mock": "true"})
+
+        self.assertTrue(self.resolver.should_use_mock(request=request))
+
+    @patch(f"{RESOLVER_MODULE}.is_feature_active_for_attributes")
+    def test_should_use_mock_with_string_one(
+        self, mock_is_feature_active_for_attributes
+    ):
+        mock_is_feature_active_for_attributes.return_value = False
+        request = self._make_request(query_params={"use_mock": "1"})
+
+        self.assertTrue(self.resolver.should_use_mock(request=request))
+
+    @patch(f"{RESOLVER_MODULE}.is_feature_active_for_attributes")
+    def test_should_use_mock_with_string_false(
+        self, mock_is_feature_active_for_attributes
+    ):
+        mock_is_feature_active_for_attributes.return_value = False
+        request = self._make_request(query_params={"use_mock": "false"})
+
+        self.assertFalse(self.resolver.should_use_mock(request=request))
+
+    @patch(f"{RESOLVER_MODULE}.is_feature_active_for_attributes")
+    def test_should_use_mock_when_param_is_missing(
+        self, mock_is_feature_active_for_attributes
+    ):
+        mock_is_feature_active_for_attributes.return_value = False
+        request = self._make_request()
+
+        self.assertFalse(self.resolver.should_use_mock(request=request))
+
+    @override_settings(CONVERSATIONS_DASHBOARD_FORCE_USE_MOCK_SERVICE=True)
+    @patch(f"{RESOLVER_MODULE}.is_feature_active_for_attributes")
+    def test_should_use_mock_when_force_setting_is_true(
+        self, mock_is_feature_active_for_attributes
+    ):
+        mock_is_feature_active_for_attributes.return_value = False
+
+        self.assertTrue(self.resolver.should_use_mock())
+
+    @patch(f"{RESOLVER_MODULE}.is_feature_active_for_attributes")
+    def test_should_use_mock_when_feature_flag_is_on(
+        self, mock_is_feature_active_for_attributes
+    ):
+        mock_is_feature_active_for_attributes.return_value = True
+        project_uuid = uuid4()
+        user = MagicMock()
+        user.is_authenticated = True
+        user.email = "test@example.com"
+        request = self._make_request(user=user)
+
+        self.assertTrue(
+            self.resolver.should_use_mock(request=request, project_uuid=project_uuid)
+        )
+        call_kwargs = mock_is_feature_active_for_attributes.call_args
+        self.assertEqual(
+            call_kwargs.kwargs.get("attributes", {}).get("projectUUID"),
+            str(project_uuid),
+        )
+        self.assertEqual(
+            call_kwargs.kwargs.get("attributes", {}).get("userEmail"),
+            "test@example.com",
+        )
+
+    @patch(f"{RESOLVER_MODULE}.is_feature_active_for_attributes")
     def test_resolve_with_request_and_flag_off(
         self, mock_is_feature_active_for_attributes
     ):
