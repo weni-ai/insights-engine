@@ -1052,9 +1052,25 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         results = self.service.check_if_sales_funnel_data_exists(project_uuid)
         self.assertTrue(results)
 
+    def _assert_classification_existence_query(self, project_uuid, now):
+        self.mock_events_client.get_events.assert_called_once()
+        call_kwargs = self.mock_events_client.get_events.call_args.kwargs
+        self.assertEqual(call_kwargs["event_name"], "weni_nexus_data")
+        self.assertEqual(call_kwargs["key"], "conversation_classification")
+        self.assertEqual(call_kwargs["table"], "conversation_classification")
+        self.assertEqual(call_kwargs["project"], project_uuid)
+        self.assertEqual(call_kwargs["limit"], 1)
+        self.assertEqual(call_kwargs["date_end"], now)
+        self.assertEqual(call_kwargs["date_start"], now - timedelta(days=365))
+
+    @patch(
+        "insights.metrics.conversations.integrations.datalake.services.timezone.now"
+    )
     def test_check_if_conversation_classification_data_exists_when_data_does_not_exist(
-        self,
+        self, mock_now
     ):
+        now = datetime(2026, 10, 8, 12, 0, 0)
+        mock_now.return_value = now
         self.mock_events_client.get_events.return_value = []
         project_uuid = uuid.uuid4()
 
@@ -1063,15 +1079,15 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         )
 
         self.assertFalse(results)
-        self.mock_events_client.get_events.assert_called_once()
-        call_kwargs = self.mock_events_client.get_events.call_args.kwargs
-        self.assertEqual(call_kwargs["event_name"], "weni_nexus_data")
-        self.assertEqual(call_kwargs["key"], "conversation_classification")
-        self.assertEqual(call_kwargs["table"], "conversation_classification")
-        self.assertEqual(call_kwargs["project"], project_uuid)
-        self.assertEqual(call_kwargs["limit"], 1)
+        self._assert_classification_existence_query(project_uuid, now)
 
-    def test_check_if_conversation_classification_data_exists_when_empty_payload(self):
+    @patch(
+        "insights.metrics.conversations.integrations.datalake.services.timezone.now"
+    )
+    def test_check_if_conversation_classification_data_exists_when_empty_payload(
+        self, mock_now
+    ):
+        mock_now.return_value = datetime(2026, 10, 8, 12, 0, 0)
         self.mock_events_client.get_events.return_value = [{}]
         project_uuid = uuid.uuid4()
 
@@ -1081,7 +1097,13 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
         self.assertFalse(results)
 
-    def test_check_if_conversation_classification_data_exists_when_data_exists(self):
+    @patch(
+        "insights.metrics.conversations.integrations.datalake.services.timezone.now"
+    )
+    def test_check_if_conversation_classification_data_exists_when_data_exists(
+        self, mock_now
+    ):
+        mock_now.return_value = datetime(2026, 10, 8, 12, 0, 0)
         self.mock_events_client.get_events.return_value = [
             {"key": "conversation_classification"}
         ]
