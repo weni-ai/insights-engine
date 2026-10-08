@@ -1146,8 +1146,8 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
         return True
 
     def _conversation_classification_existence_kwargs(self, project_uuid: UUID) -> dict:
-        end_date = timezone.now().replace(microsecond=0)
-        start_date = end_date - timedelta(
+        end = timezone.now().date()
+        start = end - timedelta(
             days=settings.CONVERSATIONS_DASHBOARD_MOCK_CHECK_LOOKBACK_DAYS
         )
         return {
@@ -1155,9 +1155,8 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
             "key": "conversation_classification",
             "table": "conversation_classification",
             "project": project_uuid,
-            "date_start": start_date,
-            "date_end": end_date,
-            "limit": 1,
+            "date_start": f"{start.isoformat()}T00:00:00",
+            "date_end": f"{end.isoformat()}T23:59:59",
         }
 
     def check_if_conversation_classification_data_exists(
@@ -1165,16 +1164,16 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
     ) -> bool:
         """
         Check if conversation classification events exist in Datalake.
-        Fetches a single row in the last year — existence check, not a full scan.
+        Uses silver count (same path as totals) over LOOKBACK_DAYS.
         """
-        events = self.events_client.get_events(
+        result = self.events_client.get_events_count(
             **self._conversation_classification_existence_kwargs(project_uuid)
         )
 
-        if len(events) == 0 or events == [{}]:
+        if not result or result == [{}]:
             return False
 
-        return True
+        return int(result[0].get("count", 0) or 0) > 0
 
     def get_raw_events_data(self, **kwargs) -> list[EventDataType]:
         """
