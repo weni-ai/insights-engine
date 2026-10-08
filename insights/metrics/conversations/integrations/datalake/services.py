@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Type, TypeVar
 from uuid import UUID
 
@@ -1145,21 +1145,30 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
 
         return True
 
+    def _conversation_classification_existence_kwargs(self, project_uuid: UUID) -> dict:
+        end_date = timezone.now().replace(microsecond=0)
+        start_date = end_date - timedelta(
+            days=settings.CONVERSATIONS_DASHBOARD_MOCK_CHECK_LOOKBACK_DAYS
+        )
+        return {
+            "event_name": self.event_name,
+            "key": "conversation_classification",
+            "table": "conversation_classification",
+            "project": project_uuid,
+            "date_start": start_date,
+            "date_end": end_date,
+            "limit": 1,
+        }
+
     def check_if_conversation_classification_data_exists(
         self, project_uuid: UUID
     ) -> bool:
         """
         Check if conversation classification events exist in Datalake.
-        Fetches a single row — this is an existence check, not a full scan.
+        Fetches a single row in the last year — existence check, not a full scan.
         """
         events = self.events_client.get_events(
-            event_name=self.event_name,
-            key="conversation_classification",
-            table="conversation_classification",
-            project=project_uuid,
-            date_start=settings.CONVERSATIONS_DASHBOARD_EVENTS_START_DATE,
-            date_end=timezone.now().isoformat(),
-            limit=1,
+            **self._conversation_classification_existence_kwargs(project_uuid)
         )
 
         if len(events) == 0 or events == [{}]:
