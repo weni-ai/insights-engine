@@ -31,6 +31,14 @@ services:
       - DEBUG=${DEBUG:-true}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
       - DEFAULT_DATABASE=${DEFAULT_DATABASE:-postgres://insights:insights@postgres:5432/insights}
+      - KONG_ADMIN_URL=${KONG_ADMIN_URL:-http://localhost:8001}
+      - KONG_SERVICE=${KONG_SERVICE:-insights-service}
+      - KONG_SERVICE_URL=${KONG_SERVICE_URL:-}
+      - KONG_URL_PREFIX=${KONG_URL_PREFIX:-/insights}
+      - WENI_SESSION_TOKEN_DYNAMODB_TABLE=${WENI_SESSION_TOKEN_DYNAMODB_TABLE:-}
+      - WENI_SESSION_TOKEN_DYNAMODB_REGION=${WENI_SESSION_TOKEN_DYNAMODB_REGION:-}
+      - WENI_SESSION_TOKEN_MAX_REDIS_TTL=${WENI_SESSION_TOKEN_MAX_REDIS_TTL:-3600}
+      - WENI_SESSION_TOKEN_REDIS_ALIAS=${WENI_SESSION_TOKEN_REDIS_ALIAS:-default}
   rabbitmq:
     image: rabbitmq:3.9.7-management
     ports:
