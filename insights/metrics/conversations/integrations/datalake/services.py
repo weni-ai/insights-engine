@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Type, TypeVar
 from uuid import UUID
 
@@ -1145,26 +1145,35 @@ class DatalakeConversationsMetricsService(BaseDatalakeConversationsMetricsServic
 
         return True
 
+    def _conversation_classification_existence_kwargs(self, project_uuid: UUID) -> dict:
+        end = timezone.now().date()
+        start = end - timedelta(
+            days=settings.CONVERSATIONS_DASHBOARD_MOCK_CHECK_LOOKBACK_DAYS
+        )
+        return {
+            "event_name": self.event_name,
+            "key": "conversation_classification",
+            "table": "conversation_classification",
+            "project": project_uuid,
+            "date_start": f"{start.isoformat()}T00:00:00",
+            "date_end": f"{end.isoformat()}T23:59:59",
+        }
+
     def check_if_conversation_classification_data_exists(
         self, project_uuid: UUID
     ) -> bool:
         """
         Check if conversation classification events exist in Datalake.
+        Uses silver count (same path as totals) over LOOKBACK_DAYS.
         """
-        events = self.events_client.get_events(
-            event_name=self.event_name,
-            key="conversation_classification",
-            table="conversation_classification",
-            project=project_uuid,
-            date_start=settings.CONVERSATIONS_DASHBOARD_EVENTS_START_DATE,
-            date_end=timezone.now().isoformat(),
-            limit=1,
+        result = self.events_client.get_events_count(
+            **self._conversation_classification_existence_kwargs(project_uuid)
         )
 
-        if len(events) == 0 or events == [{}]:
+        if not result or result == [{}]:
             return False
 
-        return True
+        return int(result[0].get("count", 0) or 0) > 0
 
     def get_raw_events_data(self, **kwargs) -> list[EventDataType]:
         """

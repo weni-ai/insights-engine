@@ -1052,27 +1052,42 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         results = self.service.check_if_sales_funnel_data_exists(project_uuid)
         self.assertTrue(results)
 
-    def test_check_if_conversation_classification_data_exists_when_data_does_not_exist(
-        self,
-    ):
-        self.mock_events_client.get_events.return_value = []
-        project_uuid = uuid.uuid4()
-
-        results = self.service.check_if_conversation_classification_data_exists(
-            project_uuid
-        )
-
-        self.assertFalse(results)
-        self.mock_events_client.get_events.assert_called_once()
-        call_kwargs = self.mock_events_client.get_events.call_args.kwargs
+    def _assert_classification_existence_query(self, project_uuid):
+        call_kwargs = self.mock_events_client.get_events_count.call_args.kwargs
         self.assertEqual(call_kwargs["event_name"], "weni_nexus_data")
         self.assertEqual(call_kwargs["key"], "conversation_classification")
         self.assertEqual(call_kwargs["table"], "conversation_classification")
         self.assertEqual(call_kwargs["project"], project_uuid)
-        self.assertEqual(call_kwargs["limit"], 1)
+        self.assertEqual(call_kwargs["date_end"], "2026-10-08T23:59:59")
+        self.assertEqual(call_kwargs["date_start"], "2025-10-08T00:00:00")
 
-    def test_check_if_conversation_classification_data_exists_when_empty_payload(self):
-        self.mock_events_client.get_events.return_value = [{}]
+    @patch(
+        "insights.metrics.conversations.integrations.datalake.services.timezone.now"
+    )
+    def test_check_if_conversation_classification_data_exists_when_data_does_not_exist(
+        self, mock_now
+    ):
+        now = datetime(2026, 10, 8, 12, 0, 0)
+        mock_now.return_value = now
+        self.mock_events_client.get_events_count.return_value = []
+        project_uuid = uuid.uuid4()
+
+        results = self.service.check_if_conversation_classification_data_exists(
+            project_uuid
+        )
+
+        self.assertFalse(results)
+        self._assert_classification_existence_query(project_uuid)
+        self.assertEqual(self.mock_events_client.get_events_count.call_count, 1)
+
+    @patch(
+        "insights.metrics.conversations.integrations.datalake.services.timezone.now"
+    )
+    def test_check_if_conversation_classification_data_exists_when_empty_payload(
+        self, mock_now
+    ):
+        mock_now.return_value = datetime(2026, 10, 8, 12, 0, 0)
+        self.mock_events_client.get_events_count.return_value = [{}]
         project_uuid = uuid.uuid4()
 
         results = self.service.check_if_conversation_classification_data_exists(
@@ -1081,10 +1096,30 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
 
         self.assertFalse(results)
 
-    def test_check_if_conversation_classification_data_exists_when_data_exists(self):
-        self.mock_events_client.get_events.return_value = [
-            {"key": "conversation_classification"}
-        ]
+    @patch(
+        "insights.metrics.conversations.integrations.datalake.services.timezone.now"
+    )
+    def test_check_if_conversation_classification_data_exists_when_count_is_zero(
+        self, mock_now
+    ):
+        mock_now.return_value = datetime(2026, 10, 8, 12, 0, 0)
+        self.mock_events_client.get_events_count.return_value = [{"count": 0}]
+        project_uuid = uuid.uuid4()
+
+        results = self.service.check_if_conversation_classification_data_exists(
+            project_uuid
+        )
+
+        self.assertFalse(results)
+
+    @patch(
+        "insights.metrics.conversations.integrations.datalake.services.timezone.now"
+    )
+    def test_check_if_conversation_classification_data_exists_when_data_exists(
+        self, mock_now
+    ):
+        mock_now.return_value = datetime(2026, 10, 8, 12, 0, 0)
+        self.mock_events_client.get_events_count.return_value = [{"count": 17}]
         project_uuid = uuid.uuid4()
 
         results = self.service.check_if_conversation_classification_data_exists(
@@ -1092,6 +1127,8 @@ class DatalakeConversationsMetricsServiceTestCase(TestCase):
         )
 
         self.assertTrue(results)
+        self.assertEqual(self.mock_events_client.get_events_count.call_count, 1)
+        self._assert_classification_existence_query(project_uuid)
 
     def test_get_event_count(self):
         project_uuid = uuid.uuid4()

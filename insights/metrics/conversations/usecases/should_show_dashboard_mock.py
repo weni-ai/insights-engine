@@ -22,8 +22,8 @@ class ShouldShowConversationsDashboardMockUseCase:
     """
     Decide whether the conversational dashboard should be shown with mock data.
 
-    Returns True only when the project has no conversation_classification events
-    and no conversational widget with a valid config.
+    Returns True only when events and widgets were checked successfully and
+    both came back empty. Errors never show mock.
     """
 
     CACHE_KEY_PREFIX = "conversations_dashboard_should_show_mock"
@@ -139,7 +139,7 @@ class ShouldShowConversationsDashboardMockUseCase:
                     exc_info=True,
                 )
                 capture_exception(e)
-                return True
+                return False
 
             if has_events:
                 self._persist_has_events(dashboard)
